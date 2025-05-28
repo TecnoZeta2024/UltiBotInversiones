@@ -134,6 +134,7 @@ La base de datos principal será PostgreSQL, gestionada a través de Supabase ( 
 - Consideración Futura: Se dispone de una API key de Pinecone para eventuales mejoras en las capacidades de análisis de IA post-v1.0.
 
 ## Investigación Relevante (Opcional)
+
 ### Documentos Fundacionales Proporcionados por el Usuario:
 1_System_Design.md: Documento que detalla la visión general del sistema "UltiBotInversiones", sus componentes principales, interacciones, flujo de trabajo, consideraciones de alta disponibilidad, seguridad, escalabilidad, modelos de despliegue, métricas y una hoja de ruta inicial.
 2_Architecture_Pattern.md: Especificación del patrón arquitectónico para "UltiBotInversiones", describiendo una Arquitectura Orientada a Eventos con Microservicios Opcionales, principios de Domain-Driven Design (DDD), diagramas, principios arquitectónicos fundamentales (EDA, CQRS, etc.), patrones de diseño adicionales y la aplicación de principios SOLID.
