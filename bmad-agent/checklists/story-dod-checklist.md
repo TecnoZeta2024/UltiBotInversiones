@@ -17,6 +17,11 @@ Before marking a story as 'Review', please go through each item in this checklis
     - [ ] All new/modified code aligns with `Project Structure` (file locations, naming, etc.).
     - [ ] Adherence to `Tech Stack` for technologies/versions used (if story introduces or modifies tech usage).
     - [ ] Adherence to `Api Reference` and `Data Models` (if story involves API or data model changes).
+    - [ ] Impacto en Rendimiento: Se ha revisado que el código nuevo/modificado no impacte negativamente la latencia del sistema (<500ms) o las capacidades de procesamiento paralelo, según los NFRs del PRD.
+    - [ ] Pruebas de Rendimiento (si aplica): Si los cambios afectan áreas críticas para el rendimiento, se han realizado pruebas pertinentes y cumplen los NFRs del PRD.
+    - [ ] Adherencia a Principios Arquitectónicos: El código nuevo/modificado se alinea con la arquitectura modular del proyecto y los principios de diseño (ej. DDD, CQRS) como se describe en la documentación arquitectónica y el PRD.
+    - [ ] Logging y Trazabilidad: Se ha implementado suficiente logging para las funcionalidades nuevas/modificadas para asegurar la trazabilidad de decisiones y operaciones, adhiriéndose a las directrices del PRD y del workspace (sin datos sensibles en logs de texto plano).
+    - [ ] Manejo Seguro de Credenciales: Si la historia involucra la gestión de credenciales, estas se manejan según los requisitos de seguridad del PRD y del workspace (ej. encriptadas con AES-256, nunca logueadas en texto plano).
     - [ ] Basic security best practices (e.g., input validation, proper error handling, no hardcoded secrets) applied for new/modified code.
     - [ ] No new linter errors or warnings introduced.
     - [ ] Code is well-commented where necessary (clarifying complex logic, not obvious statements).
@@ -32,6 +37,7 @@ Before marking a story as 'Review', please go through each item in this checklis
 
     - [ ] Functionality has been manually verified by the developer (e.g., running the app locally, checking UI, testing API endpoints).
     - [ ] Edge cases and potential error conditions considered and handled gracefully.
+    - [ ] Flujos de Confirmación del Usuario: Si la historia impacta operaciones con dinero real, todos los pasos de confirmación explícita del usuario según el PRD están correctamente implementados y verificados.
 
 5.  **Story Administration:**
     - [ ] All tasks within the story file are marked as complete.
