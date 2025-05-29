@@ -10,8 +10,4 @@ Este workflow guía a Cline para asumir el rol de Dev Agent, procesar una histor
 
 2.  **Indicar a Cline que siga la historia pendiente:**
     Notifica a Cline que debe continuar con la historia pendiente en el directorio `docs/stories`.
-    `/say Por favor, sigue el archivo de historia pendiente en docs/stories.`
-
-3.  **Restaurar Custom Instructions del Orchestrator:**
-    Una vez que las tareas del Dev Agent hayan terminado, restaura las instrucciones personalizadas al prompt del Orchestrator.
-    `/custom-instructions bmad-agent/ide-bmad-orchestrator.md`
+    `/say trabaja con la siguiente story pendiente en docs/stories.`

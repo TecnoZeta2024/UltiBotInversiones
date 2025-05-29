@@ -11,7 +11,4 @@ Este workflow guía a Cline para asumir el rol de Technical Scrum Master (IDE), 
 2.  **Indicar a Cline que cree la siguiente historia:**
     Notifica a Cline que debe proceder a ejecutar la tarea de creación de la siguiente historia.
     `/say Por favor, procede a ejecutar la tarea de creación de la siguiente historia usando bmad-agent/tasks/create-next-story-task.md.`
-
-3.  **Restaurar Custom Instructions del Orchestrator:**
-    Una vez que las tareas del SM Agent hayan terminado, restaura las instrucciones personalizadas al prompt del Orchestrator.
-    `/custom-instructions bmad-agent/ide-bmad-orchestrator.md`
+    
