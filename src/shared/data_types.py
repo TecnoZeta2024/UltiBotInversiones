@@ -61,15 +61,13 @@ class APICredential(BaseModel):
         }
         use_enum_values = True # Para que los enums se serialicen como sus valores de string
 
-def add_numbers(a: int, b: int) -> int:
+class TelegramConnectionStatus(BaseModel):
     """
-    Suma dos números enteros y devuelve el resultado.
-
-    Args:
-        a: El primer número entero.
-        b: El segundo número entero.
-
-    Returns:
-        La suma de los dos números.
+    Representa el estado actual de la conexión de Telegram.
     """
-    return a + b
+    is_connected: bool = Field(..., description="True si la conexión con Telegram está activa y verificada.")
+    last_verified_at: Optional[datetime] = Field(None, description="Marca de tiempo de la última verificación exitosa.")
+    status_message: str = Field(..., description="Mensaje descriptivo del estado de la conexión (éxito o error).")
+    status_code: Optional[str] = Field(None, description="Código de error si la conexión falló.")
+
+# La función add_numbers no es relevante para los tipos de datos compartidos, la eliminaré.

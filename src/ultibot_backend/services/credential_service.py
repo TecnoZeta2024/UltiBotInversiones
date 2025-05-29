@@ -171,10 +171,11 @@ class CredentialService:
         """
         return await self.persistence_service.delete_credential(credential_id)
 
-    async def verify_credential(self, credential: APICredential) -> bool:
+    async def verify_credential(self, credential: APICredential, notification_service: Optional[Any] = None) -> bool:
         """
         Verifica la validez de una credencial realizando una llamada de prueba no transaccional.
         Actualiza el estado de la credencial en la base de datos.
+        Si es una credencial de Telegram, usa NotificationService para enviar un mensaje de prueba.
         """
         is_valid = False
         decrypted_api_key = self.decrypt_data(credential.encrypted_api_key)
@@ -188,28 +189,29 @@ class CredentialService:
             return False
 
         try:
-            if credential.service_name == ServiceName.BINANCE_SPOT or credential.service_name == ServiceName.BINANCE_FUTURES:
+            if credential.service_name == ServiceName.TELEGRAM_BOT:
+                if notification_service:
+                    # Usar NotificationService para la verificación real de Telegram
+                    is_valid = await notification_service.send_test_telegram_notification(credential.user_id)
+                    # El NotificationService ya actualiza el estado de la credencial
+                    # Basamos el estado de la credencial en el resultado del envío del mensaje de prueba
+                    if is_valid:
+                        print(f"Verificación de Telegram exitosa para el usuario {credential.user_id}.")
+                    else:
+                        print(f"Verificación de Telegram fallida para el usuario {credential.user_id}.")
+                else:
+                    print(f"NotificationService no proporcionado para verificar Telegram. Simulación.")
+                    is_valid = True # Simulación si no hay NotificationService
+            elif credential.service_name == ServiceName.BINANCE_SPOT or credential.service_name == ServiceName.BINANCE_FUTURES:
                 # Placeholder para la verificación de Binance
-                # binance_adapter = BinanceAdapter(api_key=decrypted_api_key, api_secret=decrypted_api_secret)
-                # is_valid = await binance_adapter.test_connection()
                 print(f"Simulando verificación para Binance {credential.service_name}...")
-                is_valid = True # Simulación
-            elif credential.service_name == ServiceName.TELEGRAM_BOT:
-                # Placeholder para la verificación de Telegram
-                # telegram_adapter = TelegramAdapter(bot_token=decrypted_api_key)
-                # is_valid = await telegram_adapter.test_connection()
-                print(f"Simulando verificación para Telegram {credential.service_name}...")
                 is_valid = True # Simulación
             elif credential.service_name == ServiceName.GEMINI_API:
                 # Placeholder para la verificación de Gemini
-                # gemini_adapter = GeminiAdapter(api_key=decrypted_api_key, api_secret=decrypted_api_secret)
-                # is_valid = await gemini_adapter.test_connection()
                 print(f"Simulando verificación para Gemini {credential.service_name}...")
                 is_valid = True # Simulación
             elif credential.service_name == ServiceName.MOBULA_API:
                 # Placeholder para la verificación de Mobula
-                # mobula_adapter = MobulaAdapter(api_key=decrypted_api_key)
-                # is_valid = await mobula_adapter.test_connection()
                 print(f"Simulando verificación para Mobula {credential.service_name}...")
                 is_valid = True # Simulación
             else:
@@ -220,6 +222,9 @@ class CredentialService:
             print(f"Error durante la verificación de {credential.service_name}: {e}")
             is_valid = False
         
-        new_status = "active" if is_valid else "verification_failed"
-        await self.persistence_service.update_credential_status(credential.id, new_status, datetime.utcnow())
+        # Solo actualizamos el estado aquí si no fue manejado por NotificationService (ej. para otros servicios)
+        if credential.service_name != ServiceName.TELEGRAM_BOT:
+            new_status = "active" if is_valid else "verification_failed"
+            await self.persistence_service.update_credential_status(credential.id, new_status, datetime.utcnow())
+        
         return is_valid
