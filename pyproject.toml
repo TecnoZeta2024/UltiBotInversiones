@@ -1,0 +1,54 @@
+[tool.poetry]
+name = "ultibotinversiones"
+version = "0.1.0"
+description = "Plataforma de trading personal avanzada y de alto rendimiento."
+authors = ["BMad Agent <bmad@example.com>"]
+readme = "README.md"
+packages = [{include = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.11.9"
+fastapi = "^0.111.0"
+pydantic = "^2.7.1"
+pydantic-settings = "^2.3.0" # Compatible con Pydantic 2.x
+PyQt5 = "^5.15.11"
+uvicorn = {extras = ["standard"], version = "^0.29.0"}
+google-generativeai = "^0.5.0"
+langchain-core = "^0.2.10"
+langchain-google-genai = "^0.0.18"
+langchain-community = "^0.0.42"
+supabase-py = "^2.4.0"
+httpx = "^0.27.0"
+websockets = "^12.0"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "*"
+pytest = "*"
+pytest-asyncio = "*"
+black = "*"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "UP", # pyupgrade
+    "D",  # pydocstyle
+    "B",  # flake8-bugbear
+]
+# ignore = [] # Specific rules to ignore
+
+[tool.ruff.format]
+# Ruff's formatter is Black-compatible by default.
+# Options can be added here if specific deviations from Black are needed.
+# quote-style = "double"
+# indent-style = "space"
+# skip-magic-trailing-comma = false

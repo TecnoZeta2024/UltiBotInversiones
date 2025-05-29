@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+pip-wheel-metadata/
+*.egg-info/
+dist/
+build/
+
+# Variables de entorno y secretos
+*.env
+secrets/
+API_Keys.txt
+
+# IDEs
+.idea/
+*.swp
+*.swo
+
+# VSCode
+.vscode/*
+!.vscode/settings.json
+
+# Docker
+docker-compose.override.yml
+
+# Poetry
+.venv/

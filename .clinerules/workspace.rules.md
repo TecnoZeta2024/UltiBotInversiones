@@ -1,0 +1,6 @@
+- El sistema se basa en arquitectura modular y procesamiento paralelo.
+- Usar `PyQt5` con `QDarkStyleSheet` como base de UI para el dashboard.
+- Las credenciales deben encriptarse con AES-256, nunca guardarse en texto plano.
+- Las operaciones reales deben confirmarse explícitamente por el usuario antes de ejecutarse.
+- Toda funcionalidad debe estar alineada al PRD y respetar los NFRs definidos (latencia < 500ms, win rate > 75%, etc.).
+- Todo análisis y decisión de trading debe tener trazabilidad, ya sea en logs o en la UI.
