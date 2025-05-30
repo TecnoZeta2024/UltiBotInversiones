@@ -2659,6 +2659,18 @@ files = [
 ]
 
 [[package]]
+name = "qasync"
+version = "0.27.1"
+description = "Python library for using asyncio in Qt-based applications"
+optional = false
+python-versions = ">=3.8,<4.0"
+groups = ["main"]
+files = [
+    {file = "qasync-0.27.1-py3-none-any.whl", hash = "sha256:5d57335723bc7d9b328dadd8cb2ed7978640e4bf2da184889ce50ee3ad2602c7"},
+    {file = "qasync-0.27.1.tar.gz", hash = "sha256:8dc768fd1ee5de1044c7c305eccf2d39d24d87803ea71189d4024fb475f4985f"},
+]
+
+[[package]]
 name = "realtime"
 version = "2.4.3"
 description = ""
@@ -3527,5 +3539,5 @@ propcache = ">=0.2.1"
 
 [metadata]
 lock-version = "2.1"
-python-versions = "^3.11.9"
-content-hash = "44120851e722bc6954cc716fcf5fd81a470d1d284694b15e29591133a7b4ca8d"
+python-versions = "^3.11"
+content-hash = "266f7ad3c9cd2b16f46fb2c094b8e76b2bce328b69a33b039c89b94d841d426a"
