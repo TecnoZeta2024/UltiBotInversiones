@@ -150,9 +150,9 @@ class PortfolioWidget(QWidget):
         
         # Asegurarse de que horizontalHeader() y verticalHeader() no sean None
         if table.horizontalHeader() is not None:
-            table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch) # type: ignore
         if table.verticalHeader() is not None:
-            table.verticalHeader().setVisible(False)
+            table.verticalHeader().setVisible(False) # type: ignore
             
         table.setEditTriggers(QTableWidget.NoEditTriggers)
         table.setStyleSheet("""

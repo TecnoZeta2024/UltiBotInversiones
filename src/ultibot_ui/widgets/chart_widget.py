@@ -243,7 +243,7 @@ if __name__ == '__main__':
             return sample_data
 
     mock_market_data_service = MockMarketDataService()
-    chart_widget = ChartWidget(user_id=test_user_id, market_data_service=mock_market_data_service) # Pasar el mock
+    chart_widget = ChartWidget(user_id=test_user_id, market_data_service=mock_market_data_service) # type: ignore # Pasar el mock
     main_window.setCentralWidget(chart_widget)
     main_window.show()
 

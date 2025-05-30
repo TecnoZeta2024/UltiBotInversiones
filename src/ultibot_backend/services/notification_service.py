@@ -46,6 +46,14 @@ class NotificationService:
         if self._telegram_adapter:
             await self._telegram_adapter.close()
 
+    # TODO: Implementar métodos para la gestión de notificaciones en la base de datos
+    # y para la recuperación del historial de notificaciones para la UI.
+    # Esto incluye:
+    # - async def save_notification(self, notification: Notification):
+    # - async def get_notification_history(self, user_id: UUID, limit: int = 50) -> List[Dict[str, Any]]:
+    # - async def mark_notification_as_read(self, notification_id: UUID, user_id: UUID):
+    # Estos métodos se conectarán con la capa de persistencia.
+
         self._telegram_adapter = TelegramAdapter(bot_token=bot_token)
         return self._telegram_adapter
 

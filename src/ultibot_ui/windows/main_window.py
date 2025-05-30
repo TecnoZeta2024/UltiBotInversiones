@@ -7,13 +7,15 @@ from ultibot_ui.widgets.sidebar_navigation_widget import SidebarNavigationWidget
 
 from src.ultibot_backend.services.market_data_service import MarketDataService
 from src.ultibot_backend.services.config_service import ConfigService
+from src.ultibot_backend.services.notification_service import NotificationService # Importar NotificationService
 
 class MainWindow(QMainWindow):
-    def __init__(self, user_id: UUID, market_data_service: MarketDataService, config_service: ConfigService):
-        super().__init__()
+    def __init__(self, user_id: UUID, market_data_service: MarketDataService, config_service: ConfigService, notification_service: NotificationService, parent=None): # Añadir notification_service
+        super().__init__(parent)
         self.user_id = user_id
         self.market_data_service = market_data_service
         self.config_service = config_service
+        self.notification_service = notification_service # Guardar la referencia al servicio de notificaciones
 
         self.setWindowTitle("UltiBotInversiones")
         self.setGeometry(100, 100, 1200, 800) # x, y, width, height
@@ -48,24 +50,24 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(self.stacked_widget)
 
         # Añadir vistas al stacked widget
-        self.dashboard_view = DashboardView(self.user_id, self.market_data_service, self.config_service)
+        self.dashboard_view = DashboardView(self.user_id, self.market_data_service, self.config_service, self.notification_service) # Pasar notification_service
         self.stacked_widget.addWidget(self.dashboard_view) # Índice 0
 
         # Placeholder para otras vistas
         self.opportunities_view = QLabel("Vista de Oportunidades (Placeholder)")
-        self.opportunities_view.setAlignment(Qt.AlignCenter)
+        self.opportunities_view.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.stacked_widget.addWidget(self.opportunities_view) # Índice 1
 
         self.strategies_view = QLabel("Vista de Estrategias (Placeholder)")
-        self.strategies_view.setAlignment(Qt.AlignCenter)
+        self.strategies_view.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.stacked_widget.addWidget(self.strategies_view) # Índice 2
 
         self.history_view = QLabel("Vista de Historial (Placeholder)")
-        self.history_view.setAlignment(Qt.AlignCenter)
+        self.history_view.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.stacked_widget.addWidget(self.history_view) # Índice 3
 
         self.settings_view = QLabel("Vista de Configuración (Placeholder)")
-        self.settings_view.setAlignment(Qt.AlignCenter)
+        self.settings_view.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.stacked_widget.addWidget(self.settings_view) # Índice 4
 
         # Mapeo de nombres a índices del stacked widget

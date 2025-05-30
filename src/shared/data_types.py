@@ -216,4 +216,59 @@ class UserConfiguration(BaseModel):
         }
         use_enum_values = True
         populate_by_name = True # Permite usar alias para los nombres de campo si es necesario
-        arbitrary_types_allowed = True # Para el campo 'configuration: Any' en DashboardLayoutProfile
+    arbitrary_types_allowed = True # Para el campo 'configuration: Any' en DashboardLayoutProfile
+
+class NotificationPriority(str, Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+class NotificationAction(BaseModel):
+    label: str
+    actionType: str # Ej. "NAVIGATE", "API_CALL", "DISMISS", "SNOOZE_NOTIFICATION"
+    actionValue: Optional[Any] = None # Puede ser string o dict
+    requiresConfirmation: Optional[bool] = False
+    confirmationMessage: Optional[str] = None
+
+class Notification(BaseModel):
+    id: UUID = Field(default_factory=uuid4)
+    userId: Optional[UUID] = None
+
+    eventType: str
+    channel: str # 'telegram' | 'ui' | 'email'
+
+    titleKey: Optional[str] = None
+    messageKey: Optional[str] = None
+    messageParams: Optional[Dict[str, Any]] = None
+    
+    title: str
+    message: str
+
+    priority: Optional[NotificationPriority] = NotificationPriority.MEDIUM
+
+    status: str = "new" # 'new' | 'read' | 'archived' | 'error_sending' | 'snoozed' | 'processing_action'
+    snoozedUntil: Optional[datetime] = None
+
+    dataPayload: Optional[Dict[str, Any]] = None
+    actions: Optional[List[NotificationAction]] = None
+
+    correlationId: Optional[str] = None
+    isSummary: Optional[bool] = False
+    summarizedNotificationIds: Optional[List[UUID]] = None
+
+    createdAt: datetime = Field(default_factory=datetime.utcnow)
+    readAt: Optional[datetime] = None
+    sentAt: Optional[datetime] = None
+
+    statusHistory: Optional[List[Dict[str, Any]]] = None # Simplificado para v1.0
+    generatedBy: Optional[str] = None
+
+    class Config:
+        json_encoders = {
+            datetime: lambda dt: dt.isoformat() + "Z",
+            UUID: lambda uuid: str(uuid),
+        }
+        use_enum_values = True
+        populate_by_name = True
+        arbitrary_types_allowed = True

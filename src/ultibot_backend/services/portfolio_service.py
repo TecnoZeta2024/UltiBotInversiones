@@ -113,7 +113,8 @@ class PortfolioService:
                 available_balance_usdt=available_balance_usdt,
                 total_assets_value_usd=total_assets_value_usd,
                 total_portfolio_value_usd=total_portfolio_value_usd,
-                assets=real_assets
+                assets=real_assets,
+                error_message=None # Pasar explícitamente None
             )
         except UltiBotError as e:
             logger.error(f"Error al obtener el resumen del portafolio real para el usuario {user_id}: {e}")
@@ -123,7 +124,7 @@ class PortfolioService:
                 total_assets_value_usd=0.0,
                 total_portfolio_value_usd=0.0,
                 assets=[],
-                error_message=str(e)
+                error_message=str(e) # Pasar explícitamente el mensaje de error
             )
         except Exception as e:
             logger.critical(f"Error inesperado al obtener el resumen del portafolio real para el usuario {user_id}: {e}", exc_info=True)
@@ -132,7 +133,7 @@ class PortfolioService:
                 total_assets_value_usd=0.0,
                 total_portfolio_value_usd=0.0,
                 assets=[],
-                error_message="Error inesperado al cargar el portafolio real."
+                error_message="Error inesperado al cargar el portafolio real." # Pasar explícitamente el mensaje de error
             )
 
     async def _get_paper_trading_summary(self) -> PortfolioSummary:
@@ -156,13 +157,19 @@ class PortfolioService:
                         total_assets_value_usd += current_value
                         asset.current_price = current_price
                         asset.current_value_usd = current_value
-                        if asset.entry_price is not None:
+                        if asset.entry_price is not None and asset.quantity > 0 and asset.entry_price > 0:
                             asset.unrealized_pnl_usd = (current_price - asset.entry_price) * asset.quantity
-                            if asset.entry_price > 0:
+                            if asset.unrealized_pnl_usd is not None: # Asegurar que unrealized_pnl_usd no es None
                                 asset.unrealized_pnl_percentage = (asset.unrealized_pnl_usd / (asset.entry_price * asset.quantity)) * 100
+                            else:
+                                asset.unrealized_pnl_percentage = None
+                        else:
+                            asset.unrealized_pnl_usd = None
+                            asset.unrealized_pnl_percentage = None
                         paper_assets.append(asset)
                     else:
                         logger.warning(f"No se pudo obtener el precio para {symbol_pair} para el portafolio de paper trading.")
+                        # No pasar error_message a PortfolioAsset, ya que no lo tiene
                         paper_assets.append(PortfolioAsset(
                             symbol=asset.symbol,
                             quantity=asset.quantity,
@@ -179,7 +186,8 @@ class PortfolioService:
             available_balance_usdt=self.paper_trading_balance,
             total_assets_value_usd=total_assets_value_usd,
             total_portfolio_value_usd=total_portfolio_value_usd,
-            assets=paper_assets
+            assets=paper_assets,
+            error_message=None # Pasar explícitamente None
         )
 
     async def update_paper_trading_balance(self, user_id: UUID, amount: float):

@@ -485,7 +485,8 @@ if __name__ == '__main__':
     main_layout = QVBoxLayout()
     main_window.setLayout(main_layout)
 
-    market_data_widget = MarketDataWidget(test_user_id, mock_market_data_service, mock_config_service)
+    # Ignorar los errores de Pylance para los mocks en el bloque de prueba local
+    market_data_widget = MarketDataWidget(test_user_id, mock_market_data_service, mock_config_service) # type: ignore
     main_layout.addWidget(market_data_widget)
 
     # Iniciar la carga y suscripción de pares en una tarea de asyncio
