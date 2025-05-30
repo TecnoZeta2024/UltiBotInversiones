@@ -63,7 +63,7 @@ async def startup_event():
     await persistence_service.connect() # Conectar a la base de datos al inicio
 
     credential_service = CredentialService(encryption_key=effective_encryption_key)
-    notification_service = NotificationService(credential_service=credential_service)
+    notification_service = NotificationService(credential_service=credential_service, persistence_service=persistence_service)
     binance_adapter = BinanceAdapter() # Inicializar BinanceAdapter
     market_data_service = MarketDataService(credential_service=credential_service, binance_adapter=binance_adapter) # Inicializar MarketDataService
     config_service = ConfigService(persistence_service=persistence_service) # Inicializar ConfigService
@@ -128,7 +128,8 @@ async def read_root():
     return {"message": "Welcome to UltiBot Backend"}
 
 # Aquí se incluirán los routers de api/v1/endpoints
-from src.ultibot_backend.api.v1.endpoints import telegram_status, binance_status, config # Importar config
+from src.ultibot_backend.api.v1.endpoints import telegram_status, binance_status, config, notifications # Importar notifications
 app.include_router(telegram_status.router, prefix="/api/v1", tags=["telegram"]) # Añadir tags
 app.include_router(binance_status.router, prefix="/api/v1", tags=["binance"]) # Incluir el router de Binance
 app.include_router(config.router, prefix="/api/v1", tags=["config"]) # Incluir el router de configuración
+app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["notifications"]) # Incluir el router de notificaciones

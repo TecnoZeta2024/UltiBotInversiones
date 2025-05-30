@@ -7,7 +7,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, QTimer
 from PyQt5.QtGui import QColor, QFont, QIcon
 from typing import List, Optional, Any # Importar Any
 from datetime import datetime
-from uuid import UUID # Importar UUID
+from uuid import UUID, uuid4 # Importar UUID y uuid4
 
 from src.shared.data_types import Notification, NotificationPriority, NotificationAction # Importar los tipos de datos
 
@@ -303,11 +303,44 @@ if __name__ == '__main__':
     main_layout = QVBoxLayout(main_window)
     main_window.setLayout(main_layout)
 
-    notification_widget = NotificationWidget()
+    # Mock simple para NotificationService para la prueba
+    class MockNotificationService:
+        async def get_notification_history(self, user_id: UUID, limit: int = 50) -> List[Notification]:
+            # Devuelve algunas notificaciones de prueba
+            return [
+                Notification(
+                    id=uuid4(),
+                    userId=user_id,
+                    eventType="MOCK_INFO",
+                    channel="ui",
+                    title="Notificación de Prueba 1",
+                    message="Este es un mensaje de prueba para el historial.",
+                    createdAt=datetime.utcnow() - timedelta(minutes=10)
+                ),
+                Notification(
+                    id=uuid4(),
+                    userId=user_id,
+                    eventType="MOCK_WARNING",
+                    channel="ui",
+                    title="Notificación de Prueba 2",
+                    message="Otro mensaje de prueba para el historial.",
+                    createdAt=datetime.utcnow() - timedelta(minutes=20)
+                )
+            ]
+        
+        async def mark_notification_as_read(self, notification_id: UUID, user_id: UUID) -> Optional[Notification]:
+            print(f"Mock: Notificación {notification_id} marcada como leída.")
+            return None # No implementado para el mock
+
+        async def save_notification(self, notification: Notification) -> Notification:
+            print(f"Mock: Notificación {notification.id} guardada.")
+            return notification
+
+    test_user_id = uuid4()
+    notification_widget = NotificationWidget(MockNotificationService(), test_user_id)
     main_layout.addWidget(notification_widget)
 
     # Añadir algunas notificaciones de prueba
-    from uuid import uuid4
     from datetime import datetime, timedelta
 
     # Notificación de error crítico

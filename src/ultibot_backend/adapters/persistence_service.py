@@ -4,7 +4,7 @@ import logging
 from urllib.parse import urlparse
 from typing import Optional, List, Dict, Any
 from uuid import UUID
-from src.shared.data_types import APICredential, ServiceName
+from src.shared.data_types import APICredential, ServiceName, Notification
 from datetime import datetime, timezone # Importar timezone
 
 logger = logging.getLogger(__name__)
@@ -326,4 +326,110 @@ class SupabasePersistenceService:
             return None
         except Exception as e:
             logger.error(f"Error al actualizar permisos de credencial: {e}")
+            raise
+
+    async def save_notification(self, notification: Notification) -> Notification:
+        """
+        Guarda una nueva notificación o actualiza una existente en la tabla notifications.
+        """
+        if not self.connection:
+            await self.connect()
+        if not self.connection:
+            raise ConnectionError("No se pudo establecer conexión con la base de datos.")
+        
+        query = """
+        INSERT INTO notifications (
+            id, user_id, event_type, channel, title_key, message_key, message_params,
+            title, message, priority, status, snoozed_until, data_payload, actions,
+            correlation_id, is_summary, summarized_notification_ids, created_at,
+            read_at, sent_at, status_history, generated_by
+        ) VALUES (
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22
+        )
+        ON CONFLICT (id) DO UPDATE SET
+            user_id = EXCLUDED.user_id,
+            event_type = EXCLUDED.event_type,
+            channel = EXCLUDED.channel,
+            title_key = EXCLUDED.title_key,
+            message_key = EXCLUDED.message_key,
+            message_params = EXCLUDED.message_params,
+            title = EXCLUDED.title,
+            message = EXCLUDED.message,
+            priority = EXCLUDED.priority,
+            status = EXCLUDED.status,
+            snoozed_until = EXCLUDED.snoozed_until,
+            data_payload = EXCLUDED.data_payload,
+            actions = EXCLUDED.actions,
+            correlation_id = EXCLUDED.correlation_id,
+            is_summary = EXCLUDED.is_summary,
+            summarized_notification_ids = EXCLUDED.summarized_notification_ids,
+            read_at = EXCLUDED.read_at,
+            sent_at = EXCLUDED.sent_at,
+            status_history = EXCLUDED.status_history,
+            generated_by = EXCLUDED.generated_by,
+            created_at = EXCLUDED.created_at
+        RETURNING *;
+        """
+        try:
+            record = await self.connection.fetchrow(
+                query,
+                notification.id, notification.userId, notification.eventType, notification.channel,
+                notification.titleKey, notification.messageKey, notification.messageParams,
+                notification.title, notification.message, notification.priority.value if notification.priority else None, notification.status,
+                notification.snoozedUntil, notification.dataPayload, notification.actions,
+                notification.correlationId, notification.isSummary, notification.summarizedNotificationIds,
+                notification.createdAt, notification.readAt, notification.sentAt,
+                notification.statusHistory, notification.generatedBy
+            )
+            if record:
+                return Notification(**dict(record))
+            raise ValueError("No se pudo guardar/actualizar la notificación y obtener el registro de retorno.")
+        except Exception as e:
+            logger.error(f"Error al guardar/actualizar notificación: {e}")
+            raise
+
+    async def get_notification_history(self, user_id: UUID, limit: int = 50) -> List[Notification]:
+        """
+        Recupera un historial de notificaciones para un usuario, ordenadas por las más recientes.
+        """
+        if not self.connection:
+            await self.connect()
+        if not self.connection:
+            raise ConnectionError("No se pudo establecer conexión con la base de datos.")
+        
+        query = """
+        SELECT * FROM notifications
+        WHERE user_id = $1
+        ORDER BY created_at DESC
+        LIMIT $2;
+        """
+        try:
+            records = await self.connection.fetch(query, user_id, limit)
+            return [Notification(**dict(record)) for record in records]
+        except Exception as e:
+            logger.error(f"Error al obtener historial de notificaciones para el usuario {user_id}: {e}")
+            raise
+
+    async def mark_notification_as_read(self, notification_id: UUID, user_id: UUID) -> Optional[Notification]:
+        """
+        Marca una notificación específica como leída.
+        """
+        if not self.connection:
+            await self.connect()
+        if not self.connection:
+            raise ConnectionError("No se pudo establecer conexión con la base de datos.")
+        
+        query = """
+        UPDATE notifications
+        SET status = 'read', read_at = timezone('utc'::text, now())
+        WHERE id = $1 AND user_id = $2
+        RETURNING *;
+        """
+        try:
+            record = await self.connection.fetchrow(query, notification_id, user_id)
+            if record:
+                return Notification(**dict(record))
+            return None
+        except Exception as e:
+            logger.error(f"Error al marcar notificación {notification_id} como leída para el usuario {user_id}: {e}")
             raise

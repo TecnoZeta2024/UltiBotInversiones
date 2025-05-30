@@ -1,10 +1,12 @@
 import logging
 import json
 from uuid import UUID
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
+from uuid import UUID
 
-from src.shared.data_types import ServiceName, APICredential
+from src.shared.data_types import ServiceName, APICredential, Notification
 from src.ultibot_backend.adapters.telegram_adapter import TelegramAdapter
+from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService # Importar PersistenceService
 from src.ultibot_backend.services.credential_service import CredentialService
 from src.ultibot_backend.core.exceptions import CredentialError, NotificationError, TelegramNotificationError, ExternalAPIError # Importar excepciones
 
@@ -13,8 +15,9 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 class NotificationService:
-    def __init__(self, credential_service: CredentialService):
+    def __init__(self, credential_service: CredentialService, persistence_service: SupabasePersistenceService):
         self.credential_service = credential_service
+        self.persistence_service = persistence_service # Inyectar el servicio de persistencia
         self._telegram_adapter: Optional[TelegramAdapter] = None
 
     async def _get_telegram_adapter(self, user_id: UUID) -> Optional[TelegramAdapter]:
@@ -46,16 +49,47 @@ class NotificationService:
         if self._telegram_adapter:
             await self._telegram_adapter.close()
 
-    # TODO: Implementar métodos para la gestión de notificaciones en la base de datos
-    # y para la recuperación del historial de notificaciones para la UI.
-    # Esto incluye:
-    # - async def save_notification(self, notification: Notification):
-    # - async def get_notification_history(self, user_id: UUID, limit: int = 50) -> List[Dict[str, Any]]:
-    # - async def mark_notification_as_read(self, notification_id: UUID, user_id: UUID):
-    # Estos métodos se conectarán con la capa de persistencia.
-
         self._telegram_adapter = TelegramAdapter(bot_token=bot_token)
         return self._telegram_adapter
+
+    async def save_notification(self, notification: Notification) -> Notification:
+        """
+        Guarda una notificación en la base de datos.
+        """
+        try:
+            saved_notification = await self.persistence_service.save_notification(notification)
+            logger.info(f"Notificación {notification.id} guardada en la base de datos.")
+            return saved_notification
+        except Exception as e:
+            logger.error(f"Error al guardar notificación {notification.id} en la base de datos: {e}", exc_info=True)
+            raise NotificationError(f"Error al guardar notificación: {e}", code="NOTIFICATION_SAVE_FAILED")
+
+    async def get_notification_history(self, user_id: UUID, limit: int = 50) -> List[Notification]:
+        """
+        Recupera el historial de notificaciones para un usuario desde la base de datos.
+        """
+        try:
+            history = await self.persistence_service.get_notification_history(user_id, limit)
+            logger.info(f"Historial de notificaciones recuperado para el usuario {user_id}.")
+            return history
+        except Exception as e:
+            logger.error(f"Error al obtener historial de notificaciones para el usuario {user_id}: {e}", exc_info=True)
+            raise NotificationError(f"Error al obtener historial de notificaciones: {e}", code="NOTIFICATION_HISTORY_FAILED")
+
+    async def mark_notification_as_read(self, notification_id: UUID, user_id: UUID) -> Optional[Notification]:
+        """
+        Marca una notificación como leída en la base de datos.
+        """
+        try:
+            updated_notification = await self.persistence_service.mark_notification_as_read(notification_id, user_id)
+            if updated_notification:
+                logger.info(f"Notificación {notification_id} marcada como leída para el usuario {user_id}.")
+            else:
+                logger.warning(f"No se encontró la notificación {notification_id} para marcar como leída para el usuario {user_id}.")
+            return updated_notification
+        except Exception as e:
+            logger.error(f"Error al marcar notificación {notification_id} como leída: {e}", exc_info=True)
+            raise NotificationError(f"Error al marcar notificación como leída: {e}", code="NOTIFICATION_MARK_READ_FAILED")
 
     async def send_test_telegram_notification(self, user_id: UUID) -> bool:
         """
@@ -130,7 +164,7 @@ class NotificationService:
     async def send_notification(self, user_id: UUID, title: str, message: str, channel: str = "telegram", event_type: str = "SYSTEM_MESSAGE") -> bool:
         """
         Envía una notificación general al usuario a través del canal especificado.
-        Por ahora, solo soporta Telegram.
+        Por ahora, soporta Telegram y UI.
 
         Args:
             user_id: El ID del usuario.
@@ -142,6 +176,24 @@ class NotificationService:
         Returns:
             True si la notificación se envió con éxito, False en caso contrario.
         """
+        # Crear la notificación para guardar en la base de datos
+        notification_to_save = Notification(
+            userId=user_id,
+            eventType=event_type,
+            channel=channel,
+            title=title,
+            message=message,
+            # Otros campos pueden ser poblados según sea necesario
+        )
+        
+        # Guardar la notificación en la base de datos
+        try:
+            await self.save_notification(notification_to_save)
+        except NotificationError as e:
+            logger.error(f"No se pudo guardar la notificación en la base de datos: {e}")
+            # Continuar con el envío si el guardado falla, pero registrar el error
+            pass # O re-raise si el guardado es crítico para todos los canales
+
         if channel == "telegram":
             telegram_credential = await self.credential_service.get_credential(
                 user_id=user_id,

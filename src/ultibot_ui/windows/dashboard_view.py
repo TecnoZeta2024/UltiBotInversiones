@@ -118,9 +118,8 @@ class DashboardView(QWidget):
         try:
             # Cargar historial de notificaciones
             history_notifications = await self.notification_service.get_notification_history(self.user_id)
-            for notification_data in history_notifications:
-                # Convertir dict a objeto Notification
-                notification = Notification(**notification_data)
+            for notification in history_notifications:
+                # notification_data ya es un objeto Notification
                 self.notification_widget.add_notification(notification)
             
             # TODO: Implementar suscripción a WebSockets para notificaciones en tiempo real
@@ -148,8 +147,7 @@ class DashboardView(QWidget):
             # pero sirve para el propósito de demostración de polling.
             # La lógica de add_notification ya maneja duplicados.
             new_notifications = await self.notification_service.get_notification_history(self.user_id)
-            for notification_data in new_notifications:
-                notification = Notification(**notification_data)
+            for notification in new_notifications:
                 self.notification_widget.add_notification(notification)
         except Exception as e:
             print(f"Error al hacer polling de nuevas notificaciones: {e}")
