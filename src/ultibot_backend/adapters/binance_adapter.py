@@ -5,7 +5,8 @@ import httpx
 import os # Importar os
 import json # Importar json
 import asyncio # Importar asyncio
-from typing import Dict, Any, List, Optional
+import websockets # Importar websockets
+from typing import Dict, Any, List, Optional, Callable
 from datetime import datetime
 
 from src.ultibot_backend.core.exceptions import BinanceAPIError, ExternalAPIError
@@ -31,7 +32,7 @@ class BinanceAdapter:
         params['signature'] = m.hexdigest()
         return params
 
-    async def _make_request(self, method: str, endpoint: str, api_key: str, api_secret: str, params: Optional[Dict[str, Any]] = None, signed: bool = False) -> Dict[str, Any]:
+    async def _make_request(self, method: str, endpoint: str, api_key: str, api_secret: str, params: Optional[Dict[str, Any]] = None, signed: bool = False) -> Any:
         """
         Realiza una solicitud a la API de Binance con reintentos y manejo de errores.
         """
@@ -146,6 +147,75 @@ class BinanceAdapter:
                 print(f"Advertencia: No se pudo parsear el balance para el activo {balance.get('asset')}: {e}")
         return asset_balances
 
+    async def get_ticker_24hr(self, symbol: str) -> Dict[str, Any]:
+        """
+        Obtiene los datos de ticker de 24 horas para un símbolo específico.
+        Endpoint: GET /api/v3/ticker/24hr
+        """
+        endpoint = "/api/v3/ticker/24hr"
+        params = {"symbol": symbol}
+        try:
+            response_data = await self._make_request("GET", endpoint, "", "", params=params, signed=False)
+            return response_data
+        except BinanceAPIError as e:
+            raise e
+        except Exception as e:
+            raise BinanceAPIError(f"Error al obtener ticker 24hr para {symbol}: {e}", original_exception=e)
+
+    async def get_all_tickers_24hr(self) -> List[Dict[str, Any]]:
+        """
+        Obtiene los datos de ticker de 24 horas para todos los símbolos.
+        Endpoint: GET /api/v3/ticker/24hr
+        """
+        endpoint = "/api/v3/ticker/24hr"
+        try:
+            response_data = await self._make_request("GET", endpoint, "", "", signed=False)
+            return response_data
+        except BinanceAPIError as e:
+            raise e
+        except Exception as e:
+            raise BinanceAPIError(f"Error al obtener todos los tickers 24hr: {e}", original_exception=e)
+
+    async def _connect_websocket(self, stream_url: str, callback: Callable):
+        """
+        Establece una conexión WebSocket y procesa los mensajes entrantes.
+        """
+        try:
+            async with websockets.connect(stream_url) as ws:
+                print(f"Conectado a WebSocket: {stream_url}")
+                while True:
+                    try:
+                        message = await ws.recv()
+                        data = json.loads(message)
+                        await callback(data)
+                    except websockets.exceptions.ConnectionClosedOK:
+                        print(f"Conexión WebSocket cerrada normalmente para {stream_url}.")
+                        break
+                    except websockets.exceptions.ConnectionClosedError as e:
+                        print(f"Error de conexión WebSocket para {stream_url}: {e}")
+                        break
+                    except json.JSONDecodeError:
+                        print(f"Error al decodificar JSON del mensaje WebSocket: {message}")
+                    except Exception as e:
+                        print(f"Error inesperado al procesar mensaje WebSocket: {e}")
+        except Exception as e:
+            print(f"Error al conectar al WebSocket {stream_url}: {e}")
+            raise ExternalAPIError(
+                message=f"Error al conectar al WebSocket de Binance: {e}",
+                service_name="BINANCE_WEBSOCKET",
+                original_exception=e
+            )
+
+    async def subscribe_to_ticker_stream(self, symbol: str, callback: Callable):
+        """
+        Suscribe a un stream de ticker de 24 horas para un símbolo específico.
+        Stream: <symbol>@ticker
+        """
+        stream_url = f"wss://stream.binance.com:9443/ws/{symbol.lower()}@ticker"
+        print(f"Intentando conectar a WebSocket para {symbol} en {stream_url}")
+        # Ejecutar el WebSocket en una tarea separada para no bloquear el main loop
+        asyncio.create_task(self._connect_websocket(stream_url, callback))
+
     async def close(self):
         """Cierra el cliente HTTP."""
         await self.client.aclose()
@@ -173,6 +243,37 @@ async def main():
         balances = await binance_adapter.get_spot_balances(api_key, api_secret)
         for balance in balances:
             print(f"  {balance.asset}: Free={balance.free}, Locked={balance.locked}, Total={balance.total}")
+
+        print("\nObteniendo datos de ticker 24hr para BTCUSDT...")
+        try:
+            btc_usdt_ticker = await binance_adapter.get_ticker_24hr("BTCUSDT")
+            print("Ticker BTCUSDT:", json.dumps(btc_usdt_ticker, indent=2))
+        except BinanceAPIError as e:
+            print(f"Error al obtener ticker BTCUSDT: {e} (Código: {e.status_code}, Detalles: {e.response_data})")
+
+        try:
+            all_tickers = await binance_adapter.get_all_tickers_24hr()
+            print(f"Total de tickers obtenidos: {len(all_tickers)}")
+            # Imprimir solo los primeros 5 para no saturar la salida
+            for i, ticker in enumerate(all_tickers[:5]):
+                print(f"  {ticker.get('symbol')}: Price={ticker.get('lastPrice')}, Change 24h={ticker.get('priceChangePercent')}%, Volume={ticker.get('quoteVolume')}")
+            if len(all_tickers) > 5:
+                print("  ...")
+        except BinanceAPIError as e:
+            print(f"Error al obtener todos los tickers: {e} (Código: {e.status_code}, Detalles: {e.response_data})")
+
+        # Función de callback para el stream de WebSocket
+        async def handle_ticker_data(data: Dict[str, Any]):
+            symbol = data.get('s')
+            price = data.get('c')
+            print(f"WebSocket Ticker Update: {symbol} - Last Price: {price}")
+
+        print("\nSuscribiéndose al stream de ticker de BTCUSDT...")
+        await binance_adapter.subscribe_to_ticker_stream("BTCUSDT", handle_ticker_data)
+
+        # Mantener el evento loop corriendo por un tiempo para recibir actualizaciones de WebSocket
+        print("Manteniendo la conexión WebSocket abierta por 30 segundos. Presiona Ctrl+C para salir.")
+        await asyncio.sleep(30) # Esperar 30 segundos para recibir actualizaciones
 
     except BinanceAPIError as e:
         print(f"Error de Binance API: {e} (Código: {e.status_code}, Detalles: {e.response_data})")

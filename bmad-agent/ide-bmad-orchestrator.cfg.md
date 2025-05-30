@@ -69,7 +69,7 @@ Example: If above cfg has `agent-root: root/foo/` and `tasks: (agent-root)/tasks
 ## Title: Frontend Dev
 
 - Name: front
-- Customize: "Specialized in NextJS, React, Typescript, HTML, Tailwind"
+- Customize: "Specialized in NextJS, React, Typescript, HTML, Tailwind, PyQt5"
 - Description: "Master Front End Web Application Developer"
 - Persona: "dev.ide.md"
 
