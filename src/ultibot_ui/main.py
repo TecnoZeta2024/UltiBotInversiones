@@ -13,8 +13,12 @@ from ultibot_ui.windows.main_window import MainWindow
 from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 from src.ultibot_backend.services.credential_service import CredentialService
-from src.ultibot_backend.services.market_data_service import MarketDataService
-from src.ultibot_backend.services.config_service import ConfigService
+from src.ultibot_backend.services.market_data_service import MarketDataService as BackendMarketDataService # Alias para claridad
+from src.ultibot_backend.services.config_service import ConfigService as BackendConfigService # Alias para claridad
+
+# Importar UI service wrappers
+from src.ultibot_ui.services import UIMarketDataService # Importar el wrapper
+from src.ultibot_ui.services import UIConfigService # Importar el wrapper
 
 async def start_application():
     app = QApplication(sys.argv)
@@ -33,13 +37,19 @@ async def start_application():
     # En un entorno real, se podría inyectar una instancia ya conectada.
     persistence_service = SupabasePersistenceService()
     
-    credential_service = CredentialService() # CredentialService no necesita persistence_service en su constructor
+    # Inicializar servicios de backend
+    credential_service = CredentialService()
     binance_adapter = BinanceAdapter()
-    market_data_service = MarketDataService(credential_service, binance_adapter)
-    config_service = ConfigService(persistence_service)
+    # Renombrar instancias de backend para evitar confusión
+    backend_market_data_service = BackendMarketDataService(credential_service, binance_adapter)
+    backend_config_service = BackendConfigService(persistence_service)
 
-    # Crear y mostrar la ventana principal, pasando los servicios
-    main_window = MainWindow(user_id, market_data_service, config_service)
+    # Inicializar UI service wrappers, pasando los servicios de backend
+    ui_market_data_service = UIMarketDataService(backend_market_data_service=backend_market_data_service)
+    ui_config_service = UIConfigService(backend_config_service=backend_config_service)
+
+    # Crear y mostrar la ventana principal, pasando los UI service wrappers
+    main_window = MainWindow(user_id, ui_market_data_service, ui_config_service) # Actualizado aquí
     main_window.show()
 
     # qasync se encarga de ejecutar el loop de eventos de Qt y asyncio

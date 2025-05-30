@@ -11,8 +11,9 @@ from typing import List, Dict, Any, Optional, Set # Importar tipos de typing
 from datetime import datetime # Importar datetime
 from uuid import UUID # Importar UUID
 
-from src.ultibot_backend.services.market_data_service import MarketDataService
-from src.ultibot_backend.services.config_service import ConfigService
+# Updated imports for UI service wrappers
+from src.ultibot_ui.services import UIMarketDataService # Changed
+from src.ultibot_ui.services import UIConfigService # Changed
 
 class MarketDataWidget(QWidget):
     """
@@ -21,11 +22,11 @@ class MarketDataWidget(QWidget):
     """
     data_updated = pyqtSignal(dict) # Señal para notificar actualizaciones de datos
 
-    def __init__(self, user_id: UUID, market_data_service: MarketDataService, config_service: ConfigService, parent=None):
+    def __init__(self, user_id: UUID, market_data_service: UIMarketDataService, config_service: UIConfigService, parent=None): # Types updated
         super().__init__(parent)
         self.user_id = user_id
-        self.market_data_service = market_data_service
-        self.config_service = config_service
+        self.market_data_service = market_data_service # Instance of UIMarketDataService
+        self.config_service = config_service # Instance of UIConfigService
         self.market_data = {} # Almacena los datos de mercado actuales
         self.favorite_pairs = [] # Lista de pares favoritos
         self._rest_update_timer = QTimer(self)
@@ -397,7 +398,7 @@ if __name__ == '__main__':
 
     from typing import Callable # Importar Callable para el mock
 
-    class MockMarketDataService:
+    class MockUIMarketDataService: # Renamed for clarity
         async def get_market_data_rest(self, user_id: UUID, symbols: List[str]) -> Dict[str, Any]:
             print(f"Mock: Obteniendo datos REST para {symbols}")
             mock_data = {}
@@ -418,7 +419,11 @@ if __name__ == '__main__':
             print(f"Mock: Desuscribiéndose de WS para {symbol}")
             pass
 
-    class MockConfigService:
+        async def get_all_binance_symbols(self, user_id: UUID) -> List[str]:
+            print(f"Mock: Obteniendo todos los símbolos de Binance para {user_id}")
+            return ["BTCUSDT", "ETHUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT", "DOGEUSDT"]
+
+    class MockUIConfigService: # Renamed for clarity
         def __init__(self):
             self._config = {"favoritePairs": ["BTCUSDT", "ETHUSDT"]}
 
@@ -449,8 +454,8 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     
     # Crear instancias de los servicios mockeados
-    mock_market_data_service = MockMarketDataService()
-    mock_config_service = MockConfigService()
+    mock_ui_market_data_service = MockUIMarketDataService() # Updated
+    mock_ui_config_service = MockUIConfigService() # Updated
     test_user_id = UUID("00000000-0000-0000-0000-000000000001")
 
     # Ejemplo de uso del MarketDataWidget
@@ -458,7 +463,7 @@ if __name__ == '__main__':
     main_layout = QVBoxLayout()
     main_window.setLayout(main_layout)
 
-    market_data_widget = MarketDataWidget(test_user_id, mock_market_data_service, mock_config_service)
+    market_data_widget = MarketDataWidget(test_user_id, mock_ui_market_data_service, mock_ui_config_service) # Updated
     main_layout.addWidget(market_data_widget)
 
     # Iniciar la carga y suscripción de pares en una tarea de asyncio
