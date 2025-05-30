@@ -54,6 +54,7 @@ class ConfigService:
             selectedTheme='dark',
             enableTelegramNotifications=False,
             defaultPaperTradingCapital=10000.0,
+            paperTradingActive=True, # Nuevo campo por defecto
             aiAnalysisConfidenceThresholds={"paperTrading": 0.7, "realTrading": 0.8},
             favoritePairs=["BTCUSDT", "ETHUSDT", "BNBUSDT"], # Valores por defecto
             # Otros valores por defecto según sea necesario

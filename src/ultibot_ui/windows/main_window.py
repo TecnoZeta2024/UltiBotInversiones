@@ -3,11 +3,22 @@ from PyQt5.QtCore import Qt
 from uuid import UUID # Importar UUID
 
 from src.ultibot_ui.windows.dashboard_view import DashboardView
+from src.ultibot_ui.windows.settings_view import SettingsView # Importar SettingsView
+from src.ultibot_ui.widgets.sidebar_navigation_widget import SidebarNavigationWidget
+
+import logging # Importar logging
+from PyQt5.QtWidgets import QMainWindow, QStatusBar, QLabel, QWidget, QHBoxLayout, QStackedWidget, QPushButton
+from PyQt5.QtCore import Qt
+from uuid import UUID # Importar UUID
+
+from src.ultibot_ui.windows.dashboard_view import DashboardView
+from src.ultibot_ui.windows.settings_view import SettingsView # Importar SettingsView
 from src.ultibot_ui.widgets.sidebar_navigation_widget import SidebarNavigationWidget
 
 from src.ultibot_backend.services.market_data_service import MarketDataService
 from src.ultibot_backend.services.config_service import ConfigService
 from src.ultibot_backend.services.notification_service import NotificationService # Importar NotificationService
+from src.shared.data_types import UserConfiguration # Importar UserConfiguration
 
 class MainWindow(QMainWindow):
     def __init__(self, user_id: UUID, market_data_service: MarketDataService, config_service: ConfigService, notification_service: NotificationService, parent=None): # Añadir notification_service
@@ -22,15 +33,51 @@ class MainWindow(QMainWindow):
 
         self._create_status_bar()
         self._setup_central_widget()
+        # Conectar la señal de cambio de configuración de SettingsView
+        self.settings_view.config_changed.connect(self._update_paper_trading_status_display)
+        # Cargar el estado inicial del paper trading al iniciar la ventana
+        import asyncio
+        asyncio.create_task(self._load_initial_paper_trading_status())
 
     def _create_status_bar(self):
         self.statusBar = QStatusBar()
         self.setStatusBar(self.statusBar)
+        
+        # Etiqueta para el estado de conexión general
+        self.connection_status_label = QLabel("Estado de Conexión: Desconectado")
+        self.statusBar.addPermanentWidget(self.connection_status_label)
+
+        # Etiqueta para el modo Paper Trading
+        self.paper_trading_status_label = QLabel("Modo: Real")
+        self.paper_trading_status_label.setStyleSheet("font-weight: bold; color: green;") # Estilo inicial
+        self.statusBar.addPermanentWidget(self.paper_trading_status_label)
+
         self.statusBar.showMessage("Listo")
 
-        # Ejemplo de cómo añadir un widget a la barra de estado
-        self.status_label = QLabel("Estado de Conexión: Desconectado")
-        self.statusBar.addPermanentWidget(self.status_label)
+    async def _load_initial_paper_trading_status(self):
+        """Carga el estado inicial del modo Paper Trading y actualiza la UI."""
+        try:
+            user_config = await self.config_service.load_user_configuration(self.user_id)
+            self._update_paper_trading_status_label(user_config.paperTradingActive or False)
+        except Exception as e:
+            self.paper_trading_status_label.setText("Modo: Error")
+            self.paper_trading_status_label.setStyleSheet("font-weight: bold; color: red;")
+            self.statusBar.showMessage(f"Error al cargar modo: {e}")
+            logging.error(f"Error al cargar el estado inicial del Paper Trading: {e}", exc_info=True)
+
+    def _update_paper_trading_status_display(self, config: UserConfiguration):
+        """Actualiza la visualización del modo Paper Trading en la barra de estado."""
+        self._update_paper_trading_status_label(config.paperTradingActive or False)
+        self.statusBar.showMessage("Configuración de Paper Trading actualizada.")
+
+    def _update_paper_trading_status_label(self, is_paper_trading_active: bool):
+        """Actualiza el texto y estilo de la etiqueta del modo Paper Trading."""
+        if is_paper_trading_active:
+            self.paper_trading_status_label.setText("Modo: PAPER TRADING")
+            self.paper_trading_status_label.setStyleSheet("font-weight: bold; color: orange;")
+        else:
+            self.paper_trading_status_label.setText("Modo: Real")
+            self.paper_trading_status_label.setStyleSheet("font-weight: bold; color: green;")
 
     def _setup_central_widget(self):
         central_widget = QWidget()
@@ -66,8 +113,7 @@ class MainWindow(QMainWindow):
         self.history_view.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.stacked_widget.addWidget(self.history_view) # Índice 3
 
-        self.settings_view = QLabel("Vista de Configuración (Placeholder)")
-        self.settings_view.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.settings_view = SettingsView(str(self.user_id), self.config_service) # Instanciar SettingsView, convertir UUID a str
         self.stacked_widget.addWidget(self.settings_view) # Índice 4
 
         # Mapeo de nombres a índices del stacked widget
