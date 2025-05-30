@@ -3,6 +3,8 @@ import qdarkstyle
 import asyncio
 from PyQt5.QtWidgets import QApplication
 from uuid import UUID
+from qasync.qt import QEventLoopPolicy # Importar QEventLoopPolicy de qasync.qt
+from qasync import run # Importar run de qasync
 
 # Importar la MainWindow
 from ultibot_ui.windows.main_window import MainWindow
@@ -40,9 +42,13 @@ async def start_application():
     main_window = MainWindow(user_id, market_data_service, config_service)
     main_window.show()
 
-    # Ejecutar el loop de eventos de Qt
-    sys.exit(app.exec_())
+    # qasync se encarga de ejecutar el loop de eventos de Qt y asyncio
+    # No es necesario sys.exit(app.exec_()) aquí, qasync.run lo maneja.
+    # El retorno de run() es el resultado de la corrutina, que en este caso no se usa.
+    return app.exec_() # Retornar el código de salida de la aplicación Qt
 
 if __name__ == "__main__":
-    # Ejecutar la aplicación asíncrona
-    asyncio.run(start_application())
+    # Establecer la política del bucle de eventos de asyncio a QEventLoopPolicy
+    asyncio.set_event_loop_policy(QEventLoopPolicy())
+    # Ejecutar la aplicación asíncrona con qasync
+    run(start_application())

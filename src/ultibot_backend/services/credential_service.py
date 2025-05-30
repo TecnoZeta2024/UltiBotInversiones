@@ -4,6 +4,7 @@ import base64
 from typing import Optional, Dict, Any
 from cryptography.fernet import Fernet, InvalidToken
 from uuid import UUID
+from dotenv import load_dotenv # Importar load_dotenv
 
 from src.shared.data_types import APICredential, ServiceName, BinanceConnectionStatus, AssetBalance
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
@@ -14,22 +15,25 @@ import logging # Importar logging
 
 logger = logging.getLogger(__name__) # Configurar logger
 
+# Cargar variables de entorno desde .env al inicio del módulo
+load_dotenv()
+
 class CredentialService:
     def __init__(self, encryption_key: Optional[str] = None):
         """
         Inicializa CredentialService.
         :param encryption_key: Clave de encriptación Fernet URL-safe base64-encoded.
-                               Si es None o inválida, se generará una clave de prueba.
+                               Si es None, se intentará obtener de las variables de entorno.
         """
-        logger.info(f"CredentialService __init__ recibió encryption_key (str): {encryption_key}")
-        # encryption_key aquí es la cadena base64url. Fernet() la manejará.
-        # Solo necesitamos asegurarnos de que sea una cadena y no None.
+        # Si no se proporciona una clave, intentar obtenerla de las variables de entorno
+        if encryption_key is None:
+            encryption_key = os.getenv("CREDENTIAL_ENCRYPTION_KEY")
+            logger.info(f"CredentialService __init__ obtuvo encryption_key de ENV: {encryption_key}")
+
         if not isinstance(encryption_key, str) or not encryption_key:
             logger.error("CREDENTIAL_ENCRYPTION_KEY debe ser una cadena no vacía.")
             raise ValueError("CREDENTIAL_ENCRYPTION_KEY inválida en __init__.")
         
-        # Pasamos la clave (string) directamente a Fernet, que espera bytes o string.
-        # Si es string, Fernet la codificará a ascii y luego la decodificará de base64.
         logger.info(f"Pasando la siguiente clave (str) a Fernet: {encryption_key}")
         self.fernet = Fernet(encryption_key.encode('utf-8')) # Fernet espera bytes
         self.persistence_service = SupabasePersistenceService()
@@ -40,26 +44,24 @@ class CredentialService:
 
     def _get_encryption_key(self, provided_key: Optional[str]) -> bytes:
         """
-        Valida la clave de encriptación proporcionada o genera una si es necesario.
+        Valida la clave de encriptación proporcionada.
+        Este método ya no genera una clave, solo valida.
         """
         if provided_key:
             try:
-                # Asegurarse de que la clave proporcionada (string) se codifique a bytes antes de decodificarla con base64
                 key_bytes = provided_key.encode('utf-8')
                 decoded_key = base64.urlsafe_b64decode(key_bytes)
                 if len(decoded_key) == 32:
                     logger.info("Usando clave de encriptación proporcionada.")
                     return decoded_key
                 else:
-                    # Si la longitud no es 32 después de la decodificación, es un error.
                     logger.error(f"La clave de encriptación decodificada no tiene 32 bytes de longitud: {len(decoded_key)} bytes. Clave original: {provided_key}")
                     raise ValueError("La clave de encriptación Fernet debe ser de 32 bytes después de la decodificación base64.")
             except Exception as e:
                 logger.error(f"Error al procesar la clave de encriptación proporcionada '{provided_key}': {e}. Esto es un error crítico.")
-                # Levantar una excepción para detener la inicialización si la clave es mala.
                 raise ValueError(f"La clave de encriptación proporcionada no es válida: {e}")
         else:
-            # Si no se proporciona ninguna clave, esto es un error de configuración.
+            # Este caso ya debería ser manejado por el constructor, pero se mantiene para robustez.
             logger.error("No se proporcionó CREDENTIAL_ENCRYPTION_KEY. Este es un valor requerido.")
             raise ValueError("CREDENTIAL_ENCRYPTION_KEY no puede ser None.")
 

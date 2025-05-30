@@ -48,7 +48,7 @@ class MarketDataWidget(QWidget):
         self.table_widget = QTableWidget()
         self.table_widget.setColumnCount(4)
         self.table_widget.setHorizontalHeaderLabels(["Símbolo", "Precio Actual", "Cambio 24h (%)", "Volumen 24h"])
-        self.table_widget.horizontalHeader().setSectionResizeMode(QHeaderView.SectionResizeMode.Stretch)
+        self.table_widget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table_widget.verticalHeader().setVisible(False) # No hay un enum para esto, es un booleano
         self.table_widget.setEditTriggers(QTableWidget.NoEditTriggers) # Hacer la tabla de solo lectura
         self.table_widget.setStyleSheet("""
