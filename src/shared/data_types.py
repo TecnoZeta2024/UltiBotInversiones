@@ -70,4 +70,21 @@ class TelegramConnectionStatus(BaseModel):
     status_message: str = Field(..., description="Mensaje descriptivo del estado de la conexión (éxito o error).")
     status_code: Optional[str] = Field(None, description="Código de error si la conexión falló.")
 
-# La función add_numbers no es relevante para los tipos de datos compartidos, la eliminaré.
+class BinanceConnectionStatus(BaseModel):
+    """
+    Representa el estado actual de la conexión con Binance.
+    """
+    is_connected: bool = Field(..., description="True si la conexión con Binance está activa y verificada.")
+    last_verified_at: Optional[datetime] = Field(None, description="Marca de tiempo de la última verificación exitosa.")
+    status_message: str = Field(..., description="Mensaje descriptivo del estado de la conexión (éxito o error).")
+    status_code: Optional[str] = Field(None, description="Código de error si la conexión falló.")
+    account_permissions: Optional[List[str]] = Field(None, description="Lista de permisos de la API Key de Binance (ej. 'SPOT_TRADING', 'MARGIN_TRADING').")
+
+class AssetBalance(BaseModel):
+    """
+    Representa el balance de un activo específico en una cuenta.
+    """
+    asset: str = Field(..., description="Símbolo del activo (ej. 'USDT', 'BTC').")
+    free: float = Field(..., description="Cantidad disponible para trading.")
+    locked: float = Field(..., description="Cantidad bloqueada en órdenes.")
+    total: float = Field(..., description="Cantidad total (free + locked).")

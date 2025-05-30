@@ -5,37 +5,63 @@ from typing import Optional, Dict, Any
 from cryptography.fernet import Fernet, InvalidToken
 from uuid import UUID
 
-from src.shared.data_types import APICredential, ServiceName
+from src.shared.data_types import APICredential, ServiceName, BinanceConnectionStatus, AssetBalance
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter # Importar BinanceAdapter
+from src.ultibot_backend.core.exceptions import BinanceAPIError, CredentialError, ExternalAPIError # Importar excepciones relevantes
 from datetime import datetime
-# Importar adaptadores de API (placeholders por ahora)
-# from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
-# from src.ultibot_backend.adapters.telegram_adapter import TelegramAdapter
-# from src.ultibot_backend.adapters.gemini_adapter import GeminiAdapter
-# from src.ultibot_backend.adapters.mobula_adapter import MobulaAdapter
+import logging # Importar logging
+
+logger = logging.getLogger(__name__) # Configurar logger
 
 class CredentialService:
-    def __init__(self):
-        self._encryption_key = self._get_encryption_key()
-        self.fernet = Fernet(self._encryption_key)
+    def __init__(self, encryption_key: Optional[str] = None):
+        """
+        Inicializa CredentialService.
+        :param encryption_key: Clave de encriptación Fernet URL-safe base64-encoded.
+                               Si es None o inválida, se generará una clave de prueba.
+        """
+        logger.info(f"CredentialService __init__ recibió encryption_key (str): {encryption_key}")
+        # encryption_key aquí es la cadena base64url. Fernet() la manejará.
+        # Solo necesitamos asegurarnos de que sea una cadena y no None.
+        if not isinstance(encryption_key, str) or not encryption_key:
+            logger.error("CREDENTIAL_ENCRYPTION_KEY debe ser una cadena no vacía.")
+            raise ValueError("CREDENTIAL_ENCRYPTION_KEY inválida en __init__.")
+        
+        # Pasamos la clave (string) directamente a Fernet, que espera bytes o string.
+        # Si es string, Fernet la codificará a ascii y luego la decodificará de base64.
+        logger.info(f"Pasando la siguiente clave (str) a Fernet: {encryption_key}")
+        self.fernet = Fernet(encryption_key.encode('utf-8')) # Fernet espera bytes
         self.persistence_service = SupabasePersistenceService()
-        # self.binance_adapter = BinanceAdapter() # Inicializar adaptadores
+        self.binance_adapter = BinanceAdapter()
         # self.telegram_adapter = TelegramAdapter()
         # self.gemini_adapter = GeminiAdapter()
         # self.mobula_adapter = MobulaAdapter()
 
-    def _get_encryption_key(self) -> bytes:
+    def _get_encryption_key(self, provided_key: Optional[str]) -> bytes:
         """
-        Carga la clave de encriptación desde las variables de entorno.
-        La clave debe ser una clave Fernet URL-safe base64-encoded.
+        Valida la clave de encriptación proporcionada o genera una si es necesario.
         """
-        key = os.getenv("CREDENTIAL_ENCRYPTION_KEY")
-        if not key:
-            raise ValueError("CREDENTIAL_ENCRYPTION_KEY no está configurada en las variables de entorno.")
-        try:
-            return base64.urlsafe_b64decode(key)
-        except Exception as e:
-            raise ValueError(f"La clave de encriptación no es una clave Fernet válida: {e}")
+        if provided_key:
+            try:
+                # Asegurarse de que la clave proporcionada (string) se codifique a bytes antes de decodificarla con base64
+                key_bytes = provided_key.encode('utf-8')
+                decoded_key = base64.urlsafe_b64decode(key_bytes)
+                if len(decoded_key) == 32:
+                    logger.info("Usando clave de encriptación proporcionada.")
+                    return decoded_key
+                else:
+                    # Si la longitud no es 32 después de la decodificación, es un error.
+                    logger.error(f"La clave de encriptación decodificada no tiene 32 bytes de longitud: {len(decoded_key)} bytes. Clave original: {provided_key}")
+                    raise ValueError("La clave de encriptación Fernet debe ser de 32 bytes después de la decodificación base64.")
+            except Exception as e:
+                logger.error(f"Error al procesar la clave de encriptación proporcionada '{provided_key}': {e}. Esto es un error crítico.")
+                # Levantar una excepción para detener la inicialización si la clave es mala.
+                raise ValueError(f"La clave de encriptación proporcionada no es válida: {e}")
+        else:
+            # Si no se proporciona ninguna clave, esto es un error de configuración.
+            logger.error("No se proporcionó CREDENTIAL_ENCRYPTION_KEY. Este es un valor requerido.")
+            raise ValueError("CREDENTIAL_ENCRYPTION_KEY no puede ser None.")
 
     def encrypt_data(self, data: str) -> str:
         """
@@ -86,7 +112,12 @@ class CredentialService:
         encrypted_credential = await self.persistence_service.get_credential_by_service_label(user_id, service_name, credential_label)
         if encrypted_credential:
             decrypted_api_key = self.decrypt_data(encrypted_credential.encrypted_api_key)
+            if decrypted_api_key is None:
+                raise CredentialError(f"API Key para {encrypted_credential.service_name} no pudo ser desencriptada.")
+
             decrypted_api_secret = self.decrypt_data(encrypted_credential.encrypted_api_secret) if encrypted_credential.encrypted_api_secret else None
+            if encrypted_credential.encrypted_api_secret and decrypted_api_secret is None:
+                raise CredentialError(f"API Secret para {encrypted_credential.service_name} no pudo ser desencriptado.")
             
             decrypted_other_details_str = self.decrypt_data(encrypted_credential.encrypted_other_details) if encrypted_credential.encrypted_other_details else None
             decrypted_other_details = json.loads(decrypted_other_details_str) if decrypted_other_details_str else None
@@ -98,7 +129,7 @@ class CredentialService:
                 user_id=encrypted_credential.user_id,
                 service_name=encrypted_credential.service_name,
                 credential_label=encrypted_credential.credential_label,
-                encrypted_api_key=decrypted_api_key if decrypted_api_key is not None else "", # Asignar cadena vacía si desencriptación falla
+                encrypted_api_key=decrypted_api_key,
                 encrypted_api_secret=decrypted_api_secret,
                 encrypted_other_details=json.dumps(decrypted_other_details) if decrypted_other_details else None,
                 status=encrypted_credential.status,
@@ -179,52 +210,81 @@ class CredentialService:
         """
         is_valid = False
         decrypted_api_key = self.decrypt_data(credential.encrypted_api_key)
-        decrypted_api_secret = self.decrypt_data(credential.encrypted_api_secret) if credential.encrypted_api_secret else None
+        if decrypted_api_key is None:
+            logger.error(f"Error de verificación para {credential.service_name}: API Key no pudo ser desencriptada.")
+            await self.persistence_service.update_credential_status(credential.id, "verification_failed", datetime.utcnow())
+            raise CredentialError(f"API Key para {credential.service_name} no pudo ser desencriptada.")
+
+        decrypted_api_secret = None
+        if credential.encrypted_api_secret:
+            decrypted_api_secret = self.decrypt_data(credential.encrypted_api_secret)
+            if decrypted_api_secret is None:
+                logger.error(f"Error de verificación para {credential.service_name}: API Secret no pudo ser desencriptado.")
+                await self.persistence_service.update_credential_status(credential.id, "verification_failed", datetime.utcnow())
+                raise CredentialError(f"API Secret para {credential.service_name} no pudo ser desencriptado.")
+
         decrypted_other_details_str = self.decrypt_data(credential.encrypted_other_details) if credential.encrypted_other_details else None
         decrypted_other_details = json.loads(decrypted_other_details_str) if decrypted_other_details_str else {}
-
-        if not decrypted_api_key:
-            print(f"Error de verificación para {credential.service_name}: API Key no pudo ser desencriptada.")
-            await self.persistence_service.update_credential_status(credential.id, "verification_failed", datetime.utcnow())
-            return False
 
         try:
             if credential.service_name == ServiceName.TELEGRAM_BOT:
                 if notification_service:
-                    # Usar NotificationService para la verificación real de Telegram
                     is_valid = await notification_service.send_test_telegram_notification(credential.user_id)
-                    # El NotificationService ya actualiza el estado de la credencial
-                    # Basamos el estado de la credencial en el resultado del envío del mensaje de prueba
                     if is_valid:
-                        print(f"Verificación de Telegram exitosa para el usuario {credential.user_id}.")
+                        logger.info(f"Verificación de Telegram exitosa para el usuario {credential.user_id}.")
                     else:
-                        print(f"Verificación de Telegram fallida para el usuario {credential.user_id}.")
+                        logger.warning(f"Verificación de Telegram fallida para el usuario {credential.user_id}.")
                 else:
-                    print(f"NotificationService no proporcionado para verificar Telegram. Simulación.")
-                    is_valid = True # Simulación si no hay NotificationService
-            elif credential.service_name == ServiceName.BINANCE_SPOT or credential.service_name == ServiceName.BINANCE_FUTURES:
-                # Placeholder para la verificación de Binance
-                print(f"Simulando verificación para Binance {credential.service_name}...")
-                is_valid = True # Simulación
+                    logger.warning(f"NotificationService no proporcionado para verificar Telegram. No se puede verificar.")
+                    is_valid = False # No se puede verificar sin NotificationService
+            elif credential.service_name in [ServiceName.BINANCE_SPOT, ServiceName.BINANCE_FUTURES]:
+                if decrypted_api_secret is None:
+                    logger.error(f"Error de verificación para Binance: API Secret no pudo ser desencriptado o es nulo.")
+                    await self.persistence_service.update_credential_status(credential.id, "verification_failed", datetime.utcnow())
+                    raise CredentialError(f"API Secret para Binance no pudo ser desencriptado o es nulo.")
+                
+                try:
+                    # Intentar obtener información de la cuenta para verificar la validez de las credenciales
+                    account_info = await self.binance_adapter.get_account_info(decrypted_api_key, decrypted_api_secret)
+                    # Verificar si la cuenta tiene permisos de trading si es necesario (AC5)
+                    can_trade = account_info.get("canTrade", False)
+                    # Aquí se podría añadir lógica para verificar permisos específicos si la AC lo requiere
+                    
+                    is_valid = True
+                    logger.info(f"Verificación de Binance {credential.service_name} exitosa para el usuario {credential.user_id}.")
+                    # Actualizar permisos si se obtienen de la API
+                    permissions = []
+                    if account_info.get("canTrade"): permissions.append("SPOT_TRADING")
+                    if account_info.get("canDeposit"): permissions.append("DEPOSIT")
+                    if account_info.get("canWithdraw"): permissions.append("WITHDRAWAL")
+                    # Otros permisos relevantes de Binance
+                    await self.persistence_service.update_credential_permissions(credential.id, permissions, datetime.utcnow())
+
+                except BinanceAPIError as e:
+                    logger.error(f"Error de Binance API durante la verificación: {e}")
+                    is_valid = False
+                    # El estado ya se actualiza en el bloque finally
+                except Exception as e:
+                    logger.error(f"Error inesperado durante la verificación de Binance: {e}")
+                    is_valid = False
             elif credential.service_name == ServiceName.GEMINI_API:
-                # Placeholder para la verificación de Gemini
-                print(f"Simulando verificación para Gemini {credential.service_name}...")
+                logger.info(f"Simulando verificación para Gemini {credential.service_name}...")
                 is_valid = True # Simulación
             elif credential.service_name == ServiceName.MOBULA_API:
-                # Placeholder para la verificación de Mobula
-                print(f"Simulando verificación para Mobula {credential.service_name}...")
+                logger.info(f"Simulando verificación para Mobula {credential.service_name}...")
                 is_valid = True # Simulación
             else:
-                print(f"No hay lógica de verificación implementada para el servicio: {credential.service_name}. Asumiendo válido.")
+                logger.info(f"No hay lógica de verificación implementada para el servicio: {credential.service_name}. Asumiendo válido.")
                 is_valid = True # Asumir válido si no hay lógica específica
 
+        except CredentialError: # Propagar errores de desencriptación
+            raise
         except Exception as e:
-            print(f"Error durante la verificación de {credential.service_name}: {e}")
+            logger.error(f"Error general durante la verificación de {credential.service_name}: {e}", exc_info=True)
             is_valid = False
         
-        # Solo actualizamos el estado aquí si no fue manejado por NotificationService (ej. para otros servicios)
-        if credential.service_name != ServiceName.TELEGRAM_BOT:
-            new_status = "active" if is_valid else "verification_failed"
-            await self.persistence_service.update_credential_status(credential.id, new_status, datetime.utcnow())
+        # Actualizar el estado de la credencial en la base de datos
+        new_status = "active" if is_valid else "verification_failed"
+        await self.persistence_service.update_credential_status(credential.id, new_status, datetime.utcnow())
         
         return is_valid

@@ -30,3 +30,8 @@ class ExternalAPIError(UltiBotError):
         self.status_code = status_code
         self.response_data = response_data
         self.original_exception = original_exception
+
+class BinanceAPIError(ExternalAPIError):
+    """Excepción específica para errores al interactuar con la API de Binance."""
+    def __init__(self, message: str, status_code: Optional[int] = None, response_data: Optional[Dict[str, Any]] = None, original_exception: Optional[Exception] = None):
+        super().__init__(message, service_name="BINANCE", status_code=status_code, response_data=response_data, original_exception=original_exception)
