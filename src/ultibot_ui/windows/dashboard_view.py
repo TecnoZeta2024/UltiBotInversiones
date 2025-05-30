@@ -4,9 +4,11 @@ from uuid import UUID # Importar UUID
 import asyncio # Importar asyncio para iniciar tareas asíncronas
 
 from src.ultibot_ui.widgets.market_data_widget import MarketDataWidget
-from src.ultibot_ui.widgets.chart_widget import ChartWidget # Importar ChartWidget
+from src.ultibot_ui.widgets.chart_widget import ChartWidget
+from src.ultibot_ui.widgets.portfolio_widget import PortfolioWidget # Importar PortfolioWidget
 from src.ultibot_backend.services.market_data_service import MarketDataService
 from src.ultibot_backend.services.config_service import ConfigService
+from src.ultibot_backend.services.portfolio_service import PortfolioService # Importar PortfolioService
 
 class DashboardView(QWidget):
     def __init__(self, user_id: UUID, market_data_service: MarketDataService, config_service: ConfigService):
@@ -14,7 +16,14 @@ class DashboardView(QWidget):
         self.user_id = user_id
         self.market_data_service = market_data_service
         self.config_service = config_service
+        
+        # Inicializar PortfolioService aquí, ya que DashboardView tiene sus dependencias
+        self.portfolio_service = PortfolioService(self.market_data_service, self.config_service)
+        
         self._setup_ui()
+        
+        # Iniciar la inicialización del portafolio de paper trading
+        asyncio.create_task(self.portfolio_service.initialize_portfolio(self.user_id))
 
     def _setup_ui(self):
         main_layout = QVBoxLayout(self)
@@ -29,18 +38,19 @@ class DashboardView(QWidget):
         asyncio.create_task(self.market_data_widget.load_and_subscribe_pairs())
 
         # Zona Central (con QSplitter horizontal)
-        center_splitter = QSplitter(Qt.Orientation.Horizontal) # Usar Qt.Orientation
+        center_splitter = QSplitter(Qt.Orientation.Horizontal)
         center_splitter.setContentsMargins(0, 0, 0, 0)
         center_splitter.setChildrenCollapsible(False)
 
-        # Panel Izquierdo (Placeholder para Estado del Portafolio)
-        portfolio_area = QLabel("Panel Izquierdo: Estado del Portafolio")
-        portfolio_area.setAlignment(Qt.AlignmentFlag.AlignCenter) # Usar Qt.AlignmentFlag
-        portfolio_area.setStyleSheet("background-color: #1E1E1E; padding: 10px;")
-        center_splitter.addWidget(portfolio_area)
+        # Panel Izquierdo: Estado del Portafolio (PortfolioWidget)
+        self.portfolio_widget = PortfolioWidget(self.user_id, self.portfolio_service)
+        center_splitter.addWidget(self.portfolio_widget)
+        
+        # Iniciar las actualizaciones del portfolio_widget
+        self.portfolio_widget.start_updates()
 
         # Panel Derecho (Gráficos Financieros - ChartWidget)
-        self.chart_widget = ChartWidget(self.user_id, self.market_data_service) # Pasar market_data_service
+        self.chart_widget = ChartWidget(self.user_id, self.market_data_service)
         center_splitter.addWidget(self.chart_widget)
 
         # Conectar señales del ChartWidget para solicitar datos al backend

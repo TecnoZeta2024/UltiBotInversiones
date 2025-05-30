@@ -89,6 +89,36 @@ class AssetBalance(BaseModel):
     locked: float = Field(..., description="Cantidad bloqueada en órdenes.")
     total: float = Field(..., description="Cantidad total (free + locked).")
 
+class PortfolioAsset(BaseModel):
+    """
+    Representa un activo específico poseído en un portafolio (real o paper).
+    """
+    symbol: str = Field(..., description="Símbolo del activo (ej. 'BTC', 'ETH').")
+    quantity: float = Field(..., description="Cantidad del activo poseído.")
+    entry_price: Optional[float] = Field(None, description="Precio promedio de entrada del activo.")
+    current_price: Optional[float] = Field(None, description="Precio actual de mercado del activo.")
+    current_value_usd: Optional[float] = Field(None, description="Valor actual del activo en USD.")
+    unrealized_pnl_usd: Optional[float] = Field(None, description="Ganancia/Pérdida no realizada en USD.")
+    unrealized_pnl_percentage: Optional[float] = Field(None, description="Ganancia/Pérdida no realizada en porcentaje.")
+
+class PortfolioSummary(BaseModel):
+    """
+    Representa un resumen del portafolio para un modo específico (paper o real).
+    """
+    available_balance_usdt: float = Field(..., description="Saldo disponible en USDT.")
+    total_assets_value_usd: float = Field(..., description="Valor total de los activos poseídos en USD.")
+    total_portfolio_value_usd: float = Field(..., description="Valor total del portafolio (saldo + valor de activos) en USD.")
+    assets: List[PortfolioAsset] = Field(default_factory=list, description="Lista de activos poseídos.")
+    error_message: Optional[str] = Field(None, description="Mensaje de error si hubo un problema al obtener el resumen.")
+
+class PortfolioSnapshot(BaseModel):
+    """
+    Contiene el resumen del portafolio para paper trading y real.
+    """
+    paper_trading: PortfolioSummary = Field(..., description="Resumen del portafolio de Paper Trading.")
+    real_trading: PortfolioSummary = Field(..., description="Resumen del portafolio Real.")
+    last_updated: datetime = Field(default_factory=datetime.utcnow, description="Marca de tiempo de la última actualización.")
+
 # Sub-modelos para UserConfiguration
 class NotificationPreference(BaseModel):
     eventType: str
