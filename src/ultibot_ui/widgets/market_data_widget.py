@@ -1,483 +1,371 @@
-import sys
 import asyncio
-from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget,
-    QTableWidgetItem, QHeaderView, QApplication, QLineEdit, QPushButton, QDialog,
-    QDialogButtonBox, QCompleter
+from typing import List, Dict, Optional, Any
+from uuid import UUID
+
+from PySide6.QtCore import Qt, Signal, QTimer
+from PySide6.QtWidgets import (
+    QWidget, QVBoxLayout, QTableWidget, QTableWidgetItem,
+    QPushButton, QHBoxLayout, QHeaderView, QDialog, QListWidget,
+    QDialogButtonBox, QLabel, QLineEdit, QMessageBox
 )
-from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QObject
-from PyQt5.QtGui import QColor, QFont
-from typing import List, Dict, Any, Optional, Set # Importar tipos de typing
-from datetime import datetime # Importar datetime
-from uuid import UUID # Importar UUID
 
-# Updated imports for UI service wrappers
-from src.ultibot_ui.services import UIMarketDataService # Changed
-from src.ultibot_ui.services import UIConfigService # Changed
+from src.ultibot_ui.services.ui_market_data_service import UIMarketDataService
+from src.ultibot_ui.services.ui_config_service import UIConfigService
+# Pydantic models typically not directly used in widget, data flows through services
+# from src.ultibot_ui.models import MarketData # Example if needed
 
-class MarketDataWidget(QWidget):
-    """
-    Widget para la visualización de datos de mercado en tiempo real.
-    Muestra una tabla con pares de criptomonedas, precio actual, cambio 24h y volumen 24h.
-    """
-    data_updated = pyqtSignal(dict) # Señal para notificar actualizaciones de datos
-
-    def __init__(self, user_id: UUID, market_data_service: UIMarketDataService, config_service: UIConfigService, parent=None): # Types updated
-        super().__init__(parent)
-        self.user_id = user_id
-        self.market_data_service = market_data_service # Instance of UIMarketDataService
-        self.config_service = config_service # Instance of UIConfigService
-        self.market_data = {} # Almacena los datos de mercado actuales
-        self.favorite_pairs = [] # Lista de pares favoritos
-        self._rest_update_timer = QTimer(self)
-        self._websocket_tasks: Set[str] = set() # Para mantener un registro de los símbolos suscritos
-        self.init_ui()
-        self.load_and_subscribe_pairs()
-
-    def init_ui(self):
-        main_layout = QVBoxLayout()
-        self.setLayout(main_layout)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(5)
-
-        # Título del widget
-        title_label = QLabel("Resumen de Datos de Mercado")
-        title_label.setStyleSheet("font-size: 18px; font-weight: bold; margin-bottom: 10px;")
-        main_layout.addWidget(title_label)
-
-        # Tabla para mostrar los datos de mercado
-        self.table_widget = QTableWidget()
-        self.table_widget.setColumnCount(4)
-        self.table_widget.setHorizontalHeaderLabels(["Símbolo", "Precio Actual", "Cambio 24h (%)", "Volumen 24h"])
-        self.table_widget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.table_widget.verticalHeader().setVisible(False) # No hay un enum para esto, es un booleano
-        self.table_widget.setEditTriggers(QTableWidget.NoEditTriggers) # Hacer la tabla de solo lectura
-        self.table_widget.setStyleSheet("""
-            QTableWidget {
-                background-color: #2b2b2b;
-                color: #f0f0f0;
-                border: 1px solid #444;
-                gridline-color: #444;
-            }
-            QHeaderView::section {
-                background-color: #3c3c3c;
-                color: #f0f0f0;
-                padding: 5px;
-                border: 1px solid #444;
-            }
-            QTableWidget::item {
-                padding: 5px;
-            }
-        """)
-        main_layout.addWidget(self.table_widget)
-
-        # Botón para configurar pares favoritos (AC1)
-        self.configure_button = QPushButton("Configurar Pares Favoritos")
-        self.configure_button.setStyleSheet("""
-            QPushButton {
-                background-color: #007bff;
-                color: white;
-                border: none;
-                padding: 8px 15px;
-                border-radius: 5px;
-            }
-            QPushButton:hover {
-                background-color: #0056b3;
-            }
-        """)
-        self.configure_button.clicked.connect(self.open_pair_configuration_dialog)
-        main_layout.addWidget(self.configure_button, alignment=Qt.AlignRight)
-
-        self.data_updated.connect(self.update_table)
-
-    def set_favorite_pairs(self, pairs: List[str]):
-        """Establece la lista de pares favoritos y actualiza la tabla."""
-        self.favorite_pairs = pairs
-        self.update_table_structure()
-
-    def update_table_structure(self):
-        """Actualiza la estructura de la tabla basada en los pares favoritos."""
-        self.table_widget.setRowCount(len(self.favorite_pairs))
-        for row, pair in enumerate(self.favorite_pairs):
-            symbol_item = QTableWidgetItem(pair)
-            symbol_item.setTextAlignment(Qt.AlignCenter)
-            self.table_widget.setItem(row, 0, symbol_item)
-            # Inicializar las otras celdas con N/A o --
-            for col in range(1, 4):
-                item = QTableWidgetItem("N/A")
-                item.setTextAlignment(Qt.AlignCenter)
-                self.table_widget.setItem(row, col, item)
-
-    def update_table(self, new_data: Dict[str, Dict[str, Any]]):
-        """
-        Actualiza la tabla con los nuevos datos de mercado.
-        new_data: {'SYMBOL': {'lastPrice': X, 'priceChangePercent': Y, 'quoteVolume': Z, 'error': '...'}}
-        """
-        for row, pair in enumerate(self.favorite_pairs):
-            data = new_data.get(pair)
-            if data:
-                if "error" in data:
-                    for col in range(1, 4):
-                        item = QTableWidgetItem("Error")
-                        item.setTextAlignment(Qt.AlignCenter)
-                        item.setForeground(QColor("#dc3545")) # Rojo para errores
-                        self.table_widget.setItem(row, col, item)
-                else:
-                    # Precio Actual
-                    price_item = QTableWidgetItem(f"{data['lastPrice']:.8f}")
-                    price_item.setTextAlignment(Qt.AlignCenter)
-                    self.table_widget.setItem(row, 1, price_item)
-
-                    # Cambio 24h
-                    change_percent = data['priceChangePercent']
-                    change_item = QTableWidgetItem(f"{change_percent:.2f}%")
-                    change_item.setTextAlignment(Qt.AlignCenter)
-                    if change_percent > 0:
-                        change_item.setForeground(QColor("#28a745")) # Verde
-                    elif change_percent < 0:
-                        change_item.setForeground(QColor("#dc3545")) # Rojo
-                    else:
-                        change_item.setForeground(QColor("#f0f0f0")) # Blanco/gris
-                    self.table_widget.setItem(row, 2, change_item)
-
-                    # Volumen 24h
-                    volume_item = QTableWidgetItem(f"{data['quoteVolume']:.2f}")
-                    volume_item.setTextAlignment(Qt.AlignCenter)
-                    self.table_widget.setItem(row, 3, volume_item)
-            else:
-                # Si no hay datos para un par, mostrar N/A
-                for col in range(1, 4):
-                    item = QTableWidgetItem("N/A")
-                    item.setTextAlignment(Qt.AlignCenter)
-                    self.table_widget.setItem(row, col, item)
-
-    async def load_and_subscribe_pairs(self):
-        """Carga los pares favoritos del usuario y suscribe a los streams de datos."""
-        try:
-            user_config = await self.config_service.load_user_configuration(self.user_id)
-            if user_config.favoritePairs:
-                self.set_favorite_pairs(user_config.favoritePairs)
-            else:
-                self.set_favorite_pairs([]) # Asegurarse de que la lista esté vacía si no hay favoritos
-
-            # Iniciar la actualización REST periódica
-            self._rest_update_timer.timeout.connect(lambda: asyncio.create_task(self._fetch_rest_data()))
-            self._rest_update_timer.start(10000) # Actualizar cada 10 segundos (configurable)
-            await self._fetch_rest_data() # Primera carga inmediata
-
-            # Suscribirse a WebSockets para los pares favoritos
-            await self._subscribe_to_websockets()
-
-        except Exception as e:
-            print(f"Error al cargar y suscribir pares favoritos: {e}")
-            # Manejar el error en la UI, quizás mostrando un mensaje
-
-    async def _fetch_rest_data(self):
-        """Obtiene datos de mercado vía REST API para los pares favoritos."""
-        if not self.favorite_pairs:
-            return
-
-        try:
-            rest_data = await self.market_data_service.get_market_data_rest(self.user_id, self.favorite_pairs)
-            # Fusionar los datos REST con los datos existentes (que pueden incluir actualizaciones de WS)
-            for symbol, data in rest_data.items():
-                self.market_data[symbol] = {**self.market_data.get(symbol, {}), **data}
-            self.data_updated.emit(self.market_data)
-        except Exception as e:
-            print(f"Error al obtener datos REST de mercado: {e}")
-            # Marcar los pares con error en la UI si es necesario
-
-    async def _subscribe_to_websockets(self):
-        """Suscribe a los streams de WebSocket para los pares favoritos."""
-        # Cancelar suscripciones WS existentes que ya no son favoritas
-        for symbol in list(self._websocket_tasks):
-            if symbol not in self.favorite_pairs:
-                await self.market_data_service.unsubscribe_from_market_data_websocket(symbol)
-                self._websocket_tasks.remove(symbol)
-
-        # Suscribirse a nuevos pares favoritos
-        for pair in self.favorite_pairs:
-            if pair not in self._websocket_tasks:
-                try:
-                    await self.market_data_service.subscribe_to_market_data_websocket(
-                        self.user_id, pair, self._handle_websocket_data
-                    )
-                    self._websocket_tasks.add(pair) # Marcar como suscrito
-                except Exception as e:
-                    print(f"Error al suscribirse a WebSocket para {pair}: {e}")
-                    # Marcar el par con error en la UI
-
-    async def _handle_websocket_data(self, data: Dict[str, Any]):
-        """Maneja los datos recibidos del stream de WebSocket."""
-        event_type = data.get('e')
-        if event_type == '24hrTicker':
-            symbol = data.get('s')
-            last_price = float(data.get('c', 0))
-            price_change_percent = float(data.get('P', 0))
-            quote_volume = float(data.get('q', 0))
-
-            # Actualizar solo los campos que vienen del WebSocket (principalmente precio)
-            current_data = self.market_data.get(symbol, {})
-            current_data['lastPrice'] = last_price
-            current_data['priceChangePercent'] = price_change_percent
-            current_data['quoteVolume'] = quote_volume
-            self.market_data[symbol] = current_data
-            self.data_updated.emit(self.market_data)
-        # else:
-            # print(f"Datos WS no reconocidos: {data}")
-
-    def open_pair_configuration_dialog(self):
-        """Abre un diálogo para configurar los pares favoritos."""
-        dialog = PairConfigurationDialog(self.favorite_pairs, self)
-        if dialog.exec_() == QDialog.Accepted:
-            new_pairs = dialog.get_selected_pairs()
-            self.set_favorite_pairs(new_pairs)
-            # Guardar los nuevos pares en el backend
-            asyncio.create_task(self._save_favorite_pairs(new_pairs))
-            # Re-suscribir a los WebSockets con la nueva lista
-            asyncio.create_task(self._subscribe_to_websockets())
-            asyncio.create_task(self._fetch_rest_data()) # Actualizar datos REST inmediatamente
-
-    async def _save_favorite_pairs(self, pairs: List[str]):
-        """Guarda la lista de pares favoritos en la configuración del usuario."""
-        try:
-            user_config = await self.config_service.load_user_configuration(self.user_id)
-            user_config.favoritePairs = pairs
-            await self.config_service.save_user_configuration(self.user_id, user_config)
-            print(f"Pares favoritos guardados: {pairs}")
-        except Exception as e:
-            print(f"Error al guardar pares favoritos: {e}")
+# TODO: Fetch this from a configuration or a dedicated API endpoint via UIConfigService
+ALL_AVAILABLE_PAIRS_EXAMPLE = [
+    "BTC-USD", "ETH-USD", "SOL-USD", "ADA-USD", "DOGE-USD",
+    "DOT-USD", "LINK-USD", "LTC-USD", "XRP-USD", "BNB-USD",
+    "AAPL-USD", "GOOGL-USD", "MSFT-USD", "AMZN-USD", "TSLA-USD" # Example "stock" pairs
+]
 
 
 class PairConfigurationDialog(QDialog):
-    """
-    Diálogo para permitir al usuario añadir/eliminar pares de criptomonedas favoritos.
-    """
-    def __init__(self, current_pairs: List[str], parent=None):
+    def __init__(self, current_pairs: List[str], all_available_pairs: List[str], parent: Optional[QWidget] = None):
         super().__init__(parent)
-        self.setWindowTitle("Configurar Pares Favoritos")
-        self.setGeometry(200, 200, 400, 300)
-        self.setModal(True) # Hacer el diálogo modal
+        self.setWindowTitle("Configure Favorite Pairs")
+        self.setMinimumSize(400, 300)
 
-        self.current_pairs = set(current_pairs) # Usar un set para búsquedas rápidas
-        self.all_available_pairs = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT", "DOGEUSDT"] # Simulación de pares disponibles
+        self.all_available_pairs = sorted(list(set(all_available_pairs))) # Ensure unique and sorted
+        self.selected_pairs = list(current_pairs) # Work with a copy
 
-        self.init_ui()
+        layout = QVBoxLayout(self)
 
-    def init_ui(self):
-        dialog_layout = QVBoxLayout()
-        self.setLayout(dialog_layout)
+        search_label = QLabel("Search Pairs:")
+        layout.addWidget(search_label)
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Type to filter...")
+        self.search_input.textChanged.connect(self.filter_pairs)
+        layout.addWidget(self.search_input)
 
-        # Campo de entrada para añadir nuevos pares
-        add_pair_layout = QHBoxLayout()
-        self.pair_input = QLineEdit()
-        self.pair_input.setPlaceholderText("Buscar o añadir par (ej. BTCUSDT)")
-        
-        # Autocompletado (básico, se puede mejorar con datos de la API de Binance)
-        completer = QCompleter(self.all_available_pairs, self)
-        completer.setCaseSensitivity(Qt.CaseInsensitive)
-        self.pair_input.setCompleter(completer)
+        self.pair_list_widget = QListWidget()
+        self.pair_list_widget.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
+        self._populate_pair_list()
+        self._select_current_pairs()
+        layout.addWidget(self.pair_list_widget)
 
-        add_button = QPushButton("Añadir")
-        add_button.clicked.connect(self.add_pair)
-        add_pair_layout.addWidget(self.pair_input)
-        add_pair_layout.addWidget(add_button)
-        dialog_layout.addLayout(add_pair_layout)
-
-        # Lista de pares seleccionados
-        self.selected_pairs_list = QTableWidget()
-        self.selected_pairs_list.setColumnCount(2)
-        self.selected_pairs_list.setHorizontalHeaderLabels(["Símbolo", "Acción"])
-        self.selected_pairs_list.horizontalHeader().setSectionResizeMode(0, QHeaderView.SectionResizeMode.Stretch)
-        self.selected_pairs_list.horizontalHeader().setSectionResizeMode(1, QHeaderView.SectionResizeMode.ResizeToContents)
-        self.selected_pairs_list.verticalHeader().setVisible(False)
-        self.selected_pairs_list.setEditTriggers(QTableWidget.NoEditTriggers)
-        dialog_layout.addWidget(self.selected_pairs_list)
-
-        self.populate_selected_pairs_list()
-
-        # Botones de diálogo
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
-        dialog_layout.addWidget(button_box)
+        layout.addWidget(button_box)
 
-        self.setStyleSheet("""
-            QDialog {
-                background-color: #2b2b2b;
-                color: #f0f0f0;
-            }
-            QLineEdit {
-                background-color: #3c3c3c;
-                color: #f0f0f0;
-                border: 1px solid #555;
-                padding: 5px;
-                border-radius: 3px;
-            }
-            QPushButton {
-                background-color: #007bff;
-                color: white;
-                border: none;
-                padding: 5px 10px;
-                border-radius: 3px;
-            }
-            QPushButton:hover {
-                background-color: #0056b3;
-            }
-            QTableWidget {
-                background-color: #2b2b2b;
-                color: #f0f0f0;
-                border: 1px solid #444;
-                gridline-color: #444;
-            }
-            QHeaderView::section {
-                background-color: #3c3c3c;
-                color: #f0f0f0;
-                padding: 5px;
-                border: 1px solid #444;
-            }
-            QTableWidget::item {
-                padding: 5px;
-            }
-        """)
+    def _populate_pair_list(self, filter_text: str = ""):
+        self.pair_list_widget.clear()
+        for pair in self.all_available_pairs:
+            if filter_text.lower() in pair.lower():
+                item = QListWidget.item.QListWidgetItem(pair) # type: ignore
+                self.pair_list_widget.addItem(item)
 
-    def populate_selected_pairs_list(self):
-        self.selected_pairs_list.setRowCount(0) # Limpiar la tabla
-        for pair in sorted(list(self.current_pairs)):
-            row_position = self.selected_pairs_list.rowCount()
-            self.selected_pairs_list.insertRow(row_position)
+    def _select_current_pairs(self):
+        for i in range(self.pair_list_widget.count()):
+            item = self.pair_list_widget.item(i)
+            if item.text() in self.selected_pairs:
+                item.setSelected(True)
 
-            symbol_item = QTableWidgetItem(pair)
-            symbol_item.setTextAlignment(Qt.AlignCenter)
-            self.selected_pairs_list.setItem(row_position, 0, symbol_item)
+    def filter_pairs(self, text: str):
+        self._populate_pair_list(text)
+        # Re-apply selection after filtering might be complex if items are hidden/shown
+        # For simplicity, current selections might be lost if they don't match filter
+        # A more robust way would be to hide/show items instead of clearing and repopulating
+        # or maintain a master list of selected items.
+        # For now, we re-select based on the initial self.selected_pairs
+        # This means if you select, then filter out, then clear filter, selection is remembered.
+        # If you select, then filter and it hides, then change selection, it's based on visible items.
+        current_selection_texts = [item.text() for item in self.pair_list_widget.selectedItems()]
 
-            remove_button = QPushButton("Eliminar")
-            remove_button.setStyleSheet("""
-                QPushButton {
-                    background-color: #dc3545;
-                    color: white;
-                    border: none;
-                    padding: 3px 8px;
-                    border-radius: 3px;
-                }
-                QPushButton:hover {
-                    background-color: #c82333;
-                }
-            """)
-            remove_button.clicked.connect(lambda _, p=pair: self.remove_pair(p))
-            self.selected_pairs_list.setCellWidget(row_position, 1, remove_button)
+        # Update self.selected_pairs based on current visible selection
+        # This is tricky because filtering changes what's visible.
+        # A simpler approach might be to just filter the display list and make final selection on "OK"
+        # For now, let's just filter the display. The final selection is gathered on accept().
+        pass
 
-    def add_pair(self):
-        pair = self.pair_input.text().strip().upper()
-        if pair and pair not in self.current_pairs:
-            # Validación básica: solo permitir pares que estén en all_available_pairs (simulado)
-            if pair in self.all_available_pairs:
-                self.current_pairs.add(pair)
-                self.populate_selected_pairs_list()
-                self.pair_input.clear()
-            else:
-                # Aquí se podría mostrar un mensaje de error al usuario
-                print(f"Par '{pair}' no válido o no disponible.")
-        elif pair in self.current_pairs:
-            print(f"Par '{pair}' ya está en la lista.")
-
-    def remove_pair(self, pair: str):
-        if pair in self.current_pairs:
-            self.current_pairs.remove(pair)
-            self.populate_selected_pairs_list()
 
     def get_selected_pairs(self) -> List[str]:
-        return sorted(list(self.current_pairs))
+        return sorted([item.text() for item in self.pair_list_widget.selectedItems()])
 
 
-if __name__ == '__main__':
-    # Para ejecutar el ejemplo, necesitarás un loop de eventos de asyncio
-    # que se ejecute junto con el loop de eventos de QApplication.
-    # Una forma sencilla para pruebas es usar un runner como qasync,
-    # pero para este ejemplo, simularemos los servicios.
+class MarketDataWidget(QWidget):
+    data_updated = Signal(dict)  # Emits the updated market_data dictionary
 
-    from typing import Callable # Importar Callable para el mock
+    def __init__(self, user_id: UUID, market_data_service: UIMarketDataService, config_service: UIConfigService, parent: Optional[QWidget] = None):
+        super().__init__(parent)
+        self.user_id = user_id
+        self.market_data_service = market_data_service
+        self.config_service = config_service
+        # Ensure user_id is set in config_service if it's used for loading/saving configs
+        self.config_service.set_user_id(user_id)
 
-    class MockUIMarketDataService: # Renamed for clarity
-        async def get_market_data_rest(self, user_id: UUID, symbols: List[str]) -> Dict[str, Any]:
-            print(f"Mock: Obteniendo datos REST para {symbols}")
-            mock_data = {}
-            for symbol in symbols:
-                mock_data[symbol] = {
-                    "lastPrice": 100.0 + (datetime.now().second % 10),
-                    "priceChangePercent": 0.5 + (datetime.now().second % 3 - 1),
-                    "quoteVolume": 1000000.0 + (datetime.now().second * 1000)
-                }
-            return mock_data
 
-        async def subscribe_to_market_data_websocket(self, user_id: UUID, symbol: str, callback: Callable):
-            print(f"Mock: Suscribiéndose a WS para {symbol}")
-            # En un mock, no iniciamos un WS real, solo simulamos la suscripción
-            pass
+        self.favorite_pairs: List[str] = []
+        # Market data structure: {'PAIR_SYMBOL': {'lastPrice': '...', 'priceChangePercent': '...', 'quoteVolume': '...', 'error': '...'}}
+        self.market_data: Dict[str, Dict[str, Any]] = {}
 
-        async def unsubscribe_from_market_data_websocket(self, symbol: str):
-            print(f"Mock: Desuscribiéndose de WS para {symbol}")
-            pass
+        self._init_ui()
 
-        async def get_all_binance_symbols(self, user_id: UUID) -> List[str]:
-            print(f"Mock: Obteniendo todos los símbolos de Binance para {user_id}")
-            return ["BTCUSDT", "ETHUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT", "SOLUSDT", "DOGEUSDT"]
+        self.rest_update_timer = QTimer(self)
+        self.rest_update_timer.timeout.connect(self._on_rest_update_timeout)
 
-    class MockUIConfigService: # Renamed for clarity
-        def __init__(self):
-            self._config = {"favoritePairs": ["BTCUSDT", "ETHUSDT"]}
+        # Initial load
+        asyncio.create_task(self.load_and_refresh_data())
 
-        async def load_user_configuration(self, user_id: UUID) -> Any:
-            class MockUserConfig:
-                def __init__(self, pairs):
-                    self.favoritePairs = pairs
-            return MockUserConfig(self._config["favoritePairs"])
 
-        async def save_user_configuration(self, user_id: UUID, config: Any):
-            self._config["favoritePairs"] = config.favoritePairs
-            print(f"Mock: Pares favoritos guardados: {self._config['favoritePairs']}")
+    def _init_ui(self):
+        layout = QVBoxLayout(self)
+        self.setLayout(layout)
 
-    app = QApplication(sys.argv)
-    app.setStyleSheet("""
-        QWidget {
-            background-color: #222;
-            color: #f0f0f0;
-            font-family: "Segoe UI", sans-serif;
-        }
-        QLabel {
-            color: #f0f0f0;
-        }
-    """)
+        # Table for market data
+        self.table_widget = QTableWidget()
+        self.table_widget.setColumnCount(4) # Pair, Price, Change, Volume
+        self.table_widget.setHorizontalHeaderLabels(["Pair", "Last Price", "Change (24h)", "Volume (24h)"])
+        self.table_widget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.table_widget.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers) # Read-only
+        layout.addWidget(self.table_widget)
 
-    # Configurar el loop de eventos de asyncio para que se ejecute con el de Qt
-    # Esto es una simplificación; en una aplicación real se usaría qasync
-    loop = asyncio.get_event_loop()
-    
-    # Crear instancias de los servicios mockeados
-    mock_ui_market_data_service = MockUIMarketDataService() # Updated
-    mock_ui_config_service = MockUIConfigService() # Updated
-    test_user_id = UUID("00000000-0000-0000-0000-000000000001")
+        self.status_label = QLabel("Loading initial data...")
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.status_label)
 
-    # Ejemplo de uso del MarketDataWidget
-    main_window = QWidget()
-    main_layout = QVBoxLayout()
-    main_window.setLayout(main_layout)
+        # Buttons
+        button_layout = QHBoxLayout()
+        self.refresh_button = QPushButton("Refresh Now")
+        self.refresh_button.clicked.connect(self._on_refresh_button_clicked)
+        button_layout.addWidget(self.refresh_button)
 
-    market_data_widget = MarketDataWidget(test_user_id, mock_ui_market_data_service, mock_ui_config_service) # Updated
-    main_layout.addWidget(market_data_widget)
+        self.configure_button = QPushButton("Configure Pairs")
+        self.configure_button.clicked.connect(self.open_pair_configuration_dialog)
+        button_layout.addWidget(self.configure_button)
 
-    # Iniciar la carga y suscripción de pares en una tarea de asyncio
-    asyncio.create_task(market_data_widget.load_and_subscribe_pairs())
+        layout.addLayout(button_layout)
+        self.data_updated.connect(self.update_table)
 
-    # Para que el loop de asyncio se ejecute junto con el de Qt,
-    # necesitamos un mecanismo que "bombee" los eventos de asyncio.
-    # Esto es lo que qasync hace automáticamente. Aquí, lo simulamos con un QTimer.
-    async def run_async_tasks():
-        await asyncio.sleep(0.01) # Pequeña pausa para permitir que el loop de Qt procese eventos
 
-    timer_async = QTimer()
-    timer_async.timeout.connect(lambda: asyncio.create_task(run_async_tasks()))
-    timer_async.start(10) # Ejecutar cada 10ms para mantener el loop de asyncio activo
+    async def load_and_refresh_data(self):
+        """Loads configuration and then fetches initial market data."""
+        self.status_label.setText("Loading configuration...")
+        self.table_widget.setEnabled(False)
+        self.refresh_button.setEnabled(False)
+        self.configure_button.setEnabled(False)
+        try:
+            # Load user configuration (which includes favorite pairs)
+            # The user_id is already set in config_service constructor or via set_user_id
+            user_config = await self.config_service.load_user_configuration()
+            if user_config and "favoritePairs" in user_config:
+                loaded_pairs = user_config["favoritePairs"]
+            else:
+                # Fallback or handle error if config loading fails
+                loaded_pairs = await self.config_service.get_favorite_pairs() # Try direct getter which has defaults
+                if not user_config: # If load_user_configuration returned None
+                    self.status_label.setText("Could not load user configuration. Using default pairs.")
+                    # Optionally save these defaults back if appropriate
+                    # await self.config_service.save_user_configuration({"favoritePairs": loaded_pairs})
 
-    main_window.show()
-    sys.exit(app.exec_())
+            self.set_favorite_pairs(loaded_pairs) # This will also trigger an initial table update (empty)
+
+            if not self.favorite_pairs:
+                self.status_label.setText("No favorite pairs configured. Click 'Configure Pairs'.")
+            else:
+                self.status_label.setText(f"Loaded {len(self.favorite_pairs)} pairs. Fetching data...")
+                await self._fetch_rest_data() # Fetch initial data
+
+            # Start the timer for periodic REST updates if there are pairs
+            if self.favorite_pairs:
+                if not self.rest_update_timer.isActive():
+                    self.rest_update_timer.start(30 * 1000) # 30 seconds
+            else:
+                if self.rest_update_timer.isActive():
+                    self.rest_update_timer.stop()
+
+        except Exception as e:
+            self.status_label.setText(f"Error during initial load: {e}")
+            QMessageBox.critical(self, "Load Error", f"Failed to load initial data: {e}")
+        finally:
+            self.table_widget.setEnabled(True)
+            self.refresh_button.setEnabled(True)
+            self.configure_button.setEnabled(True)
+
+
+    def _on_rest_update_timeout(self):
+        if self.favorite_pairs:
+            asyncio.create_task(self._fetch_rest_data())
+        else:
+            self.status_label.setText("No pairs to fetch. Configure pairs.")
+            if self.rest_update_timer.isActive():
+                self.rest_update_timer.stop()
+
+
+    def _on_refresh_button_clicked(self):
+        if self.favorite_pairs:
+            asyncio.create_task(self._fetch_rest_data())
+        else:
+            QMessageBox.information(self, "No Pairs", "Please configure favorite pairs first.")
+
+
+    async def _fetch_rest_data(self):
+        """Fetches current ticker data for favorite pairs using UIMarketDataService."""
+        if not self.favorite_pairs:
+            self.status_label.setText("No favorite pairs to fetch.")
+            self.market_data = {}
+            self.data_updated.emit(self.market_data)
+            return
+
+        self.status_label.setText(f"Fetching data for {len(self.favorite_pairs)} pairs...")
+        self.table_widget.setEnabled(False) # Disable table during update
+        self.refresh_button.setEnabled(False)
+
+        try:
+            # Using the new batch ticker fetch method
+            tickers_data = await self.market_data_service.fetch_tickers_data(self.favorite_pairs)
+
+            if tickers_data is None:
+                # API call failed or returned None (e.g., network error, server error)
+                self.status_label.setText("Error fetching market data. Check connection or try again.")
+                # Preserve old data but mark as error, or clear and show error per row
+                for pair in self.favorite_pairs:
+                    self.market_data[pair] = {
+                        "lastPrice": "Error",
+                        "priceChangePercent": "Error",
+                        "quoteVolume": "Error",
+                        "error": "Failed to fetch"
+                    }
+            else:
+                # API call succeeded, update market_data
+                # Ensure all favorite pairs have an entry, even if API didn't return them (maybe they are delisted)
+                new_market_data = {}
+                for pair in self.favorite_pairs:
+                    if pair in tickers_data:
+                        new_market_data[pair] = tickers_data[pair]
+                    else:
+                        new_market_data[pair] = {
+                            "lastPrice": "N/A",
+                            "priceChangePercent": "N/A",
+                            "quoteVolume": "N/A",
+                            "error": "Not found"
+                        }
+                self.market_data = new_market_data
+                self.status_label.setText(f"Market data updated. Last: {QDateTime.currentDateTime().toString()}") # type: ignore
+
+            self.data_updated.emit(self.market_data)
+
+        except Exception as e:
+            self.status_label.setText(f"An error occurred: {e}")
+            # You might want to update the table to show errors for all rows
+            for pair in self.favorite_pairs:
+                 self.market_data[pair] = {"lastPrice": "Error", "priceChangePercent": "N/A", "quoteVolume": "N/A", "error": str(e)}
+            self.data_updated.emit(self.market_data)
+        finally:
+            self.table_widget.setEnabled(True)
+            self.refresh_button.setEnabled(True)
+
+    def update_table(self, new_data: Dict[str, Dict[str, Any]]):
+        self.table_widget.setRowCount(0) # Clear existing rows
+
+        if not new_data and self.favorite_pairs: # Data is empty but we have pairs, likely an error state
+             for i, pair_symbol in enumerate(self.favorite_pairs):
+                self.table_widget.insertRow(i)
+                self.table_widget.setItem(i, 0, QTableWidgetItem(pair_symbol))
+                error_item = QTableWidgetItem("Error fetching")
+                error_item.setForeground(Qt.GlobalColor.red) # type: ignore
+                self.table_widget.setItem(i, 1, error_item)
+                self.table_widget.setItem(i, 2, QTableWidgetItem("-"))
+                self.table_widget.setItem(i, 3, QTableWidgetItem("-"))
+             return
+
+        for i, pair_symbol in enumerate(self.favorite_pairs): # Iterate over configured pairs to maintain order
+            self.table_widget.insertRow(i)
+            self.table_widget.setItem(i, 0, QTableWidgetItem(pair_symbol))
+
+            pair_data = new_data.get(pair_symbol)
+            if pair_data:
+                if pair_data.get("error"):
+                    price_item = QTableWidgetItem(str(pair_data.get("lastPrice", "Error"))) # Show error if available
+                    price_item.setForeground(Qt.GlobalColor.red) # type: ignore
+                    change_item = QTableWidgetItem(str(pair_data.get("priceChangePercent", "-")))
+                    volume_item = QTableWidgetItem(str(pair_data.get("quoteVolume", "-")))
+                    if pair_data.get("error") == "Not found":
+                         price_item.setForeground(Qt.GlobalColor.gray) # type: ignore
+                else:
+                    price_item = QTableWidgetItem(str(pair_data.get("lastPrice", "N/A")))
+                    change_val_str = str(pair_data.get("priceChangePercent", "0"))
+                    try:
+                        change_val = float(change_val_str)
+                        change_item = QTableWidgetItem(f"{change_val:.2f}%")
+                        if change_val > 0:
+                            change_item.setForeground(Qt.GlobalColor.green) # type: ignore
+                        elif change_val < 0:
+                            change_item.setForeground(Qt.GlobalColor.red) # type: ignore
+                        else:
+                            change_item.setForeground(Qt.GlobalColor.gray) # type: ignore
+                    except ValueError:
+                        change_item = QTableWidgetItem(change_val_str) # Show as is if not float
+                        change_item.setForeground(Qt.GlobalColor.gray) # type: ignore
+
+                    volume_item = QTableWidgetItem(str(pair_data.get("quoteVolume", "N/A")))
+
+                self.table_widget.setItem(i, 1, price_item)
+                self.table_widget.setItem(i, 2, change_item)
+                self.table_widget.setItem(i, 3, volume_item)
+            else:
+                # Pair was in favorite_pairs but not in new_data (should be handled by _fetch_rest_data)
+                self.table_widget.setItem(i, 1, QTableWidgetItem("Waiting..."))
+                self.table_widget.setItem(i, 2, QTableWidgetItem("-"))
+                self.table_widget.setItem(i, 3, QTableWidgetItem("-"))
+
+
+    def set_favorite_pairs(self, pairs: List[str]):
+        """Updates the list of favorite pairs and refreshes the table structure."""
+        self.favorite_pairs = sorted(list(set(pairs))) # Ensure unique and sorted
+
+        # Update table structure (rows) based on new pairs
+        # This will clear data, but _fetch_rest_data will be called soon after.
+        self.market_data = {pair: {} for pair in self.favorite_pairs} # Reset data with new keys
+        self.update_table(self.market_data) # Display empty rows for new pairs
+
+        if not self.favorite_pairs:
+            self.status_label.setText("No favorite pairs configured.")
+            if self.rest_update_timer.isActive():
+                self.rest_update_timer.stop()
+        else:
+            self.status_label.setText(f"{len(self.favorite_pairs)} pairs configured. Fetching data...")
+            if not self.rest_update_timer.isActive():
+                 self.rest_update_timer.start(30 * 1000) # Restart timer if it was stopped
+
+
+    def open_pair_configuration_dialog(self):
+        # TODO: Fetch ALL_AVAILABLE_PAIRS_EXAMPLE from config service or market data service eventually
+        # For now, using the example list.
+        # all_pairs = await self.market_data_service.get_all_available_symbols() or ALL_AVAILABLE_PAIRS_EXAMPLE
+        all_pairs = ALL_AVAILABLE_PAIRS_EXAMPLE
+        
+        dialog = PairConfigurationDialog(self.favorite_pairs, all_pairs, self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            new_pairs = dialog.get_selected_pairs()
+            self.set_favorite_pairs(new_pairs) # Updates UI and self.favorite_pairs
+
+            # Save the new configuration
+            # The user_id is already set in config_service
+            asyncio.create_task(
+                self.config_service.save_user_configuration({"favoritePairs": new_pairs})
+            )
+
+            # Refresh data for the new set of pairs
+            if new_pairs:
+                asyncio.create_task(self._fetch_rest_data())
+            else: # No pairs selected, clear table and stop updates
+                self.market_data = {}
+                self.data_updated.emit(self.market_data)
+                if self.rest_update_timer.isActive():
+                    self.rest_update_timer.stop()
+                self.status_label.setText("No favorite pairs configured.")
+
+
+    def cleanup(self):
+        """Clean up resources, like stopping timers."""
+        if self.rest_update_timer.isActive():
+            self.rest_update_timer.stop()
+        # Any other cleanup (WebSockets were removed, but if added back, close here)
+        print("MarketDataWidget cleaned up.")
+
+# Need QDateTime for status label update, if not already imported by PySide6
+from PySide6.QtCore import QDateTime
