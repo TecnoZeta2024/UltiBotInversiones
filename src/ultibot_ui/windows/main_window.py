@@ -2,8 +2,8 @@ from PyQt5.QtWidgets import QMainWindow, QStatusBar, QLabel, QWidget, QHBoxLayou
 from PyQt5.QtCore import Qt
 from uuid import UUID # Importar UUID
 
-from ultibot_ui.windows.dashboard_view import DashboardView
-from ultibot_ui.widgets.sidebar_navigation_widget import SidebarNavigationWidget
+from src.ultibot_ui.windows.dashboard_view import DashboardView
+from src.ultibot_ui.widgets.sidebar_navigation_widget import SidebarNavigationWidget
 
 from src.ultibot_backend.services.market_data_service import MarketDataService
 from src.ultibot_backend.services.config_service import ConfigService

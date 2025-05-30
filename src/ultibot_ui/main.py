@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from src.ultibot_backend.app_config import AppSettings
 
 # Importar la MainWindow
-from ultibot_ui.windows.main_window import MainWindow
+from src.ultibot_ui.windows.main_window import MainWindow
 
 # Importar servicios de backend
 from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
