@@ -183,6 +183,7 @@ class UserConfiguration(BaseModel):
 
     # Preferencias de Trading
     defaultPaperTradingCapital: Optional[float] = None
+    paperTradingActive: Optional[bool] = False # Estado de activación del modo paper trading
     watchlists: Optional[List[Watchlist]] = None
     favoritePairs: Optional[List[str]] = None
     riskProfile: Optional[str] = None # 'conservative' | 'moderate' | 'aggressive' | 'custom'

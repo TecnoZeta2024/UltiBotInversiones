@@ -22,6 +22,7 @@ export interface UserConfiguration {
 
   // --- Preferencias de Trading ---
   defaultPaperTradingCapital?: number; // Capital inicial por defecto para el modo paper trading
+  paperTradingActive?: boolean; // Estado de activación del modo paper trading
   
   watchlists?: Array<{
     id: string; // Identificador único de la lista de observación
@@ -867,6 +868,7 @@ export interface SaveTradingStrategyConfigRequest {
     
         -- Preferencias de Trading
         default_paper_trading_capital DECIMAL(18, 8), -- Capital para paper trading, ej: 1000.00
+        paper_trading_active BOOLEAN DEFAULT FALSE, -- Estado de activación del modo paper trading
         watchlists JSONB, -- Ej: [{ "id": "uuid_watchlist_1", "name": "Volátiles Alto Riesgo", "pairs": ["BTC/USDT", "SOL/USDT"], ... }]. Considerar normalizar a tablas separadas en futuras versiones si se requiere consulta compleja/compartición.
         favorite_pairs TEXT[], -- Ej: {"BTC/USDT", "ETH/USDT"}
         risk_profile VARCHAR(50), -- 'conservative', 'moderate', 'aggressive', 'custom'

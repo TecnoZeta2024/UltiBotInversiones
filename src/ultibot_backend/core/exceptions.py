@@ -39,3 +39,7 @@ class BinanceAPIError(ExternalAPIError):
 class ConfigurationError(UltiBotError):
     """Excepción para errores relacionados con la configuración de la aplicación."""
     pass
+
+class OrderExecutionError(UltiBotError):
+    """Excepción para errores durante la ejecución de órdenes de trading."""
+    pass

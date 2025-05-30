@@ -36,8 +36,9 @@ async def test_load_user_configuration_existing(config_service, mock_persistence
         "selectedTheme": "light",
         "enableTelegramNotifications": True,
         "defaultPaperTradingCapital": 5000.0,
-        "createdAt": datetime.now(timezone.utc).isoformat(), # Eliminar "+ "Z""
-        "updatedAt": datetime.now(timezone.utc).isoformat(), # Eliminar "+ "Z""
+        "paperTradingActive": True, # Añadir el nuevo campo
+        "createdAt": datetime.now(timezone.utc).isoformat(),
+        "updatedAt": datetime.now(timezone.utc).isoformat(),
     }
     mock_persistence_service.get_user_configuration.return_value = mock_config_data
 
@@ -49,6 +50,7 @@ async def test_load_user_configuration_existing(config_service, mock_persistence
     assert config.selectedTheme == "light"
     assert config.enableTelegramNotifications is True
     assert config.defaultPaperTradingCapital == 5000.0
+    assert config.paperTradingActive is True # Verificar el nuevo campo
 
 @pytest.mark.asyncio
 async def test_load_user_configuration_not_found(config_service, mock_persistence_service, fixed_user_id):
@@ -61,9 +63,10 @@ async def test_load_user_configuration_not_found(config_service, mock_persistenc
 
     mock_persistence_service.get_user_configuration.assert_called_once_with(fixed_user_id)
     assert isinstance(config, UserConfiguration)
-    assert config.user_id == fixed_user_id # Debería usar el user_id por defecto del get_default_configuration
-    assert config.selectedTheme == "dark" # Valor por defecto
-    assert config.defaultPaperTradingCapital == 10000.0 # Valor por defecto
+    assert config.user_id == fixed_user_id
+    assert config.selectedTheme == "dark"
+    assert config.defaultPaperTradingCapital == 10000.0
+    assert config.paperTradingActive is True # Verificar el valor por defecto del nuevo campo
 
 @pytest.mark.asyncio
 async def test_load_user_configuration_persistence_error(config_service, mock_persistence_service, fixed_user_id):
@@ -76,9 +79,10 @@ async def test_load_user_configuration_persistence_error(config_service, mock_pe
 
     mock_persistence_service.get_user_configuration.assert_called_once_with(fixed_user_id)
     assert isinstance(config, UserConfiguration)
-    assert config.user_id == fixed_user_id # Debería usar el user_id por defecto del get_default_configuration
-    assert config.selectedTheme == "dark" # Valor por defecto
-    assert config.defaultPaperTradingCapital == 10000.0 # Valor por defecto
+    assert config.user_id == fixed_user_id
+    assert config.selectedTheme == "dark"
+    assert config.defaultPaperTradingCapital == 10000.0
+    assert config.paperTradingActive is True # Verificar el valor por defecto del nuevo campo
 
 @pytest.mark.asyncio
 async def test_save_user_configuration_success(config_service, mock_persistence_service, fixed_user_id):
@@ -90,22 +94,23 @@ async def test_save_user_configuration_success(config_service, mock_persistence_
         user_id=fixed_user_id,
         selectedTheme="light",
         enableTelegramNotifications=True,
-        defaultPaperTradingCapital=7500.0
+        defaultPaperTradingCapital=7500.0,
+        paperTradingActive=False # Añadir el nuevo campo
     )
-    mock_persistence_service.upsert_user_configuration.return_value = None # upsert no retorna nada
+    mock_persistence_service.upsert_user_configuration.return_value = None
 
     await config_service.save_user_configuration(fixed_user_id, test_config)
 
     mock_persistence_service.upsert_user_configuration.assert_called_once()
-    # Verificar que los datos pasados a upsert_user_configuration sean correctos
     args, kwargs = mock_persistence_service.upsert_user_configuration.call_args
     assert args[0] == fixed_user_id
     saved_config_dict = args[1]
     assert saved_config_dict['selectedTheme'] == "light"
     assert saved_config_dict['enableTelegramNotifications'] is True
     assert saved_config_dict['defaultPaperTradingCapital'] == 7500.0
-    assert 'id' in saved_config_dict # El ID de la configuración debe estar presente
-    assert 'user_id' in saved_config_dict # El user_id debe estar presente
+    assert saved_config_dict['paperTradingActive'] is False # Verificar el nuevo campo
+    assert 'id' in saved_config_dict
+    assert 'user_id' in saved_config_dict
 
 @pytest.mark.asyncio
 async def test_save_user_configuration_persistence_error(config_service, mock_persistence_service, fixed_user_id):
@@ -128,13 +133,14 @@ def test_get_default_configuration(config_service, fixed_user_id):
     """
     Verifica que get_default_configuration retorne una instancia válida con valores por defecto.
     """
-    default_config = config_service.get_default_configuration()
+    default_config = config_service.get_default_configuration(fixed_user_id) # Pasar fixed_user_id
 
     assert isinstance(default_config, UserConfiguration)
-    assert default_config.user_id == fixed_user_id # El user_id por defecto del servicio
+    assert default_config.user_id == fixed_user_id
     assert default_config.selectedTheme == "dark"
     assert default_config.enableTelegramNotifications is False
     assert default_config.defaultPaperTradingCapital == 10000.0
+    assert default_config.paperTradingActive is True # Verificar el valor por defecto del nuevo campo
     assert isinstance(default_config.id, UUID)
     assert isinstance(default_config.createdAt, datetime)
     assert isinstance(default_config.updatedAt, datetime)

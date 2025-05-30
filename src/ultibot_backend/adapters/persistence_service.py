@@ -9,6 +9,7 @@ from typing import Optional, List, Dict, Any
 from uuid import UUID
 from src.shared.data_types import APICredential, ServiceName, Notification
 from datetime import datetime, timezone
+from psycopg.sql import SQL, Identifier, Literal, Composed # Importar SQL y otros componentes necesarios
 
 logger = logging.getLogger(__name__)
 
@@ -84,10 +85,10 @@ class SupabasePersistenceService:
         await self._ensure_connection()
         assert self.connection is not None, "Connection must be established by _ensure_connection"
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
-                await cur.execute("SELECT 1 AS result;")
+            async with self.connection.cursor(row_factory=dict_row) as cur:
+                await cur.execute(SQL("SELECT 1 AS result;")) # Envolver en SQL()
                 result = await cur.fetchone()
-                if result and result.get('result') == 1: # Usar .get() para acceso seguro
+                if result and result.get('result') == 1:
                     logger.info("Conexión de prueba a la base de datos Supabase (psycopg) exitosa.")
                     return True
                 logger.warning(f"Conexión de prueba a Supabase (psycopg) devolvió: {result}")
@@ -99,7 +100,7 @@ class SupabasePersistenceService:
     async def save_credential(self, credential: APICredential) -> APICredential:
         await self._ensure_connection()
         assert self.connection is not None, "Connection must be established by _ensure_connection"
-        query = """
+        query = SQL("""
         INSERT INTO api_credentials (
             id, user_id, service_name, credential_label, 
             encrypted_api_key, encrypted_api_secret, encrypted_other_details, 
@@ -126,13 +127,13 @@ class SupabasePersistenceService:
             notes = EXCLUDED.notes,
             updated_at = timezone('utc'::text, now())
         RETURNING *;
-        """
+        """)
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+            async with self.connection.cursor(row_factory=dict_row) as cur:
                 await cur.execute(
                     query,
                     (
-                        credential.id, credential.user_id, credential.service_name, credential.credential_label, # Quitado .value
+                        credential.id, credential.user_id, credential.service_name, credential.credential_label,
                         credential.encrypted_api_key, credential.encrypted_api_secret, credential.encrypted_other_details,
                         credential.status, credential.last_verified_at, credential.permissions, credential.permissions_checked_at,
                         credential.expires_at, credential.rotation_reminder_policy_days, credential.usage_count, credential.last_used_at,
@@ -140,7 +141,7 @@ class SupabasePersistenceService:
                     )
                 )
                 record = await cur.fetchone()
-                await self.connection.commit() # Asegurar commit
+                await self.connection.commit()
                 if record:
                     return APICredential(**record)
             raise ValueError("No se pudo guardar/actualizar la credencial y obtener el registro de retorno (psycopg).")
@@ -153,9 +154,9 @@ class SupabasePersistenceService:
     async def get_credential_by_id(self, credential_id: UUID) -> Optional[APICredential]:
         await self._ensure_connection()
         assert self.connection is not None, "Connection must be established by _ensure_connection"
-        query = "SELECT * FROM api_credentials WHERE id = %s;"
+        query = SQL("SELECT * FROM api_credentials WHERE id = %s;")
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+            async with self.connection.cursor(row_factory=dict_row) as cur:
                 await cur.execute(query, (credential_id,))
                 record = await cur.fetchone()
                 if record:
@@ -168,13 +169,13 @@ class SupabasePersistenceService:
     async def get_credential_by_service_label(self, user_id: UUID, service_name: ServiceName, credential_label: str) -> Optional[APICredential]:
         await self._ensure_connection()
         assert self.connection is not None, "Connection must be established by _ensure_connection"
-        query = """
+        query = SQL("""
         SELECT * FROM api_credentials 
         WHERE user_id = %s AND service_name = %s AND credential_label = %s;
-        """
+        """)
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
-                await cur.execute(query, (user_id, service_name, credential_label)) # Quitado .value
+            async with self.connection.cursor(row_factory=dict_row) as cur:
+                await cur.execute(query, (user_id, service_name, credential_label))
                 record = await cur.fetchone()
                 if record:
                     return APICredential(**record)
@@ -186,14 +187,14 @@ class SupabasePersistenceService:
     async def update_credential_status(self, credential_id: UUID, new_status: str, last_verified_at: Optional[datetime] = None) -> Optional[APICredential]:
         await self._ensure_connection()
         assert self.connection is not None, "Connection must be established by _ensure_connection"
-        query = """
+        query = SQL("""
         UPDATE api_credentials 
         SET status = %s, last_verified_at = %s, updated_at = timezone('utc'::text, now())
         WHERE id = %s
         RETURNING *;
-        """
+        """)
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+            async with self.connection.cursor(row_factory=dict_row) as cur:
                 await cur.execute(query, (new_status, last_verified_at, credential_id))
                 record = await cur.fetchone()
                 await self.connection.commit()
@@ -209,15 +210,12 @@ class SupabasePersistenceService:
     async def delete_credential(self, credential_id: UUID) -> bool:
         await self._ensure_connection()
         assert self.connection is not None, "Connection must be established by _ensure_connection"
-        query = "DELETE FROM api_credentials WHERE id = %s;"
+        query = SQL("DELETE FROM api_credentials WHERE id = %s;")
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor (aunque no se use para fetch)
+            async with self.connection.cursor(row_factory=dict_row) as cur:
                 await cur.execute(query, (credential_id,))
                 await self.connection.commit()
-                # rowcount podría no ser fiable para DELETE sin RETURNING en todos los casos/DBs
-                # Para psycopg, si la ejecución es exitosa y no hay error, asumimos que funcionó.
-                # Un check más robusto sería `RETURNING id` y ver si devuelve algo.
-                return cur.rowcount > 0 # True si se eliminó al menos una fila
+                return cur.rowcount > 0
         except Exception as e:
             logger.error(f"Error al eliminar credencial (psycopg): {e}")
             if self.connection and not self.connection.closed:
@@ -227,13 +225,13 @@ class SupabasePersistenceService:
     async def get_user_configuration(self, user_id: UUID) -> Optional[Dict[str, Any]]:
         await self._ensure_connection()
         assert self.connection is not None, "Connection must be established by _ensure_connection"
-        query = "SELECT * FROM user_configurations WHERE user_id = %s;"
+        query = SQL("SELECT * FROM user_configurations WHERE user_id = %s;")
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+            async with self.connection.cursor(row_factory=dict_row) as cur:
                 await cur.execute(query, (user_id,))
                 record = await cur.fetchone()
                 if record:
-                    return dict(record) # Ya es un dict debido a row_factory
+                    return dict(record)
             return None
         except Exception as e:
             logger.error(f"Error al obtener configuración de usuario para {user_id} (psycopg): {e}", exc_info=True)
@@ -251,6 +249,7 @@ class SupabasePersistenceService:
         db_columns_map = {
             "telegramChatId": "telegram_chat_id", "notificationPreferences": "notification_preferences",
             "enableTelegramNotifications": "enable_telegram_notifications", "defaultPaperTradingCapital": "default_paper_trading_capital",
+            "paperTradingActive": "paper_trading_active", # Nuevo campo
             "watchlists": "watchlists", "favoritePairs": "favorite_pairs", "riskProfile": "risk_profile",
             "riskProfileSettings": "risk_profile_settings", "realTradingSettings": "real_trading_settings",
             "aiStrategyConfigurations": "ai_strategy_configurations", "aiAnalysisConfidenceThresholds": "ai_analysis_confidence_thresholds",
@@ -262,22 +261,29 @@ class SupabasePersistenceService:
         insert_values_dict = {db_columns_map.get(k, k): v for k, v in config_to_save.items()}
         insert_values_dict['user_id'] = user_id
 
-        columns_str = ', '.join(insert_values_dict.keys())
-        placeholders_str = ', '.join(['%s'] * len(insert_values_dict))
-        update_set_parts = [f"{col} = EXCLUDED.{col}" for col in insert_values_dict if col != 'user_id']
-        update_set_str = ', '.join(update_set_parts)
+        columns = [Identifier(col) for col in insert_values_dict.keys()]
+        
+        update_set_parts = [
+            SQL("{} = EXCLUDED.{}").format(Identifier(col), Identifier(col))
+            for col in insert_values_dict if col != 'user_id'
+        ]
+        update_set_str = SQL(", ").join(update_set_parts)
 
-        query = f"""
-        INSERT INTO user_configurations ({columns_str})
-        VALUES ({placeholders_str})
+        query = SQL("""
+        INSERT INTO user_configurations ({})
+        VALUES ({})
         ON CONFLICT (user_id) DO UPDATE SET
-            {update_set_str},
+            {},
             updated_at = timezone('utc'::text, now())
         RETURNING *;
-        """
+        """).format(
+            SQL(", ").join(columns),
+            SQL(", ").join(SQL("%s") for _ in insert_values_dict),
+            update_set_str
+        )
         
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+            async with self.connection.cursor(row_factory=dict_row) as cur:
                 await cur.execute(query, tuple(insert_values_dict.values()))
                 await self.connection.commit()
             logger.info(f"Configuración de usuario para {user_id} guardada/actualizada exitosamente (psycopg).")
@@ -290,14 +296,14 @@ class SupabasePersistenceService:
     async def update_credential_permissions(self, credential_id: UUID, permissions: List[str], permissions_checked_at: datetime) -> Optional[APICredential]:
         await self._ensure_connection()
         assert self.connection is not None, "Connection must be established by _ensure_connection"
-        query = """
+        query = SQL("""
         UPDATE api_credentials 
         SET permissions = %s, permissions_checked_at = %s, updated_at = timezone('utc'::text, now())
         WHERE id = %s
         RETURNING *;
-        """
+        """)
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+            async with self.connection.cursor(row_factory=dict_row) as cur:
                 await cur.execute(query, (permissions, permissions_checked_at, credential_id))
                 record = await cur.fetchone()
                 await self.connection.commit()
@@ -313,7 +319,7 @@ class SupabasePersistenceService:
     async def save_notification(self, notification: Notification) -> Notification:
         await self._ensure_connection()
         assert self.connection is not None, "Connection must be established by _ensure_connection"
-        query = """
+        query = SQL("""
         INSERT INTO notifications (
             id, user_id, event_type, channel, title_key, message_key, message_params,
             title, message, priority, status, snoozed_until, data_payload, actions,
@@ -332,20 +338,20 @@ class SupabasePersistenceService:
             sent_at = EXCLUDED.sent_at, status_history = EXCLUDED.status_history, generated_by = EXCLUDED.generated_by,
             created_at = EXCLUDED.created_at -- Asegurarse de que created_at se actualice si es parte del EXCLUDED
         RETURNING *;
-        """
+        """)
         # Nota: El ON CONFLICT para created_at = EXCLUDED.created_at puede no ser lo deseado si created_at
         # solo debe establecerse en la inserción inicial. Ajustar si es necesario.
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+            async with self.connection.cursor(row_factory=dict_row) as cur:
                 await cur.execute(
                     query,
                     (
-                        notification.id, notification.userId, notification.eventType, # Quitado .value
-                        notification.channel, # Quitado .value
+                        notification.id, notification.userId, notification.eventType,
+                        notification.channel,
                         notification.titleKey, notification.messageKey, notification.messageParams,
                         notification.title, notification.message,
-                        notification.priority, # Quitado .value
-                        notification.status, # Quitado .value
+                        notification.priority,
+                        notification.status,
                         notification.snoozedUntil, notification.dataPayload, notification.actions,
                         notification.correlationId, notification.isSummary, notification.summarizedNotificationIds,
                         notification.createdAt, notification.readAt, notification.sentAt,
@@ -355,9 +361,6 @@ class SupabasePersistenceService:
                 record = await cur.fetchone()
                 await self.connection.commit()
                 if record:
-                    # Psycopg devuelve dicts, pero los enums deben reconstruirse
-                    # Esto se manejaría mejor en el modelo Pydantic con validadores o constructores
-                    # Por ahora, asumimos que el modelo Pydantic puede manejar los valores string de los enums
                     return Notification(**record)
             raise ValueError("No se pudo guardar/actualizar la notificación y obtener el registro de retorno (psycopg).")
         except Exception as e:
@@ -369,14 +372,14 @@ class SupabasePersistenceService:
     async def get_notification_history(self, user_id: UUID, limit: int = 50) -> List[Notification]:
         await self._ensure_connection()
         assert self.connection is not None, "Connection must be established by _ensure_connection"
-        query = """
+        query = SQL("""
         SELECT * FROM notifications
         WHERE user_id = %s
         ORDER BY created_at DESC
         LIMIT %s;
-        """
+        """)
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+            async with self.connection.cursor(row_factory=dict_row) as cur:
                 await cur.execute(query, (user_id, limit))
                 records = await cur.fetchall()
             return [Notification(**record) for record in records]
@@ -387,14 +390,14 @@ class SupabasePersistenceService:
     async def mark_notification_as_read(self, notification_id: UUID, user_id: UUID) -> Optional[Notification]:
         await self._ensure_connection()
         assert self.connection is not None, "Connection must be established by _ensure_connection"
-        query = """
+        query = SQL("""
         UPDATE notifications
         SET status = 'read', read_at = timezone('utc'::text, now())
         WHERE id = %s AND user_id = %s
         RETURNING *;
-        """
+        """)
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+            async with self.connection.cursor(row_factory=dict_row) as cur:
                 await cur.execute(query, (notification_id, user_id))
                 record = await cur.fetchone()
                 await self.connection.commit()
@@ -414,8 +417,8 @@ class SupabasePersistenceService:
         assert self.connection is not None, "Connection must be established by _ensure_connection"
         try:
             user_uuid = UUID(user_id_str)
-            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor (aunque no se use para fetch)
-                await cur.execute("DELETE FROM user_configurations WHERE user_id = %s;", (user_uuid,))
+            async with self.connection.cursor(row_factory=dict_row) as cur:
+                await cur.execute(SQL("DELETE FROM user_configurations WHERE user_id = %s;"), (user_uuid,))
                 await self.connection.commit()
             logger.info(f"Datos de prueba para user_id {user_id_str} eliminados (psycopg).")
         except Exception as e:
@@ -430,12 +433,12 @@ class SupabasePersistenceService:
         assert self.connection is not None, "Connection must be established by _ensure_connection"
         try:
             user_uuid = UUID(user_id_str)
-            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+            async with self.connection.cursor(row_factory=dict_row) as cur:
                 await cur.execute(
-                    """
+                    SQL("""
                     INSERT INTO user_configurations (user_id, selected_theme)
                     VALUES (%s, %s);
-                    """,
+                    """),
                     (user_uuid, theme)
                 )
                 await self.connection.commit()
@@ -452,13 +455,13 @@ class SupabasePersistenceService:
         assert self.connection is not None, "Connection must be established by _ensure_connection"
         try:
             user_uuid = UUID(user_id_str)
-            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+            async with self.connection.cursor(row_factory=dict_row) as cur:
                 await cur.execute(
-                    "SELECT user_id, selected_theme FROM user_configurations WHERE user_id = %s;",
+                    SQL("SELECT user_id, selected_theme FROM user_configurations WHERE user_id = %s;"),
                     (user_uuid,)
                 )
                 record = await cur.fetchone()
-                return record # Ya es un dict
+                return record
         except Exception as e:
             logger.error(f"Error en lectura de prueba para user_id {user_id_str} (psycopg): {e}")
             raise
@@ -467,13 +470,13 @@ class SupabasePersistenceService:
     async def execute_test_insert_config(self, params: tuple):
         await self._ensure_connection()
         assert self.connection is not None, "Connection must be established by _ensure_connection"
-        insert_query = """
+        insert_query = SQL("""
         INSERT INTO user_configurations (user_id, selected_theme, enable_telegram_notifications, default_paper_trading_capital, notification_preferences)
         VALUES (%s, %s, %s, %s, %s::jsonb)
         RETURNING id, user_id, selected_theme;
-        """
+        """)
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+            async with self.connection.cursor(row_factory=dict_row) as cur:
                 await cur.execute(insert_query, params)
                 record = await cur.fetchone()
                 await self.connection.commit()
@@ -487,10 +490,10 @@ class SupabasePersistenceService:
     async def fetchrow_test_select_config(self, user_id_str: str) -> Optional[Dict[str, Any]]:
         await self._ensure_connection()
         assert self.connection is not None, "Connection must be established by _ensure_connection"
-        select_query = "SELECT user_id, selected_theme, default_paper_trading_capital FROM user_configurations WHERE user_id = %s;"
+        select_query = SQL("SELECT user_id, selected_theme, default_paper_trading_capital FROM user_configurations WHERE user_id = %s;")
         try:
-            user_uuid = UUID(user_id_str) # Asegurarse de que es UUID para la comparación
-            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+            user_uuid = UUID(user_id_str)
+            async with self.connection.cursor(row_factory=dict_row) as cur:
                 await cur.execute(select_query, (user_uuid,))
                 record = await cur.fetchone()
                 return record
@@ -502,9 +505,10 @@ class SupabasePersistenceService:
         """ Ejecuta una consulta SQL cruda. Usado para limpieza en tests. """
         await self._ensure_connection()
         assert self.connection is not None, "Connection must be established by _ensure_connection"
+        
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor (aunque no se use para fetch)
-                await cur.execute(query, params)
+            async with self.connection.cursor(row_factory=dict_row) as cur:
+                await cur.execute(SQL(query), params)
                 await self.connection.commit()
         except Exception as e:
             logger.error(f"Error ejecutando SQL crudo (psycopg): {query} con params {params} - {e}")

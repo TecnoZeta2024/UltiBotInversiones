@@ -217,9 +217,13 @@ El backend de "UltiBotInversiones", desarrollado con FastAPI, expondrá una API 
     * **`/auth/`**:
         * Description: (Potencial, si se necesita un handshake inicial o gestión de sesión muy ligera entre UI y backend local, aunque para v1.0 podría no ser estrictamente necesario si solo está en localhost).
     * **`/config/`**:
-        * Description: Gestiona la configuración de la aplicación y las preferencias del usuario.
-        * Consumers: `ConfigManager`.
-        * Example Endpoints: `GET /config/`, `POST /config/`, `GET /config/scan-presets`, `POST /config/scan-presets` (para guardar y cargar los "sistemas de búsqueda" que mencionaste).
+        * Description: Gestiona la configuración de la aplicación y las preferencias del usuario, incluyendo el estado de activación del modo Paper Trading y el capital virtual.
+        * Consumers: `ConfigManager`, UI (Settings View).
+        * Example Endpoints: 
+            * `GET /config/`: Obtiene la configuración completa del usuario (`UserConfiguration`).
+            * `PATCH /config/`: Actualiza parcialmente la configuración del usuario. Utiliza `UpdateUserConfigurationRequest` (ver `docs/data-models.md`).
+            * `GET /config/scan-presets`: Obtiene presets de escaneo.
+            * `POST /config/scan-presets`: Guarda presets de escaneo.
     * **`/credentials/`**:
         * Description: Permite a la UI gestionar (añadir, actualizar, verificar estado) las claves API para servicios externos de forma segura.
         * Consumers: `CredentialManager`.
