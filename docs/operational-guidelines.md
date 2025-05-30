@@ -26,6 +26,16 @@ En esta sección, estableceremos las reglas y convenciones que todo el código (
         -   Se configurarán `pre-commit hooks` utilizando la herramienta `pre-commit`.
         -   Los hooks incluirán, como mínimo, `ruff check --fix` y `ruff format`.
         -   Esto asegura que todo el código subido al repositorio cumpla con los estándares automáticamente, crucial cuando la IA genera código.
+    -   **Instalación y Uso:**
+        -   Para instalar los hooks de pre-commit en tu repositorio local, ejecuta:
+            ```bash
+            poetry run pre-commit install
+            ```
+        -   Esto configurará Git para ejecutar automáticamente los hooks definidos en `.pre-commit-config.yaml` antes de cada commit.
+        -   Para ejecutar los hooks manualmente en todos los archivos (útil para verificar el código existente), ejecuta:
+            ```bash
+            poetry run pre-commit run --all-files
+            ```
 3.  **Naming Conventions:**
     
     -   Variables y Funciones: `snake_case` (ej. `mi_variable`, `calcular_valor_neto()`).
@@ -168,6 +178,19 @@ Considerando nuestro enfoque en una v1.0 ágil y estable para una aplicación lo
     
     -   Para pruebas unitarias y de integración, los datos de prueba se definirán directamente en los archivos de prueba o mediante fixtures de `pytest`.
     -   Se evitará depender de estados de base de datos preexistentes; cada prueba debe configurar y, si es necesario, limpiar sus propios datos.
+-   **Ejecución de Pruebas:**
+    -   Para ejecutar todas las pruebas unitarias y de integración, utiliza el comando Poetry definido en `pyproject.toml`:
+        ```bash
+        poetry run test
+        ```
+    -   Para ejecutar pruebas específicas (ej. solo las pruebas unitarias de un módulo), puedes pasar argumentos adicionales a `pytest`:
+        ```bash
+        poetry run test tests/unit/shared/test_data_types.py
+        ```
+    -   Para generar un informe de cobertura de código (requiere `pytest-cov`):
+        ```bash
+        poetry run test --cov=src
+        ```
 
 ## Error Handling Strategy
 

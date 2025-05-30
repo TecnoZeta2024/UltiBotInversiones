@@ -1,3 +1,189 @@
-# Este archivo contendrá definiciones de tipos de datos compartidos,
-# por ejemplo, modelos Pydantic comunes si la UI los consume directamente
-# o si hay tipos de datos que tanto el backend como la UI necesitan conocer.
+"""
+Este archivo contendrá definiciones de tipos de datos compartidos,
+por ejemplo, modelos Pydantic comunes si la UI los consume directamente
+o si hay tipos de datos que tanto el backend como la UI necesitan conocer.
+"""
+
+from datetime import datetime
+from typing import Optional, List, Dict, Any
+from uuid import UUID, uuid4
+from enum import Enum
+from pydantic import BaseModel, Field
+
+class ServiceName(str, Enum):
+    BINANCE_SPOT = "BINANCE_SPOT"
+    BINANCE_FUTURES = "BINANCE_FUTURES"
+    TELEGRAM_BOT = "TELEGRAM_BOT"
+    GEMINI_API = "GEMINI_API"
+    MOBULA_API = "MOBULA_API"
+    N8N_WEBHOOK = "N8N_WEBHOOK"
+    SUPABASE_CLIENT = "SUPABASE_CLIENT"
+    MCP_GENERIC = "MCP_GENERIC"
+    MCP_DOGGYBEE_CCXT = "MCP_DOGGYBEE_CCXT"
+    MCP_METATRADER_BRIDGE = "MCP_METATRADER_BRIDGE"
+    MCP_WEB3_RESEARCH = "MCP_WEB3_RESEARCH"
+    CUSTOM_SERVICE = "CUSTOM_SERVICE"
+
+class APICredential(BaseModel):
+    id: UUID = Field(default_factory=uuid4)
+    user_id: UUID
+    service_name: ServiceName
+    credential_label: str
+
+    encrypted_api_key: str
+    encrypted_api_secret: Optional[str] = None
+    encrypted_other_details: Optional[str] = None # JSON encriptado para detalles adicionales
+
+    status: str = "verification_pending" # 'active' | 'inactive' | 'revoked' | 'verification_pending' | 'verification_failed' | 'expired'
+    last_verified_at: Optional[datetime] = None
+    
+    permissions: Optional[List[str]] = None
+    permissions_checked_at: Optional[datetime] = None
+
+    expires_at: Optional[datetime] = None
+    rotation_reminder_policy_days: Optional[int] = None
+
+    usage_count: int = 0
+    last_used_at: Optional[datetime] = None
+
+    purpose_description: Optional[str] = None
+    tags: Optional[List[str]] = None
+
+    notes: Optional[str] = None
+
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    class Config:
+        json_encoders = {
+            datetime: lambda dt: dt.isoformat() + "Z",
+            UUID: lambda uuid: str(uuid),
+        }
+        use_enum_values = True # Para que los enums se serialicen como sus valores de string
+
+class TelegramConnectionStatus(BaseModel):
+    """
+    Representa el estado actual de la conexión de Telegram.
+    """
+    is_connected: bool = Field(..., description="True si la conexión con Telegram está activa y verificada.")
+    last_verified_at: Optional[datetime] = Field(None, description="Marca de tiempo de la última verificación exitosa.")
+    status_message: str = Field(..., description="Mensaje descriptivo del estado de la conexión (éxito o error).")
+    status_code: Optional[str] = Field(None, description="Código de error si la conexión falló.")
+
+class BinanceConnectionStatus(BaseModel):
+    """
+    Representa el estado actual de la conexión con Binance.
+    """
+    is_connected: bool = Field(..., description="True si la conexión con Binance está activa y verificada.")
+    last_verified_at: Optional[datetime] = Field(None, description="Marca de tiempo de la última verificación exitosa.")
+    status_message: str = Field(..., description="Mensaje descriptivo del estado de la conexión (éxito o error).")
+    status_code: Optional[str] = Field(None, description="Código de error si la conexión falló.")
+    account_permissions: Optional[List[str]] = Field(None, description="Lista de permisos de la API Key de Binance (ej. 'SPOT_TRADING', 'MARGIN_TRADING').")
+
+class AssetBalance(BaseModel):
+    """
+    Representa el balance de un activo específico en una cuenta.
+    """
+    asset: str = Field(..., description="Símbolo del activo (ej. 'USDT', 'BTC').")
+    free: float = Field(..., description="Cantidad disponible para trading.")
+    locked: float = Field(..., description="Cantidad bloqueada en órdenes.")
+    total: float = Field(..., description="Cantidad total (free + locked).")
+
+# Sub-modelos para UserConfiguration
+class NotificationPreference(BaseModel):
+    eventType: str
+    channel: str # 'telegram' | 'ui' | 'email'
+    isEnabled: bool
+    minConfidence: Optional[float] = None
+    minProfitability: Optional[float] = None
+
+class Watchlist(BaseModel):
+    id: UUID = Field(default_factory=uuid4)
+    name: str
+    pairs: List[str]
+    defaultAlertProfileId: Optional[str] = None
+    defaultAiAnalysisProfileId: Optional[str] = None
+
+class RiskProfileSettings(BaseModel):
+    dailyCapitalRiskPercentage: Optional[float] = None
+    perTradeCapitalRiskPercentage: Optional[float] = None
+    maxDrawdownPercentage: Optional[float] = None
+
+class RealTradingSettings(BaseModel):
+    maxConcurrentOperations: Optional[int] = None
+    dailyLossLimitAbsolute: Optional[float] = None
+    dailyProfitTargetAbsolute: Optional[float] = None
+    assetSpecificStopLoss: Optional[Dict[str, Dict[str, float]]] = None
+    autoPauseTradingConditions: Optional[Dict[str, Any]] = None
+
+class AiStrategyConfiguration(BaseModel):
+    id: UUID = Field(default_factory=uuid4)
+    name: str
+    appliesToStrategies: Optional[List[str]] = None
+    appliesToPairs: Optional[List[str]] = None
+    geminiPromptTemplate: Optional[str] = None
+    indicatorWeights: Optional[Dict[str, float]] = None
+    confidenceThresholds: Optional[Dict[str, float]] = None
+    maxContextWindowTokens: Optional[int] = None
+
+class McpServerPreference(BaseModel):
+    id: str # Identificador del servidor MCP (ej. "doggybee-ccxt")
+    type: str # Tipo de MCP (ej. "ccxt", "web3")
+    url: Optional[str] = None
+    credentialId: Optional[UUID] = None # Referencia a APICredential.id
+    isEnabled: Optional[bool] = None
+    queryFrequencySeconds: Optional[int] = None
+    reliabilityWeight: Optional[float] = None
+    customParameters: Optional[Dict[str, Any]] = None
+
+class DashboardLayoutProfile(BaseModel):
+    name: str
+    configuration: Any # Estructura específica del layout
+
+class CloudSyncPreferences(BaseModel):
+    isEnabled: Optional[bool] = None
+    lastSuccessfulSync: Optional[datetime] = None
+
+class UserConfiguration(BaseModel):
+    id: UUID = Field(default_factory=uuid4)
+    user_id: UUID
+
+    # Preferencias de Notificaciones
+    telegramChatId: Optional[str] = None
+    notificationPreferences: Optional[List[NotificationPreference]] = None
+    enableTelegramNotifications: Optional[bool] = True
+
+    # Preferencias de Trading
+    defaultPaperTradingCapital: Optional[float] = None
+    watchlists: Optional[List[Watchlist]] = None
+    favoritePairs: Optional[List[str]] = None
+    riskProfile: Optional[str] = None # 'conservative' | 'moderate' | 'aggressive' | 'custom'
+    riskProfileSettings: Optional[RiskProfileSettings] = None
+    realTradingSettings: Optional[RealTradingSettings] = None
+
+    # Preferencias de IA y Análisis
+    aiStrategyConfigurations: Optional[List[AiStrategyConfiguration]] = None
+    aiAnalysisConfidenceThresholds: Optional[Dict[str, float]] = None
+    mcpServerPreferences: Optional[List[McpServerPreference]] = None
+
+    # Preferencias de UI
+    selectedTheme: Optional[str] = 'dark' # 'dark' | 'light'
+    dashboardLayoutProfiles: Optional[Dict[str, DashboardLayoutProfile]] = None
+    activeDashboardLayoutProfileId: Optional[str] = None
+    dashboardLayoutConfig: Optional[Any] = None
+
+    # Configuración de Persistencia y Sincronización
+    cloudSyncPreferences: Optional[CloudSyncPreferences] = None
+
+    # Timestamps
+    createdAt: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    updatedAt: Optional[datetime] = Field(default_factory=datetime.utcnow)
+
+    class Config:
+        json_encoders = {
+            datetime: lambda dt: dt.isoformat() + "Z",
+            UUID: lambda uuid: str(uuid),
+        }
+        use_enum_values = True
+        populate_by_name = True # Permite usar alias para los nombres de campo si es necesario
+        arbitrary_types_allowed = True # Para el campo 'configuration: Any' en DashboardLayoutProfile

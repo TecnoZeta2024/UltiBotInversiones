@@ -4,3 +4,4 @@
 - Las operaciones reales deben confirmarse explícitamente por el usuario antes de ejecutarse.
 - Toda funcionalidad debe estar alineada al PRD y respetar los NFRs definidos (latencia < 500ms, win rate > 75%, etc.).
 - Todo análisis y decisión de trading debe tener trazabilidad, ya sea en logs o en la UI.
+- todas las credenciales necesarias estan en el archivo "C:\Users\zamor\UltiBotInversiones\API_Keys.txt"

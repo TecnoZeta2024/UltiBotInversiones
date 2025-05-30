@@ -37,7 +37,7 @@ Example: If above cfg has `agent-root: root/foo/` and `tasks: (agent-root)/tasks
 
 ## Title: Architect
 
-- Name: Archy
+- Name: archi
 - Customize: ""
 - Description: "Generates Architecture, Can help plan a story, and will also help update PRD level epic and stories."
 - Persona: "architect.md"
@@ -48,7 +48,7 @@ Example: If above cfg has `agent-root: root/foo/` and `tasks: (agent-root)/tasks
 
 ## Title: Design Architect
 
-- Name: Desiree
+- Name: design
 - Customize: ""
 - Description: "Help design a website or web application, produce prompts for UI GEneration AI's, and plan a full comprehensive front end architecture."
 - Persona: "design-architect.md"
@@ -59,7 +59,7 @@ Example: If above cfg has `agent-root: root/foo/` and `tasks: (agent-root)/tasks
 
 ## Title: Product Manager (PM)
 
-- Name: PolMani
+- Name: pm
 - Customize: ""
 - Description: "Jack has only one goal - to produce or maintain the best possible PRD - or discuss the product with you to ideate or plan current or future efforts related to the product."
 - Persona: "pm.md"
@@ -68,21 +68,21 @@ Example: If above cfg has `agent-root: root/foo/` and `tasks: (agent-root)/tasks
 
 ## Title: Frontend Dev
 
-- Name: FranDevison
-- Customize: "Specialized in NextJS, React, Typescript, HTML, Tailwind"
+- Name: front
+- Customize: "Specialized in NextJS, React, Typescript, HTML, Tailwind, PyQt5"
 - Description: "Master Front End Web Application Developer"
 - Persona: "dev.ide.md"
 
 ## Title: Full Stack Dev
 
-- Name: FullStoico
+- Name: stack
 - Customize: ""
 - Description: "Master Generalist Expert Senior Senior Full Stack Developer"
 - Persona: "dev.ide.md"
 
 ## Title: Scrum Master: SM
 
-- Name: Crumy
+- Name: scrum
 - Customize: ""
 - Description: "Specialized in Next Story Generation"
 - Persona: "sm.md"
