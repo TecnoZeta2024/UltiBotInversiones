@@ -88,3 +88,102 @@ class AssetBalance(BaseModel):
     free: float = Field(..., description="Cantidad disponible para trading.")
     locked: float = Field(..., description="Cantidad bloqueada en órdenes.")
     total: float = Field(..., description="Cantidad total (free + locked).")
+
+# Sub-modelos para UserConfiguration
+class NotificationPreference(BaseModel):
+    eventType: str
+    channel: str # 'telegram' | 'ui' | 'email'
+    isEnabled: bool
+    minConfidence: Optional[float] = None
+    minProfitability: Optional[float] = None
+
+class Watchlist(BaseModel):
+    id: UUID = Field(default_factory=uuid4)
+    name: str
+    pairs: List[str]
+    defaultAlertProfileId: Optional[str] = None
+    defaultAiAnalysisProfileId: Optional[str] = None
+
+class RiskProfileSettings(BaseModel):
+    dailyCapitalRiskPercentage: Optional[float] = None
+    perTradeCapitalRiskPercentage: Optional[float] = None
+    maxDrawdownPercentage: Optional[float] = None
+
+class RealTradingSettings(BaseModel):
+    maxConcurrentOperations: Optional[int] = None
+    dailyLossLimitAbsolute: Optional[float] = None
+    dailyProfitTargetAbsolute: Optional[float] = None
+    assetSpecificStopLoss: Optional[Dict[str, Dict[str, float]]] = None
+    autoPauseTradingConditions: Optional[Dict[str, Any]] = None
+
+class AiStrategyConfiguration(BaseModel):
+    id: UUID = Field(default_factory=uuid4)
+    name: str
+    appliesToStrategies: Optional[List[str]] = None
+    appliesToPairs: Optional[List[str]] = None
+    geminiPromptTemplate: Optional[str] = None
+    indicatorWeights: Optional[Dict[str, float]] = None
+    confidenceThresholds: Optional[Dict[str, float]] = None
+    maxContextWindowTokens: Optional[int] = None
+
+class McpServerPreference(BaseModel):
+    id: str # Identificador del servidor MCP (ej. "doggybee-ccxt")
+    type: str # Tipo de MCP (ej. "ccxt", "web3")
+    url: Optional[str] = None
+    credentialId: Optional[UUID] = None # Referencia a APICredential.id
+    isEnabled: Optional[bool] = None
+    queryFrequencySeconds: Optional[int] = None
+    reliabilityWeight: Optional[float] = None
+    customParameters: Optional[Dict[str, Any]] = None
+
+class DashboardLayoutProfile(BaseModel):
+    name: str
+    configuration: Any # Estructura específica del layout
+
+class CloudSyncPreferences(BaseModel):
+    isEnabled: Optional[bool] = None
+    lastSuccessfulSync: Optional[datetime] = None
+
+class UserConfiguration(BaseModel):
+    id: UUID = Field(default_factory=uuid4)
+    user_id: UUID
+
+    # Preferencias de Notificaciones
+    telegramChatId: Optional[str] = None
+    notificationPreferences: Optional[List[NotificationPreference]] = None
+    enableTelegramNotifications: Optional[bool] = True
+
+    # Preferencias de Trading
+    defaultPaperTradingCapital: Optional[float] = None
+    watchlists: Optional[List[Watchlist]] = None
+    favoritePairs: Optional[List[str]] = None
+    riskProfile: Optional[str] = None # 'conservative' | 'moderate' | 'aggressive' | 'custom'
+    riskProfileSettings: Optional[RiskProfileSettings] = None
+    realTradingSettings: Optional[RealTradingSettings] = None
+
+    # Preferencias de IA y Análisis
+    aiStrategyConfigurations: Optional[List[AiStrategyConfiguration]] = None
+    aiAnalysisConfidenceThresholds: Optional[Dict[str, float]] = None
+    mcpServerPreferences: Optional[List[McpServerPreference]] = None
+
+    # Preferencias de UI
+    selectedTheme: Optional[str] = 'dark' # 'dark' | 'light'
+    dashboardLayoutProfiles: Optional[Dict[str, DashboardLayoutProfile]] = None
+    activeDashboardLayoutProfileId: Optional[str] = None
+    dashboardLayoutConfig: Optional[Any] = None
+
+    # Configuración de Persistencia y Sincronización
+    cloudSyncPreferences: Optional[CloudSyncPreferences] = None
+
+    # Timestamps
+    createdAt: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    updatedAt: Optional[datetime] = Field(default_factory=datetime.utcnow)
+
+    class Config:
+        json_encoders = {
+            datetime: lambda dt: dt.isoformat() + "Z",
+            UUID: lambda uuid: str(uuid),
+        }
+        use_enum_values = True
+        populate_by_name = True # Permite usar alias para los nombres de campo si es necesario
+        arbitrary_types_allowed = True # Para el campo 'configuration: Any' en DashboardLayoutProfile

@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 from typing import Optional, List, Dict, Any
 from uuid import UUID
 from src.shared.data_types import APICredential, ServiceName
-from datetime import datetime
+from datetime import datetime, timezone # Importar timezone
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +119,7 @@ class SupabasePersistenceService:
         try:
             record = await self.connection.fetchrow(
                 query,
-                credential.id, credential.user_id, credential.service_name.value, credential.credential_label,
+                credential.id, credential.user_id, credential.service_name, credential.credential_label, # Eliminar .value
                 credential.encrypted_api_key, credential.encrypted_api_secret, credential.encrypted_other_details,
                 credential.status, credential.last_verified_at, credential.permissions, credential.permissions_checked_at,
                 credential.expires_at, credential.rotation_reminder_policy_days, credential.usage_count, credential.last_used_at,
@@ -165,7 +165,7 @@ class SupabasePersistenceService:
         WHERE user_id = $1 AND service_name = $2 AND credential_label = $3;
         """
         try:
-            record = await self.connection.fetchrow(query, user_id, service_name.value, credential_label)
+            record = await self.connection.fetchrow(query, user_id, service_name, credential_label) # Eliminar .value
             if record:
                 return APICredential(**dict(record)) # Convertir a dict
             return None
@@ -212,6 +212,93 @@ class SupabasePersistenceService:
             return result == "DELETE 1"
         except Exception as e:
             logger.error(f"Error al eliminar credencial: {e}")
+            raise
+
+    async def get_user_configuration(self, user_id: UUID) -> Optional[Dict[str, Any]]:
+        """
+        Recupera la configuración de un usuario por su ID.
+        """
+        if not self.connection:
+            await self.connect()
+        if not self.connection:
+            raise ConnectionError("No se pudo establecer conexión con la base de datos.")
+        
+        query = "SELECT * FROM user_configurations WHERE user_id = $1;"
+        try:
+            record = await self.connection.fetchrow(query, user_id)
+            if record:
+                # Convertir el record a un diccionario para que Pydantic lo pueda procesar
+                # Los campos JSONB ya deberían ser dicts/lists de Python
+                return dict(record)
+            return None
+        except Exception as e:
+            logger.error(f"Error al obtener configuración de usuario para {user_id}: {e}", exc_info=True)
+            raise
+
+    async def upsert_user_configuration(self, user_id: UUID, config_data: Dict[str, Any]):
+        """
+        Inserta o actualiza la configuración de un usuario.
+        """
+        if not self.connection:
+            await self.connect()
+        if not self.connection:
+            raise ConnectionError("No se pudo establecer conexión con la base de datos.")
+        
+        # Eliminar 'id' y 'createdAt' si están presentes y son generados por la DB
+        # Pydantic model_dump con exclude_none=True ya debería manejar esto,
+        # pero es una salvaguarda si el dict viene de otra fuente.
+        config_to_save = config_data.copy()
+        config_id = config_to_save.pop('id', None) # El ID de la configuración, no el user_id
+        config_to_save.pop('createdAt', None)
+        config_to_save.pop('updatedAt', None) # updated_at se maneja por trigger
+
+        # Convertir nombres de campos de camelCase a snake_case para la DB
+        db_columns = {
+            "telegramChatId": "telegram_chat_id",
+            "notificationPreferences": "notification_preferences",
+            "enableTelegramNotifications": "enable_telegram_notifications",
+            "defaultPaperTradingCapital": "default_paper_trading_capital",
+            "watchlists": "watchlists",
+            "favoritePairs": "favorite_pairs",
+            "riskProfile": "risk_profile",
+            "riskProfileSettings": "risk_profile_settings",
+            "realTradingSettings": "real_trading_settings",
+            "aiStrategyConfigurations": "ai_strategy_configurations",
+            "aiAnalysisConfidenceThresholds": "ai_analysis_confidence_thresholds",
+            "mcpServerPreferences": "mcp_server_preferences",
+            "selectedTheme": "selected_theme",
+            "dashboardLayoutProfiles": "dashboard_layout_profiles",
+            "activeDashboardLayoutProfileId": "active_dashboard_layout_profile_id",
+            "dashboardLayoutConfig": "dashboard_layout_config",
+            "cloudSyncPreferences": "cloud_sync_preferences",
+        }
+        
+        # Construir el diccionario para la inserción/actualización
+        insert_values = {db_columns.get(k, k): v for k, v in config_to_save.items()}
+        
+        # Asegurar que user_id esté presente para la inserción/conflicto
+        insert_values['user_id'] = user_id
+
+        # Construir la consulta dinámicamente
+        columns = ', '.join(insert_values.keys())
+        placeholders = ', '.join(f"${i+1}" for i in range(len(insert_values)))
+        update_set = ', '.join(f"{col} = EXCLUDED.{col}" for col in insert_values.keys() if col != 'user_id') # No actualizar user_id en ON CONFLICT
+
+        query = f"""
+        INSERT INTO user_configurations ({columns})
+        VALUES ({placeholders})
+        ON CONFLICT (user_id) DO UPDATE SET
+            {update_set},
+            updated_at = timezone('utc'::text, now())
+        RETURNING *;
+        """
+        
+        try:
+            # Ejecutar la consulta con los valores en el orden correcto
+            await self.connection.fetchrow(query, *insert_values.values())
+            logger.info(f"Configuración de usuario para {user_id} guardada/actualizada exitosamente.")
+        except Exception as e:
+            logger.error(f"Error al guardar/actualizar configuración de usuario para {user_id}: {e}", exc_info=True)
             raise
 
     async def update_credential_permissions(self, credential_id: UUID, permissions: List[str], permissions_checked_at: datetime) -> Optional[APICredential]:
