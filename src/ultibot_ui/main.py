@@ -4,9 +4,11 @@ import asyncio
 from PyQt5.QtWidgets import QApplication, QMessageBox
 from uuid import UUID
 from typing import Optional
+import os # Importar os
 
 from dotenv import load_dotenv
 from src.ultibot_backend.app_config import AppSettings
+from src.shared.data_types import APICredential, ServiceName # Importar APICredential y ServiceName
 
 # Importar la MainWindow
 from src.ultibot_ui.windows.main_window import MainWindow
@@ -54,6 +56,46 @@ async def start_application():
 
         # Initialize CredentialService
         credential_service = CredentialService(encryption_key=settings.CREDENTIAL_ENCRYPTION_KEY)
+
+        # --- Cargar y guardar credenciales de Binance si no existen ---
+        # Esto asegura que las credenciales de Binance estén disponibles en la base de datos
+        # para el CredentialService, que las recupera de allí.
+        binance_api_key = os.getenv("BINANCE_API_KEY")
+        binance_api_secret = os.getenv("BINANCE_API_SECRET")
+
+        if not binance_api_key or not binance_api_secret:
+            raise ValueError("BINANCE_API_KEY or BINANCE_API_SECRET not found in .env file or environment.")
+
+        try:
+            # Intentar obtener las credenciales para ver si ya están guardadas
+            existing_binance_credential = await credential_service.get_credential(
+                user_id=user_id,
+                service_name=ServiceName.BINANCE_SPOT, # Corregido a ServiceName.BINANCE_SPOT
+                credential_label="default"
+            )
+            if not existing_binance_credential:
+                print("Credenciales de Binance no encontradas en la base de datos. Guardando...")
+                
+                # Encriptar las claves antes de guardarlas
+                encrypted_api_key = credential_service.encrypt_data(binance_api_key)
+                encrypted_api_secret = credential_service.encrypt_data(binance_api_secret)
+
+                binance_credential = APICredential( # Usar APICredential
+                    id=settings.FIXED_BINANCE_CREDENTIAL_ID, # Pasar el UUID directamente
+                    user_id=user_id, # Corregido a user_id
+                    service_name=ServiceName.BINANCE_SPOT, # Corregido a ServiceName.BINANCE_SPOT
+                    credential_label="default", # Corregido a credential_label
+                    encrypted_api_key=encrypted_api_key, # Usar clave encriptada
+                    encrypted_api_secret=encrypted_api_secret # Usar clave secreta encriptada
+                )
+                await credential_service.save_encrypted_credential(binance_credential) # Usar el nuevo método
+                print("Credenciales de Binance guardadas exitosamente.")
+            else:
+                print("Credenciales de Binance ya existen en la base de datos.")
+        except Exception as e:
+            QMessageBox.critical(None, "Error de Credenciales", f"Error al verificar/guardar credenciales de Binance: {str(e)}\n\nLa aplicación se cerrará.")
+            sys.exit(1)
+        # --- Fin de la lógica de credenciales de Binance ---
 
         # Other services
         binance_adapter = BinanceAdapter() # Assumes AppSettings is used internally
@@ -135,5 +177,9 @@ if __name__ == "__main__":
     # or ensure your current working directory is the project root when running:
     #   python src/ultibot_ui/main.py
     # ---
+    # Fix for Windows ProactorEventLoop issue with psycopg
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+        
     # Ejecutar la aplicación asíncrona
     asyncio.run(start_application())

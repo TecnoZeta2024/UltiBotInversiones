@@ -1,96 +1,104 @@
-import asyncpg
+import psycopg
+from psycopg.rows import dict_row # Usar dict_row, se aplica al cursor
+from psycopg.conninfo import make_conninfo
 from src.ultibot_backend.app_config import settings
 import logging
-from urllib.parse import urlparse
+import os # Importar os
+from urllib.parse import urlparse, unquote
 from typing import Optional, List, Dict, Any
 from uuid import UUID
 from src.shared.data_types import APICredential, ServiceName, Notification
-from datetime import datetime, timezone # Importar timezone
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
 class SupabasePersistenceService:
     def __init__(self):
-        self.connection: Optional[asyncpg.Connection] = None
-        self.database_url = settings.DATABASE_URL
+        self.connection: Optional[psycopg.AsyncConnection] = None
+        # self.database_url ya no se establece desde settings aquí para asegurar que se lee la más fresca en connect()
+        # if not settings.DATABASE_URL: # Esta verificación se hará en connect()
+        #     raise ValueError("DATABASE_URL no está configurada.")
+        
+        # self.database_url se leerá directamente de os.getenv() en el método connect
+        # para asegurar que se usa el valor más fresco, especialmente después de cambios en .env
+        # Sin embargo, la lógica de parseo que estaba aquí para el logging de conninfo
+        # puede eliminarse o ajustarse si ya no es necesaria en __init__.
+        # Por ahora, la eliminaremos de __init__ para simplificar, ya que connect() usa el DSN directamente.
+
+        # Parsear la URL una vez para obtener los componentes
+        # y construir el conninfo para psycopg
+        # Ejemplo DSN: postgresql://user:pass@host:port/dbname?sslmode=verify-full&sslrootcert=path/to/cert.crt
+        
+        # No es necesario parsear manualmente si pasamos el DSN directamente a connect,
+        # pero para añadir sslrootcert de forma programática, construir conninfo es más limpio.
+        
+        # parsed = urlparse(self.database_url) # self.database_url no está definido aquí ahora
+        # Dejar que psycopg maneje la decodificación de la contraseña del DSN.
+        # make_conninfo espera la contraseña tal como estaría en un DSN.
+        # Si la DATABASE_URL tiene la contraseña codificada (%2A), make_conninfo la pasará así.
+        # psycopg.Connection.connect luego la decodificará.
+        # No es necesario construir conninfo explícitamente si pasamos el DSN y los parámetros SSL directamente.
+        pass # __init__ ya no necesita construir self.conninfo de esta manera
+
 
     async def connect(self):
         try:
-            if not self.database_url:
-                logger.error("DATABASE_URL no está configurada.")
-                raise ValueError("DATABASE_URL no está configurada.")
+            if self.connection and not self.connection.closed:
+                logger.info("Ya existe una conexión activa.")
+                return
 
-            parsed_url = urlparse(self.database_url)
-            
-            # Usar la contraseña original directamente, asyncpg debería manejarla.
-            # La contraseña en .env es Carlose1411* (según API_Keys.txt y la lógica previa)
-            # El usuario es postgres.ryfkuilvlbuzaxniqxwx
-            # El host es aws-0-sa-east-1.pooler.supabase.com
-            # El puerto es 5432
-            # La base de datos es postgres
-            
-            # Extraer componentes de la URL. El DSN del .env es:
-            # postgresql://postgres.ryfkuilvlbuzaxniqxwx:Carlose1411%2A@aws-0-sa-east-1.pooler.supabase.com:5432/postgres
-            # El usuario es 'postgres.ryfkuilvlbuzaxniqxwx'
-            # La contraseña original es 'Carlose1411*'
-            
-            db_user = parsed_url.username
-            # La contraseña del parsed_url podría estar codificada, usamos la original.
-            # En este caso, el pooler usa el formato 'postgres.PROJECT_REF' como usuario
-            # y la contraseña del proyecto como contraseña.
-            db_password = parsed_url.password # Contraseña original del proyecto
-            if not db_password:
-                logger.error("La contraseña no se encontró en DATABASE_URL.")
-                raise ValueError("La contraseña no se encontró en DATABASE_URL.")
-            db_host = parsed_url.hostname
-            db_port = parsed_url.port
-            db_name = parsed_url.path.lstrip('/')
+            # Leer DATABASE_URL directamente de las variables de entorno aquí
+            # para asegurar que se usa el valor más reciente, especialmente después de cambios en .env
+            current_database_url = os.getenv("DATABASE_URL")
+            if not current_database_url:
+                logger.error("DATABASE_URL no se encontró en las variables de entorno al intentar conectar.")
+                raise ValueError("DATABASE_URL no está configurada en las variables de entorno.")
 
-            if not all([db_user, db_password, db_host, db_port, db_name]):
-                logger.error(f"No se pudieron parsear todos los componentes de DATABASE_URL: {self.database_url}")
-                raise ValueError(f"DATABASE_URL mal formada: {self.database_url}")
-
-            self.connection = await asyncpg.connect(
-                user=db_user,
-                password=db_password,
-                database=db_name,
-                host=db_host,
-                port=db_port
+            # Pasar el DSN directamente y los parámetros SSL por separado.
+            # psycopg decodificará la contraseña del DSN.
+            self.connection = await psycopg.AsyncConnection.connect(
+                current_database_url, # Usar la URL leída directamente
+                sslmode='verify-full',
+                sslrootcert='supabase/prod-ca-2021.crt'
+                # row_factory se aplicará al cursor
             )
-            logger.info("Conexión a la base de datos Supabase establecida exitosamente usando parámetros individuales.")
+            logger.info("Conexión a la base de datos Supabase (psycopg) establecida exitosamente usando DSN directo.")
         except Exception as e:
-            logger.error(f"Error al conectar a la base de datos Supabase con parámetros individuales: {e}")
+            logger.error(f"Error al conectar a la base de datos Supabase (psycopg): {e}")
+            if isinstance(e, psycopg.Error) and e.diag: # Comprobación más segura para diag
+                 logger.error(f"Detalles del error de PSQL (diag): {e.diag.message_primary}")
             raise
 
     async def disconnect(self):
-        if self.connection:
+        if self.connection and not self.connection.closed:
             await self.connection.close()
-            logger.info("Conexión a la base de datos Supabase cerrada.")
+            logger.info("Conexión a la base de datos Supabase (psycopg) cerrada.")
 
-    async def test_connection(self):
-        if not self.connection:
+    async def _ensure_connection(self):
+        if not self.connection or self.connection.closed:
             await self.connect()
-        if self.connection: # Asegurar que la conexión no es None
-            try:
-                result = await self.connection.fetchval("SELECT 1;")
-                if result == 1:
-                    logger.info("Conexión de prueba a la base de datos Supabase exitosa.")
+        # No es necesario el segundo if not self.connection, connect() ya lanzaría una excepción si falla.
+        # Si connect() no lanza excepción, self.connection debería estar establecido.
+
+    async def test_connection(self) -> bool:
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
+        try:
+            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+                await cur.execute("SELECT 1 AS result;")
+                result = await cur.fetchone()
+                if result and result.get('result') == 1: # Usar .get() para acceso seguro
+                    logger.info("Conexión de prueba a la base de datos Supabase (psycopg) exitosa.")
                     return True
+                logger.warning(f"Conexión de prueba a Supabase (psycopg) devolvió: {result}")
                 return False
-            except Exception as e:
-                logger.error(f"Error en la conexión de prueba a la base de datos Supabase: {e}")
-                return False
-        return False # Si la conexión es None después de intentar conectar
+        except Exception as e:
+            logger.error(f"Error en la conexión de prueba a la base de datos Supabase (psycopg): {e}")
+            return False
 
     async def save_credential(self, credential: APICredential) -> APICredential:
-        """
-        Guarda una nueva credencial o actualiza una existente en la tabla api_credentials.
-        """
-        if not self.connection:
-            await self.connect()
-        if not self.connection: # Asegurar que la conexión no es None
-            raise ConnectionError("No se pudo establecer conexión con la base de datos.")
-        
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
         query = """
         INSERT INTO api_credentials (
             id, user_id, service_name, credential_label, 
@@ -99,7 +107,7 @@ class SupabasePersistenceService:
             expires_at, rotation_reminder_policy_days, usage_count, last_used_at, 
             purpose_description, tags, notes, created_at, updated_at
         ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
         )
         ON CONFLICT (user_id, service_name, credential_label) DO UPDATE SET
             encrypted_api_key = EXCLUDED.encrypted_api_key,
@@ -120,223 +128,191 @@ class SupabasePersistenceService:
         RETURNING *;
         """
         try:
-            record = await self.connection.fetchrow(
-                query,
-                credential.id, credential.user_id, credential.service_name, credential.credential_label, # Eliminar .value
-                credential.encrypted_api_key, credential.encrypted_api_secret, credential.encrypted_other_details,
-                credential.status, credential.last_verified_at, credential.permissions, credential.permissions_checked_at,
-                credential.expires_at, credential.rotation_reminder_policy_days, credential.usage_count, credential.last_used_at,
-                credential.purpose_description, credential.tags, credential.notes, credential.created_at, credential.updated_at
-            )
-            if record:
-                return APICredential(**dict(record)) # Convertir a dict
-            raise ValueError("No se pudo guardar/actualizar la credencial y obtener el registro de retorno.")
+            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+                await cur.execute(
+                    query,
+                    (
+                        credential.id, credential.user_id, credential.service_name, credential.credential_label, # Quitado .value
+                        credential.encrypted_api_key, credential.encrypted_api_secret, credential.encrypted_other_details,
+                        credential.status, credential.last_verified_at, credential.permissions, credential.permissions_checked_at,
+                        credential.expires_at, credential.rotation_reminder_policy_days, credential.usage_count, credential.last_used_at,
+                        credential.purpose_description, credential.tags, credential.notes, credential.created_at, credential.updated_at
+                    )
+                )
+                record = await cur.fetchone()
+                await self.connection.commit() # Asegurar commit
+                if record:
+                    return APICredential(**record)
+            raise ValueError("No se pudo guardar/actualizar la credencial y obtener el registro de retorno (psycopg).")
         except Exception as e:
-            logger.error(f"Error al guardar/actualizar credencial: {e}")
+            logger.error(f"Error al guardar/actualizar credencial (psycopg): {e}")
+            if self.connection and not self.connection.closed: # Asegurar que hay conexión para rollback
+                await self.connection.rollback() # Rollback en caso de error
             raise
 
     async def get_credential_by_id(self, credential_id: UUID) -> Optional[APICredential]:
-        """
-        Recupera una credencial por su ID.
-        """
-        if not self.connection:
-            await self.connect()
-        if not self.connection: # Asegurar que la conexión no es None
-            raise ConnectionError("No se pudo establecer conexión con la base de datos.")
-        
-        query = "SELECT * FROM api_credentials WHERE id = $1;"
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
+        query = "SELECT * FROM api_credentials WHERE id = %s;"
         try:
-            record = await self.connection.fetchrow(query, credential_id)
-            if record:
-                return APICredential(**dict(record)) # Convertir a dict
+            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+                await cur.execute(query, (credential_id,))
+                record = await cur.fetchone()
+                if record:
+                    return APICredential(**record)
             return None
         except Exception as e:
-            logger.error(f"Error al obtener credencial por ID: {e}")
+            logger.error(f"Error al obtener credencial por ID (psycopg): {e}")
             raise
 
     async def get_credential_by_service_label(self, user_id: UUID, service_name: ServiceName, credential_label: str) -> Optional[APICredential]:
-        """
-        Recupera una credencial por user_id, service_name y credential_label.
-        """
-        if not self.connection:
-            await self.connect()
-        if not self.connection: # Asegurar que la conexión no es None
-            raise ConnectionError("No se pudo establecer conexión con la base de datos.")
-        
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
         query = """
         SELECT * FROM api_credentials 
-        WHERE user_id = $1 AND service_name = $2 AND credential_label = $3;
+        WHERE user_id = %s AND service_name = %s AND credential_label = %s;
         """
         try:
-            record = await self.connection.fetchrow(query, user_id, service_name, credential_label) # Eliminar .value
-            if record:
-                return APICredential(**dict(record)) # Convertir a dict
+            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+                await cur.execute(query, (user_id, service_name, credential_label)) # Quitado .value
+                record = await cur.fetchone()
+                if record:
+                    return APICredential(**record)
             return None
         except Exception as e:
-            logger.error(f"Error al obtener credencial por servicio y etiqueta: {e}")
+            logger.error(f"Error al obtener credencial por servicio y etiqueta (psycopg): {e}")
             raise
 
     async def update_credential_status(self, credential_id: UUID, new_status: str, last_verified_at: Optional[datetime] = None) -> Optional[APICredential]:
-        """
-        Actualiza el estado de una credencial y opcionalmente la fecha de última verificación.
-        """
-        if not self.connection:
-            await self.connect()
-        if not self.connection: # Asegurar que la conexión no es None
-            raise ConnectionError("No se pudo establecer conexión con la base de datos.")
-        
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
         query = """
         UPDATE api_credentials 
-        SET status = $2, last_verified_at = $3, updated_at = timezone('utc'::text, now())
-        WHERE id = $1
+        SET status = %s, last_verified_at = %s, updated_at = timezone('utc'::text, now())
+        WHERE id = %s
         RETURNING *;
         """
         try:
-            record = await self.connection.fetchrow(query, credential_id, new_status, last_verified_at)
-            if record:
-                return APICredential(**dict(record)) # Convertir a dict
+            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+                await cur.execute(query, (new_status, last_verified_at, credential_id))
+                record = await cur.fetchone()
+                await self.connection.commit()
+                if record:
+                    return APICredential(**record)
             return None
         except Exception as e:
-            logger.error(f"Error al actualizar estado de credencial: {e}")
+            logger.error(f"Error al actualizar estado de credencial (psycopg): {e}")
+            if self.connection and not self.connection.closed:
+                await self.connection.rollback()
             raise
 
     async def delete_credential(self, credential_id: UUID) -> bool:
-        """
-        Elimina una credencial por su ID.
-        """
-        if not self.connection:
-            await self.connect()
-        if not self.connection: # Asegurar que la conexión no es None
-            raise ConnectionError("No se pudo establecer conexión con la base de datos.")
-        
-        query = "DELETE FROM api_credentials WHERE id = $1;"
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
+        query = "DELETE FROM api_credentials WHERE id = %s;"
         try:
-            result = await self.connection.execute(query, credential_id)
-            return result == "DELETE 1"
+            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor (aunque no se use para fetch)
+                await cur.execute(query, (credential_id,))
+                await self.connection.commit()
+                # rowcount podría no ser fiable para DELETE sin RETURNING en todos los casos/DBs
+                # Para psycopg, si la ejecución es exitosa y no hay error, asumimos que funcionó.
+                # Un check más robusto sería `RETURNING id` y ver si devuelve algo.
+                return cur.rowcount > 0 # True si se eliminó al menos una fila
         except Exception as e:
-            logger.error(f"Error al eliminar credencial: {e}")
+            logger.error(f"Error al eliminar credencial (psycopg): {e}")
+            if self.connection and not self.connection.closed:
+                await self.connection.rollback()
             raise
 
     async def get_user_configuration(self, user_id: UUID) -> Optional[Dict[str, Any]]:
-        """
-        Recupera la configuración de un usuario por su ID.
-        """
-        if not self.connection:
-            await self.connect()
-        if not self.connection:
-            raise ConnectionError("No se pudo establecer conexión con la base de datos.")
-        
-        query = "SELECT * FROM user_configurations WHERE user_id = $1;"
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
+        query = "SELECT * FROM user_configurations WHERE user_id = %s;"
         try:
-            record = await self.connection.fetchrow(query, user_id)
-            if record:
-                # Convertir el record a un diccionario para que Pydantic lo pueda procesar
-                # Los campos JSONB ya deberían ser dicts/lists de Python
-                return dict(record)
+            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+                await cur.execute(query, (user_id,))
+                record = await cur.fetchone()
+                if record:
+                    return dict(record) # Ya es un dict debido a row_factory
             return None
         except Exception as e:
-            logger.error(f"Error al obtener configuración de usuario para {user_id}: {e}", exc_info=True)
+            logger.error(f"Error al obtener configuración de usuario para {user_id} (psycopg): {e}", exc_info=True)
             raise
 
     async def upsert_user_configuration(self, user_id: UUID, config_data: Dict[str, Any]):
-        """
-        Inserta o actualiza la configuración de un usuario.
-        """
-        if not self.connection:
-            await self.connect()
-        if not self.connection:
-            raise ConnectionError("No se pudo establecer conexión con la base de datos.")
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
         
-        # Eliminar 'id' y 'createdAt' si están presentes y son generados por la DB
-        # Pydantic model_dump con exclude_none=True ya debería manejar esto,
-        # pero es una salvaguarda si el dict viene de otra fuente.
         config_to_save = config_data.copy()
-        config_id = config_to_save.pop('id', None) # El ID de la configuración, no el user_id
+        config_to_save.pop('id', None)
         config_to_save.pop('createdAt', None)
-        config_to_save.pop('updatedAt', None) # updated_at se maneja por trigger
+        config_to_save.pop('updatedAt', None)
 
-        # Convertir nombres de campos de camelCase a snake_case para la DB
-        db_columns = {
-            "telegramChatId": "telegram_chat_id",
-            "notificationPreferences": "notification_preferences",
-            "enableTelegramNotifications": "enable_telegram_notifications",
-            "defaultPaperTradingCapital": "default_paper_trading_capital",
-            "watchlists": "watchlists",
-            "favoritePairs": "favorite_pairs",
-            "riskProfile": "risk_profile",
-            "riskProfileSettings": "risk_profile_settings",
-            "realTradingSettings": "real_trading_settings",
-            "aiStrategyConfigurations": "ai_strategy_configurations",
-            "aiAnalysisConfidenceThresholds": "ai_analysis_confidence_thresholds",
-            "mcpServerPreferences": "mcp_server_preferences",
-            "selectedTheme": "selected_theme",
-            "dashboardLayoutProfiles": "dashboard_layout_profiles",
-            "activeDashboardLayoutProfileId": "active_dashboard_layout_profile_id",
-            "dashboardLayoutConfig": "dashboard_layout_config",
-            "cloudSyncPreferences": "cloud_sync_preferences",
+        db_columns_map = {
+            "telegramChatId": "telegram_chat_id", "notificationPreferences": "notification_preferences",
+            "enableTelegramNotifications": "enable_telegram_notifications", "defaultPaperTradingCapital": "default_paper_trading_capital",
+            "watchlists": "watchlists", "favoritePairs": "favorite_pairs", "riskProfile": "risk_profile",
+            "riskProfileSettings": "risk_profile_settings", "realTradingSettings": "real_trading_settings",
+            "aiStrategyConfigurations": "ai_strategy_configurations", "aiAnalysisConfidenceThresholds": "ai_analysis_confidence_thresholds",
+            "mcpServerPreferences": "mcp_server_preferences", "selectedTheme": "selected_theme",
+            "dashboardLayoutProfiles": "dashboard_layout_profiles", "activeDashboardLayoutProfileId": "active_dashboard_layout_profile_id",
+            "dashboardLayoutConfig": "dashboard_layout_config", "cloudSyncPreferences": "cloud_sync_preferences",
         }
         
-        # Construir el diccionario para la inserción/actualización
-        insert_values = {db_columns.get(k, k): v for k, v in config_to_save.items()}
-        
-        # Asegurar que user_id esté presente para la inserción/conflicto
-        insert_values['user_id'] = user_id
+        insert_values_dict = {db_columns_map.get(k, k): v for k, v in config_to_save.items()}
+        insert_values_dict['user_id'] = user_id
 
-        # Construir la consulta dinámicamente
-        columns = ', '.join(insert_values.keys())
-        placeholders = ', '.join(f"${i+1}" for i in range(len(insert_values)))
-        update_set = ', '.join(f"{col} = EXCLUDED.{col}" for col in insert_values.keys() if col != 'user_id') # No actualizar user_id en ON CONFLICT
+        columns_str = ', '.join(insert_values_dict.keys())
+        placeholders_str = ', '.join(['%s'] * len(insert_values_dict))
+        update_set_parts = [f"{col} = EXCLUDED.{col}" for col in insert_values_dict if col != 'user_id']
+        update_set_str = ', '.join(update_set_parts)
 
         query = f"""
-        INSERT INTO user_configurations ({columns})
-        VALUES ({placeholders})
+        INSERT INTO user_configurations ({columns_str})
+        VALUES ({placeholders_str})
         ON CONFLICT (user_id) DO UPDATE SET
-            {update_set},
+            {update_set_str},
             updated_at = timezone('utc'::text, now())
         RETURNING *;
         """
         
         try:
-            # Ejecutar la consulta con los valores en el orden correcto
-            await self.connection.fetchrow(query, *insert_values.values())
-            logger.info(f"Configuración de usuario para {user_id} guardada/actualizada exitosamente.")
+            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+                await cur.execute(query, tuple(insert_values_dict.values()))
+                await self.connection.commit()
+            logger.info(f"Configuración de usuario para {user_id} guardada/actualizada exitosamente (psycopg).")
         except Exception as e:
-            logger.error(f"Error al guardar/actualizar configuración de usuario para {user_id}: {e}", exc_info=True)
+            logger.error(f"Error al guardar/actualizar configuración de usuario para {user_id} (psycopg): {e}", exc_info=True)
+            if self.connection and not self.connection.closed:
+                await self.connection.rollback()
             raise
 
     async def update_credential_permissions(self, credential_id: UUID, permissions: List[str], permissions_checked_at: datetime) -> Optional[APICredential]:
-        """
-        Actualiza los permisos y la fecha de verificación de permisos de una credencial.
-        """
-        if not self.connection:
-            await self.connect()
-        if not self.connection:
-            raise ConnectionError("No se pudo establecer conexión con la base de datos.")
-        
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
         query = """
         UPDATE api_credentials 
-        SET permissions = $2, permissions_checked_at = $3, updated_at = timezone('utc'::text, now())
-        WHERE id = $1
+        SET permissions = %s, permissions_checked_at = %s, updated_at = timezone('utc'::text, now())
+        WHERE id = %s
         RETURNING *;
         """
         try:
-            record = await self.connection.fetchrow(query, credential_id, permissions, permissions_checked_at)
-            if record:
-                return APICredential(**dict(record))
+            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+                await cur.execute(query, (permissions, permissions_checked_at, credential_id))
+                record = await cur.fetchone()
+                await self.connection.commit()
+                if record:
+                    return APICredential(**record)
             return None
         except Exception as e:
-            logger.error(f"Error al actualizar permisos de credencial: {e}")
+            logger.error(f"Error al actualizar permisos de credencial (psycopg): {e}")
+            if self.connection and not self.connection.closed:
+                await self.connection.rollback()
             raise
 
     async def save_notification(self, notification: Notification) -> Notification:
-        """
-        Guarda una nueva notificación o actualiza una existente en la tabla notifications.
-        """
-        if not self.connection:
-            await self.connect()
-        if not self.connection:
-            raise ConnectionError("No se pudo establecer conexión con la base de datos.")
-        
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
         query = """
         INSERT INTO notifications (
             id, user_id, event_type, channel, title_key, message_key, message_params,
@@ -344,92 +320,197 @@ class SupabasePersistenceService:
             correlation_id, is_summary, summarized_notification_ids, created_at,
             read_at, sent_at, status_history, generated_by
         ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
         )
         ON CONFLICT (id) DO UPDATE SET
-            user_id = EXCLUDED.user_id,
-            event_type = EXCLUDED.event_type,
-            channel = EXCLUDED.channel,
-            title_key = EXCLUDED.title_key,
-            message_key = EXCLUDED.message_key,
-            message_params = EXCLUDED.message_params,
-            title = EXCLUDED.title,
-            message = EXCLUDED.message,
-            priority = EXCLUDED.priority,
-            status = EXCLUDED.status,
-            snoozed_until = EXCLUDED.snoozed_until,
-            data_payload = EXCLUDED.data_payload,
-            actions = EXCLUDED.actions,
-            correlation_id = EXCLUDED.correlation_id,
-            is_summary = EXCLUDED.is_summary,
-            summarized_notification_ids = EXCLUDED.summarized_notification_ids,
-            read_at = EXCLUDED.read_at,
-            sent_at = EXCLUDED.sent_at,
-            status_history = EXCLUDED.status_history,
-            generated_by = EXCLUDED.generated_by,
-            created_at = EXCLUDED.created_at
+            user_id = EXCLUDED.user_id, event_type = EXCLUDED.event_type, channel = EXCLUDED.channel,
+            title_key = EXCLUDED.title_key, message_key = EXCLUDED.message_key, message_params = EXCLUDED.message_params,
+            title = EXCLUDED.title, message = EXCLUDED.message, priority = EXCLUDED.priority,
+            status = EXCLUDED.status, snoozed_until = EXCLUDED.snoozed_until, data_payload = EXCLUDED.data_payload,
+            actions = EXCLUDED.actions, correlation_id = EXCLUDED.correlation_id, is_summary = EXCLUDED.is_summary,
+            summarized_notification_ids = EXCLUDED.summarized_notification_ids, read_at = EXCLUDED.read_at,
+            sent_at = EXCLUDED.sent_at, status_history = EXCLUDED.status_history, generated_by = EXCLUDED.generated_by,
+            created_at = EXCLUDED.created_at -- Asegurarse de que created_at se actualice si es parte del EXCLUDED
         RETURNING *;
         """
+        # Nota: El ON CONFLICT para created_at = EXCLUDED.created_at puede no ser lo deseado si created_at
+        # solo debe establecerse en la inserción inicial. Ajustar si es necesario.
         try:
-            record = await self.connection.fetchrow(
-                query,
-                notification.id, notification.userId, notification.eventType, notification.channel,
-                notification.titleKey, notification.messageKey, notification.messageParams,
-                notification.title, notification.message, notification.priority.value if notification.priority else None, notification.status,
-                notification.snoozedUntil, notification.dataPayload, notification.actions,
-                notification.correlationId, notification.isSummary, notification.summarizedNotificationIds,
-                notification.createdAt, notification.readAt, notification.sentAt,
-                notification.statusHistory, notification.generatedBy
-            )
-            if record:
-                return Notification(**dict(record))
-            raise ValueError("No se pudo guardar/actualizar la notificación y obtener el registro de retorno.")
+            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+                await cur.execute(
+                    query,
+                    (
+                        notification.id, notification.userId, notification.eventType, # Quitado .value
+                        notification.channel, # Quitado .value
+                        notification.titleKey, notification.messageKey, notification.messageParams,
+                        notification.title, notification.message,
+                        notification.priority, # Quitado .value
+                        notification.status, # Quitado .value
+                        notification.snoozedUntil, notification.dataPayload, notification.actions,
+                        notification.correlationId, notification.isSummary, notification.summarizedNotificationIds,
+                        notification.createdAt, notification.readAt, notification.sentAt,
+                        notification.statusHistory, notification.generatedBy
+                    )
+                )
+                record = await cur.fetchone()
+                await self.connection.commit()
+                if record:
+                    # Psycopg devuelve dicts, pero los enums deben reconstruirse
+                    # Esto se manejaría mejor en el modelo Pydantic con validadores o constructores
+                    # Por ahora, asumimos que el modelo Pydantic puede manejar los valores string de los enums
+                    return Notification(**record)
+            raise ValueError("No se pudo guardar/actualizar la notificación y obtener el registro de retorno (psycopg).")
         except Exception as e:
-            logger.error(f"Error al guardar/actualizar notificación: {e}")
+            logger.error(f"Error al guardar/actualizar notificación (psycopg): {e}")
+            if self.connection and not self.connection.closed:
+                await self.connection.rollback()
             raise
 
     async def get_notification_history(self, user_id: UUID, limit: int = 50) -> List[Notification]:
-        """
-        Recupera un historial de notificaciones para un usuario, ordenadas por las más recientes.
-        """
-        if not self.connection:
-            await self.connect()
-        if not self.connection:
-            raise ConnectionError("No se pudo establecer conexión con la base de datos.")
-        
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
         query = """
         SELECT * FROM notifications
-        WHERE user_id = $1
+        WHERE user_id = %s
         ORDER BY created_at DESC
-        LIMIT $2;
+        LIMIT %s;
         """
         try:
-            records = await self.connection.fetch(query, user_id, limit)
-            return [Notification(**dict(record)) for record in records]
+            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+                await cur.execute(query, (user_id, limit))
+                records = await cur.fetchall()
+            return [Notification(**record) for record in records]
         except Exception as e:
-            logger.error(f"Error al obtener historial de notificaciones para el usuario {user_id}: {e}")
+            logger.error(f"Error al obtener historial de notificaciones para el usuario {user_id} (psycopg): {e}")
             raise
 
     async def mark_notification_as_read(self, notification_id: UUID, user_id: UUID) -> Optional[Notification]:
-        """
-        Marca una notificación específica como leída.
-        """
-        if not self.connection:
-            await self.connect()
-        if not self.connection:
-            raise ConnectionError("No se pudo establecer conexión con la base de datos.")
-        
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
         query = """
         UPDATE notifications
         SET status = 'read', read_at = timezone('utc'::text, now())
-        WHERE id = $1 AND user_id = $2
+        WHERE id = %s AND user_id = %s
         RETURNING *;
         """
         try:
-            record = await self.connection.fetchrow(query, notification_id, user_id)
-            if record:
-                return Notification(**dict(record))
+            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+                await cur.execute(query, (notification_id, user_id))
+                record = await cur.fetchone()
+                await self.connection.commit()
+                if record:
+                    return Notification(**record)
             return None
         except Exception as e:
-            logger.error(f"Error al marcar notificación {notification_id} como leída para el usuario {user_id}: {e}")
+            logger.error(f"Error al marcar notificación {notification_id} como leída para el usuario {user_id} (psycopg): {e}")
+            if self.connection and not self.connection.closed:
+                await self.connection.rollback()
             raise
+
+    # Métodos específicos de los tests que necesitan ser adaptados
+    async def execute_test_delete(self, user_id_str: str):
+        """Método de ayuda para eliminar datos de prueba, usado en test_persistence_connection.py"""
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
+        try:
+            user_uuid = UUID(user_id_str)
+            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor (aunque no se use para fetch)
+                await cur.execute("DELETE FROM user_configurations WHERE user_id = %s;", (user_uuid,))
+                await self.connection.commit()
+            logger.info(f"Datos de prueba para user_id {user_id_str} eliminados (psycopg).")
+        except Exception as e:
+            logger.error(f"Error al eliminar datos de prueba para user_id {user_id_str} (psycopg): {e}")
+            if self.connection and not self.connection.closed:
+                await self.connection.rollback() # Asegurar rollback en caso de error
+            # No relanzar para no interrumpir la limpieza en finally, pero loggear es importante.
+
+    async def execute_test_insert(self, user_id_str: str, theme: str):
+        """Método de ayuda para insertar datos de prueba, usado en test_persistence_connection.py"""
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
+        try:
+            user_uuid = UUID(user_id_str)
+            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+                await cur.execute(
+                    """
+                    INSERT INTO user_configurations (user_id, selected_theme)
+                    VALUES (%s, %s);
+                    """,
+                    (user_uuid, theme)
+                )
+                await self.connection.commit()
+            logger.info(f"Inserción de prueba para user_id {user_id_str} exitosa (psycopg).")
+        except Exception as e:
+            logger.error(f"Error en inserción de prueba para user_id {user_id_str} (psycopg): {e}")
+            if self.connection and not self.connection.closed:
+                await self.connection.rollback()
+            raise # Relanzar para que el test falle si la inserción falla
+
+    async def fetchrow_test_select(self, user_id_str: str) -> Optional[Dict[str, Any]]:
+        """Método de ayuda para leer datos de prueba, usado en test_persistence_connection.py"""
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
+        try:
+            user_uuid = UUID(user_id_str)
+            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+                await cur.execute(
+                    "SELECT user_id, selected_theme FROM user_configurations WHERE user_id = %s;",
+                    (user_uuid,)
+                )
+                record = await cur.fetchone()
+                return record # Ya es un dict
+        except Exception as e:
+            logger.error(f"Error en lectura de prueba para user_id {user_id_str} (psycopg): {e}")
+            raise
+            
+    # Adaptación de los métodos de test_persistence.py
+    async def execute_test_insert_config(self, params: tuple):
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
+        insert_query = """
+        INSERT INTO user_configurations (user_id, selected_theme, enable_telegram_notifications, default_paper_trading_capital, notification_preferences)
+        VALUES (%s, %s, %s, %s, %s::jsonb)
+        RETURNING id, user_id, selected_theme;
+        """
+        try:
+            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+                await cur.execute(insert_query, params)
+                record = await cur.fetchone()
+                await self.connection.commit()
+                return record
+        except Exception as e:
+            logger.error(f"Error en execute_test_insert_config (psycopg): {e}")
+            if self.connection and not self.connection.closed:
+                await self.connection.rollback()
+            raise
+
+    async def fetchrow_test_select_config(self, user_id_str: str) -> Optional[Dict[str, Any]]:
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
+        select_query = "SELECT user_id, selected_theme, default_paper_trading_capital FROM user_configurations WHERE user_id = %s;"
+        try:
+            user_uuid = UUID(user_id_str) # Asegurarse de que es UUID para la comparación
+            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor
+                await cur.execute(select_query, (user_uuid,))
+                record = await cur.fetchone()
+                return record
+        except Exception as e:
+            logger.error(f"Error en fetchrow_test_select_config (psycopg): {e}")
+            raise
+
+    async def execute_raw_sql(self, query: str, params: Optional[tuple] = None):
+        """ Ejecuta una consulta SQL cruda. Usado para limpieza en tests. """
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
+        try:
+            async with self.connection.cursor(row_factory=dict_row) as cur: # Añadir row_factory al cursor (aunque no se use para fetch)
+                await cur.execute(query, params)
+                await self.connection.commit()
+        except Exception as e:
+            logger.error(f"Error ejecutando SQL crudo (psycopg): {query} con params {params} - {e}")
+            if self.connection and not self.connection.closed:
+                await self.connection.rollback()
+            # No relanzar si es para limpieza, pero sí loggear.
+            # Si no es para limpieza, el que llama debería manejar el error.
+            # Para los tests, si la limpieza falla, es informativo pero no debe detener otros tests.
+            # raise # Descomentar si se necesita que el error se propague

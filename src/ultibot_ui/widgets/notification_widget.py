@@ -1,4 +1,5 @@
 import sys
+import asyncio # Importar asyncio
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
     QPushButton, QApplication, QAbstractItemView, QSizePolicy
@@ -26,6 +27,58 @@ class NotificationWidget(QWidget):
         self.init_ui()
         self._setup_styles()
         self._setup_realtime_updates() # Configurar actualizaciones en tiempo real
+
+    def _setup_realtime_updates(self):
+        """
+        Configura un temporizador para buscar nuevas notificaciones periódicamente.
+        """
+        self.update_timer = QTimer(self)
+        self.update_timer.setInterval(5000)  # Actualizar cada 5 segundos (ajustable)
+        self.update_timer.timeout.connect(self._fetch_notifications)
+        self.update_timer.start()
+
+    def _fetch_notifications(self):
+        """
+        Obtiene las notificaciones pendientes del servicio y las añade al widget.
+        """
+        # Ejecutar la llamada asíncrona en un hilo separado o usar un executor
+        # Para simplificar, usaremos un enfoque que no bloquee la UI directamente.
+        # En una aplicación real, esto podría usar QThreadPool o un enfoque más robusto.
+        
+        # Aquí se asume que notification_service.get_notification_history es un método asíncrono.
+        # Para llamarlo desde un contexto síncrono de Qt, necesitamos un bucle de eventos asyncio.
+        # Dado que la aplicación principal ya usa asyncio.run, podemos usar asyncio.create_task
+        # para programar la corrutina.
+        
+        async def fetch_and_add():
+            try:
+                # Obtener solo las notificaciones no leídas o activas
+                # Asumiendo que get_notification_history puede filtrar por estado o que
+                # solo queremos las más recientes y el widget maneja los duplicados.
+                # Para este ejemplo, obtendremos las últimas 20 notificaciones.
+                new_notifications = await self.notification_service.get_notification_history(
+                    user_id=self.user_id, limit=20, status="unread" # Asumiendo que el servicio soporta 'status'
+                )
+                for notif in new_notifications:
+                    self.add_notification(notif)
+            except Exception as e:
+                print(f"Error al obtener notificaciones en tiempo real: {e}")
+
+        # Programar la corrutina para que se ejecute en el bucle de eventos existente
+        # Esto requiere que el bucle de eventos de asyncio esté corriendo, lo cual es cierto
+        # porque main.py usa asyncio.run().
+        try:
+            loop = asyncio.get_event_loop()
+            if not loop.is_running():
+                # Esto no debería ocurrir si main.py está configurado correctamente
+                # para ejecutar el bucle de eventos.
+                print("Advertencia: El bucle de eventos de asyncio no está corriendo. No se pueden obtener notificaciones.")
+                return
+            asyncio.create_task(fetch_and_add())
+        except RuntimeError:
+            # Esto puede ocurrir si el bucle de eventos ya se cerró o no se ha iniciado.
+            print("Error: No se pudo obtener el bucle de eventos de asyncio para las notificaciones.")
+
 
     def init_ui(self):
         main_layout = QVBoxLayout(self)

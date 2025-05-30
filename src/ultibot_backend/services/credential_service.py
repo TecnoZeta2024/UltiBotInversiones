@@ -107,6 +107,14 @@ class CredentialService:
         saved_credential = await self.persistence_service.save_credential(credential_data)
         return saved_credential
 
+    async def save_encrypted_credential(self, credential: APICredential) -> APICredential:
+        """
+        Guarda una credencial APICredential que ya tiene sus campos sensibles encriptados.
+        Este método es útil cuando la encriptación ya se realizó externamente.
+        """
+        saved_credential = await self.persistence_service.save_credential(credential)
+        return saved_credential
+
     async def get_credential(self, user_id: UUID, service_name: ServiceName, credential_label: str) -> Optional[APICredential]:
         """
         Recupera y desencripta una credencial de la base de datos.
