@@ -72,14 +72,33 @@ class PortfolioService:
                 if balance.asset == "USDT":
                     available_balance_usdt = balance.free # Solo el saldo disponible de USDT
                 elif balance.total > 0:
-                    assets_to_value.append(f"{balance.asset}USDT") # Asumimos pares con USDT para valoración
+                    asset_name = balance.asset.upper() # Convertir a mayúsculas para la comparación
+                    if asset_name.endswith("USDT"):
+                        pair_to_query = asset_name
+                    # Considerar si el activo es USDC u otra stablecoin que se quiera valorar contra USDT
+                    elif asset_name == "USDC":
+                        pair_to_query = "USDCUSDT" # Par para obtener el precio de USDC en USDT
+                    else:
+                        pair_to_query = f"{asset_name}USDT"
+                    assets_to_value.append(pair_to_query)
 
             # Obtener precios de mercado para los activos no-USDT
             if assets_to_value:
-                market_data = await self.market_data_service.get_market_data_rest(user_id, assets_to_value)
+                # Eliminar duplicados de assets_to_value antes de la llamada a la API
+                unique_assets_to_value = sorted(list(set(assets_to_value)))
+                market_data = await self.market_data_service.get_market_data_rest(user_id, unique_assets_to_value)
+
                 for balance in binance_balances:
                     if balance.asset != "USDT" and balance.total > 0:
-                        symbol_pair = f"{balance.asset}USDT"
+                        asset_name = balance.asset.upper() # Convertir a mayúsculas
+                        # Reconstruir el par de la misma manera para la búsqueda en market_data
+                        if asset_name.endswith("USDT"):
+                            symbol_pair = asset_name
+                        elif asset_name == "USDC":
+                            symbol_pair = "USDCUSDT"
+                        else:
+                            symbol_pair = f"{asset_name}USDT"
+                        
                         price_info = market_data.get(symbol_pair)
                         
                         if price_info and "lastPrice" in price_info:

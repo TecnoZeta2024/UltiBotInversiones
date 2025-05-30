@@ -24,11 +24,11 @@ class ConfigService:
                 return UserConfiguration(**config_data)
             else:
                 logger.info(f"No se encontró configuración para el usuario {user_id}. Retornando configuración por defecto.")
-                return self.get_default_configuration()
+                return self.get_default_configuration(user_id) # Pasar user_id
         except Exception as e:
             logger.error(f"Error al cargar la configuración para el usuario {user_id}: {e}", exc_info=True)
             # Intentar arrancar con una configuración mínima segura por defecto en caso de error crítico
-            return self.get_default_configuration()
+            return self.get_default_configuration(user_id) # Pasar user_id
 
     async def save_user_configuration(self, user_id: UUID, config: UserConfiguration):
         """
@@ -44,17 +44,13 @@ class ConfigService:
             logger.error(f"Error al guardar la configuración para el usuario {user_id}: {e}", exc_info=True)
             raise ConfigurationError(f"No se pudo guardar la configuración para el usuario {user_id}.") from e
 
-    def get_default_configuration(self) -> UserConfiguration:
+    def get_default_configuration(self, user_id: UUID) -> UserConfiguration:
         """
-        Provee una instancia de UserConfiguration con valores por defecto.
+        Provee una instancia de UserConfiguration con valores por defecto para un user_id dado.
         """
-        # Para la v1.0, se puede asumir un user_id fijo si no hay un sistema de autenticación de usuarios completo.
-        # Aquí se usa un UUID de ejemplo, que debería ser reemplazado por el user_id real del usuario autenticado.
-        default_user_id = UUID("00000000-0000-0000-0000-000000000001") # Ejemplo de UUID fijo para desarrollo
-
         return UserConfiguration(
-            id=uuid4(), # Generar un nuevo UUID para la configuración
-            user_id=default_user_id,
+            id=user_id, # Usar el user_id proporcionado como ID de la configuración
+            user_id=user_id,
             selectedTheme='dark',
             enableTelegramNotifications=False,
             defaultPaperTradingCapital=10000.0,
