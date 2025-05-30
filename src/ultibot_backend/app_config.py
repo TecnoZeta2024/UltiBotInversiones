@@ -2,6 +2,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from dotenv import load_dotenv # Importar load_dotenv
 import os # Importar os
 from typing import Optional # Importar Optional
+from uuid import UUID # Add this import
 
 # Cargar variables de entorno desde .env al inicio, permitiendo la sobreescritura
 load_dotenv(override=True)
@@ -22,5 +23,8 @@ class AppSettings(BaseSettings):
 
     # Logging
     LOG_LEVEL: str = "INFO"
+
+    # Fixed User ID for UI (can be overridden by .env)
+    FIXED_USER_ID: UUID = UUID("00000000-0000-0000-0000-000000000001")
 
 settings = AppSettings()

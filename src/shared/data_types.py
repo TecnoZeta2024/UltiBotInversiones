@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any
 from uuid import UUID, uuid4
 from enum import Enum
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 class ServiceName(str, Enum):
     BINANCE_SPOT = "BINANCE_SPOT"
@@ -54,12 +54,10 @@ class APICredential(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-    class Config:
-        json_encoders = {
-            datetime: lambda dt: dt.isoformat() + "Z",
-            UUID: lambda uuid: str(uuid),
-        }
-        use_enum_values = True # Para que los enums se serialicen como sus valores de string
+    model_config = ConfigDict(
+        use_enum_values=True,  # Para que los enums se serialicen como sus valores de string
+        arbitrary_types_allowed=True # Permitir tipos arbitrarios si es necesario
+    )
 
 class TelegramConnectionStatus(BaseModel):
     """
@@ -209,14 +207,11 @@ class UserConfiguration(BaseModel):
     createdAt: Optional[datetime] = Field(default_factory=datetime.utcnow)
     updatedAt: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
-    class Config:
-        json_encoders = {
-            datetime: lambda dt: dt.isoformat() + "Z",
-            UUID: lambda uuid: str(uuid),
-        }
-        use_enum_values = True
-        populate_by_name = True # Permite usar alias para los nombres de campo si es necesario
-    arbitrary_types_allowed = True # Para el campo 'configuration: Any' en DashboardLayoutProfile
+    model_config = ConfigDict(
+        use_enum_values=True,
+        populate_by_name=True,  # Permite usar alias para los nombres de campo si es necesario
+        arbitrary_types_allowed=True  # Para el campo 'configuration: Any' en DashboardLayoutProfile
+    )
 
 class NotificationPriority(str, Enum):
     LOW = "low"
@@ -264,11 +259,8 @@ class Notification(BaseModel):
     statusHistory: Optional[List[Dict[str, Any]]] = None # Simplificado para v1.0
     generatedBy: Optional[str] = None
 
-    class Config:
-        json_encoders = {
-            datetime: lambda dt: dt.isoformat() + "Z",
-            UUID: lambda uuid: str(uuid),
-        }
-        use_enum_values = True
-        populate_by_name = True
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(
+        use_enum_values=True,
+        populate_by_name=True,
+        arbitrary_types_allowed=True
+    )

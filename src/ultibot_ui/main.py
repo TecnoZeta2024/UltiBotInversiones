@@ -1,11 +1,12 @@
 import sys
 import qdarkstyle
 import asyncio
-from PyQt5.QtWidgets import QApplication
-from uuid import UUID, uuid4 # Importar uuid4
-from qasync import run # Importar run de qasync
-from typing import List, Dict, Any, Optional # Importar tipos de typing
-from datetime import datetime, timedelta # Importar datetime y timedelta
+from PyQt5.QtWidgets import QApplication, QMessageBox
+from uuid import UUID
+from typing import Optional
+
+from dotenv import load_dotenv
+from src.ultibot_backend.app_config import AppSettings
 
 # Importar la MainWindow
 from ultibot_ui.windows.main_window import MainWindow
@@ -18,153 +19,121 @@ from src.ultibot_backend.services.market_data_service import MarketDataService
 from src.ultibot_backend.services.config_service import ConfigService
 from src.ultibot_backend.services.notification_service import NotificationService # Importar NotificationService
 
-# Importar modelos de datos compartidos
-from src.shared.data_types import Notification, NotificationPriority, NotificationAction
-
-# --- Mocks para desarrollo local y pruebas ---
-class MockNotificationService:
-    """
-    Mock del NotificationService para desarrollo de UI.
-    Simula el historial de notificaciones y la capacidad de marcarlas como leídas.
-    """
-    def __init__(self):
-        self._notifications: List[Dict[str, Any]] = []
-        self._populate_mock_notifications()
-
-    def _populate_mock_notifications(self):
-        # Notificación de error crítico
-        self._notifications.append(Notification(
-            id=uuid4(),
-            eventType="SYSTEM_ERROR",
-            channel="ui",
-            title="Error Crítico de Conexión",
-            message="No se pudo establecer conexión con la API de Binance. Revise sus credenciales.",
-            priority=NotificationPriority.CRITICAL,
-            createdAt=datetime.utcnow() - timedelta(minutes=5)
-        ).model_dump()) # Usar model_dump para obtener un dict
-
-        # Notificación de éxito de operación
-        self._notifications.append(Notification(
-            id=uuid4(),
-            eventType="REAL_TRADE_EXECUTED",
-            channel="ui",
-            title="Operación Exitosa",
-            message="Compra de BTC/USDT ejecutada con éxito. Cantidad: 0.001 BTC, Precio: 60,000 USDT.",
-            priority=NotificationPriority.HIGH,
-            createdAt=datetime.utcnow() - timedelta(minutes=2)
-        ).model_dump())
-
-        # Notificación de advertencia
-        self._notifications.append(Notification(
-            id=uuid4(),
-            eventType="RISK_ALERT",
-            channel="ui",
-            title="Advertencia de Riesgo",
-            message="El drawdown actual de su portafolio de paper trading ha superado el 5%.",
-            priority=NotificationPriority.MEDIUM,
-            createdAt=datetime.utcnow() - timedelta(minutes=1)
-        ).model_dump())
-
-        # Notificación de información
-        self._notifications.append(Notification(
-            id=uuid4(),
-            eventType="INFO",
-            channel="ui",
-            title="Actualización del Sistema",
-            message="Los datos de mercado se han actualizado correctamente.",
-            priority=NotificationPriority.LOW,
-            createdAt=datetime.utcnow()
-        ).model_dump())
-
-        # Notificación con acción (ejemplo)
-        self._notifications.append(Notification(
-            id=uuid4(),
-            eventType="OPPORTUNITY_ANALYZED",
-            channel="ui",
-            title="Nueva Oportunidad Detectada",
-            message="Se ha detectado una oportunidad de compra para ETH/USDT con alta confianza.",
-            priority=NotificationPriority.HIGH,
-            createdAt=datetime.utcnow() + timedelta(seconds=10),
-            actions=[
-                NotificationAction(label="Ver Detalles", actionType="NAVIGATE", actionValue="/opportunity/123"),
-                NotificationAction(label="Ejecutar en Paper", actionType="API_CALL", actionValue={"endpoint": "/trade/paper/execute", "method": "POST"})
-            ]
-        ).model_dump())
-
-    async def get_notification_history(self, user_id: UUID, limit: int = 50) -> List[Dict[str, Any]]:
-        """Simula la obtención del historial de notificaciones."""
-        print(f"MockNotificationService: Obteniendo historial para {user_id}")
-        # Devolver las últimas 'limit' notificaciones
-        return self._notifications[:limit]
-
-    async def mark_notification_as_read(self, notification_id: UUID, user_id: UUID):
-        """Simula marcar una notificación como leída."""
-        print(f"MockNotificationService: Marcando notificación {notification_id} como leída para {user_id}")
-        # En un mock, no hacemos nada real, pero podríamos cambiar el estado interno
-        for notif in self._notifications:
-            if notif["id"] == str(notification_id):
-                notif["status"] = "read"
-                notif["readAt"] = datetime.utcnow().isoformat() + "Z"
-                break
-
-    async def mark_all_notifications_as_read(self, user_id: UUID):
-        """Simula marcar todas las notificaciones como leídas."""
-        print(f"MockNotificationService: Marcando todas las notificaciones como leídas para {user_id}")
-        for notif in self._notifications:
-            notif["status"] = "read"
-            notif["readAt"] = datetime.utcnow().isoformat() + "Z"
-        self._notifications = [] # Limpiar el historial del mock
-
-    async def send_notification(self, user_id: UUID, title: str, message: str, channel: str = "telegram", event_type: str = "SYSTEM_MESSAGE") -> bool:
-        """Simula el envío de una notificación."""
-        print(f"MockNotificationService: Enviando notificación a {channel} para {user_id}: {title} - {message}")
-        # En un mock, simplemente la añadimos al historial si es para UI
-        if channel == "ui":
-            new_notif = Notification(
-                id=uuid4(),
-                eventType=event_type,
-                channel=channel,
-                title=title,
-                message=message,
-                createdAt=datetime.utcnow()
-            )
-            self._notifications.insert(0, new_notif.model_dump())
-        return True
-
-    async def close(self):
-        """Simula el cierre del servicio."""
-        print("MockNotificationService: Cerrando.")
-        pass
-
 async def start_application():
-    app = QApplication(sys.argv)
+    # --- Application Configuration ---
+    # This application relies on a .env file in its working directory for essential
+    # configurations such as database connection strings, API keys, and encryption keys.
+    # Ensure a valid .env file is present. See .env.example for a template.
+    # The AppSettings object will load these configurations.
+    # ---
 
-    # Aplicar el tema oscuro
+    app = QApplication(sys.argv)
+    # Apply the dark theme early so QMessageBox is styled.
     app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
 
-    # Inicializar servicios de backend
-    # Para un entorno de desarrollo/prueba, puedes usar un UUID fijo
-    # En un entorno de producción, el user_id se obtendría de la autenticación
-    user_id = UUID("00000000-0000-0000-0000-000000000001") 
+    settings = None
+    persistence_service = None
+    credential_service = None
+    market_data_service = None
+    config_service = None
+    notification_service = None # Añadir notification_service
+    user_id = None
 
-    # Inicializar PersistenceService (requiere configuración de Supabase)
-    persistence_service = SupabasePersistenceService()
-    
-    credential_service = CredentialService() # CredentialService no necesita persistence_service en su constructor
-    binance_adapter = BinanceAdapter()
-    market_data_service = MarketDataService(credential_service, binance_adapter)
-    config_service = ConfigService(persistence_service)
-    
-    # Instanciar el MockNotificationService
-    notification_service = MockNotificationService() # type: ignore # Ignorar error de Pylance para el mock
+    try:
+        load_dotenv(override=True)
+        settings = AppSettings()
 
+        if not settings.CREDENTIAL_ENCRYPTION_KEY:
+            raise ValueError("CREDENTIAL_ENCRYPTION_KEY is not set in .env file or environment.")
+        
+        user_id = settings.FIXED_USER_ID # Set user_id after settings are loaded
+
+        # Initialize PersistenceService
+        persistence_service = SupabasePersistenceService()
+        await persistence_service.connect() # Connection attempt
+
+        # Initialize CredentialService
+        credential_service = CredentialService(encryption_key=settings.CREDENTIAL_ENCRYPTION_KEY)
+
+        # Other services
+        binance_adapter = BinanceAdapter() # Assumes AppSettings is used internally
+        market_data_service = MarketDataService(credential_service, binance_adapter)
+        config_service = ConfigService(persistence_service)
+        notification_service = NotificationService(credential_service, persistence_service) # Inicializar NotificationService
+
+    except ValueError as ve: # Specifically for missing key or other ValueErrors during setup
+        QMessageBox.critical(None, "Configuration Error", f"A configuration error occurred: {str(ve)}\n\nPlease check your .env file or environment variables.\nThe application will now exit.")
+        sys.exit(1)
+    except Exception as e: # Catch other potential errors during service init (e.g., DB connection, malformed keys)
+        QMessageBox.critical(None, "Service Initialization Error", f"Failed to initialize critical services: {str(e)}\n\nThe application will now exit.")
+        sys.exit(1)
+
+    # Ensure persistence_service is available for cleanup, even if MainWindow creation fails
+    # (though unlikely if services initialized correctly)
+    
     # Crear y mostrar la ventana principal, pasando los servicios
-    main_window = MainWindow(user_id, market_data_service, config_service, notification_service) # type: ignore # Pasar notification_service
+    # This part is reached only if all initializations were successful
+    main_window = MainWindow(user_id, market_data_service, config_service, notification_service) # Pasar notification_service
     main_window.show()
 
-    # qasync se encarga de ejecutar el loop de eventos de Qt y asyncio
-    return app.exec_() # Retornar el código de salida de la aplicación Qt
+    # Configurar limpieza de recursos al salir
+    # persistence_service might be None if initialization failed before it was set.
+    if persistence_service:
+        async def cleanup_resources(ps_service: SupabasePersistenceService):
+            if ps_service: # Double check, though outer 'if' should cover
+                print("Disconnecting persistence service...")
+                await ps_service.disconnect()
+                print("Persistence service disconnected.")
+
+        def _cleanup_sync_wrapper(ps_service_to_clean: SupabasePersistenceService):
+            # Wrapper to ensure the correct persistence_service instance is used
+            def _cleanup_sync():
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_closed():
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                    
+                    loop.run_until_complete(cleanup_resources(ps_service_to_clean))
+                except Exception as e:
+                    print(f"Error during cleanup: {e}")
+                finally:
+                    if 'loop' in locals() and loop is not asyncio.get_event_loop() and not loop.is_closed():
+                         # This logic for closing a potentially new loop needs care.
+                         # If the main event loop was closed, and we started a new one for cleanup,
+                         # it should ideally be closed. However, get_event_loop() behavior can be tricky.
+                         # For now, let's assume the loop management is sufficient.
+                         pass
+            return _cleanup_sync
+
+        app.aboutToQuit.connect(_cleanup_sync_wrapper(persistence_service))
+
+    # Ejecutar el loop de eventos de Qt
+    exit_code = app.exec_()
+    
+    # Final cleanup check (safeguard)
+    # This check needs to be careful if persistence_service was never initialized.
+    # Eliminar la lógica de verificación de is_connected, ya que app.aboutToQuit.connect es el método preferido
+    # para la limpieza y el atributo is_connected no existe en SupabasePersistenceService.
+
+    sys.exit(exit_code)
 
 if __name__ == "__main__":
-    # Ejecutar la aplicación asíncrona con qasync
-    run(start_application())
+    # --- Running the Application ---
+    # This UI application is part of a larger project structure within the 'src' directory.
+    # To ensure all internal imports (e.g., from 'src.ultibot_backend' or 'ultibot_ui.windows')
+    # resolve correctly, it's recommended to run this script using Poetry from the
+    # project root directory:
+    #
+    #   poetry run python src/ultibot_ui/main.py
+    #
+    # If not using Poetry, ensure the project root directory (containing 'src')
+    # is in your PYTHONPATH, or run the script from the project root directory, e.g.:
+    #
+    #   python -m src.ultibot_ui.main
+    #
+    # or ensure your current working directory is the project root when running:
+    #   python src/ultibot_ui/main.py
+    # ---
+    # Ejecutar la aplicación asíncrona
+    asyncio.run(start_application())
