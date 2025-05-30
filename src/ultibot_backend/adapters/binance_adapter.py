@@ -176,6 +176,36 @@ class BinanceAdapter:
         except Exception as e:
             raise BinanceAPIError(f"Error al obtener todos los tickers 24hr: {e}", original_exception=e)
 
+    async def get_klines(self, symbol: str, interval: str, start_time: Optional[int] = None, end_time: Optional[int] = None, limit: int = 500) -> List[List[Any]]:
+        """
+        Obtiene datos históricos de velas (OHLCV) para un símbolo y temporalidad dados.
+        Endpoint: GET /api/v3/klines
+        Parámetros:
+            symbol (str): El par de trading (ej. "BTCUSDT").
+            interval (str): La temporalidad de las velas (ej. "1m", "5m", "1h", "1d").
+            start_time (int, optional): Timestamp en milisegundos para el inicio del rango.
+            end_time (int, optional): Timestamp en milisegundos para el fin del rango.
+            limit (int): Número de velas a retornar (máximo 1000).
+        """
+        endpoint = "/api/v3/klines"
+        params = {
+            "symbol": symbol,
+            "interval": interval,
+            "limit": limit
+        }
+        if start_time:
+            params["startTime"] = start_time
+        if end_time:
+            params["endTime"] = end_time
+
+        try:
+            response_data = await self._make_request("GET", endpoint, "", "", params=params, signed=False)
+            return response_data
+        except BinanceAPIError as e:
+            raise e
+        except Exception as e:
+            raise BinanceAPIError(f"Error al obtener klines para {symbol} con intervalo {interval}: {e}", original_exception=e)
+
     async def _connect_websocket(self, stream_url: str, callback: Callable):
         """
         Establece una conexión WebSocket y procesa los mensajes entrantes.

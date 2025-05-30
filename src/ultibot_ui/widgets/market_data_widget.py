@@ -5,11 +5,12 @@ from PyQt5.QtWidgets import (
     QTableWidgetItem, QHeaderView, QApplication, QLineEdit, QPushButton, QDialog,
     QDialogButtonBox, QCompleter
 )
-from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QObject
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QObject, QCoreApplication # Importar QCoreApplication
 from PyQt5.QtGui import QColor, QFont
 from typing import List, Dict, Any, Optional, Set # Importar tipos de typing
 from datetime import datetime # Importar datetime
 from uuid import UUID # Importar UUID
+import asyncio # Importar asyncio para el loop de eventos
 
 from src.ultibot_backend.services.market_data_service import MarketDataService
 from src.ultibot_backend.services.config_service import ConfigService
@@ -31,7 +32,8 @@ class MarketDataWidget(QWidget):
         self._rest_update_timer = QTimer(self)
         self._websocket_tasks: Set[str] = set() # Para mantener un registro de los símbolos suscritos
         self.init_ui()
-        self.load_and_subscribe_pairs()
+        # La carga y suscripción de pares se iniciará de forma asíncrona después de la inicialización del widget
+        # Esto se manejará desde el código que instancia el widget (ej. main_window o dashboard_view)
 
     def init_ui(self):
         main_layout = QVBoxLayout()
@@ -48,9 +50,15 @@ class MarketDataWidget(QWidget):
         self.table_widget = QTableWidget()
         self.table_widget.setColumnCount(4)
         self.table_widget.setHorizontalHeaderLabels(["Símbolo", "Precio Actual", "Cambio 24h (%)", "Volumen 24h"])
-        self.table_widget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.table_widget.verticalHeader().setVisible(False) # No hay un enum para esto, es un booleano
-        self.table_widget.setEditTriggers(QTableWidget.NoEditTriggers) # Hacer la tabla de solo lectura
+        horizontal_header = self.table_widget.horizontalHeader()
+        if horizontal_header:
+            horizontal_header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch) # Usar ResizeMode
+        
+        vertical_header = self.table_widget.verticalHeader()
+        if vertical_header:
+            vertical_header.setVisible(False)
+        
+        self.table_widget.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers) # Usar EditTrigger
         self.table_widget.setStyleSheet("""
             QTableWidget {
                 background-color: #2b2b2b;
@@ -85,7 +93,7 @@ class MarketDataWidget(QWidget):
             }
         """)
         self.configure_button.clicked.connect(self.open_pair_configuration_dialog)
-        main_layout.addWidget(self.configure_button, alignment=Qt.AlignRight)
+        main_layout.addWidget(self.configure_button, alignment=Qt.AlignmentFlag.AlignRight) # Usar AlignmentFlag
 
         self.data_updated.connect(self.update_table)
 
@@ -99,12 +107,12 @@ class MarketDataWidget(QWidget):
         self.table_widget.setRowCount(len(self.favorite_pairs))
         for row, pair in enumerate(self.favorite_pairs):
             symbol_item = QTableWidgetItem(pair)
-            symbol_item.setTextAlignment(Qt.AlignCenter)
+            symbol_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter) # Usar AlignmentFlag
             self.table_widget.setItem(row, 0, symbol_item)
             # Inicializar las otras celdas con N/A o --
             for col in range(1, 4):
                 item = QTableWidgetItem("N/A")
-                item.setTextAlignment(Qt.AlignCenter)
+                item.setTextAlignment(Qt.AlignmentFlag.AlignCenter) # Usar AlignmentFlag
                 self.table_widget.setItem(row, col, item)
 
     def update_table(self, new_data: Dict[str, Dict[str, Any]]):
@@ -118,19 +126,19 @@ class MarketDataWidget(QWidget):
                 if "error" in data:
                     for col in range(1, 4):
                         item = QTableWidgetItem("Error")
-                        item.setTextAlignment(Qt.AlignCenter)
+                        item.setTextAlignment(Qt.AlignmentFlag.AlignCenter) # Usar AlignmentFlag
                         item.setForeground(QColor("#dc3545")) # Rojo para errores
                         self.table_widget.setItem(row, col, item)
                 else:
                     # Precio Actual
                     price_item = QTableWidgetItem(f"{data['lastPrice']:.8f}")
-                    price_item.setTextAlignment(Qt.AlignCenter)
+                    price_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter) # Usar AlignmentFlag
                     self.table_widget.setItem(row, 1, price_item)
 
                     # Cambio 24h
                     change_percent = data['priceChangePercent']
                     change_item = QTableWidgetItem(f"{change_percent:.2f}%")
-                    change_item.setTextAlignment(Qt.AlignCenter)
+                    change_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter) # Usar AlignmentFlag
                     if change_percent > 0:
                         change_item.setForeground(QColor("#28a745")) # Verde
                     elif change_percent < 0:
@@ -141,13 +149,13 @@ class MarketDataWidget(QWidget):
 
                     # Volumen 24h
                     volume_item = QTableWidgetItem(f"{data['quoteVolume']:.2f}")
-                    volume_item.setTextAlignment(Qt.AlignCenter)
+                    volume_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter) # Usar AlignmentFlag
                     self.table_widget.setItem(row, 3, volume_item)
             else:
                 # Si no hay datos para un par, mostrar N/A
                 for col in range(1, 4):
                     item = QTableWidgetItem("N/A")
-                    item.setTextAlignment(Qt.AlignCenter)
+                    item.setTextAlignment(Qt.AlignmentFlag.AlignCenter) # Usar AlignmentFlag
                     self.table_widget.setItem(row, col, item)
 
     async def load_and_subscribe_pairs(self):
@@ -160,7 +168,8 @@ class MarketDataWidget(QWidget):
                 self.set_favorite_pairs([]) # Asegurarse de que la lista esté vacía si no hay favoritos
 
             # Iniciar la actualización REST periódica
-            self._rest_update_timer.timeout.connect(lambda: asyncio.create_task(self._fetch_rest_data()))
+            # Conectar el timer a un slot síncrono que inicie la tarea asíncrona
+            self._rest_update_timer.timeout.connect(self._on_rest_timer_timeout)
             self._rest_update_timer.start(10000) # Actualizar cada 10 segundos (configurable)
             await self._fetch_rest_data() # Primera carga inmediata
 
@@ -231,11 +240,18 @@ class MarketDataWidget(QWidget):
         if dialog.exec_() == QDialog.Accepted:
             new_pairs = dialog.get_selected_pairs()
             self.set_favorite_pairs(new_pairs)
-            # Guardar los nuevos pares en el backend
-            asyncio.create_task(self._save_favorite_pairs(new_pairs))
-            # Re-suscribir a los WebSockets con la nueva lista
-            asyncio.create_task(self._subscribe_to_websockets())
-            asyncio.create_task(self._fetch_rest_data()) # Actualizar datos REST inmediatamente
+            # Guardar los nuevos pares en el backend y re-suscribir
+            asyncio.create_task(self._save_and_resubscribe_pairs(new_pairs))
+
+    def _on_rest_timer_timeout(self):
+        """Slot síncrono para el QTimer que inicia la tarea asíncrona de fetch de datos REST."""
+        asyncio.create_task(self._fetch_rest_data())
+
+    async def _save_and_resubscribe_pairs(self, new_pairs: List[str]):
+        """Guarda los pares favoritos y re-suscribe a los streams."""
+        await self._save_favorite_pairs(new_pairs)
+        await self._subscribe_to_websockets()
+        await self._fetch_rest_data() # Actualizar datos REST inmediatamente
 
     async def _save_favorite_pairs(self, pairs: List[str]):
         """Guarda la lista de pares favoritos en la configuración del usuario."""
@@ -274,7 +290,7 @@ class PairConfigurationDialog(QDialog):
         
         # Autocompletado (básico, se puede mejorar con datos de la API de Binance)
         completer = QCompleter(self.all_available_pairs, self)
-        completer.setCaseSensitivity(Qt.CaseInsensitive)
+        completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive) # Usar CaseSensitivity
         self.pair_input.setCompleter(completer)
 
         add_button = QPushButton("Añadir")
@@ -287,10 +303,16 @@ class PairConfigurationDialog(QDialog):
         self.selected_pairs_list = QTableWidget()
         self.selected_pairs_list.setColumnCount(2)
         self.selected_pairs_list.setHorizontalHeaderLabels(["Símbolo", "Acción"])
-        self.selected_pairs_list.horizontalHeader().setSectionResizeMode(0, QHeaderView.SectionResizeMode.Stretch)
-        self.selected_pairs_list.horizontalHeader().setSectionResizeMode(1, QHeaderView.SectionResizeMode.ResizeToContents)
-        self.selected_pairs_list.verticalHeader().setVisible(False)
-        self.selected_pairs_list.setEditTriggers(QTableWidget.NoEditTriggers)
+        selected_pairs_horizontal_header = self.selected_pairs_list.horizontalHeader()
+        if selected_pairs_horizontal_header:
+            selected_pairs_horizontal_header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch) # Usar ResizeMode
+            selected_pairs_horizontal_header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents) # Usar ResizeMode
+        
+        selected_pairs_vertical_header = self.selected_pairs_list.verticalHeader()
+        if selected_pairs_vertical_header:
+            selected_pairs_vertical_header.setVisible(False)
+        
+        self.selected_pairs_list.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers) # Usar EditTrigger
         dialog_layout.addWidget(self.selected_pairs_list)
 
         self.populate_selected_pairs_list()
@@ -347,7 +369,7 @@ class PairConfigurationDialog(QDialog):
             self.selected_pairs_list.insertRow(row_position)
 
             symbol_item = QTableWidgetItem(pair)
-            symbol_item.setTextAlignment(Qt.AlignCenter)
+            symbol_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter) # Usar AlignmentFlag
             self.selected_pairs_list.setItem(row_position, 0, symbol_item)
 
             remove_button = QPushButton("Eliminar")
@@ -446,7 +468,12 @@ if __name__ == '__main__':
 
     # Configurar el loop de eventos de asyncio para que se ejecute con el de Qt
     # Esto es una simplificación; en una aplicación real se usaría qasync
-    loop = asyncio.get_event_loop()
+    # Asegurarse de que haya un loop de eventos de asyncio
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
     
     # Crear instancias de los servicios mockeados
     mock_market_data_service = MockMarketDataService()
@@ -462,16 +489,23 @@ if __name__ == '__main__':
     main_layout.addWidget(market_data_widget)
 
     # Iniciar la carga y suscripción de pares en una tarea de asyncio
-    asyncio.create_task(market_data_widget.load_and_subscribe_pairs())
+    # Usar un QTimer para iniciar la tarea asíncrona después de que el loop de Qt esté listo
+    # La lambda ahora solo inicia la tarea, no devuelve la tarea en sí.
+    def _start_load_and_subscribe():
+        loop.create_task(market_data_widget.load_and_subscribe_pairs())
+    QTimer.singleShot(0, _start_load_and_subscribe)
 
     # Para que el loop de asyncio se ejecute junto con el de Qt,
     # necesitamos un mecanismo que "bombee" los eventos de asyncio.
     # Esto es lo que qasync hace automáticamente. Aquí, lo simulamos con un QTimer.
-    async def run_async_tasks():
-        await asyncio.sleep(0.01) # Pequeña pausa para permitir que el loop de Qt procese eventos
+    # Este timer asegura que el loop de asyncio tenga la oportunidad de ejecutarse.
+    def run_async_tasks_periodically():
+        # Ejecutar el loop de asyncio por un corto período
+        loop.call_soon(loop.stop)
+        loop.run_forever()
 
     timer_async = QTimer()
-    timer_async.timeout.connect(lambda: asyncio.create_task(run_async_tasks()))
+    timer_async.timeout.connect(run_async_tasks_periodically)
     timer_async.start(10) # Ejecutar cada 10ms para mantener el loop de asyncio activo
 
     main_window.show()

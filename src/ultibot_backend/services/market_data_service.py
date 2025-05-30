@@ -180,6 +180,60 @@ class MarketDataService:
         else:
             logger.warning(f"No hay una suscripción activa a WebSocket para {symbol}.")
 
+    async def get_candlestick_data(self, user_id: UUID, symbol: str, interval: str, limit: int = 200, start_time: Optional[int] = None, end_time: Optional[int] = None) -> List[Dict[str, Any]]:
+        """
+        Obtiene datos históricos de velas (OHLCV) para un par y temporalidad dados,
+        procesándolos para ser consumidos por el frontend.
+        """
+        try:
+            # No se requieren credenciales para este endpoint público
+            klines_data = await self.binance_adapter.get_klines(
+                symbol=symbol,
+                interval=interval,
+                start_time=start_time,
+                end_time=end_time,
+                limit=limit
+            )
+
+            processed_data = []
+            for kline in klines_data:
+                # Formato de kline:
+                # [
+                #   1499040000000,      // Open time
+                #   "0.01634790",       // Open
+                #   "0.80000000",       // High
+                #   "0.01575800",       // Low
+                #   "0.01577100",       // Close
+                #   "148976.11427815",  // Volume
+                #   1499644799999,      // Close time
+                #   "2434.19055334",    // Quote asset volume
+                #   308,                // Number of trades
+                #   "1756.87402397",    // Taker buy base asset volume
+                #   "28.46694368",      // Taker buy quote asset volume
+                #   "1792.34210000"     // Ignore
+                # ]
+                processed_data.append({
+                    "open_time": kline[0],
+                    "open": float(kline[1]),
+                    "high": float(kline[2]),
+                    "low": float(kline[3]),
+                    "close": float(kline[4]),
+                    "volume": float(kline[5]),
+                    "close_time": kline[6],
+                    "quote_asset_volume": float(kline[7]),
+                    "number_of_trades": kline[8],
+                    "taker_buy_base_asset_volume": float(kline[9]),
+                    "taker_buy_quote_asset_volume": float(kline[10])
+                })
+            logger.info(f"Datos de velas para {symbol}-{interval} obtenidos y procesados para el usuario {user_id}.")
+            return processed_data
+        except BinanceAPIError as e:
+            logger.error(f"Error al obtener datos de velas para {symbol}-{interval} para el usuario {user_id}: {e}")
+            raise UltiBotError(f"No se pudieron obtener los datos de velas de Binance para {symbol}-{interval}: {e}")
+        except Exception as e:
+            logger.critical(f"Error inesperado al obtener datos de velas para {symbol}-{interval} para el usuario {user_id}: {e}", exc_info=True)
+            raise UltiBotError(f"Error inesperado al obtener datos de velas de Binance para {symbol}-{interval}: {e}")
+
     async def close(self):
         """
         Cierra el cliente HTTP y cancela todas las tareas WebSocket activas.
