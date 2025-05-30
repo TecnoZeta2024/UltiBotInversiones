@@ -20,6 +20,7 @@ from src.ultibot_backend.services.credential_service import CredentialService
 from src.ultibot_backend.services.market_data_service import MarketDataService
 from src.ultibot_backend.services.config_service import ConfigService
 from src.ultibot_backend.services.notification_service import NotificationService # Importar NotificationService
+from src.shared.data_types import UserConfiguration # Importar UserConfiguration
 
 async def start_application():
     # --- Application Configuration ---
@@ -54,8 +55,54 @@ async def start_application():
         persistence_service = SupabasePersistenceService()
         await persistence_service.connect() # Connection attempt
 
+        # --- Asegurar que el user_id exista en user_configurations antes de cualquier otra operación ---
+        # Esto es una medida de contingencia para la clave foránea.
+        try:
+            await persistence_service.execute_raw_sql(
+                """
+                INSERT INTO user_configurations (user_id, selected_theme)
+                VALUES (%s, %s)
+                ON CONFLICT (user_id) DO NOTHING;
+                """,
+                (user_id, "dark") # Usar un tema por defecto
+            )
+            print(f"Asegurado que user_id {user_id} existe en user_configurations.")
+            await asyncio.sleep(1) # Añadir un pequeño retraso para la consistencia de la base de datos
+        except Exception as e:
+            QMessageBox.critical(None, "Error de Inicialización de Usuario", f"Error al asegurar la existencia del usuario en la base de datos: {str(e)}\n\nLa aplicación se cerrará.")
+            sys.exit(1)
+        # --- Fin de la inicialización de user_id ---
+
         # Initialize CredentialService
         credential_service = CredentialService(encryption_key=settings.CREDENTIAL_ENCRYPTION_KEY)
+
+        # Other services
+        binance_adapter = BinanceAdapter() # Assumes AppSettings is used internally
+        market_data_service = MarketDataService(credential_service, binance_adapter)
+        config_service = ConfigService(persistence_service)
+        notification_service = NotificationService(credential_service, persistence_service) # Inicializar NotificationService
+
+        # --- Asegurar que la configuración de usuario por defecto exista ---
+        # Esto es necesario porque api_credentials tiene una clave foránea a user_configurations.
+        existing_user_config = await config_service.load_user_configuration(user_id) # Cambiado a load_user_configuration
+        if not existing_user_config or existing_user_config.id != user_id: # Verificar si la configuración es realmente para este user_id
+            print(f"Configuración de usuario para {user_id} no encontrada o no válida. Creando configuración por defecto...")
+            default_user_config = UserConfiguration(
+                id=user_id,
+                user_id=user_id,
+                defaultPaperTradingCapital=10000.0, # Capital inicial para paper trading
+                enableTelegramNotifications=False,
+                selectedTheme="dark"
+            )
+            print("DEBUG: Antes de config_service.save_user_configuration") # Log de depuración
+            # logger.info("DEBUG: Antes de config_service.save_user_configuration") # Comentado para evitar dependencia de logger aquí
+            await config_service.save_user_configuration(user_id, default_user_config) # Pasar user_id como primer argumento
+            print("DEBUG: Después de config_service.save_user_configuration") # Log de depuración
+            # logger.info("DEBUG: Después de config_service.save_user_configuration") # Comentado
+            print("Configuración de usuario por defecto creada exitosamente.")
+        else:
+            print(f"Configuración de usuario para {user_id} ya existe.")
+        # --- Fin de la lógica de configuración de usuario ---
 
         # --- Cargar y guardar credenciales de Binance si no existen ---
         # Esto asegura que las credenciales de Binance estén disponibles en la base de datos
@@ -73,35 +120,29 @@ async def start_application():
                 service_name=ServiceName.BINANCE_SPOT, # Corregido a ServiceName.BINANCE_SPOT
                 credential_label="default"
             )
-            if not existing_binance_credential:
-                print("Credenciales de Binance no encontradas en la base de datos. Guardando...")
-                
-                # Encriptar las claves antes de guardarlas
-                encrypted_api_key = credential_service.encrypt_data(binance_api_key)
-                encrypted_api_secret = credential_service.encrypt_data(binance_api_secret)
+            # Se elimina la condición 'if not existing_binance_credential:' para forzar la actualización
+            # de las credenciales desde .env en cada inicio, aprovechando el ON CONFLICT DO UPDATE.
+            print("Intentando guardar/actualizar credenciales de Binance desde .env...")
+            
+            # Encriptar las claves antes de guardarlas
+            encrypted_api_key = credential_service.encrypt_data(binance_api_key)
+            encrypted_api_secret = credential_service.encrypt_data(binance_api_secret)
 
-                binance_credential = APICredential( # Usar APICredential
-                    id=settings.FIXED_BINANCE_CREDENTIAL_ID, # Pasar el UUID directamente
-                    user_id=user_id, # Corregido a user_id
-                    service_name=ServiceName.BINANCE_SPOT, # Corregido a ServiceName.BINANCE_SPOT
-                    credential_label="default", # Corregido a credential_label
-                    encrypted_api_key=encrypted_api_key, # Usar clave encriptada
-                    encrypted_api_secret=encrypted_api_secret # Usar clave secreta encriptada
-                )
-                await credential_service.save_encrypted_credential(binance_credential) # Usar el nuevo método
-                print("Credenciales de Binance guardadas exitosamente.")
-            else:
-                print("Credenciales de Binance ya existen en la base de datos.")
+            binance_credential = APICredential( # Usar APICredential
+                id=settings.FIXED_BINANCE_CREDENTIAL_ID, # Pasar el UUID directamente
+                user_id=user_id, # Corregido a user_id
+                service_name=ServiceName.BINANCE_SPOT, # Corregido a ServiceName.BINANCE_SPOT
+                credential_label="default", # Corregido a credential_label
+                encrypted_api_key=encrypted_api_key, # Usar clave encriptada
+                encrypted_api_secret=encrypted_api_secret # Usar clave secreta encriptada
+            )
+            await credential_service.save_encrypted_credential(binance_credential) # Usar el nuevo método
+            print("Credenciales de Binance guardadas/actualizadas exitosamente desde .env.")
+            # Ya no se necesita el 'else' porque siempre se intenta guardar/actualizar.
         except Exception as e:
-            QMessageBox.critical(None, "Error de Credenciales", f"Error al verificar/guardar credenciales de Binance: {str(e)}\n\nLa aplicación se cerrará.")
+            QMessageBox.critical(None, "Error de Credenciales", f"Error al guardar/actualizar credenciales de Binance: {str(e)}\n\nLa aplicación se cerrará.")
             sys.exit(1)
         # --- Fin de la lógica de credenciales de Binance ---
-
-        # Other services
-        binance_adapter = BinanceAdapter() # Assumes AppSettings is used internally
-        market_data_service = MarketDataService(credential_service, binance_adapter)
-        config_service = ConfigService(persistence_service)
-        notification_service = NotificationService(credential_service, persistence_service) # Inicializar NotificationService
 
     except ValueError as ve: # Specifically for missing key or other ValueErrors during setup
         QMessageBox.critical(None, "Configuration Error", f"A configuration error occurred: {str(ve)}\n\nPlease check your .env file or environment variables.\nThe application will now exit.")
