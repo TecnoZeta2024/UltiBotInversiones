@@ -38,12 +38,15 @@ class SupabasePersistenceService:
             # La contraseña del parsed_url podría estar codificada, usamos la original.
             # En este caso, el pooler usa el formato 'postgres.PROJECT_REF' como usuario
             # y la contraseña del proyecto como contraseña.
-            db_password = "Carlose1411*" # Contraseña original del proyecto
+            db_password = parsed_url.password # Contraseña original del proyecto
+            if not db_password:
+                logger.error("La contraseña no se encontró en DATABASE_URL.")
+                raise ValueError("La contraseña no se encontró en DATABASE_URL.")
             db_host = parsed_url.hostname
             db_port = parsed_url.port
             db_name = parsed_url.path.lstrip('/')
 
-            if not all([db_user, db_host, db_port, db_name]):
+            if not all([db_user, db_password, db_host, db_port, db_name]):
                 logger.error(f"No se pudieron parsear todos los componentes de DATABASE_URL: {self.database_url}")
                 raise ValueError(f"DATABASE_URL mal formada: {self.database_url}")
 
