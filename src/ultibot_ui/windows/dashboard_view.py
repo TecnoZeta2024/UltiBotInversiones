@@ -1,13 +1,19 @@
+import logging
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QLabel
 from PyQt5.QtCore import Qt, QTimer # Importar QTimer
 from uuid import UUID # Importar UUID
 import asyncio # Importar asyncio para iniciar tareas asíncronas
 
-from src.shared.data_types import Notification # Importar Notification
+logger = logging.getLogger(__name__)
+
+from src.shared.data_types import Notification, OpportunityStatus, Opportunity # Importar Notification, OpportunityStatus y Opportunity
 
 from src.ultibot_ui.widgets.market_data_widget import MarketDataWidget
 from src.ultibot_ui.widgets.chart_widget import ChartWidget
 from src.ultibot_ui.widgets.portfolio_widget import PortfolioWidget # Importar PortfolioWidget
+from src.ultibot_ui.widgets.real_trade_confirmation_dialog import RealTradeConfirmationDialog # Importar el nuevo diálogo
+from src.ultibot_ui.services.api_client import UltiBotAPIClient # Importar el cliente API
+
 from src.ultibot_backend.services.market_data_service import MarketDataService
 from src.ultibot_backend.services.config_service import ConfigService
 from src.ultibot_backend.services.portfolio_service import PortfolioService
@@ -16,16 +22,17 @@ from src.ultibot_backend.services.notification_service import NotificationServic
 from src.ultibot_ui.widgets.notification_widget import NotificationWidget # Importar NotificationWidget
 
 class DashboardView(QWidget):
-    def __init__(self, user_id: UUID, market_data_service: MarketDataService, config_service: ConfigService, notification_service: NotificationService, persistence_service: SupabasePersistenceService): # Añadir persistence_service
+    def __init__(self, user_id: UUID, market_data_service: MarketDataService, config_service: ConfigService, notification_service: NotificationService, persistence_service: SupabasePersistenceService, api_client: UltiBotAPIClient): # Añadir api_client
         super().__init__()
         self.user_id = user_id
         self.market_data_service = market_data_service
         self.config_service = config_service
         self.notification_service = notification_service # Guardar la referencia al servicio de notificaciones
         self.persistence_service = persistence_service # Guardar la referencia al servicio de persistencia
+        self.api_client = api_client # Guardar la referencia al cliente API
         
         # Inicializar PortfolioService aquí, ya que DashboardView tiene sus dependencias
-        self.portfolio_service = PortfolioService(self.market_data_service, self.config_service, self.persistence_service)
+        self.portfolio_service = PortfolioService(self.market_data_service, self.persistence_service)
         
         self._setup_ui()
         
@@ -33,6 +40,12 @@ class DashboardView(QWidget):
         asyncio.create_task(self.portfolio_service.initialize_portfolio(self.user_id))
         # Iniciar la carga de notificaciones y la suscripción en tiempo real
         asyncio.create_task(self._load_and_subscribe_notifications())
+        # Iniciar el monitoreo de oportunidades de trading real pendientes
+        self._opportunity_monitor_timer = QTimer(self)
+        self._opportunity_monitor_timer.setInterval(10000) # Chequear cada 10 segundos
+        self._opportunity_monitor_timer.timeout.connect(self._on_opportunity_monitor_timeout)
+        self._opportunity_monitor_timer.start()
+        print("Monitor de oportunidades de trading real iniciado.")
 
     def _setup_ui(self):
         main_layout = QVBoxLayout(self)
@@ -155,6 +168,77 @@ class DashboardView(QWidget):
             print(f"Error al hacer polling de nuevas notificaciones: {e}")
             # Manejar el error, quizás mostrando una notificación de error en la UI
 
+    def _on_opportunity_monitor_timeout(self):
+        """Slot síncrono para el QTimer que inicia la tarea asíncrona de monitoreo de oportunidades."""
+        asyncio.create_task(self._check_pending_real_opportunities())
+
+    async def _check_pending_real_opportunities(self):
+        """
+        Verifica si hay oportunidades de trading real pendientes de confirmación
+        y abre el diálogo correspondiente.
+        """
+        try:
+            opportunities_data = await self.api_client.get_real_trading_candidates()
+            if opportunities_data:
+                # Asumimos que el backend devuelve una lista de diccionarios, convertimos a objetos Opportunity
+                opportunities = [Opportunity(**opp_data) for opp_data in opportunities_data]
+                
+                if opportunities:
+                    # Tomar la primera oportunidad pendiente y mostrar el diálogo
+                    opportunity_to_confirm = opportunities[0]
+                    logger.info(f"Oportunidad pendiente de confirmación encontrada: {opportunity_to_confirm.id}")
+                    
+                    dialog = RealTradeConfirmationDialog(opportunity_to_confirm, self.api_client, self)
+                    dialog.trade_confirmed.connect(self._handle_trade_confirmed)
+                    dialog.trade_cancelled.connect(self._handle_trade_cancelled)
+                    dialog.exec_() # Mostrar el diálogo de forma modal
+                    
+                    # Después de cerrar el diálogo, re-chequear oportunidades o actualizar UI
+                    await self._refresh_opportunities_ui() # Método para actualizar la UI de oportunidades
+                    await self._update_real_trades_count_ui() # Método para actualizar el contador
+            else:
+                logger.debug("No hay oportunidades de trading real pendientes de confirmación.")
+
+        except Exception as e:
+            logger.error(f"Error al verificar oportunidades de trading real pendientes: {e}", exc_info=True)
+            # Podríamos mostrar una notificación de error en la UI
+
+    async def _refresh_opportunities_ui(self):
+        """
+        Método placeholder para actualizar la UI de oportunidades.
+        En una implementación real, esto recargaría el widget de oportunidades.
+        """
+        logger.info("Actualizando UI de oportunidades (placeholder).")
+        # TODO: Implementar la lógica real para recargar el widget de oportunidades
+        # Por ahora, solo loguea.
+
+    async def _update_real_trades_count_ui(self):
+        """
+        Método para actualizar el contador de operaciones reales en la UI.
+        """
+        try:
+            config_status = await self.api_client.get_real_trading_mode_status()
+            if config_status and 'real_trades_executed_count' in config_status:
+                count = config_status['real_trades_executed_count']
+                max_trades = config_status['max_real_trades']
+                logger.info(f"Contador de trades reales actualizado: {count}/{max_trades}")
+                # TODO: Actualizar un QLabel o similar en la UI con este valor
+            else:
+                logger.warning("No se pudo obtener el contador de trades reales del backend.")
+        except Exception as e:
+            logger.error(f"Error al actualizar el contador de trades reales en UI: {e}", exc_info=True)
+
+    def _handle_trade_confirmed(self, opportunity_id: str):
+        logger.info(f"Trade real confirmado para oportunidad {opportunity_id}. Actualizando UI.")
+        # Aquí se podría disparar una actualización más específica de la UI
+        asyncio.create_task(self._refresh_opportunities_ui())
+        asyncio.create_task(self._update_real_trades_count_ui())
+
+    def _handle_trade_cancelled(self, opportunity_id: str):
+        logger.info(f"Trade real cancelado para oportunidad {opportunity_id}. No se requiere acción adicional en UI.")
+        # Opcional: Actualizar el estado de la oportunidad en la UI a "rechazada por usuario" si se implementa en backend.
+        asyncio.create_task(self._refresh_opportunities_ui()) # Refrescar por si el estado cambió en backend
+
     def cleanup(self):
         """
         Limpia los recursos utilizados por DashboardView y sus widgets hijos.
@@ -176,6 +260,11 @@ class DashboardView(QWidget):
         if hasattr(self, '_notification_polling_timer') and self._notification_polling_timer.isActive():
             print("DashboardView: Stopping notification polling timer.")
             self._notification_polling_timer.stop()
+
+        # Detener el temporizador de monitoreo de oportunidades
+        if hasattr(self, '_opportunity_monitor_timer') and self._opportunity_monitor_timer.isActive():
+            print("DashboardView: Stopping opportunity monitor timer.")
+            self._opportunity_monitor_timer.stop()
 
         # Limpiar NotificationWidget (si es necesario, por ejemplo, para cancelar suscripciones WebSocket)
         if hasattr(self.notification_widget, 'cleanup') and callable(self.notification_widget.cleanup):

@@ -464,6 +464,62 @@ class NotificationService:
         except Exception as e:
             logger.error(f"Error al enviar notificación Telegram de fallo de activación de modo real para {user_id}: {e}", exc_info=True)
 
+    async def send_real_trade_status_notification(self, user_id: UUID, message: str, status_level: str = "INFO", symbol: Optional[str] = None, trade_id: Optional[UUID] = None):
+        """
+        Envía una notificación sobre el estado de una operación real.
+        Args:
+            user_id: El ID del usuario.
+            message: El mensaje de la notificación.
+            status_level: Nivel de estado (ej. "INFO", "WARNING", "ERROR", "CRITICAL").
+            symbol: Símbolo del par de trading (opcional).
+            trade_id: ID del trade (opcional).
+        """
+        title_prefix = ""
+        if status_level == "INFO":
+            title_prefix = "ℹ️ Estado de Orden Real"
+        elif status_level == "WARNING":
+            title_prefix = "⚠️ Advertencia de Orden Real"
+        elif status_level == "ERROR":
+            title_prefix = "❌ Error de Orden Real"
+        elif status_level == "CRITICAL":
+            title_prefix = "🚨 Error CRÍTICO de Orden Real"
+        
+        title = f"{title_prefix}: {symbol}" if symbol else title_prefix
+        
+        data_payload = {
+            "mode": "real",
+            "status_level": status_level,
+            "symbol": symbol,
+            "tradeId": str(trade_id) if trade_id else None,
+            "message": message
+        }
+
+        try:
+            await self.send_notification(
+                user_id=user_id,
+                title=title,
+                message=message,
+                channel="ui",
+                event_type=f"REAL_TRADE_STATUS_{status_level.upper()}",
+                dataPayload=data_payload
+            )
+            logger.info(f"Notificación UI de estado de orden real enviada para {user_id}.")
+        except Exception as e:
+            logger.error(f"Error al enviar notificación UI de estado de orden real para {user_id}: {e}", exc_info=True)
+
+        try:
+            await self.send_notification(
+                user_id=user_id,
+                title=title,
+                message=message,
+                channel="telegram",
+                event_type=f"REAL_TRADE_STATUS_{status_level.upper()}",
+                dataPayload=data_payload
+            )
+            logger.info(f"Notificación Telegram de estado de orden real enviada para {user_id}.")
+        except Exception as e:
+            logger.error(f"Error al enviar notificación Telegram de estado de orden real para {user_id}: {e}", exc_info=True)
+
     async def close(self):
         """Cierra cualquier adaptador de Telegram activo."""
         if self._telegram_adapter:

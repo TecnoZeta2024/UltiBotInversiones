@@ -29,7 +29,7 @@ class UltiBotAPIClient:
         self.base_url = base_url
         self.timeout = 30.0  # Timeout por defecto
         
-    async def _make_request(self, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
+    async def _make_request(self, method: str, endpoint: str, **kwargs) -> Any: # Cambiado a Any
         """
         Hace una petición HTTP al backend.
         
@@ -39,7 +39,7 @@ class UltiBotAPIClient:
             **kwargs: Argumentos adicionales para httpx
             
         Returns:
-            Respuesta JSON deserializada
+            Respuesta JSON deserializada (puede ser Dict o List)
             
         Raises:
             APIError: Si la petición falla
@@ -237,3 +237,22 @@ class UltiBotAPIClient:
         """
         logger.info("Obteniendo estado del modo de operativa real limitada.")
         return await self._make_request("GET", "/api/v1/config/real-trading-mode/status")
+
+    async def confirm_real_trade_opportunity(self, opportunity_id: UUID, user_id: UUID) -> Dict[str, Any]:
+        """
+        Envía una solicitud al backend para confirmar una oportunidad de trading real.
+        """
+        logger.info(f"Confirmando oportunidad de trading real {opportunity_id} para usuario {user_id}.")
+        return await self._make_request(
+            "POST",
+            f"/api/v1/trading/real/confirm-opportunity/{opportunity_id}",
+            json={"opportunity_id": str(opportunity_id), "user_id": str(user_id)}
+        )
+
+    async def get_real_trading_candidates(self) -> List[Dict[str, Any]]:
+        """
+        Obtiene una lista de oportunidades de muy alta confianza pendientes de confirmación
+        para operativa real.
+        """
+        logger.info("Obteniendo oportunidades de trading real pendientes de confirmación.")
+        return await self._make_request("GET", "/api/v1/opportunities/real-trading-candidates")
