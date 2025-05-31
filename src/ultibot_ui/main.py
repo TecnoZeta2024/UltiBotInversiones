@@ -173,7 +173,7 @@ async def start_application():
     
     # Crear y mostrar la ventana principal, pasando los servicios
     # This part is reached only if all initializations were successful
-    main_window = MainWindow(user_id, market_data_service, config_service, notification_service) # Pasar notification_service
+    main_window = MainWindow(user_id, market_data_service, config_service, notification_service, persistence_service) # Pasar persistence_service
     main_window.show()
 
     # Ejecutar el loop de eventos de Qt

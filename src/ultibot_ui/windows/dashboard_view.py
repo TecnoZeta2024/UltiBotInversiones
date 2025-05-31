@@ -11,19 +11,21 @@ from src.ultibot_ui.widgets.portfolio_widget import PortfolioWidget # Importar P
 from src.ultibot_backend.services.market_data_service import MarketDataService
 from src.ultibot_backend.services.config_service import ConfigService
 from src.ultibot_backend.services.portfolio_service import PortfolioService
+from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService # Importar SupabasePersistenceService
 from src.ultibot_backend.services.notification_service import NotificationService # Importar NotificationService
 from src.ultibot_ui.widgets.notification_widget import NotificationWidget # Importar NotificationWidget
 
 class DashboardView(QWidget):
-    def __init__(self, user_id: UUID, market_data_service: MarketDataService, config_service: ConfigService, notification_service: NotificationService): # Añadir notification_service
+    def __init__(self, user_id: UUID, market_data_service: MarketDataService, config_service: ConfigService, notification_service: NotificationService, persistence_service: SupabasePersistenceService): # Añadir persistence_service
         super().__init__()
         self.user_id = user_id
         self.market_data_service = market_data_service
         self.config_service = config_service
         self.notification_service = notification_service # Guardar la referencia al servicio de notificaciones
+        self.persistence_service = persistence_service # Guardar la referencia al servicio de persistencia
         
         # Inicializar PortfolioService aquí, ya que DashboardView tiene sus dependencias
-        self.portfolio_service = PortfolioService(self.market_data_service, self.config_service)
+        self.portfolio_service = PortfolioService(self.market_data_service, self.config_service, self.persistence_service)
         
         self._setup_ui()
         

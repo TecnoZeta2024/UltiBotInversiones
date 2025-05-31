@@ -70,3 +70,7 @@ class MobulaAPIError(ExternalAPIError):
     """Excepción específica para errores al interactuar con la API de Mobula."""
     def __init__(self, message: str, status_code: Optional[int] = None, response_data: Optional[Dict[str, Any]] = None, original_exception: Optional[Exception] = None):
         super().__init__(message, service_name="MOBULA", status_code=status_code, response_data=response_data, original_exception=original_exception)
+
+class ReportError(UltiBotError):
+    """Excepción para errores relacionados con la generación o procesamiento de reportes."""
+    pass

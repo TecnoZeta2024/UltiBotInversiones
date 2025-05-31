@@ -68,17 +68,21 @@ class SettingsView(QWidget):
         # Botón para guardar cambios
         save_button = QPushButton("Guardar Cambios")
         save_button.setStyleSheet("padding: 10px 20px; font-size: 16px; font-weight: bold;")
-        save_button.clicked.connect(lambda: asyncio.create_task(self._save_config())) # Conectar a una lambda que crea una tarea
+        save_button.clicked.connect(self._handle_save_button_clicked) # Conectar al nuevo slot síncrono
         main_layout.addWidget(save_button)
 
         main_layout.addStretch(1) # Empujar todo hacia arriba
+
+    def _handle_save_button_clicked(self):
+        """Slot síncrono para manejar el clic del botón Guardar. Crea una tarea para guardar la configuración."""
+        asyncio.create_task(self._save_config())
 
     async def _load_config_into_ui(self):
         """Carga la configuración actual del usuario y la muestra en la UI."""
         try:
             # Asumimos un user_id fijo para la v1.0, como en el backend
             # FIXED_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
-            self.current_config = await self.config_service.load_user_configuration(UUID(self.user_id))
+            self.current_config = await self.config_service.get_user_configuration(UUID(self.user_id))
             
             self.paper_trading_checkbox.setChecked(self.current_config.paperTradingActive or False)
             self.initial_capital_spinbox.setValue(self.current_config.defaultPaperTradingCapital or 10000.0) # Valor por defecto si es None
