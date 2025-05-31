@@ -58,6 +58,14 @@ class AIAnalysisError(UltiBotError):
         self.llm_provider = llm_provider
         self.original_exception = original_exception
 
+class MarketDataError(UltiBotError):
+    """Excepción para errores al obtener datos de mercado."""
+    pass
+
+class PortfolioError(UltiBotError):
+    """Excepción para errores relacionados con la gestión del portafolio."""
+    pass
+
 class MobulaAPIError(ExternalAPIError):
     """Excepción específica para errores al interactuar con la API de Mobula."""
     def __init__(self, message: str, status_code: Optional[int] = None, response_data: Optional[Dict[str, Any]] = None, original_exception: Optional[Exception] = None):

@@ -7,7 +7,7 @@ import os # Importar os
 from urllib.parse import urlparse, unquote
 from typing import Optional, List, Dict, Any, TYPE_CHECKING, LiteralString # Importar LiteralString
 from uuid import UUID
-from src.shared.data_types import APICredential, ServiceName, Notification, Opportunity, OpportunityStatus # Importar Opportunity y OpportunityStatus
+from src.shared.data_types import APICredential, ServiceName, Notification, Opportunity, OpportunityStatus, Trade, TradeOrderDetails # Importar Trade y TradeOrderDetails
 from datetime import datetime, timezone
 from psycopg.sql import SQL, Identifier, Literal, Composed # Importar SQL y otros componentes necesarios
 
@@ -596,6 +596,155 @@ class SupabasePersistenceService:
             return None
         except Exception as e:
             logger.error(f"Error al actualizar estado de oportunidad {opportunity_id}: {e}", exc_info=True)
+            if self.connection and not self.connection.closed:
+                await self.connection.rollback()
+            raise
+
+    async def get_open_paper_trades(self) -> List['Trade']:
+        """
+        Recupera todos los trades abiertos en modo 'paper'.
+        """
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
+        
+        # Importar Trade aquí para evitar importación circular a nivel de módulo
+        from src.shared.data_types import Trade 
+
+        query = SQL("""
+            SELECT * FROM trades
+            WHERE mode = 'paper' AND position_status = 'open';
+        """)
+        try:
+            async with self.connection.cursor(row_factory=dict_row) as cur:
+                await cur.execute(query)
+                records = await cur.fetchall()
+                
+                trades = []
+                for record in records:
+                    # Convertir los campos JSONB de la BD a objetos Python
+                    # Asegurarse de que los UUIDs y datetimes se manejen correctamente
+                    record_copy = record.copy()
+                    record_copy['id'] = UUID(record_copy['id'])
+                    record_copy['user_id'] = UUID(record_copy['user_id'])
+                    if record_copy.get('opportunity_id'):
+                        record_copy['opportunity_id'] = UUID(record_copy['opportunity_id'])
+                    
+                    # Convertir entry_order y exit_orders de dict a TradeOrderDetails
+                    if 'entry_order' in record_copy and record_copy['entry_order']:
+                        record_copy['entryOrder'] = TradeOrderDetails(**record_copy.pop('entry_order'))
+                    if 'exit_orders' in record_copy and record_copy['exit_orders']:
+                        record_copy['exitOrders'] = [TradeOrderDetails(**eo) for eo in record_copy.pop('exit_orders')]
+                    else:
+                        record_copy['exitOrders'] = [] # Asegurar que sea una lista vacía si no hay
+
+                    # Convertir timestamps de string ISO a datetime
+                    for key in ['created_at', 'opened_at', 'updated_at', 'closed_at']:
+                        if key in record_copy and isinstance(record_copy[key], str):
+                            record_copy[key] = datetime.fromisoformat(record_copy[key])
+                    
+                    # Mapear nombres de columnas de BD (snake_case) a nombres de campos de Pydantic (camelCase/PascalCase)
+                    # Esto es crucial para que Pydantic pueda instanciar el modelo correctamente
+                    pydantic_fields_map = {
+                        "position_status": "positionStatus",
+                        "opportunity_id": "opportunityId",
+                        "ai_analysis_confidence": "aiAnalysisConfidence",
+                        "pnl_usd": "pnl_usd",
+                        "pnl_percentage": "pnl_percentage",
+                        "closing_reason": "closingReason",
+                        "take_profit_price": "takeProfitPrice",
+                        "trailing_stop_activation_price": "trailingStopActivationPrice",
+                        "trailing_stop_callback_rate": "trailingStopCallbackRate",
+                        "current_stop_price_tsl": "currentStopPrice_tsl",
+                        "risk_reward_adjustments": "riskRewardAdjustments",
+                    }
+                    for db_col, pydantic_field in pydantic_fields_map.items():
+                        if db_col in record_copy:
+                            record_copy[pydantic_field] = record_copy.pop(db_col)
+
+                    trades.append(Trade(**record_copy))
+                return trades
+        except Exception as e:
+            logger.error(f"Error al obtener trades abiertos en paper trading (psycopg): {e}", exc_info=True)
+            raise
+
+    async def upsert_trade(self, user_id: UUID, trade_data: Dict[str, Any]):
+        """
+        Inserta un nuevo trade o actualiza uno existente.
+        """
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
+
+        # Asegurarse de que los campos de fecha y UUID estén en el formato correcto para la BD
+        trade_data_copy = trade_data.copy()
+        trade_data_copy['id'] = str(trade_data_copy['id'])
+        trade_data_copy['user_id'] = str(trade_data_copy['user_id'])
+        if trade_data_copy.get('opportunityId'):
+            trade_data_copy['opportunityId'] = str(trade_data_copy['opportunityId'])
+
+        # Convertir objetos datetime a strings ISO 8601 si no lo están ya
+        for key in ['created_at', 'opened_at', 'updated_at', 'closed_at']:
+            if key in trade_data_copy and isinstance(trade_data_copy[key], datetime):
+                trade_data_copy[key] = trade_data_copy[key].isoformat()
+        
+        # Manejar entryOrder y exitOrders
+        if 'entryOrder' in trade_data_copy and isinstance(trade_data_copy['entryOrder'], dict):
+            if 'timestamp' in trade_data_copy['entryOrder'] and isinstance(trade_data_copy['entryOrder']['timestamp'], datetime):
+                trade_data_copy['entryOrder']['timestamp'] = trade_data_copy['entryOrder']['timestamp'].isoformat()
+            trade_data_copy['entry_order'] = trade_data_copy.pop('entryOrder') # Mapear a snake_case para BD
+        
+        if 'exitOrders' in trade_data_copy and isinstance(trade_data_copy['exitOrders'], list):
+            processed_exit_orders = []
+            for eo in trade_data_copy['exitOrders']:
+                if isinstance(eo, dict) and 'timestamp' in eo and isinstance(eo['timestamp'], datetime):
+                    eo['timestamp'] = eo['timestamp'].isoformat()
+                processed_exit_orders.append(eo)
+            trade_data_copy['exit_orders'] = processed_exit_orders # Mapear a snake_case para BD
+            trade_data_copy.pop('exitOrders') # Eliminar el campo original
+
+        # Mapeo de nombres de campos de Pydantic a nombres de columnas de BD (snake_case)
+        db_columns_map = {
+            "user_id": "user_id", "mode": "mode", "symbol": "symbol", "side": "side",
+            "positionStatus": "position_status", "opportunityId": "opportunity_id",
+            "aiAnalysisConfidence": "ai_analysis_confidence", "pnl_usd": "pnl_usd",
+            "pnl_percentage": "pnl_percentage", "closingReason": "closing_reason",
+            "takeProfitPrice": "take_profit_price", "trailingStopActivationPrice": "trailing_stop_activation_price",
+            "trailingStopCallbackRate": "trailing_stop_callback_rate", "currentStopPrice_tsl": "current_stop_price_tsl",
+            "riskRewardAdjustments": "risk_reward_adjustments",
+            "created_at": "created_at", "opened_at": "opened_at", "updated_at": "updated_at", "closed_at": "closed_at"
+        }
+
+        insert_values_dict = {db_columns_map.get(k, k): v for k, v in trade_data_copy.items()}
+        
+        columns = [Identifier(col) for col in insert_values_dict.keys()]
+        
+        update_set_parts = [
+            SQL("{} = EXCLUDED.{}").format(Identifier(col), Identifier(col))
+            for col in insert_values_dict if col != 'id' # No actualizar el ID en el UPDATE
+        ]
+        update_set_str = SQL(", ").join(update_set_parts)
+
+        query: LiteralString = """
+        INSERT INTO trades ({})
+        VALUES ({})
+        ON CONFLICT (id) DO UPDATE SET
+            {},
+            updated_at = timezone('utc'::text, now())
+        RETURNING *;
+        """
+        try:
+            async with self.connection.cursor(row_factory=dict_row) as cur:
+                await cur.execute(
+                    SQL(query).format(
+                        SQL(", ").join(columns),
+                        SQL(", ").join(SQL("%s") for _ in insert_values_dict),
+                        update_set_str
+                    ),
+                    tuple(insert_values_dict.values())
+                )
+                await self.connection.commit()
+            logger.info(f"Trade {trade_data_copy['id']} guardado/actualizado exitosamente (psycopg).")
+        except Exception as e:
+            logger.error(f"Error al guardar/actualizar trade {trade_data_copy['id']} (psycopg): {e}", exc_info=True)
             if self.connection and not self.connection.closed:
                 await self.connection.rollback()
             raise
