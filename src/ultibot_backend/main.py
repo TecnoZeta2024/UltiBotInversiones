@@ -40,29 +40,13 @@ async def startup_event():
     logger.info("Iniciando UltiBot Backend...")
     
     from src.ultibot_backend.app_config import settings # Importar settings aquí para asegurar que esté disponible
+    logger.info(f"CREDENTIAL_ENCRYPTION_KEY loaded via settings: {'********' if settings.CREDENTIAL_ENCRYPTION_KEY else 'NOT SET'}")
     
-    # Leer manualmente CREDENTIAL_ENCRYPTION_KEY desde .env para evitar problemas de carga
-    raw_env_key = None
-    try:
-        with open(".env", "r") as f:
-            for line in f:
-                if line.startswith("CREDENTIAL_ENCRYPTION_KEY="):
-                    raw_env_key = line.strip().split("=", 1)[1].strip('"')
-                    break
-    except Exception as e:
-        logger.error(f"No se pudo leer manualmente CREDENTIAL_ENCRYPTION_KEY desde .env: {e}")
-
-    logger.info(f"CREDENTIAL_ENCRYPTION_KEY desde settings: {settings.CREDENTIAL_ENCRYPTION_KEY}")
-    logger.info(f"CREDENTIAL_ENCRYPTION_KEY leída manualmente desde .env: {raw_env_key}")
-
-    # Usar la clave leída manualmente si está disponible, de lo contrario, la de settings
-    effective_encryption_key = raw_env_key if raw_env_key else settings.CREDENTIAL_ENCRYPTION_KEY
-
     # Inicializar PersistenceService primero
     persistence_service = SupabasePersistenceService()
     await persistence_service.connect() # Conectar a la base de datos al inicio
 
-    credential_service = CredentialService(encryption_key=effective_encryption_key)
+    credential_service = CredentialService(encryption_key=settings.CREDENTIAL_ENCRYPTION_KEY)
     notification_service = NotificationService(credential_service=credential_service)
     binance_adapter = BinanceAdapter() # Inicializar BinanceAdapter
     market_data_service = MarketDataService(credential_service=credential_service, binance_adapter=binance_adapter) # Inicializar MarketDataService
