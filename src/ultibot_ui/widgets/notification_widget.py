@@ -56,8 +56,10 @@ class NotificationWidget(QWidget):
                 # Asumiendo que get_notification_history puede filtrar por estado o que
                 # solo queremos las más recientes y el widget maneja los duplicados.
                 # Para este ejemplo, obtendremos las últimas 20 notificaciones.
+                # El filtrado por 'status' debe hacerse en el lado del cliente si el servicio no lo soporta,
+                # o el servicio debe ser actualizado para soportarlo. Por ahora, eliminamos el argumento.
                 new_notifications = await self.notification_service.get_notification_history(
-                    user_id=self.user_id, limit=20, status="unread" # Asumiendo que el servicio soporta 'status'
+                    user_id=self.user_id, limit=20
                 )
                 for notif in new_notifications:
                     self.add_notification(notif)
@@ -322,6 +324,17 @@ class NotificationWidget(QWidget):
         has_notifications = len(self.notifications) > 0
         self.mark_all_read_button.setEnabled(has_notifications)
         self.dismiss_selected_button.setEnabled(has_notifications and len(self.notification_list.selectedItems()) > 0)
+
+    def cleanup(self):
+        """
+        Limpia los recursos utilizados por NotificationWidget.
+        Principalmente, detiene el temporizador de actualización.
+        """
+        print("NotificationWidget: cleanup called.")
+        if hasattr(self, 'update_timer') and self.update_timer.isActive():
+            print("NotificationWidget: Stopping update timer.")
+            self.update_timer.stop()
+        print("NotificationWidget: cleanup finished.")
 
 
 # Ejemplo de uso para pruebas locales

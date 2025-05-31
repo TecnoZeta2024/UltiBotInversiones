@@ -159,45 +159,29 @@ async def start_application():
     main_window = MainWindow(user_id, market_data_service, config_service, notification_service) # Pasar notification_service
     main_window.show()
 
-    # Configurar limpieza de recursos al salir
-    # persistence_service might be None if initialization failed before it was set.
-    if persistence_service:
-        async def cleanup_resources(ps_service: SupabasePersistenceService):
-            if ps_service: # Double check, though outer 'if' should cover
-                print("Disconnecting persistence service...")
-                await ps_service.disconnect()
-                print("Persistence service disconnected.")
-
-        def _cleanup_sync_wrapper(ps_service_to_clean: SupabasePersistenceService):
-            # Wrapper to ensure the correct persistence_service instance is used
-            def _cleanup_sync():
-                try:
-                    loop = asyncio.get_event_loop()
-                    if loop.is_closed():
-                        loop = asyncio.new_event_loop()
-                        asyncio.set_event_loop(loop)
-                    
-                    loop.run_until_complete(cleanup_resources(ps_service_to_clean))
-                except Exception as e:
-                    print(f"Error during cleanup: {e}")
-                finally:
-                    if 'loop' in locals() and loop is not asyncio.get_event_loop() and not loop.is_closed():
-                         # This logic for closing a potentially new loop needs care.
-                         # If the main event loop was closed, and we started a new one for cleanup,
-                         # it should ideally be closed. However, get_event_loop() behavior can be tricky.
-                         # For now, let's assume the loop management is sufficient.
-                         pass
-            return _cleanup_sync
-
-        app.aboutToQuit.connect(_cleanup_sync_wrapper(persistence_service))
-
     # Ejecutar el loop de eventos de Qt
     exit_code = app.exec_()
+
+    # --- Limpieza de recursos después de que la aplicación Qt haya terminado ---
+    print("Iniciando limpieza de recursos asíncronos...")
+    if persistence_service:
+        try:
+            print("Desconectando persistence service...")
+            await persistence_service.disconnect()
+            print("Persistence service desconectado.")
+        except Exception as e:
+            print(f"Error durante la desconexión de persistence_service: {e}")
+
+    if market_data_service: # Asegurarse de que market_data_service se inicializó
+        try:
+            print("Cerrando market_data_service...")
+            await market_data_service.close()
+            print("Market_data_service cerrado.")
+        except Exception as e:
+            print(f"Error durante el cierre de market_data_service: {e}")
     
-    # Final cleanup check (safeguard)
-    # This check needs to be careful if persistence_service was never initialized.
-    # Eliminar la lógica de verificación de is_connected, ya que app.aboutToQuit.connect es el método preferido
-    # para la limpieza y el atributo is_connected no existe en SupabasePersistenceService.
+    print("Limpieza de recursos asíncronos completada.")
+    # --- Fin de la limpieza ---
 
     sys.exit(exit_code)
 

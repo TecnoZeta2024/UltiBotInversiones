@@ -136,3 +136,18 @@ class MainWindow(QMainWindow):
         index = self.view_map.get(view_name)
         if index is not None:
             self.stacked_widget.setCurrentIndex(index)
+
+    def closeEvent(self, event):
+        """
+        Maneja el evento de cierre de la ventana principal.
+        Asegura que los recursos de los widgets hijos se limpien.
+        """
+        print("MainWindow: closeEvent triggered.")
+        # Llamar a métodos de limpieza en las vistas/widgets que lo necesiten
+        if hasattr(self.dashboard_view, 'cleanup') and callable(self.dashboard_view.cleanup):
+            print("MainWindow: Calling cleanup on dashboard_view.")
+            self.dashboard_view.cleanup()
+        
+        # Aquí se podrían añadir llamadas a cleanup para otras vistas si fuera necesario
+        
+        super().closeEvent(event) # Aceptar el evento de cierre
