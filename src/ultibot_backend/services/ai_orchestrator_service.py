@@ -158,7 +158,7 @@ class AIOrchestratorService:
             )
             
             # Guardar la oportunidad en la base de datos
-            saved_opportunity = await self.persistence_service.save_opportunity(opportunity_data)
+            saved_opportunity = await self.persistence_service.upsert_opportunity(opportunity_data.user_id, opportunity_data.model_dump())
             logger.info(f"Oportunidad creada y guardada con ID: {saved_opportunity.id} desde MCP: {mcp_id}")
             
             # Encolar/dirigir esta oportunidad para análisis de IA (Subtask 3.1)
@@ -312,18 +312,22 @@ class AIOrchestratorService:
         
         # --- INICIO DE MODIFICACIÓN PARA TASK 2.1 ---
         should_verify_data = False
-        if opportunity.status == OpportunityStatus.AI_ANALYSIS_COMPLETE and opportunity.ai_analysis and opportunity.ai_analysis.calculatedConfidence is not None:
-            confidence_threshold_paper = user_config.aiAnalysisConfidenceThresholds.get("paperTrading") if user_config.aiAnalysisConfidenceThresholds else None
+        if opportunity.status == OpportunityStatus.AI_ANALYSIS_COMPLETE and \
+           opportunity.ai_analysis and \
+           opportunity.ai_analysis.calculatedConfidence is not None:
             
-            if confidence_threshold_paper is None:
-                logger.warning(f"Umbral de confianza para Paper Trading no configurado para el usuario {opportunity.user_id}. No se procederá con la verificación de datos.")
-            elif opportunity.ai_analysis.calculatedConfidence >= confidence_threshold_paper:
-                logger.info(f"Confianza de IA ({opportunity.ai_analysis.calculatedConfidence}) >= umbral ({confidence_threshold_paper}) para OID {opportunity.id}. Procediendo a verificación de datos.")
-                should_verify_data = True
+            confidence_threshold_paper = user_config.aiAnalysisConfidenceThresholds.paperTrading if user_config.aiAnalysisConfidenceThresholds else None
+            
+            if confidence_threshold_paper is not None: # Asegurarse de que el umbral no sea None
+                if opportunity.ai_analysis.calculatedConfidence >= confidence_threshold_paper:
+                    logger.info(f"Confianza de IA ({opportunity.ai_analysis.calculatedConfidence}) >= umbral ({confidence_threshold_paper}) para OID {opportunity.id}. Procediendo a verificación de datos.")
+                    should_verify_data = True
+                else:
+                    logger.info(f"Confianza de IA ({opportunity.ai_analysis.calculatedConfidence}) < umbral ({confidence_threshold_paper}) para OID {opportunity.id}. Oportunidad será marcada como rechazada por IA.")
+                    opportunity.status = OpportunityStatus.REJECTED_BY_AI # Se gestionará formalmente en Task 3
+                    opportunity.status_reason = "Confianza de IA por debajo del umbral de Paper Trading."
             else:
-                logger.info(f"Confianza de IA ({opportunity.ai_analysis.calculatedConfidence}) < umbral ({confidence_threshold_paper}) para OID {opportunity.id}. Oportunidad será marcada como rechazada por IA.")
-                opportunity.status = OpportunityStatus.REJECTED_BY_AI # Se gestionará formalmente en Task 3
-                opportunity.status_reason = "Confianza de IA por debajo del umbral de Paper Trading."
+                logger.warning(f"Umbral de confianza para Paper Trading no configurado para el usuario {opportunity.user_id}. No se procederá con la verificación de datos.")
         
         if should_verify_data:
             # --- INICIO DE MODIFICACIÓN PARA TASK 2.2 ---
@@ -380,8 +384,8 @@ class AIOrchestratorService:
                         # data_verified_successfully = False
 
                     # --- INICIO DE LÓGICA PARA SUBTASK 2.3 ---
-                    PRICE_DISCREPANCY_THRESHOLD_PERCENT = user_config.aiAnalysisConfidenceThresholds.get("dataVerificationPriceDiscrepancyPercent", 5.0) if user_config.aiAnalysisConfidenceThresholds else 5.0
-                    MIN_VOLUME_THRESHOLD_QUOTE = user_config.aiAnalysisConfidenceThresholds.get("dataVerificationMinVolumeQuote", 1000.0) if user_config.aiAnalysisConfidenceThresholds else 1000.0
+                    PRICE_DISCREPANCY_THRESHOLD_PERCENT = user_config.aiAnalysisConfidenceThresholds.dataVerificationPriceDiscrepancyPercent if user_config.aiAnalysisConfidenceThresholds else 5.0
+                    MIN_VOLUME_THRESHOLD_QUOTE = user_config.aiAnalysisConfidenceThresholds.dataVerificationMinVolumeQuote if user_config.aiAnalysisConfidenceThresholds else 1000.0
 
                     # 1. Verificación de Precio
                     mobula_price = None
@@ -399,8 +403,24 @@ class AIOrchestratorService:
                         except ValueError:
                             logger.warning(f"No se pudo convertir el precio de Binance '{binance_price_str}' a float para {binance_symbol}.")
                     
+                    # 1. Verificación de Precio
+                    mobula_price = None
+                    if mobula_data and isinstance(mobula_data.get("price"), (int, float)):
+                        mobula_price = float(mobula_data["price"])
+                    
+                    binance_price_str = None
+                    if binance_data and isinstance(binance_data.get("lastPrice"), str):
+                        binance_price_str = binance_data["lastPrice"]
+                    
+                    binance_price = None
+                    if binance_price_str:
+                        try:
+                            binance_price = float(binance_price_str)
+                        except ValueError:
+                            logger.warning(f"No se pudo convertir el precio de Binance '{binance_price_str}' a float para {binance_symbol}.")
+                    
                     if mobula_price is not None and binance_price is not None:
-                        price_diff_percent = 0
+                        price_diff_percent = 0.0 # Inicializar como float
                         if binance_price > 0: # Evitar división por cero
                             price_diff_percent = (abs(mobula_price - binance_price) / binance_price) * 100
                         
@@ -424,9 +444,14 @@ class AIOrchestratorService:
                                 "binance_price": binance_price,
                                 "difference_percent": round(price_diff_percent, 2)
                             })
-                    elif mobula_price is None and binance_price is None:
-                        logger.warning(f"No se pudieron obtener precios de Mobula ni de Binance para {asset_symbol} para comparación.")
-                        # No necesariamente un fallo si una fuente es opcional, pero es una advertencia.
+                    else: # Si uno o ambos precios son None
+                        logger.warning(f"No se pudieron obtener precios de Mobula o de Binance para {asset_symbol} para comparación.")
+                        verification_results["checks"].append({
+                            "check_type": "price_comparison",
+                            "status": "warning",
+                            "message": "No se pudieron obtener precios de Mobula o Binance para comparación."
+                        })
+                        # data_verified_successfully = False # Podría ser un fallo si la comparación de precios es crítica
                     
                     # 2. Verificación de Volumen (usando Binance como referencia principal para el par de trading)
                     binance_volume_str = None
@@ -440,7 +465,7 @@ class AIOrchestratorService:
                         except ValueError:
                              logger.warning(f"No se pudo convertir el volumen de Binance '{binance_volume_str}' a float para {binance_symbol}.")
                     
-                    if binance_volume is not None:
+                    if binance_volume is not None: # Asegurarse de que binance_volume no sea None antes de comparar
                         if binance_volume < MIN_VOLUME_THRESHOLD_QUOTE:
                             logger.warning(f"Volumen de Binance bajo para {binance_symbol}: {binance_volume} < {MIN_VOLUME_THRESHOLD_QUOTE}")
                             verification_results["checks"].append({
@@ -504,6 +529,8 @@ class AIOrchestratorService:
             opportunity_id=opportunity.id,
             status=opportunity.status, # El estado puede haber cambiado
             ai_analysis=ai_analysis_json,
+            confidence_score=opportunity.ai_analysis.calculatedConfidence if opportunity.ai_analysis else None,
+            suggested_action=opportunity.ai_analysis.suggestedAction if opportunity.ai_analysis else None,
             status_reason=opportunity.status_reason # Pasar el status_reason
         )
         logger.info(f"Análisis de IA y verificación de datos/umbral completados para OID: {opportunity.id}. Estado final: {opportunity.status}")
@@ -519,7 +546,7 @@ class AIOrchestratorService:
             # Y que la verificación de datos, si se hizo, fue exitosa.
             
             # Re-verificar la confianza contra el umbral para la notificación (AC5 específicamente menciona >80% o umbral)
-            confidence_threshold_paper = user_config.aiAnalysisConfidenceThresholds.get("paperTrading") if user_config.aiAnalysisConfidenceThresholds else None
+            confidence_threshold_paper = user_config.aiAnalysisConfidenceThresholds.paperTrading if user_config.aiAnalysisConfidenceThresholds else None
             notify_high_confidence = False
             if confidence_threshold_paper is not None and opportunity.ai_analysis and opportunity.ai_analysis.calculatedConfidence is not None:
                 if opportunity.ai_analysis.calculatedConfidence >= confidence_threshold_paper:

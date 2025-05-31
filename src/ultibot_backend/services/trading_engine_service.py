@@ -4,7 +4,7 @@ from datetime import datetime # Importar datetime
 from typing import Optional
 import asyncio # Importar asyncio
 
-from src.shared.data_types import TradeOrderDetails, ServiceName, Opportunity, Trade, PortfolioSnapshot # Importar PortfolioSnapshot
+from src.shared.data_types import TradeOrderDetails, ServiceName, Opportunity, Trade, PortfolioSnapshot, OpportunityStatus # Importar OpportunityStatus
 from src.ultibot_backend.services.config_service import ConfigService
 from src.ultibot_backend.services.order_execution_service import OrderExecutionService, PaperOrderExecutionService
 from src.ultibot_backend.services.credential_service import CredentialService
@@ -156,7 +156,10 @@ class TradingEngineService:
             executedQuantity=quantity,
             executedPrice=current_price,
             timestamp=datetime.utcnow(),
-            # Los campos exchangeOrderId, commission, commissionAsset, rawResponse son opcionales
+            exchangeOrderId=None, # Añadir explícitamente None
+            commission=None,      # Añadir explícitamente None
+            commissionAsset=None, # Añadir explícitamente None
+            rawResponse=None      # Añadir explícitamente None
         )
         logger.info(f"Orden simulada creada: {simulated_order_details.orderId_internal}")
 
@@ -226,6 +229,66 @@ class TradingEngineService:
             # Similar al portafolio, no bloqueamos la operación principal por un fallo en la notificación.
 
         return new_trade
+
+    async def process_opportunity_for_real_trading(self, opportunity: Opportunity):
+        """
+        Procesa una oportunidad de trading analizada por la IA para determinar
+        si es una candidata de muy alta confianza para operativa real.
+        """
+        logger.info(f"Procesando oportunidad {opportunity.id} para posible operativa real.")
+
+        user_id = opportunity.user_id
+        user_config = await self.config_service.get_user_configuration(user_id)
+
+        # Acceder a realTradingSettings de forma segura
+        real_trading_settings = user_config.realTradingSettings
+        if not real_trading_settings or not real_trading_settings.real_trading_mode_active:
+            logger.info(f"Modo de operativa real no activo para usuario {user_id}. Oportunidad {opportunity.id} no considerada para real trading.")
+            return
+
+        if not opportunity.ai_analysis or opportunity.ai_analysis.calculatedConfidence is None:
+            logger.warning(f"Oportunidad {opportunity.id} no tiene análisis de IA o confianza calculada. No se puede procesar para real trading.")
+            return
+
+        # Subtask 1.1: Filtrar oportunidades basándose en aiAnalysis.calculatedConfidence > 0.95
+        confidence_threshold = 0.95 # Valor por defecto
+        if user_config.aiAnalysisConfidenceThresholds and user_config.aiAnalysisConfidenceThresholds.realTrading is not None:
+            confidence_threshold = user_config.aiAnalysisConfidenceThresholds.realTrading
+        
+        if opportunity.ai_analysis.calculatedConfidence <= confidence_threshold:
+            logger.info(f"Confianza de IA ({opportunity.ai_analysis.calculatedConfidence:.2f}) para oportunidad {opportunity.id} no supera el umbral de {confidence_threshold:.2f}. No es candidata para operativa real.")
+            return
+
+        # Subtask 1.3: Verificar el real_trades_executed_count
+        real_trades_executed_count = real_trading_settings.real_trades_executed_count if real_trading_settings.real_trades_executed_count is not None else 0
+        max_real_trades = real_trading_settings.max_real_trades if real_trading_settings.max_real_trades is not None else 5 # Límite por defecto de 5
+
+        if real_trades_executed_count >= max_real_trades:
+            logger.warning(f"Límite de operaciones reales ({max_real_trades}) alcanzado para usuario {user_id}. Oportunidad {opportunity.id} no presentada para operativa real.")
+            # TODO: Considerar enviar una notificación al usuario si el límite se ha alcanzado y se detecta una oportunidad de alta confianza.
+            return
+
+        # Subtask 1.4: Actualizar el status de la Opportunity a PENDING_USER_CONFIRMATION_REAL
+        opportunity.status = OpportunityStatus.PENDING_USER_CONFIRMATION_REAL # Usar el miembro del Enum
+        opportunity.updated_at = datetime.utcnow()
+        try:
+            await self.persistence_service.upsert_opportunity(opportunity.user_id, opportunity.model_dump(mode='json', by_alias=True, exclude_none=True))
+            logger.info(f"Oportunidad {opportunity.id} actualizada a 'pending_user_confirmation_real' y persistida.")
+        except Exception as e:
+            logger.error(f"Error al persistir la oportunidad {opportunity.id} con estado 'pending_user_confirmation_real': {e}", exc_info=True)
+            # Si falla la persistencia, no podemos continuar con la notificación/presentación.
+            return
+
+        # Subtask 4.2: Disparar notificación prioritaria
+        try:
+            await self.notification_service.send_high_confidence_opportunity_notification(opportunity)
+            logger.info(f"Notificación de oportunidad de alta confianza enviada para {opportunity.id}.")
+        except Exception as e:
+            logger.error(f"Error al enviar notificación de alta confianza para oportunidad {opportunity.id}: {e}", exc_info=True)
+            # No bloqueamos el flujo principal si la notificación falla.
+
+        logger.info(f"Oportunidad {opportunity.id} es una candidata de muy alta confianza para operativa real y ha sido marcada para confirmación del usuario.")
+
 
     async def monitor_and_manage_paper_trade_exit(self, trade: Trade):
         """
@@ -323,7 +386,11 @@ class TradingEngineService:
             requestedQuantity=trade.entryOrder.executedQuantity, # Cantidad total de la posición
             executedQuantity=trade.entryOrder.executedQuantity,
             executedPrice=executed_price,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.utcnow(),
+            exchangeOrderId=None, # Añadir explícitamente None
+            commission=None,      # Añadir explícitamente None
+            commissionAsset=None, # Añadir explícitamente None
+            rawResponse=None      # Añadir explícitamente None
         )
         trade.exitOrders.append(exit_order_details) # Añadir a la lista de órdenes de salida
 

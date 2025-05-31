@@ -4,7 +4,7 @@ from uuid import UUID
 from typing import Optional, Dict, Any, List
 from uuid import UUID
 
-from src.shared.data_types import ServiceName, APICredential, Notification, Trade
+from src.shared.data_types import ServiceName, APICredential, Notification, Trade, Opportunity
 from src.ultibot_backend.adapters.telegram_adapter import TelegramAdapter
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 from src.ultibot_backend.services.credential_service import CredentialService
@@ -284,6 +284,114 @@ class NotificationService:
             logger.info(f"Notificación Telegram de trade simulado {trade_id} enviada.")
         except Exception as e:
             logger.error(f"Error al enviar notificación Telegram para trade simulado {trade_id}: {e}", exc_info=True)
+
+    async def send_paper_trade_exit_notification(self, trade: Trade):
+        """
+        Envía una notificación al usuario confirmando el cierre de una operación simulada en paper trading.
+        """
+        user_id = trade.user_id
+        symbol = trade.symbol
+        side = trade.side
+        executed_price = trade.exitOrders[-1].executedPrice if trade.exitOrders else None
+        pnl_usd = trade.pnl_usd
+        pnl_percentage = trade.pnl_percentage
+        closing_reason = trade.closingReason
+        trade_id = trade.id
+
+        title = f"📉 Operación Simulada Cerrada: {symbol}"
+        message = (
+            f"Se ha simulado el cierre de una operación en Paper Trading:\n"
+            f"Símbolo: {symbol}\n"
+            f"Acción: {side}\n"
+            f"Razón de Cierre: {closing_reason}\n"
+            f"Precio de Salida: {executed_price:.4f} USDT\n"
+            f"P&L: {pnl_usd:.2f} USD ({pnl_percentage:.2f}%)\n"
+            f"ID de Trade: {trade_id}"
+        )
+        
+        try:
+            await self.send_notification(
+                user_id=user_id,
+                title=title,
+                message=message,
+                channel="ui",
+                event_type="PAPER_TRADE_EXIT_SIMULATED",
+                dataPayload={"tradeId": str(trade_id), "symbol": symbol, "side": side, "executedPrice": executed_price, "pnl_usd": pnl_usd, "pnl_percentage": pnl_percentage, "closingReason": closing_reason, "mode": "paper"}
+            )
+            logger.info(f"Notificación UI de cierre de trade simulado {trade_id} enviada.")
+        except Exception as e:
+            logger.error(f"Error al enviar notificación UI para cierre de trade simulado {trade_id}: {e}", exc_info=True)
+
+        try:
+            await self.send_notification(
+                user_id=user_id,
+                title=title,
+                message=message,
+                channel="telegram",
+                event_type="PAPER_TRADE_EXIT_SIMULATED",
+                dataPayload={"tradeId": str(trade_id), "symbol": symbol, "side": side, "executedPrice": executed_price, "pnl_usd": pnl_usd, "pnl_percentage": pnl_percentage, "closingReason": closing_reason, "mode": "paper"}
+            )
+            logger.info(f"Notificación Telegram de cierre de trade simulado {trade_id} enviada.")
+        except Exception as e:
+            logger.error(f"Error al enviar notificación Telegram para cierre de trade simulado {trade_id}: {e}", exc_info=True)
+
+    async def send_high_confidence_opportunity_notification(self, opportunity: Opportunity):
+        """
+        Envía una notificación prioritaria cuando se identifica una oportunidad de muy alta confianza para operativa real.
+        """
+        user_id = opportunity.user_id
+        symbol = opportunity.symbol
+        suggested_action = opportunity.ai_analysis.suggestedAction if opportunity.ai_analysis else "N/A"
+        confidence = opportunity.ai_analysis.calculatedConfidence if opportunity.ai_analysis else 0.0
+        reasoning = opportunity.ai_analysis.reasoning_ai if opportunity.ai_analysis else "Sin resumen."
+        opportunity_id = opportunity.id
+
+        title = f"🚨 Oportunidad Real de Alta Confianza: {symbol} ({suggested_action})"
+        message = (
+            f"¡Se ha detectado una oportunidad de trading de muy alta confianza para operativa real!\n"
+            f"Símbolo: {symbol}\n"
+            f"Acción Sugerida: {suggested_action}\n"
+            f"Confianza de IA: {confidence:.2%}\n"
+            f"Resumen del Análisis: {reasoning}\n"
+            f"ID de Oportunidad: {opportunity_id}\n\n"
+            f"Por favor, revisa la sección 'Oportunidades' en la UI para confirmar la operación."
+        )
+        data_payload = {
+            "opportunityId": str(opportunity_id),
+            "symbol": symbol,
+            "suggestedAction": suggested_action,
+            "confidence": confidence,
+            "reasoning": reasoning,
+            "status": "pending_user_confirmation_real"
+        }
+
+        # Notificación UI (prioridad alta)
+        try:
+            await self.send_notification(
+                user_id=user_id,
+                title=title,
+                message=message,
+                channel="ui",
+                event_type="OPPORTUNITY_HIGH_CONFIDENCE_REAL_TRADING",
+                dataPayload=data_payload
+            )
+            logger.info(f"Notificación UI de oportunidad de alta confianza {opportunity_id} enviada.")
+        except Exception as e:
+            logger.error(f"Error al enviar notificación UI para oportunidad de alta confianza {opportunity_id}: {e}", exc_info=True)
+
+        # Notificación Telegram (prioridad alta)
+        try:
+            await self.send_notification(
+                user_id=user_id,
+                title=title,
+                message=message,
+                channel="telegram",
+                event_type="OPPORTUNITY_HIGH_CONFIDENCE_REAL_TRADING",
+                dataPayload=data_payload
+            )
+            logger.info(f"Notificación Telegram de oportunidad de alta confianza {opportunity_id} enviada.")
+        except Exception as e:
+            logger.error(f"Error al enviar notificación Telegram para oportunidad de alta confianza {opportunity_id}: {e}", exc_info=True)
 
     async def send_real_trading_mode_activated_notification(self, user_id: UUID):
         """
