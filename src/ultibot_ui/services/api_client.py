@@ -256,3 +256,44 @@ class UltiBotAPIClient:
         """
         logger.info("Obteniendo oportunidades de trading real pendientes de confirmación.")
         return await self._make_request("GET", "/api/v1/opportunities/real-trading-candidates")
+
+    async def get_open_trades(self, mode: str = "all") -> List[Dict[str, Any]]:
+        """
+        Obtiene la lista de trades abiertos (paper y/o real).
+        
+        Args:
+            mode: 'paper', 'real', o 'all' para filtrar por modo de trading
+            
+        Returns:
+            Lista de trades abiertos con detalles de TSL/TP
+        """
+        params = {}
+        if mode != "all":
+            params["mode"] = mode
+            
+        logger.info(f"Obteniendo trades abiertos con modo: {mode}")
+        return await self._make_request("GET", "/api/v1/trades/open", params=params)
+
+    async def get_capital_management_status(self) -> Dict[str, Any]:
+        """
+        Obtiene el estado actual de la gestión de capital para operaciones reales.
+        
+        Returns:
+            Estado de gestión de capital incluyendo:
+            - Capital total disponible
+            - Capital ya comprometido hoy
+            - Límites configurados
+            - Capital disponible para nuevas operaciones
+        """
+        logger.info("Obteniendo estado de gestión de capital.")
+        return await self._make_request("GET", "/api/v1/trading/capital-management/status")
+
+    async def get_portfolio_snapshot_with_capital_info(self) -> Dict[str, Any]:
+        """
+        Obtiene un snapshot completo del portafolio incluyendo información de gestión de capital.
+        
+        Returns:
+            Snapshot del portafolio extendido con información de gestión de capital
+        """
+        logger.info("Obteniendo snapshot del portafolio con información de capital.")
+        return await self._make_request("GET", "/api/v1/portfolio/snapshot/extended")
