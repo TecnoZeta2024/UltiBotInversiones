@@ -140,11 +140,21 @@ class RiskProfileSettings(BaseModel):
 class RealTradingSettings(BaseModel):
     real_trading_mode_active: bool = Field(default=False, description="Indica si el modo de operativa real limitada está activo.")
     real_trades_executed_count: int = Field(default=0, description="Contador de operaciones reales ejecutadas en el modo limitado.")
+    max_real_trades: int = Field(5, description="Número máximo de operaciones reales permitidas en el modo limitado.") # Eliminado Optional
     maxConcurrentOperations: Optional[int] = None
     dailyLossLimitAbsolute: Optional[float] = None
     dailyProfitTargetAbsolute: Optional[float] = None
     assetSpecificStopLoss: Optional[Dict[str, Dict[str, float]]] = None
     autoPauseTradingConditions: Optional[Dict[str, Any]] = None
+
+class AIAnalysisConfidenceThresholds(BaseModel):
+    """
+    Umbrales de confianza de la IA para diferentes modos de trading y verificación de datos.
+    """
+    paperTrading: Optional[float] = Field(0.70, description="Umbral para paper trading (0.0 a 1.0).")
+    realTrading: Optional[float] = Field(0.95, description="Umbral para operativa real (0.0 a 1.0).")
+    dataVerificationPriceDiscrepancyPercent: Optional[float] = Field(5.0, description="Porcentaje máximo de discrepancia de precio permitido entre fuentes de datos para verificación.")
+    dataVerificationMinVolumeQuote: Optional[float] = Field(1000.0, description="Volumen mínimo en la moneda de cotización para que un activo sea considerado líquido para verificación.")
 
 class AiStrategyConfiguration(BaseModel):
     id: UUID = Field(default_factory=uuid4)
@@ -154,7 +164,7 @@ class AiStrategyConfiguration(BaseModel):
     geminiModelName: Optional[str] = None # Nombre del modelo Gemini a usar (ej. "gemini-1.5-pro")
     geminiPromptTemplate: Optional[str] = None
     indicatorWeights: Optional[Dict[str, float]] = None
-    confidenceThresholds: Optional[Dict[str, float]] = None
+    confidenceThresholds: Optional[AIAnalysisConfidenceThresholds] = None # Usar el nuevo modelo
     maxContextWindowTokens: Optional[int] = None
 
 class McpServerPreference(BaseModel):
@@ -191,11 +201,11 @@ class UserConfiguration(BaseModel):
     favoritePairs: Optional[List[str]] = None
     riskProfile: Optional[str] = None # 'conservative' | 'moderate' | 'aggressive' | 'custom'
     riskProfileSettings: Optional[RiskProfileSettings] = None
-    realTradingSettings: Optional[RealTradingSettings] = None
+    realTradingSettings: Optional[RealTradingSettings] = None # Revertido a Optional
 
     # Preferencias de IA y Análisis
     aiStrategyConfigurations: Optional[List[AiStrategyConfiguration]] = None
-    aiAnalysisConfidenceThresholds: Optional[Dict[str, float]] = None
+    aiAnalysisConfidenceThresholds: Optional[AIAnalysisConfidenceThresholds] = None # Usar el nuevo modelo
     mcpServerPreferences: Optional[List[McpServerPreference]] = None
 
     # Preferencias de UI
@@ -293,6 +303,7 @@ class OpportunityStatus(str, Enum):
     COMPLETED_PROFIT = "completed_profit" # Cerrada con ganancia
     COMPLETED_LOSS = "completed_loss" # Cerrada con pérdida
     COMPLETED_BREAKEVEN = "completed_breakeven" # Cerrada en punto de equilibrio
+    PENDING_USER_CONFIRMATION_REAL = "pending_user_confirmation_real" # Pendiente de confirmación del usuario para operativa real
 
 class AIAnalysis(BaseModel):
     calculatedConfidence: Optional[float] = Field(None, description="Nivel de confianza numérico (0.0 a 1.0) de la IA.")

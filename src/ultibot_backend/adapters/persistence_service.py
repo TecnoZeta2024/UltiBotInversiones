@@ -108,9 +108,9 @@ class SupabasePersistenceService:
         try:
             async with self.connection.cursor(row_factory=dict_row) as cur:
                 await cur.execute(
-                    SQL(query), # type: ignore
+                    SQL(query),
                     (
-                        credential.id, credential.user_id, credential.service_name, credential.credential_label,
+                        credential.id, credential.user_id, credential.service_name.value, credential.credential_label, # Usar .value para el Enum
                         credential.encrypted_api_key, credential.encrypted_api_secret, credential.encrypted_other_details,
                         credential.status, credential.last_verified_at, credential.permissions, credential.permissions_checked_at,
                         credential.expires_at, credential.rotation_reminder_policy_days, credential.usage_count, credential.last_used_at,
@@ -166,7 +166,7 @@ class SupabasePersistenceService:
         """)
         try:
             async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(query, (user_id, service_name, credential_label))
+                await cur.execute(query, (user_id, service_name.value, credential_label))
                 record = await cur.fetchone()
                 if record:
                     return APICredential(**record)
@@ -507,64 +507,64 @@ class SupabasePersistenceService:
                 await self.connection.rollback()
             raise
 
-    async def save_opportunity(self, opportunity: OpportunityTypeHint) -> OpportunityTypeHint:
+    async def upsert_opportunity(self, user_id: UUID, opportunity_data: Dict[str, Any]) -> OpportunityTypeHint:
         """Guarda una nueva oportunidad o actualiza una existente."""
         await self._ensure_connection()
         assert self.connection is not None, "Connection must be established by _ensure_connection"
         
+        # Asegurarse de que los campos de fecha y UUID estén en el formato correcto para la BD
+        opportunity_data_copy = opportunity_data.copy()
+        opportunity_data_copy['id'] = str(opportunity_data_copy['id'])
+        opportunity_data_copy['user_id'] = str(opportunity_data_copy['user_id'])
+
+        # Convertir objetos datetime a strings ISO 8601 si no lo están ya
+        for key in ['created_at', 'updated_at', 'expires_at', 'executed_at']:
+            if key in opportunity_data_copy and isinstance(opportunity_data_copy[key], datetime):
+                opportunity_data_copy[key] = opportunity_data_copy[key].isoformat()
+        
+        # Mapeo de nombres de campos de Pydantic a nombres de columnas de BD (snake_case)
+        db_columns_map = {
+            "source_type": "source_type", "source_name": "source_name", "source_data": "source_data",
+            "status": "status", "status_reason": "status_reason", "symbol": "symbol",
+            "asset_type": "asset_type", "exchange": "exchange", "predicted_direction": "predicted_direction",
+            "predicted_price_target": "predicted_price_target", "predicted_stop_loss": "predicted_stop_loss",
+            "prediction_timeframe": "prediction_timeframe", "ai_analysis": "ai_analysis",
+            "confidence_score": "confidence_score", "suggested_action": "suggested_action",
+            "ai_model_used": "ai_model_used", "executed_at": "executed_at",
+            "executed_price": "executed_price", "executed_quantity": "executed_quantity",
+            "related_order_id": "related_order_id", "created_at": "created_at",
+            "updated_at": "updated_at", "expires_at": "expires_at"
+        }
+
+        insert_values_dict = {db_columns_map.get(k, k): v for k, v in opportunity_data_copy.items() if k not in ['id', 'user_id']}
+        insert_values_dict['id'] = opportunity_data_copy['id']
+        insert_values_dict['user_id'] = opportunity_data_copy['user_id']
+        
+        columns = [Identifier(col) for col in insert_values_dict.keys()]
+        
+        update_set_parts = [
+            SQL("{} = EXCLUDED.{}").format(Identifier(col), Identifier(col))
+            for col in insert_values_dict if col not in ['id', 'user_id'] # No actualizar el ID ni user_id en el UPDATE
+        ]
+        update_set_str = SQL(", ").join(update_set_parts)
+
         query_str: LiteralString = """
-        INSERT INTO opportunities (
-            id, user_id, source_type, source_name, source_data, status, status_reason,
-            symbol, asset_type, exchange, predicted_direction, predicted_price_target,
-            predicted_stop_loss, prediction_timeframe, ai_analysis, confidence_score,
-            suggested_action, ai_model_used, executed_at, executed_price, executed_quantity,
-            related_order_id, created_at, updated_at, expires_at
-        ) VALUES (
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
-        )
+        INSERT INTO opportunities ({})
+        VALUES ({})
         ON CONFLICT (id) DO UPDATE SET
-            user_id = EXCLUDED.user_id,
-            source_type = EXCLUDED.source_type,
-            source_name = EXCLUDED.source_name,
-            source_data = EXCLUDED.source_data,
-            status = EXCLUDED.status,
-            status_reason = EXCLUDED.status_reason,
-            symbol = EXCLUDED.symbol,
-            asset_type = EXCLUDED.asset_type,
-            exchange = EXCLUDED.exchange,
-            predicted_direction = EXCLUDED.predicted_direction,
-            predicted_price_target = EXCLUDED.predicted_price_target,
-            predicted_stop_loss = EXCLUDED.predicted_stop_loss,
-            prediction_timeframe = EXCLUDED.prediction_timeframe,
-            ai_analysis = EXCLUDED.ai_analysis,
-            confidence_score = EXCLUDED.confidence_score,
-            suggested_action = EXCLUDED.suggested_action,
-            ai_model_used = EXCLUDED.ai_model_used,
-            executed_at = EXCLUDED.executed_at,
-            executed_price = EXCLUDED.executed_price,
-            executed_quantity = EXCLUDED.executed_quantity,
-            related_order_id = EXCLUDED.related_order_id,
-            updated_at = timezone('utc'::text, now()),
-            expires_at = EXCLUDED.expires_at
+            {},
+            updated_at = timezone('utc'::text, now())
         RETURNING *;
         """
         try:
             async with self.connection.cursor(row_factory=dict_row) as cur:
                 await cur.execute(
-                    SQL(query_str), # type: ignore
-                    (
-                        opportunity.id, opportunity.user_id, opportunity.source_type.value,
-                        opportunity.source_name, opportunity.source_data, opportunity.status.value,
-                        opportunity.status_reason, opportunity.symbol, opportunity.asset_type,
-                        opportunity.exchange, opportunity.predicted_direction,
-                        opportunity.predicted_price_target, opportunity.predicted_stop_loss,
-                        opportunity.prediction_timeframe, opportunity.ai_analysis,
-                        opportunity.confidence_score, opportunity.suggested_action,
-                        opportunity.ai_model_used, opportunity.executed_at,
-                        opportunity.executed_price, opportunity.executed_quantity,
-                        opportunity.related_order_id, opportunity.created_at,
-                        opportunity.updated_at, opportunity.expires_at
-                    )
+                    SQL(query_str).format(
+                        SQL(", ").join(columns),
+                        SQL(", ").join(SQL("%s") for _ in insert_values_dict),
+                        update_set_str
+                    ),
+                    tuple(insert_values_dict.values())
                 )
                 record = await cur.fetchone()
                 await self.connection.commit()
@@ -818,38 +818,34 @@ class SupabasePersistenceService:
         assert self.connection is not None, "Connection must be established by _ensure_connection"
         
         # Construir la query SQL base
-        base_query = """
-        SELECT * FROM trades
-        WHERE user_id = %s AND mode = %s AND position_status = %s
-        """
-        
-        params = [
-            UUID(filters["user_id"]), 
-            filters["mode"], 
-            filters["positionStatus"]
+        # Construir la query SQL base usando psycopg.sql componentes
+        query_parts = [
+            SQL("SELECT * FROM trades WHERE user_id = {} AND mode = {} AND position_status = {}").format(
+                Literal(UUID(filters["user_id"])),
+                Literal(filters["mode"]),
+                Literal(filters["positionStatus"])
+            )
         ]
         
         # Añadir filtro por símbolo si está presente
         if "symbol" in filters and filters["symbol"]:
-            base_query += " AND symbol = %s"
-            params.append(filters["symbol"])
+            query_parts.append(SQL(" AND symbol = {}").format(Literal(filters["symbol"])))
             
         # Añadir filtro por fechas si están presentes
         if start_date:
-            base_query += " AND closed_at >= %s"
-            params.append(start_date)
+            query_parts.append(SQL(" AND closed_at >= {}").format(Literal(start_date)))
             
         if end_date:
-            base_query += " AND closed_at <= %s"
-            params.append(end_date)
+            query_parts.append(SQL(" AND closed_at <= {}").format(Literal(end_date)))
             
         # Añadir ordenamiento, límite y offset
-        base_query += " ORDER BY closed_at DESC LIMIT %s OFFSET %s;"
-        params.extend([limit, offset])
+        query_parts.append(SQL(" ORDER BY closed_at DESC LIMIT {} OFFSET {};").format(Literal(limit), Literal(offset)))
         
+        final_query = Composed(query_parts)
+
         try:
             async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(SQL(base_query), params) # type: ignore
+                await cur.execute(final_query)
                 records = await cur.fetchall()
                 
                 # Convertir a lista de diccionarios con el formato esperado por TradingReportService
@@ -904,3 +900,89 @@ class SupabasePersistenceService:
         except Exception as e:
             logger.error(f"Error al obtener trades cerrados con filtros {filters}: {e}", exc_info=True)
             raise
+
+    async def get_closed_trades_count(self, user_id: UUID, is_real_trade: bool) -> int:
+        """
+        Cuenta el número de trades cerrados para un usuario, filtrando por si es una operación real o no.
+        """
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
+
+        query = SQL("""
+            SELECT COUNT(*) FROM trades
+            WHERE user_id = {} AND position_status = 'closed' AND mode = {};
+        """).format(
+            Literal(user_id),
+            Literal('real' if is_real_trade else 'paper')
+        )
+        try:
+            async with self.connection.cursor(row_factory=dict_row) as cur:
+                await cur.execute(query)
+                record = await cur.fetchone()
+                if record:
+                    return record['count']
+                return 0
+        except Exception as e:
+            logger.error(f"Error al contar trades cerrados para user {user_id}, real_trade={is_real_trade}: {e}", exc_info=True)
+            raise # Re-lanzar la excepción para que el llamador pueda manejarla
+
+    async def get_opportunities_by_status(self, user_id: UUID, status: OpportunityStatusTypeHint) -> List[OpportunityTypeHint]:
+        """
+        Recupera oportunidades para un usuario con un estado específico.
+        """
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
+
+        query = SQL("""
+            SELECT * FROM opportunities
+            WHERE user_id = {} AND status = {};
+        """).format(
+            Literal(user_id),
+            Literal(status.value)
+        )
+        try:
+            async with self.connection.cursor(row_factory=dict_row) as cur:
+                await cur.execute(query)
+                records = await cur.fetchall()
+                
+                opportunities = []
+                for record in records:
+                    # Convertir UUIDs de string a UUID objects
+                    if 'id' in record:
+                        record['id'] = UUID(record['id'])
+                    if 'user_id' in record:
+                        record['user_id'] = UUID(record['user_id'])
+                    
+                    # Convertir timestamps ISO a datetime si son strings
+                    datetime_fields = ['created_at', 'updated_at', 'expires_at', 'executed_at']
+                    for field in datetime_fields:
+                        if field in record and isinstance(record[field], str):
+                            try:
+                                record[field] = datetime.fromisoformat(record[field])
+                            except (ValueError, TypeError):
+                                logger.warning(f"No se pudo convertir campo datetime {field}: {record[field]}")
+                                record[field] = None
+                    
+                    # Mapear nombres de columnas de BD (snake_case) a nombres de campos de Pydantic
+                    field_mappings = {
+                        "source_type": "sourceType", "source_name": "sourceName", "source_data": "sourceData",
+                        "status_reason": "statusReason", "asset_type": "assetType",
+                        "predicted_direction": "predictedDirection", "predicted_price_target": "predictedPriceTarget",
+                        "predicted_stop_loss": "predictedStopLoss", "prediction_timeframe": "predictionTimeframe",
+                        "ai_analysis": "aiAnalysis", "confidence_score": "confidenceScore",
+                        "suggested_action": "suggestedAction", "ai_model_used": "aiModelUsed",
+                        "executed_at": "executedAt", "executed_price": "executedPrice",
+                        "executed_quantity": "executedQuantity", "related_order_id": "relatedOrderId",
+                    }
+                    
+                    for db_field, pydantic_field in field_mappings.items():
+                        if db_field in record:
+                            record[pydantic_field] = record.pop(db_field)
+                    
+                    opportunities.append(Opportunity(**record))
+                
+                logger.info(f"Obtenidas {len(opportunities)} oportunidades con estado {status.value} para user {user_id}")
+                return opportunities
+        except Exception as e:
+            logger.error(f"Error al obtener oportunidades por estado para user {user_id}, status={status.value}: {e}", exc_info=True)
+            raise # Re-lanzar la excepción para que el llamador pueda manejarla

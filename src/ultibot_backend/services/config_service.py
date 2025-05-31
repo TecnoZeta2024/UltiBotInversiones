@@ -1,3 +1,5 @@
+from __future__ import annotations # Importar para type hints adelantados
+
 import logging
 from typing import Optional, Dict, Any
 from uuid import UUID, uuid4
