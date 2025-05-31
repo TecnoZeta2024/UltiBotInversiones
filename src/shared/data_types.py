@@ -399,3 +399,25 @@ class Trade(BaseModel):
         populate_by_name=True,
         arbitrary_types_allowed=True
     )
+
+class PerformanceMetrics(BaseModel):
+    """
+    Métricas consolidadas de rendimiento para un conjunto de trades.
+    """
+    total_trades: int = Field(0, description="Número total de operaciones cerradas")
+    winning_trades: int = Field(0, description="Número de operaciones con ganancia")
+    losing_trades: int = Field(0, description="Número de operaciones con pérdida")
+    win_rate: float = Field(0.0, description="Porcentaje de operaciones ganadoras sobre el total (excluyendo break-even)")
+    total_pnl: float = Field(0.0, description="Ganancia/Pérdida neta total")
+    avg_pnl_per_trade: float = Field(0.0, description="Ganancia/Pérdida promedio por operación")
+    best_trade_pnl: float = Field(0.0, description="PnL de la mejor operación")
+    worst_trade_pnl: float = Field(0.0, description="PnL de la peor operación")
+    best_trade_symbol: Optional[str] = Field(None, description="Símbolo de la mejor operación")
+    worst_trade_symbol: Optional[str] = Field(None, description="Símbolo de la peor operación")
+    period_start: Optional[datetime] = Field(None, description="Fecha de inicio del periodo analizado")
+    period_end: Optional[datetime] = Field(None, description="Fecha de fin del periodo analizado")
+    total_volume_traded: float = Field(0.0, description="Volumen total operado (en USDT)")
+
+    model_config = ConfigDict(
+        populate_by_name=True
+    )

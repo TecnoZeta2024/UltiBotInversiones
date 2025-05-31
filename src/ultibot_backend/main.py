@@ -72,11 +72,11 @@ async def startup_event():
 
     # Cargar la configuración del usuario al inicio
     try:
-        user_configuration = await config_service.load_user_configuration(FIXED_USER_ID)
+        user_configuration = await config_service.get_user_configuration(FIXED_USER_ID) # Corregido: usar get_user_configuration
         logger.info(f"Configuración de usuario cargada exitosamente para {FIXED_USER_ID}.")
     except Exception as e:
         logger.error(f"Error al cargar la configuración de usuario al inicio: {e}", exc_info=True)
-        user_configuration = config_service.get_default_configuration() # Asegurar que siempre haya una configuración
+        user_configuration = config_service.get_default_configuration(FIXED_USER_ID) # Corregido: pasar FIXED_USER_ID
         logger.warning("Se utilizará la configuración por defecto debido a un error de carga.")
 
 
@@ -128,8 +128,9 @@ async def read_root():
     return {"message": "Welcome to UltiBot Backend"}
 
 # Aquí se incluirán los routers de api/v1/endpoints
-from src.ultibot_backend.api.v1.endpoints import telegram_status, binance_status, config, notifications # Importar notifications
+from src.ultibot_backend.api.v1.endpoints import telegram_status, binance_status, config, notifications, reports # Importar reports
 app.include_router(telegram_status.router, prefix="/api/v1", tags=["telegram"]) # Añadir tags
 app.include_router(binance_status.router, prefix="/api/v1", tags=["binance"]) # Incluir el router de Binance
 app.include_router(config.router, prefix="/api/v1", tags=["config"]) # Incluir el router de configuración
 app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["notifications"]) # Incluir el router de notificaciones
+app.include_router(reports.router, prefix="/api/v1", tags=["reports"]) # Incluir el router de reportes

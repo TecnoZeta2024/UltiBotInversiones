@@ -14,8 +14,11 @@ from psycopg.sql import SQL, Identifier, Literal, Composed # Importar SQL y otro
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING: # Bloque para type hints que evitan importaciones circulares en runtime
-    from src.shared.data_types import Opportunity as OpportunityTypeHint
-    from src.shared.data_types import OpportunityStatus as OpportunityStatusTypeHint
+    pass
+    
+# Definir type hints para uso en el módulo
+OpportunityTypeHint = Opportunity
+OpportunityStatusTypeHint = OpportunityStatus
 
 class SupabasePersistenceService:
     def __init__(self):
@@ -788,4 +791,116 @@ class SupabasePersistenceService:
             logger.error(f"Error al actualizar análisis de IA para oportunidad {opportunity_id}: {e}", exc_info=True)
             if self.connection and not self.connection.closed:
                 await self.connection.rollback()
+            raise
+
+    async def get_closed_trades(
+        self, 
+        filters: Dict[str, str], 
+        start_date: Optional[datetime] = None, 
+        end_date: Optional[datetime] = None, 
+        limit: int = 100, 
+        offset: int = 0
+    ) -> List[Dict[str, Any]]:
+        """
+        Obtiene una lista de trades cerrados con capacidad de filtrado.
+        
+        Args:
+            filters: Diccionario con filtros básicos (user_id, mode, positionStatus, symbol)
+            start_date: Fecha de inicio para filtrar por closed_at (opcional)
+            end_date: Fecha de fin para filtrar por closed_at (opcional)
+            limit: Número máximo de trades a devolver
+            offset: Número de trades a saltar (para paginación)
+            
+        Returns:
+            Lista de diccionarios con datos de trades que cumplen los filtros
+        """
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
+        
+        # Construir la query SQL base
+        base_query = """
+        SELECT * FROM trades
+        WHERE user_id = %s AND mode = %s AND position_status = %s
+        """
+        
+        params = [
+            UUID(filters["user_id"]), 
+            filters["mode"], 
+            filters["positionStatus"]
+        ]
+        
+        # Añadir filtro por símbolo si está presente
+        if "symbol" in filters and filters["symbol"]:
+            base_query += " AND symbol = %s"
+            params.append(filters["symbol"])
+            
+        # Añadir filtro por fechas si están presentes
+        if start_date:
+            base_query += " AND closed_at >= %s"
+            params.append(start_date)
+            
+        if end_date:
+            base_query += " AND closed_at <= %s"
+            params.append(end_date)
+            
+        # Añadir ordenamiento, límite y offset
+        base_query += " ORDER BY closed_at DESC LIMIT %s OFFSET %s;"
+        params.extend([limit, offset])
+        
+        try:
+            async with self.connection.cursor(row_factory=dict_row) as cur:
+                await cur.execute(SQL(base_query), params) # type: ignore
+                records = await cur.fetchall()
+                
+                # Convertir a lista de diccionarios con el formato esperado por TradingReportService
+                processed_records = []
+                for record in records:
+                    record_copy = dict(record)
+                    
+                    # Convertir UUIDs de string a UUID objects
+                    if 'id' in record_copy:
+                        record_copy['id'] = UUID(record_copy['id'])
+                    if 'user_id' in record_copy:
+                        record_copy['user_id'] = UUID(record_copy['user_id'])
+                    if 'opportunity_id' in record_copy and record_copy['opportunity_id']:
+                        record_copy['opportunity_id'] = UUID(record_copy['opportunity_id'])
+                    
+                    # Mapear nombres de columnas de BD (snake_case) a nombres de campos de Pydantic
+                    field_mappings = {
+                        "position_status": "positionStatus",
+                        "opportunity_id": "opportunityId", 
+                        "ai_analysis_confidence": "aiAnalysisConfidence",
+                        "pnl_usd": "pnl_usd",
+                        "pnl_percentage": "pnl_percentage",
+                        "closing_reason": "closingReason",
+                        "entry_order": "entryOrder",
+                        "exit_orders": "exitOrders",
+                        "take_profit_price": "takeProfitPrice",
+                        "trailing_stop_activation_price": "trailingStopActivationPrice",
+                        "trailing_stop_callback_rate": "trailingStopCallbackRate",
+                        "current_stop_price_tsl": "currentStopPrice_tsl",
+                        "risk_reward_adjustments": "riskRewardAdjustments",
+                    }
+                    
+                    for db_field, pydantic_field in field_mappings.items():
+                        if db_field in record_copy:
+                            record_copy[pydantic_field] = record_copy.pop(db_field)
+                    
+                    # Convertir timestamps ISO a datetime si son strings
+                    datetime_fields = ['created_at', 'opened_at', 'updated_at', 'closed_at']
+                    for field in datetime_fields:
+                        if field in record_copy and isinstance(record_copy[field], str):
+                            try:
+                                record_copy[field] = datetime.fromisoformat(record_copy[field])
+                            except (ValueError, TypeError):
+                                logger.warning(f"No se pudo convertir campo datetime {field}: {record_copy[field]}")
+                                record_copy[field] = None
+                    
+                    processed_records.append(record_copy)
+                
+                logger.info(f"Obtenidos {len(processed_records)} trades cerrados con filtros: {filters}")
+                return processed_records
+                
+        except Exception as e:
+            logger.error(f"Error al obtener trades cerrados con filtros {filters}: {e}", exc_info=True)
             raise
