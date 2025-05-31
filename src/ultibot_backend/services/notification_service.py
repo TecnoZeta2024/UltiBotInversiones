@@ -335,6 +335,67 @@ class NotificationService:
         except Exception as e:
             logger.error(f"Error al enviar notificación Telegram para cierre de trade simulado {trade_id}: {e}", exc_info=True)
 
+    async def send_real_trade_exit_notification(self, trade: Trade):
+        """
+        Envía una notificación al usuario confirmando el cierre de una operación real.
+        """
+        user_id = trade.user_id
+        symbol = trade.symbol
+        side = trade.side
+        executed_price = trade.exitOrders[-1].executedPrice if trade.exitOrders else None
+        pnl_usd = trade.pnl_usd
+        pnl_percentage = trade.pnl_percentage
+        closing_reason = trade.closingReason
+        trade_id = trade.id
+
+        title = f"✅ Operación Real Cerrada: {symbol}"
+        message = (
+            f"Se ha cerrado una operación real en Binance:\n"
+            f"Símbolo: {symbol}\n"
+            f"Acción: {side}\n"
+            f"Razón de Cierre: {closing_reason}\n"
+            f"Precio de Salida: {executed_price:.4f} USDT\n"
+            f"P&L: {pnl_usd:.2f} USD ({pnl_percentage:.2f}%)\n"
+            f"ID de Trade: {trade_id}"
+        )
+        
+        data_payload = {
+            "tradeId": str(trade_id),
+            "symbol": symbol,
+            "side": side,
+            "executedPrice": executed_price,
+            "pnl_usd": pnl_usd,
+            "pnl_percentage": pnl_percentage,
+            "closingReason": closing_reason,
+            "mode": "real"
+        }
+
+        try:
+            await self.send_notification(
+                user_id=user_id,
+                title=title,
+                message=message,
+                channel="ui",
+                event_type="REAL_TRADE_EXIT",
+                dataPayload=data_payload
+            )
+            logger.info(f"Notificación UI de cierre de trade real {trade_id} enviada.")
+        except Exception as e:
+            logger.error(f"Error al enviar notificación UI para cierre de trade real {trade_id}: {e}", exc_info=True)
+
+        try:
+            await self.send_notification(
+                user_id=user_id,
+                title=title,
+                message=message,
+                channel="telegram",
+                event_type="REAL_TRADE_EXIT",
+                dataPayload=data_payload
+            )
+            logger.info(f"Notificación Telegram de cierre de trade real {trade_id} enviada.")
+        except Exception as e:
+            logger.error(f"Error al enviar notificación Telegram para cierre de trade real {trade_id}: {e}", exc_info=True)
+
     async def send_high_confidence_opportunity_notification(self, opportunity: Opportunity):
         """
         Envía una notificación prioritaria cuando se identifica una oportunidad de muy alta confianza para operativa real.

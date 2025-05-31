@@ -12,6 +12,8 @@ from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 from src.ultibot_backend.services.config_service import ConfigService
 from src.ultibot_backend.services.portfolio_service import PortfolioService
+from src.ultibot_backend.services.order_execution_service import OrderExecutionService, PaperOrderExecutionService # Importar OrderExecutionService
+from src.ultibot_backend.services.trading_engine_service import TradingEngineService # Importar TradingEngineService
 from src.shared.data_types import ServiceName, UserConfiguration
 
 # Configuración básica de logging
@@ -29,6 +31,9 @@ market_data_service: Optional[MarketDataService] = None
 persistence_service: Optional[SupabasePersistenceService] = None
 portfolio_service: Optional[PortfolioService] = None
 config_service: Optional[ConfigService] = None
+order_execution_service: Optional[OrderExecutionService] = None # Añadir OrderExecutionService
+paper_order_execution_service: Optional[PaperOrderExecutionService] = None # Añadir PaperOrderExecutionService
+trading_engine_service: Optional[TradingEngineService] = None # Añadir TradingEngineService
 user_configuration: Optional[UserConfiguration] = None # Para almacenar la configuración cargada
 
 # Asumimos un user_id fijo para la v1.0 de una aplicación local
@@ -80,7 +85,7 @@ async def startup_event():
     Evento que se ejecuta al iniciar la aplicación FastAPI.
     Inicializa servicios y realiza verificaciones iniciales.
     """
-    global credential_service, notification_service, binance_adapter, market_data_service, persistence_service, portfolio_service, config_service, user_configuration
+    global credential_service, notification_service, binance_adapter, market_data_service, persistence_service, portfolio_service, config_service, order_execution_service, paper_order_execution_service, trading_engine_service, user_configuration
     logger.info("Iniciando UltiBot Backend...")
     
     from src.ultibot_backend.app_config import settings # Importar settings aquí para asegurar que esté disponible
@@ -118,7 +123,24 @@ async def startup_event():
         notification_service=notification_service
     ) # Inicializar ConfigService con todas sus dependencias
 
-    logger.info("Servicios CredentialService, NotificationService, PersistenceService, MarketDataService, PortfolioService y ConfigService inicializados.")
+    # Inicializar OrderExecutionService y PaperOrderExecutionService
+    order_execution_service = OrderExecutionService(binance_adapter=binance_adapter)
+    paper_order_execution_service = PaperOrderExecutionService()
+
+    # Inicializar TradingEngineService
+    trading_engine_service = TradingEngineService(
+        config_service=config_service,
+        order_execution_service=order_execution_service,
+        paper_order_execution_service=paper_order_execution_service,
+        credential_service=credential_service,
+        market_data_service=market_data_service,
+        portfolio_service=portfolio_service,
+        persistence_service=persistence_service,
+        notification_service=notification_service,
+        binance_adapter=binance_adapter
+    )
+
+    logger.info("Servicios CredentialService, NotificationService, PersistenceService, MarketDataService, PortfolioService, ConfigService, OrderExecutionService, PaperOrderExecutionService y TradingEngineService inicializados.")
 
     # Cargar la configuración del usuario al inicio
     try:

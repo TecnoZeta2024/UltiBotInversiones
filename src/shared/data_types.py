@@ -136,11 +136,16 @@ class RiskProfileSettings(BaseModel):
     dailyCapitalRiskPercentage: Optional[float] = None
     perTradeCapitalRiskPercentage: Optional[float] = None
     maxDrawdownPercentage: Optional[float] = None
+    takeProfitPercentage: Optional[float] = Field(0.02, description="Porcentaje de ganancia objetivo para Take Profit (ej. 0.02 para 2%).")
+    trailingStopLossPercentage: Optional[float] = Field(0.01, description="Porcentaje de pérdida inicial para Trailing Stop Loss (ej. 0.01 para 1%).")
+    trailingStopCallbackRate: Optional[float] = Field(0.005, description="Porcentaje de retroceso para el Trailing Stop (ej. 0.005 para 0.5%).")
 
 class RealTradingSettings(BaseModel):
     real_trading_mode_active: bool = Field(default=False, description="Indica si el modo de operativa real limitada está activo.")
     real_trades_executed_count: int = Field(default=0, description="Contador de operaciones reales ejecutadas en el modo limitado.")
-    max_real_trades: int = Field(5, description="Número máximo de operaciones reales permitidas en el modo limitado.") # Eliminado Optional
+    max_real_trades: int = Field(5, description="Número máximo de operaciones reales permitidas en el modo limitado.")
+    daily_capital_risked_usd: float = Field(default=0.0, description="Capital total en USD arriesgado en operaciones reales en el día actual.")
+    last_daily_reset: datetime = Field(default_factory=datetime.utcnow, description="Marca de tiempo del último reinicio del contador diario de capital arriesgado.")
     maxConcurrentOperations: Optional[int] = None
     dailyLossLimitAbsolute: Optional[float] = None
     dailyProfitTargetAbsolute: Optional[float] = None
@@ -355,13 +360,22 @@ class Opportunity(BaseModel):
 
     model_config = ConfigDict(use_enum_values=True)
 
+class OrderCategory(str, Enum):
+    ENTRY = "entry"
+    TAKE_PROFIT = "take_profit"
+    STOP_LOSS = "stop_loss"
+    TRAILING_STOP_LOSS = "trailing_stop_loss"
+    MANUAL_CLOSE = "manual_close"
+    OCO_ORDER = "oco_order" # Para la orden OCO que agrupa TP y SL
+
 class TradeOrderDetails(BaseModel):
     """
     Detalles de una orden de trading ejecutada o simulada.
     """
     orderId_internal: UUID = Field(default_factory=uuid4, description="ID interno único de la orden.")
     exchangeOrderId: Optional[str] = Field(None, description="ID de la orden en el exchange (si es una orden real).")
-    type: str = Field(..., description="Tipo de orden (ej. 'market', 'limit').")
+    orderCategory: OrderCategory = Field(..., description="Categoría de la orden (ej. 'entry', 'take_profit', 'stop_loss').")
+    type: str = Field(..., description="Tipo de orden (ej. 'market', 'limit', 'stop_loss_limit', 'take_profit_limit').")
     status: str = Field(..., description="Estado de la orden (ej. 'filled', 'partial_fill', 'new', 'canceled', 'rejected').")
     requestedQuantity: float = Field(..., description="Cantidad solicitada en la orden.")
     executedQuantity: float = Field(..., description="Cantidad ejecutada de la orden.")
@@ -370,7 +384,8 @@ class TradeOrderDetails(BaseModel):
     commissionAsset: Optional[str] = Field(None, description="Activo en el que se pagó la comisión.")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Marca de tiempo de la ejecución/actualización de la orden.")
     rawResponse: Optional[Dict[str, Any]] = Field(None, description="Respuesta cruda del exchange (para órdenes reales).")
-
+    ocoOrderListId: Optional[str] = Field(None, description="ID de la lista de órdenes OCO a la que pertenece esta orden (si aplica).")
+    
 class Trade(BaseModel):
     """
     Representa una operación de trading completa (entrada y salida).
@@ -392,7 +407,7 @@ class Trade(BaseModel):
     
     pnl_usd: Optional[float] = Field(None, description="Ganancia o pérdida en USD (para posiciones cerradas).")
     pnl_percentage: Optional[float] = Field(None, description="Ganancia o pérdida en porcentaje (para posiciones cerradas).")
-    closingReason: Optional[str] = Field(None, description="Razón del cierre de la posición (ej. 'TP_HIT', 'SL_HIT', 'MANUAL_CLOSE').")
+    closingReason: Optional[str] = Field(None, description="Razón del cierre de la posición (ej. 'TP_HIT', 'SL_HIT', 'MANUAL_CLOSE', 'OCO_TRIGGERED').")
 
     # Campos para Trailing Stop Loss y Take Profit
     takeProfitPrice: Optional[float] = Field(None, description="Precio objetivo para Take Profit.")
