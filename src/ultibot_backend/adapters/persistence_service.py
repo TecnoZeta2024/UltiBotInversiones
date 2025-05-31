@@ -5,7 +5,7 @@ from src.ultibot_backend.app_config import settings
 import logging
 import os # Importar os
 from urllib.parse import urlparse, unquote
-from typing import Optional, List, Dict, Any, TYPE_CHECKING, LiteralString # Importar LiteralString
+from typing import Optional, List, Dict, Any, TYPE_CHECKING
 from uuid import UUID
 from src.shared.data_types import APICredential, ServiceName, Notification, Opportunity, OpportunityStatus, Trade, TradeOrderDetails # Importar Trade y TradeOrderDetails
 from datetime import datetime, timezone
@@ -77,7 +77,7 @@ class SupabasePersistenceService:
     async def save_credential(self, credential: APICredential) -> APICredential:
         await self._ensure_connection()
         assert self.connection is not None, "Connection must be established by _ensure_connection"
-        query: LiteralString = """
+        query_str: str = """
         INSERT INTO api_credentials (
             id, user_id, service_name, credential_label, 
             encrypted_api_key, encrypted_api_secret, encrypted_other_details, 
@@ -108,7 +108,7 @@ class SupabasePersistenceService:
         try:
             async with self.connection.cursor(row_factory=dict_row) as cur:
                 await cur.execute(
-                    SQL(query),
+                    SQL(query_str),
                     (
                         credential.id, credential.user_id, credential.service_name.value, credential.credential_label, # Usar .value para el Enum
                         credential.encrypted_api_key, credential.encrypted_api_secret, credential.encrypted_other_details,
@@ -260,7 +260,7 @@ class SupabasePersistenceService:
         ]
         update_set_str = SQL(", ").join(update_set_parts)
 
-        query: LiteralString = """
+        query: str = """
         INSERT INTO user_configurations ({})
         VALUES ({})
         ON CONFLICT (user_id) DO UPDATE SET
@@ -312,7 +312,7 @@ class SupabasePersistenceService:
     async def save_notification(self, notification: Notification) -> Notification:
         await self._ensure_connection()
         assert self.connection is not None, "Connection must be established by _ensure_connection"
-        query: LiteralString = """
+        query: str = """
         INSERT INTO notifications (
             id, user_id, event_type, channel, title_key, message_key, message_params,
             title, message, priority, status, snoozed_until, data_payload, actions,
@@ -335,7 +335,7 @@ class SupabasePersistenceService:
         try:
             async with self.connection.cursor(row_factory=dict_row) as cur:
                 await cur.execute(
-                    SQL(query), # type: ignore
+                    SQL(query),
                     (
                         notification.id, notification.userId, notification.eventType,
                         notification.channel,
@@ -548,7 +548,7 @@ class SupabasePersistenceService:
         ]
         update_set_str = SQL(", ").join(update_set_parts)
 
-        query_str: LiteralString = """
+        query_str: str = """
         INSERT INTO opportunities ({})
         VALUES ({})
         ON CONFLICT (id) DO UPDATE SET
@@ -557,6 +557,7 @@ class SupabasePersistenceService:
         RETURNING *;
         """
         try:
+            record = None # Inicializar record
             async with self.connection.cursor(row_factory=dict_row) as cur:
                 await cur.execute(
                     SQL(query_str).format(
@@ -583,7 +584,7 @@ class SupabasePersistenceService:
         assert self.connection is not None, "Connection must be established by _ensure_connection"
         # Opportunity y OpportunityStatus ya están importados a nivel de módulo para type hints
 
-        query_str: LiteralString = """
+        query_str: str = """
         UPDATE opportunities
         SET status = %s, status_reason = %s, updated_at = timezone('utc'::text, now())
         WHERE id = %s
@@ -591,7 +592,7 @@ class SupabasePersistenceService:
         """
         try:
             async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(SQL(query_str), (new_status.value, status_reason, opportunity_id)) # type: ignore
+                await cur.execute(SQL(query_str), (new_status.value, status_reason, opportunity_id))
                 record = await cur.fetchone()
                 await self.connection.commit()
                 if record:
@@ -649,7 +650,7 @@ class SupabasePersistenceService:
                     # Esto es crucial para que Pydantic pueda instanciar el modelo correctamente
                     pydantic_fields_map = {
                         "position_status": "positionStatus",
-                        "opportunity_id": "opportunityId",
+                        "opportunity_id": "opportunityId", 
                         "ai_analysis_confidence": "aiAnalysisConfidence",
                         "pnl_usd": "pnl_usd",
                         "pnl_percentage": "pnl_percentage",
@@ -726,7 +727,7 @@ class SupabasePersistenceService:
         ]
         update_set_str = SQL(", ").join(update_set_parts)
 
-        query: LiteralString = """
+        query: str = """
         INSERT INTO trades ({})
         VALUES ({})
         ON CONFLICT (id) DO UPDATE SET
@@ -766,7 +767,7 @@ class SupabasePersistenceService:
         assert self.connection is not None, "Connection must be established by _ensure_connection"
         # Opportunity y OpportunityStatus ya están importados a nivel de módulo para type hints
 
-        query_str: LiteralString = """
+        query_str: str = """
         UPDATE opportunities
         SET status = %s, 
             ai_analysis = %s, 
@@ -779,7 +780,7 @@ class SupabasePersistenceService:
         """
         try:
             async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(SQL(query_str), ( # type: ignore
+                await cur.execute(SQL(query_str), (
                     status.value, ai_analysis, confidence_score, suggested_action, status_reason, opportunity_id
                 ))
                 record = await cur.fetchone()
@@ -887,7 +888,7 @@ class SupabasePersistenceService:
                     for field in datetime_fields:
                         if field in record_copy and isinstance(record_copy[field], str):
                             try:
-                                record_copy[field] = datetime.fromisoformat(record_copy[field])
+                                record_copy[field] = datetime.fromisoformat(record[field])
                             except (ValueError, TypeError):
                                 logger.warning(f"No se pudo convertir campo datetime {field}: {record_copy[field]}")
                                 record_copy[field] = None
@@ -926,6 +927,63 @@ class SupabasePersistenceService:
             logger.error(f"Error al contar trades cerrados para user {user_id}, real_trade={is_real_trade}: {e}", exc_info=True)
             raise # Re-lanzar la excepción para que el llamador pueda manejarla
 
+    async def get_opportunity_by_id(self, opportunity_id: UUID) -> Optional[OpportunityTypeHint]:
+        """
+        Recupera una oportunidad por su ID.
+        """
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
+
+        query = SQL("""
+            SELECT * FROM opportunities
+            WHERE id = {};
+        """).format(
+            Literal(opportunity_id)
+        )
+        try:
+            async with self.connection.cursor(row_factory=dict_row) as cur:
+                await cur.execute(query)
+                record = await cur.fetchone()
+                
+                if record:
+                    # Convertir UUIDs de string a UUID objects
+                    if 'id' in record:
+                        record['id'] = UUID(record['id'])
+                    if 'user_id' in record:
+                        record['user_id'] = UUID(record['user_id'])
+                    
+                    # Convertir timestamps ISO a datetime si son strings
+                    datetime_fields = ['created_at', 'updated_at', 'expires_at', 'executed_at']
+                    for field in datetime_fields:
+                        if field in record and isinstance(record[field], str):
+                            try:
+                                record[field] = datetime.fromisoformat(record[field])
+                            except (ValueError, TypeError):
+                                logger.warning(f"No se pudo convertir campo datetime {field}: {record[field]}")
+                                record[field] = None
+                    
+                    # Mapear nombres de columnas de BD (snake_case) a nombres de campos de Pydantic
+                    field_mappings = {
+                        "source_type": "sourceType", "source_name": "sourceName", "source_data": "sourceData",
+                        "status_reason": "statusReason", "asset_type": "assetType",
+                        "predicted_direction": "predictedDirection", "predicted_price_target": "predictedPriceTarget",
+                        "predicted_stop_loss": "predictedStopLoss", "prediction_timeframe": "predictionTimeframe",
+                        "ai_analysis": "aiAnalysis", "confidence_score": "confidenceScore",
+                        "suggested_action": "suggestedAction", "ai_model_used": "aiModelUsed",
+                        "executed_at": "executedAt", "executed_price": "executedPrice",
+                        "executed_quantity": "executedQuantity", "related_order_id": "relatedOrderId",
+                    }
+                    
+                    for db_field, pydantic_field in field_mappings.items():
+                        if db_field in record:
+                            record[pydantic_field] = record.pop(db_field)
+                    
+                    return Opportunity(**record)
+                return None
+        except Exception as e:
+            logger.error(f"Error al obtener oportunidad por ID {opportunity_id}: {e}", exc_info=True)
+            raise # Re-lanzar la excepción para que el llamador pueda manejarla
+
     async def get_opportunities_by_status(self, user_id: UUID, status: OpportunityStatusTypeHint) -> List[OpportunityTypeHint]:
         """
         Recupera oportunidades para un usuario con un estado específico.
@@ -949,9 +1007,9 @@ class SupabasePersistenceService:
                 for record in records:
                     # Convertir UUIDs de string a UUID objects
                     if 'id' in record:
-                        record['id'] = UUID(record['id'])
+                        record['id'] = UUID(str(record['id']))
                     if 'user_id' in record:
-                        record['user_id'] = UUID(record['user_id'])
+                        record['user_id'] = UUID(str(record['user_id']))
                     
                     # Convertir timestamps ISO a datetime si son strings
                     datetime_fields = ['created_at', 'updated_at', 'expires_at', 'executed_at']

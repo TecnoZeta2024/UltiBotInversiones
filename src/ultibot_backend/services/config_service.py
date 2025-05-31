@@ -4,7 +4,7 @@ import logging
 from typing import Optional, Dict, Any
 from uuid import UUID, uuid4
 
-from src.shared.data_types import UserConfiguration, RealTradingSettings
+from src.shared.data_types import UserConfiguration, RealTradingSettings, AIAnalysisConfidenceThresholds
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 from src.ultibot_backend.core.exceptions import (
     ConfigurationError,
@@ -40,7 +40,11 @@ class ConfigService:
             if config_data:
                 user_config = UserConfiguration(**config_data)
                 if user_config.realTradingSettings is None:
-                    user_config.realTradingSettings = RealTradingSettings()
+                    user_config.realTradingSettings = RealTradingSettings(
+                        real_trading_mode_active=False,
+                        real_trades_executed_count=0,
+                        max_real_trades=5
+                    )
                 return user_config
             else:
                 logger.info(f"No se encontró configuración para el usuario {user_id}. Retornando configuración por defecto.")
@@ -118,7 +122,12 @@ class ConfigService:
             enableTelegramNotifications=False,
             defaultPaperTradingCapital=10000.0,
             paperTradingActive=True,
-            aiAnalysisConfidenceThresholds={"paperTrading": 0.7, "realTrading": 0.8},
+            aiAnalysisConfidenceThresholds=AIAnalysisConfidenceThresholds(
+                paperTrading=0.7, 
+                realTrading=0.8,
+                dataVerificationPriceDiscrepancyPercent=5.0,
+                dataVerificationMinVolumeQuote=1000.0
+            ),
             favoritePairs=["BTCUSDT", "ETHUSDT", "BNBUSDT"],
             notificationPreferences=[],
             watchlists=[],
@@ -126,7 +135,8 @@ class ConfigService:
             mcpServerPreferences=[],
             realTradingSettings=RealTradingSettings(
                 real_trading_mode_active=False,
-                real_trades_executed_count=0
+                real_trades_executed_count=0,
+                max_real_trades=5
             )
         )
 

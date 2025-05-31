@@ -289,6 +289,189 @@ class TradingEngineService:
 
         logger.info(f"Oportunidad {opportunity.id} es una candidata de muy alta confianza para operativa real y ha sido marcada para confirmación del usuario.")
 
+    async def execute_real_trade(self, opportunity_id: UUID, user_id: UUID) -> Trade:
+        """
+        Ejecuta una orden real en Binance basada en una oportunidad confirmada por el usuario.
+        """
+        logger.info(f"Iniciando ejecución de orden REAL para oportunidad {opportunity_id} y usuario {user_id}.")
+
+        # 2.2: Recuperar la Opportunity completa de la base de datos
+        opportunity = await self.persistence_service.get_opportunity_by_id(opportunity_id)
+        if not opportunity:
+            logger.error(f"Oportunidad {opportunity_id} no encontrada para ejecución real.")
+            raise OrderExecutionError(f"Oportunidad {opportunity_id} no encontrada.")
+
+        if opportunity.status != OpportunityStatus.PENDING_USER_CONFIRMATION_REAL:
+            logger.error(f"Oportunidad {opportunity_id} no está en estado PENDING_USER_CONFIRMATION_REAL. Estado actual: {opportunity.status.value}")
+            raise OrderExecutionError(f"Oportunidad {opportunity_id} no está lista para ejecución real.")
+
+        if not opportunity.symbol or not opportunity.ai_analysis or not opportunity.ai_analysis.suggestedAction:
+            logger.error(f"Oportunidad {opportunity_id} carece de símbolo o acción sugerida por IA.")
+            raise OrderExecutionError(f"Oportunidad {opportunity_id} incompleta para ejecución real.")
+
+        symbol = opportunity.symbol
+        side = opportunity.ai_analysis.suggestedAction
+        
+        # 2.3: Calcular la cantidad a operar (requestedQuantity)
+        user_config = await self.config_service.get_user_configuration(user_id)
+        if not user_config or not user_config.realTradingSettings or not user_config.riskProfileSettings:
+            logger.error(f"Configuración de usuario o de trading real/riesgo no encontrada para {user_id}.")
+            raise ConfigurationError("Configuración de usuario incompleta para operativa real.")
+
+        real_trading_settings = user_config.realTradingSettings
+        risk_profile_settings = user_config.riskProfileSettings
+
+        # Verificar cupos disponibles de nuevo (doble chequeo)
+        if real_trading_settings.real_trades_executed_count >= real_trading_settings.max_real_trades:
+            logger.error(f"Límite de operaciones reales ({real_trading_settings.max_real_trades}) alcanzado para usuario {user_id}.")
+            raise OrderExecutionError("Límite de operaciones reales alcanzado.")
+
+        # Obtener el saldo real disponible
+        try:
+            portfolio_snapshot = await self.portfolio_service.get_portfolio_snapshot(user_id)
+            available_capital = portfolio_snapshot.real_trading.available_balance_usdt
+            logger.info(f"Saldo real disponible para {user_id}: {available_capital} USDT.")
+        except PortfolioError as e:
+            logger.error(f"Error al obtener el saldo real para {user_id}: {e}", exc_info=True)
+            raise OrderExecutionError(f"No se pudo obtener el saldo real: {e}") from e
+
+        per_trade_capital_risk_percentage = risk_profile_settings.perTradeCapitalRiskPercentage
+        if per_trade_capital_risk_percentage is None:
+            logger.warning(f"perTradeCapitalRiskPercentage no configurado para {user_id}. Usando 0.01 (1%).")
+            per_trade_capital_risk_percentage = 0.01
+
+        capital_to_invest = available_capital * per_trade_capital_risk_percentage
+        if capital_to_invest <= 0:
+            logger.error(f"Capital a invertir es cero o negativo para {user_id}. Capital disponible: {available_capital}.")
+            raise OrderExecutionError("Capital insuficiente para la operación real.")
+
+        # Obtener el precio de mercado actual para calcular la cantidad
+        try:
+            current_price = await self.market_data_service.get_latest_price(symbol)
+            logger.info(f"Precio actual de {symbol}: {current_price}")
+        except MarketDataError as e:
+            logger.error(f"Error al obtener precio de mercado para {symbol}: {e}", exc_info=True)
+            raise OrderExecutionError(f"No se pudo obtener el precio de mercado para {symbol}.") from e
+
+        requested_quantity = capital_to_invest / current_price
+        logger.info(f"Calculado para orden real: Capital a invertir={capital_to_invest:.2f}, Cantidad={requested_quantity:.8f}")
+
+        # 2.4: Utilizar el BinanceAdapter para enviar la orden real a Binance
+        # Obtener credenciales de Binance
+        binance_credential = await self.credential_service.get_credential(
+            user_id=user_id,
+            service_name=ServiceName.BINANCE_SPOT, # Asumimos SPOT por ahora
+            credential_label="default_binance_spot" # Asumimos etiqueta por defecto
+        )
+        
+        if not binance_credential:
+            logger.error(f"No se encontraron credenciales de Binance para el usuario {user_id}.")
+            raise CredentialError(f"No se encontraron credenciales de Binance para el usuario {user_id}.")
+        
+        api_key = self.credential_service.decrypt_data(binance_credential.encrypted_api_key)
+        api_secret: Optional[str] = None
+        if binance_credential.encrypted_api_secret:
+            api_secret = self.credential_service.decrypt_data(binance_credential.encrypted_api_secret)
+
+        if not api_key or api_secret is None:
+            logger.error(f"API Key o Secret de Binance no pudieron ser desencriptados para {user_id}.")
+            raise CredentialError("API Key o Secret de Binance no válidos.")
+
+        trade_order_details: Optional[TradeOrderDetails] = None
+        try:
+            trade_order_details = await self.order_execution_service.execute_market_order(
+                user_id=user_id,
+                symbol=symbol,
+                side=side,
+                quantity=requested_quantity,
+                api_key=api_key,
+                api_secret=api_secret
+            )
+            logger.info(f"Orden real enviada a Binance: {trade_order_details.orderId_internal}")
+            # 2.9: Disparar notificación de orden enviada
+            await self.notification_service.send_real_trade_status_notification(
+                user_id, f"Orden real enviada para {symbol} ({side}). Estado: {trade_order_details.status}", "INFO"
+            )
+        except OrderExecutionError as e:
+            logger.error(f"Fallo al enviar orden real a Binance para oportunidad {opportunity_id}: {e}", exc_info=True)
+            # 2.8: Manejar errores de Binance y actualizar estado de la oportunidad
+            await self.persistence_service.update_opportunity_status(
+                opportunity_id, OpportunityStatus.EXECUTION_FAILED, f"Fallo al enviar orden real: {str(e)}"
+            )
+            await self.notification_service.send_real_trade_status_notification(
+                user_id, f"Error al enviar orden real para {symbol} ({side}): {str(e)}", "ERROR"
+            )
+            raise # Re-lanzar para que el endpoint pueda manejarlo
+
+        # 2.5: Registrar la orden enviada y su estado inicial en la base de datos (creando una nueva entidad Trade)
+        new_trade = Trade(
+            id=uuid4(),
+            user_id=user_id,
+            mode='real',
+            symbol=symbol,
+            side=side,
+            entryOrder=trade_order_details,
+            exitOrders=[],
+            positionStatus='open', # Asumimos que la orden de entrada abre la posición
+            opportunityId=opportunity_id,
+            aiAnalysisConfidence=opportunity.ai_analysis.calculatedConfidence if opportunity.ai_analysis else None,
+            pnl_usd=None,
+            pnl_percentage=None,
+            closingReason=None,
+            takeProfitPrice=None, # Estos se establecerán en el monitoreo de trades reales
+            trailingStopActivationPrice=None,
+            trailingStopCallbackRate=None,
+            currentStopPrice_tsl=None,
+            created_at=datetime.utcnow(),
+            opened_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+            closed_at=None
+        )
+        try:
+            await self.persistence_service.upsert_trade(new_trade.user_id, new_trade.model_dump(mode='json', by_alias=True, exclude_none=True))
+            logger.info(f"Trade real {new_trade.id} persistido exitosamente.")
+        except Exception as e:
+            logger.error(f"Error al persistir el trade real {new_trade.id}: {e}", exc_info=True)
+            # Si falla la persistencia del trade, es un problema crítico.
+            await self.notification_service.send_real_trade_status_notification(
+                user_id, f"Error crítico: Orden real enviada pero fallo al registrar el trade {new_trade.id}: {str(e)}", "CRITICAL"
+            )
+            raise OrderExecutionError(f"Orden real enviada pero fallo al registrar el trade: {e}") from e
+
+        # 2.6: Actualizar el status de la Opportunity a converted_to_trade_real y vincular el trade_id
+        try:
+            await self.persistence_service.update_opportunity_status(
+                opportunity_id, OpportunityStatus.CONVERTED_TO_TRADE_REAL, f"Convertida a trade real: {new_trade.id}"
+            )
+            logger.info(f"Oportunidad {opportunity_id} actualizada a 'converted_to_trade_real'.")
+        except Exception as e:
+            logger.error(f"Error al actualizar estado de oportunidad {opportunity_id} a 'converted_to_trade_real': {e}", exc_info=True)
+            # Esto es un problema de consistencia de datos, pero la orden ya se envió.
+            await self.notification_service.send_real_trade_status_notification(
+                user_id, f"Advertencia: Orden real enviada, pero fallo al actualizar estado de oportunidad {opportunity_id}: {str(e)}", "WARNING"
+            )
+
+        # 2.7: Decrementar el real_trades_executed_count en UserConfiguration.realTradingSettings
+        try:
+            user_config.realTradingSettings.real_trades_executed_count += 1
+            await self.config_service.save_user_configuration(user_config)
+            logger.info(f"Contador de trades reales decrementado para usuario {user_id}. Nuevo conteo: {user_config.realTradingSettings.real_trades_executed_count}")
+        except Exception as e:
+            logger.error(f"Error al decrementar el contador de trades reales para usuario {user_id}: {e}", exc_info=True)
+            await self.notification_service.send_real_trade_status_notification(
+                user_id, f"Advertencia: Orden real enviada, pero fallo al actualizar contador de trades reales para {user_id}: {str(e)}", "WARNING"
+            )
+        
+        # 2.8: Manejar las respuestas de Binance (éxito, error, rechazo) y actualizar el estado de la TradeOrderDetails y la Trade en consecuencia.
+        # Esto se haría en un proceso de monitoreo de órdenes o a través de webhooks de Binance.
+        # Por ahora, asumimos que trade_order_details ya refleja el estado inicial de la orden.
+        # Las actualizaciones posteriores (ej. 'filled', 'partial_fill') se manejarían en un servicio de monitoreo de órdenes.
+        # La lógica de TSL/TP para trades reales también iría en un monitor similar al de paper trading.
+
+        # 2.9: Disparar notificaciones (a través de NotificationService) sobre el estado de la orden.
+        # Ya se envió una notificación inicial. Notificaciones posteriores se harían en el monitor.
+
+        return new_trade
 
     async def monitor_and_manage_paper_trade_exit(self, trade: Trade):
         """

@@ -304,6 +304,7 @@ class OpportunityStatus(str, Enum):
     COMPLETED_LOSS = "completed_loss" # Cerrada con pérdida
     COMPLETED_BREAKEVEN = "completed_breakeven" # Cerrada en punto de equilibrio
     PENDING_USER_CONFIRMATION_REAL = "pending_user_confirmation_real" # Pendiente de confirmación del usuario para operativa real
+    CONVERTED_TO_TRADE_REAL = "converted_to_trade_real" # Oportunidad convertida en un trade real
 
 class AIAnalysis(BaseModel):
     calculatedConfidence: Optional[float] = Field(None, description="Nivel de confianza numérico (0.0 a 1.0) de la IA.")
@@ -434,3 +435,12 @@ class PerformanceMetrics(BaseModel):
     model_config = ConfigDict(
         populate_by_name=True
     )
+
+class ConfirmRealTradeRequest(BaseModel):
+    """
+    Modelo para la solicitud de confirmación de una operación real.
+    """
+    opportunity_id: UUID = Field(..., description="ID de la oportunidad de trading a confirmar.")
+    user_id: UUID = Field(..., description="ID del usuario que confirma la operación.")
+    # Se pueden añadir otros campos si se requiere una confirmación más detallada,
+    # como un token de confirmación o una re-verificación de parámetros.
