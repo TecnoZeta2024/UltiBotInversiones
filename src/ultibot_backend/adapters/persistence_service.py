@@ -661,6 +661,25 @@ class SupabasePersistenceService:
                         "current_stop_price_tsl": "currentStopPrice_tsl",
                         "risk_reward_adjustments": "riskRewardAdjustments",
                     }
+                    
+                    # Mapear campos específicos de TradeOrderDetails dentro de entryOrder y exitOrders
+                    if 'entry_order' in record_copy and record_copy['entry_order']:
+                        entry_order_data = record_copy.pop('entry_order')
+                        # Asegurarse de que los campos de TradeOrderDetails se mapeen correctamente
+                        entry_order_data['orderCategory'] = entry_order_data.get('order_category')
+                        entry_order_data['ocoOrderListId'] = entry_order_data.get('oco_order_list_id')
+                        record_copy['entryOrder'] = TradeOrderDetails(**entry_order_data)
+                    
+                    if 'exit_orders' in record_copy and record_copy['exit_orders']:
+                        exit_orders_list = []
+                        for eo_data in record_copy.pop('exit_orders'):
+                            eo_data['orderCategory'] = eo_data.get('order_category')
+                            eo_data['ocoOrderListId'] = eo_data.get('oco_order_list_id')
+                            exit_orders_list.append(TradeOrderDetails(**eo_data))
+                        record_copy['exitOrders'] = exit_orders_list
+                    else:
+                        record_copy['exitOrders'] = [] # Asegurar que sea una lista vacía si no hay
+
                     for db_col, pydantic_field in pydantic_fields_map.items():
                         if db_col in record_copy:
                             record_copy[pydantic_field] = record_copy.pop(db_col)
@@ -669,6 +688,83 @@ class SupabasePersistenceService:
                 return trades
         except Exception as e:
             logger.error(f"Error al obtener trades abiertos en paper trading (psycopg): {e}", exc_info=True)
+            raise
+
+    async def get_open_real_trades(self) -> List['Trade']:
+        """
+        Recupera todos los trades abiertos en modo 'real'.
+        """
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
+        
+        # Importar Trade aquí para evitar importación circular a nivel de módulo
+        from src.shared.data_types import Trade 
+
+        query = SQL("""
+            SELECT * FROM trades
+            WHERE mode = 'real' AND position_status = 'open';
+        """)
+        try:
+            async with self.connection.cursor(row_factory=dict_row) as cur:
+                await cur.execute(query)
+                records = await cur.fetchall()
+                
+                trades = []
+                for record in records:
+                    # Convertir los campos JSONB de la BD a objetos Python
+                    # Asegurarse de que los UUIDs y datetimes se manejen correctamente
+                    record_copy = record.copy()
+                    record_copy['id'] = UUID(record_copy['id'])
+                    record_copy['user_id'] = UUID(record_copy['user_id'])
+                    if record_copy.get('opportunity_id'):
+                        record_copy['opportunity_id'] = UUID(record_copy['opportunity_id'])
+                    
+                    # Convertir entry_order y exit_orders de dict a TradeOrderDetails
+                    if 'entry_order' in record_copy and record_copy['entry_order']:
+                        entry_order_data = record_copy.pop('entry_order')
+                        # Asegurarse de que los campos de TradeOrderDetails se mapeen correctamente
+                        entry_order_data['orderCategory'] = entry_order_data.get('order_category')
+                        entry_order_data['ocoOrderListId'] = entry_order_data.get('oco_order_list_id')
+                        record_copy['entryOrder'] = TradeOrderDetails(**entry_order_data)
+                    
+                    if 'exit_orders' in record_copy and record_copy['exit_orders']:
+                        exit_orders_list = []
+                        for eo_data in record_copy.pop('exit_orders'):
+                            eo_data['orderCategory'] = eo_data.get('order_category')
+                            eo_data['ocoOrderListId'] = eo_data.get('oco_order_list_id')
+                            exit_orders_list.append(TradeOrderDetails(**eo_data))
+                        record_copy['exitOrders'] = exit_orders_list
+                    else:
+                        record_copy['exitOrders'] = [] # Asegurar que sea una lista vacía si no hay
+
+                    # Convertir timestamps de string ISO a datetime
+                    for key in ['created_at', 'opened_at', 'updated_at', 'closed_at']:
+                        if key in record_copy and isinstance(record_copy[key], str):
+                            record_copy[key] = datetime.fromisoformat(record_copy[key])
+                    
+                    # Mapear nombres de columnas de BD (snake_case) a nombres de campos de Pydantic (camelCase/PascalCase)
+                    # Esto es crucial para que Pydantic pueda instanciar el modelo correctamente
+                    pydantic_fields_map = {
+                        "position_status": "positionStatus",
+                        "opportunity_id": "opportunityId", 
+                        "ai_analysis_confidence": "aiAnalysisConfidence",
+                        "pnl_usd": "pnl_usd",
+                        "pnl_percentage": "pnl_percentage",
+                        "closing_reason": "closingReason",
+                        "take_profit_price": "takeProfitPrice",
+                        "trailing_stop_activation_price": "trailingStopActivationPrice",
+                        "trailing_stop_callback_rate": "trailingStopCallbackRate",
+                        "current_stop_price_tsl": "currentStopPrice_tsl",
+                        "risk_reward_adjustments": "riskRewardAdjustments",
+                    }
+                    for db_col, pydantic_field in pydantic_fields_map.items():
+                        if db_col in record_copy:
+                            record_copy[pydantic_field] = record_copy.pop(db_col)
+
+                    trades.append(Trade(**record_copy))
+                return trades
+        except Exception as e:
+            logger.error(f"Error al obtener trades abiertos en real trading (psycopg): {e}", exc_info=True)
             raise
 
     async def upsert_trade(self, user_id: UUID, trade_data: Dict[str, Any]):
@@ -822,7 +918,7 @@ class SupabasePersistenceService:
         # Construir la query SQL base usando psycopg.sql componentes
         query_parts = [
             SQL("SELECT * FROM trades WHERE user_id = {} AND mode = {} AND position_status = {}").format(
-                Literal(UUID(filters["user_id"])),
+                Literal(str(UUID(filters["user_id"]))), # Convertir UUID a string
                 Literal(filters["mode"]),
                 Literal(filters["positionStatus"])
             )
@@ -830,17 +926,17 @@ class SupabasePersistenceService:
         
         # Añadir filtro por símbolo si está presente
         if "symbol" in filters and filters["symbol"]:
-            query_parts.append(SQL(" AND symbol = {}").format(Literal(filters["symbol"])))
+            query_parts.append(Composed([SQL(" AND symbol = "), Literal(filters["symbol"])]))
             
         # Añadir filtro por fechas si están presentes
         if start_date:
-            query_parts.append(SQL(" AND closed_at >= {}").format(Literal(start_date)))
+            query_parts.append(Composed([SQL(" AND closed_at >= "), Literal(start_date)]))
             
         if end_date:
-            query_parts.append(SQL(" AND closed_at <= {}").format(Literal(end_date)))
+            query_parts.append(Composed([SQL(" AND closed_at <= "), Literal(end_date)]))
             
         # Añadir ordenamiento, límite y offset
-        query_parts.append(SQL(" ORDER BY closed_at DESC LIMIT {} OFFSET {};").format(Literal(limit), Literal(offset)))
+        query_parts.append(Composed([SQL(" ORDER BY closed_at DESC LIMIT "), Literal(limit), SQL(" OFFSET "), Literal(offset), SQL(";")]))
         
         final_query = Composed(query_parts)
 

@@ -421,6 +421,18 @@ class PortfolioService:
 
         logger.info(f"Portafolio de paper trading actualizado tras cierre de trade {trade.id}. Nuevo balance: {self.paper_trading_balance}")
 
+    async def update_real_portfolio_after_exit(self, trade: Trade):
+        """
+        Actualiza el portafolio real después de una orden de salida real.
+        Dado que el portafolio real se consulta directamente de Binance,
+        este método principalmente sirve para fines de logging y para
+        gatillar una posible re-consulta o notificación.
+        """
+        logger.info(f"Trade real {trade.id} cerrado. Se recomienda re-consultar el balance de Binance para el estado más reciente del portafolio real.")
+        # No se requiere lógica de actualización de estado interno aquí,
+        # ya que el PortfolioService consulta el estado real de Binance.
+        # Futuras mejoras podrían incluir un mecanismo de caché o eventos.
+
     async def remove_paper_trading_asset(self, user_id: UUID, symbol: str, quantity: float):
         """
         Remueve una cantidad de un activo del portafolio de paper trading.

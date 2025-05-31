@@ -9,7 +9,7 @@ import websockets # Importar websockets
 from typing import Dict, Any, List, Optional, Callable
 from datetime import datetime
 
-from src.ultibot_backend.core.exceptions import BinanceAPIError, ExternalAPIError
+from src.ultibot_backend.core.exceptions import BinanceAPIError, ExternalAPIError, CredentialError # Importar CredentialError
 from src.shared.data_types import AssetBalance
 
 class BinanceAdapter:
@@ -249,6 +249,50 @@ class BinanceAdapter:
         print(f"Intentando conectar a WebSocket para {symbol} en {stream_url}")
         # Ejecutar el WebSocket en una tarea separada para no bloquear el main loop
         asyncio.create_task(self._connect_websocket(stream_url, callback))
+
+    async def create_oco_order(self, symbol: str, side: str, quantity: float, price: float, stopPrice: float, stopLimitPrice: float, stopLimitTimeInForce: str = 'GTC') -> Dict[str, Any]:
+        """
+        Crea una orden OCO (One Cancels the Other) en Binance.
+        Una orden OCO permite colocar una orden Limit (Take Profit) y una orden Stop-Limit (Stop Loss)
+        simultáneamente. Si una se ejecuta, la otra se cancela automáticamente.
+
+        Endpoint: POST /api/v3/order/oco (SIGNED)
+        Parámetros:
+            symbol (str): El par de trading (ej. "BTCUSDT").
+            side (str): Lado de la orden (BUY/SELL). Debe ser opuesto a la posición abierta.
+            quantity (float): Cantidad del activo base a operar.
+            price (float): Precio para la orden LIMIT (Take Profit).
+            stopPrice (float): Precio que activa la orden STOP_LOSS_LIMIT.
+            stopLimitPrice (float): Precio límite para la orden STOP_LOSS_LIMIT.
+            stopLimitTimeInForce (str): Time in Force para la orden STOP_LOSS_LIMIT (ej. 'GTC').
+        """
+        endpoint = "/api/v3/order/oco"
+        params = {
+            "symbol": symbol,
+            "side": side,
+            "quantity": f"{quantity:.8f}", # Formatear a 8 decimales para precisión
+            "price": f"{price:.8f}", # Precio para la orden LIMIT (Take Profit)
+            "stopPrice": f"{stopPrice:.8f}", # Precio que activa la orden STOP_LOSS_LIMIT
+            "stopLimitPrice": f"{stopLimitPrice:.8f}", # Precio límite para la orden STOP_LOSS_LIMIT
+            "stopLimitTimeInForce": stopLimitTimeInForce,
+            "newOrderRespType": "FULL" # Para obtener una respuesta detallada
+        }
+        
+        # Obtener API Key y Secret de las variables de entorno para esta llamada
+        # En un entorno de producción, esto debería venir de un CredentialService
+        api_key = os.getenv("BINANCE_API_KEY")
+        api_secret = os.getenv("BINANCE_API_SECRET")
+
+        if not api_key or not api_secret:
+            raise CredentialError("BINANCE_API_KEY o BINANCE_API_SECRET no configurados en el entorno.")
+
+        try:
+            response_data = await self._make_request("POST", endpoint, api_key, api_secret, params=params, signed=True)
+            return response_data
+        except BinanceAPIError as e:
+            raise e
+        except Exception as e:
+            raise BinanceAPIError(f"Error al crear orden OCO para {symbol}: {e}", original_exception=e)
 
     async def close(self):
         """Cierra el cliente HTTP y marca el adaptador como cerrado."""

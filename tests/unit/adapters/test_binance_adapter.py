@@ -1,14 +1,17 @@
 import pytest
 import httpx
 from unittest.mock import AsyncMock, patch, MagicMock
+import pytest_asyncio # Importar pytest_asyncio
 
 from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter, BinanceAPIError
 from src.shared.data_types import AssetBalance
 
-@pytest.fixture
-def binance_adapter():
-    """Fixture para crear una instancia de BinanceAdapter."""
-    return BinanceAdapter()
+@pytest_asyncio.fixture # Usar pytest_asyncio.fixture
+async def binance_adapter():
+    """Fixture para crear una instancia de BinanceAdapter y asegurar su cierre."""
+    adapter = BinanceAdapter()
+    yield adapter
+    await adapter.close()
 
 @pytest.mark.asyncio
 async def test_get_account_info_success(binance_adapter: BinanceAdapter):
@@ -42,7 +45,6 @@ async def test_get_account_info_success(binance_adapter: BinanceAdapter):
     binance_adapter._make_request.assert_called_once_with(
         "GET", "/api/v3/account", api_key, api_secret, signed=True
     )
-    await binance_adapter.close() # Asegurarse de cerrar el cliente
 
 @pytest.mark.asyncio
 async def test_get_account_info_api_error(binance_adapter: BinanceAdapter):
@@ -60,7 +62,6 @@ async def test_get_account_info_api_error(binance_adapter: BinanceAdapter):
     
     assert excinfo.value.status_code == 500
     assert excinfo.value.response_data == {"msg": "Server error", "code": -1000}
-    await binance_adapter.close()
 
 @pytest.mark.asyncio
 async def test_get_spot_balances_success(binance_adapter: BinanceAdapter):
@@ -96,7 +97,6 @@ async def test_get_spot_balances_success(binance_adapter: BinanceAdapter):
     assert usdt_balance.total == 1000.0
     
     binance_adapter.get_account_info.assert_called_once_with(api_key, api_secret)
-    await binance_adapter.close()
 
 @pytest.mark.asyncio
 async def test_get_spot_balances_parsing_error(binance_adapter: BinanceAdapter):
@@ -115,7 +115,6 @@ async def test_get_spot_balances_parsing_error(binance_adapter: BinanceAdapter):
         assert len(balances) == 1
         assert balances[0].asset == "BTC"
         mock_print.assert_called_with("Advertencia: No se pudo parsear el balance para el activo XYZ: could not convert string to float: 'invalid_value'")
-    await binance_adapter.close()
 
 @pytest.mark.asyncio
 @patch('src.ultibot_backend.adapters.binance_adapter.httpx.AsyncClient')
@@ -141,7 +140,6 @@ async def test_make_request_get_success(MockAsyncClient):
 
     assert result == {"data": "success"}
     mock_client_instance.get.assert_called_once_with(endpoint, params={}, headers={"X-MBX-APIKEY": api_key})
-    await adapter.close()
 
 
 @pytest.mark.asyncio
@@ -172,7 +170,6 @@ async def test_make_request_retry_on_5xx_then_success(MockAsyncClient):
         assert result == {"data": "success_after_retry"}
         assert mock_client_instance.get.call_count == 2
         mock_sleep.assert_called_once_with(adapter.RETRY_DELAY_SECONDS)
-    await adapter.close()
 
 @pytest.mark.asyncio
 @patch('src.ultibot_backend.adapters.binance_adapter.httpx.AsyncClient')
@@ -199,7 +196,6 @@ async def test_make_request_fail_after_retries_on_5xx(MockAsyncClient):
         assert excinfo.value.status_code == 502
         assert mock_client_instance.get.call_count == adapter.RETRY_ATTEMPTS
         assert mock_sleep.call_count == adapter.RETRY_ATTEMPTS - 1
-    await adapter.close()
 
 @pytest.mark.asyncio
 @patch('src.ultibot_backend.adapters.binance_adapter.httpx.AsyncClient')
@@ -225,4 +221,3 @@ async def test_make_request_client_error_no_retry(MockAsyncClient):
         assert excinfo.value.status_code == 400
         assert mock_client_instance.get.call_count == 1 # Solo un intento
         mock_sleep.assert_not_called() # No se debe llamar a sleep
-    await adapter.close()

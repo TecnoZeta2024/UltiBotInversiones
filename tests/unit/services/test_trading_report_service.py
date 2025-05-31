@@ -10,7 +10,7 @@ from uuid import UUID
 
 from src.ultibot_backend.services.trading_report_service import TradingReportService
 from src.ultibot_backend.core.exceptions import ReportError
-from src.shared.data_types import Trade, PerformanceMetrics, Order, OrderSide, OrderType, OrderStatus
+from src.shared.data_types import Trade, PerformanceMetrics, TradeOrderDetails # Eliminar Order, OrderSide, OrderType, OrderStatus
 
 
 @pytest.fixture
@@ -25,11 +25,11 @@ def trading_report_service(mock_persistence_service):
 
 @pytest.fixture
 def sample_trade_data():
-    """Datos de ejemplo para trades."""
-    return [
+    """Datos de ejemplo para trades, como objetos Trade."""
+    raw_data = [
         {
-            "id": "trade-1",
-            "user_id": "user-123",
+            "id": UUID("123e4567-e89b-12d3-a456-426614174001"),
+            "user_id": UUID("123e4567-e89b-12d3-a456-426614174000"),
             "symbol": "BTCUSDT",
             "side": "BUY",
             "mode": "paper",
@@ -39,38 +39,43 @@ def sample_trade_data():
             "pnl_usd": 150.0,
             "pnl_percentage": 5.0,
             "closingReason": "TAKE_PROFIT",
-            "entryOrder": {
-                "id": "order-1-entry",
-                "symbol": "BTCUSDT",
-                "side": "BUY",
-                "type": "MARKET",
-                "status": "FILLED",
-                "executedQuantity": 0.005,
-                "executedPrice": 50000.0,
-                "cost": 250.0,
-                "fee": 0.25,
-                "feeAsset": "USDT",
-                "timestamp": datetime(2024, 1, 1, 10, 0, 0)
-            },
+            "entryOrder": TradeOrderDetails(
+                orderId_internal=UUID("a1b2c3d4-e5f6-7890-1234-567890abcdef01"),
+                type="market",
+                status="filled",
+                requestedQuantity=0.005,
+                executedQuantity=0.005,
+                executedPrice=50000.0,
+                timestamp=datetime(2024, 1, 1, 10, 0, 0),
+                exchangeOrderId=None,
+                commission=None,
+                commissionAsset=None,
+                rawResponse=None
+            ),
             "exitOrders": [
-                {
-                    "id": "order-1-exit",
-                    "symbol": "BTCUSDT",
-                    "side": "SELL",
-                    "type": "MARKET",
-                    "status": "FILLED",
-                    "executedQuantity": 0.005,
-                    "executedPrice": 53000.0,
-                    "cost": 265.0,
-                    "fee": 0.265,
-                    "feeAsset": "USDT",
-                    "timestamp": datetime(2024, 1, 1, 12, 0, 0)
-                }
-            ]
+                TradeOrderDetails(
+                    orderId_internal=UUID("a1b2c3d4-e5f6-7890-1234-567890abcdef02"),
+                    type="market",
+                    status="filled",
+                    requestedQuantity=0.005,
+                    executedQuantity=0.005,
+                    executedPrice=53000.0,
+                    timestamp=datetime(2024, 1, 1, 12, 0, 0),
+                    exchangeOrderId=None,
+                    commission=None,
+                    commissionAsset=None,
+                    rawResponse=None
+                )
+            ],
+            "takeProfitPrice": 53000.0,
+            "trailingStopActivationPrice": 49500.0,
+            "trailingStopCallbackRate": 0.005,
+            "currentStopPrice_tsl": 49500.0,
+            "riskRewardAdjustments": []
         },
         {
-            "id": "trade-2",
-            "user_id": "user-123",
+            "id": UUID("123e4567-e89b-12d3-a456-426614174002"),
+            "user_id": UUID("123e4567-e89b-12d3-a456-426614174000"),
             "symbol": "ETHUSDT",
             "side": "BUY",
             "mode": "paper",
@@ -80,38 +85,43 @@ def sample_trade_data():
             "pnl_usd": -50.0,
             "pnl_percentage": -2.5,
             "closingReason": "STOP_LOSS",
-            "entryOrder": {
-                "id": "order-2-entry",
-                "symbol": "ETHUSDT",
-                "side": "BUY",
-                "type": "MARKET",
-                "status": "FILLED",
-                "executedQuantity": 0.5,
-                "executedPrice": 2000.0,
-                "cost": 1000.0,
-                "fee": 1.0,
-                "feeAsset": "USDT",
-                "timestamp": datetime(2024, 1, 2, 14, 0, 0)
-            },
+            "entryOrder": TradeOrderDetails(
+                orderId_internal=UUID("a1b2c3d4-e5f6-7890-1234-567890abcdef03"),
+                type="market",
+                status="filled",
+                requestedQuantity=0.5,
+                executedQuantity=0.5,
+                executedPrice=2000.0,
+                timestamp=datetime(2024, 1, 2, 14, 0, 0),
+                exchangeOrderId=None,
+                commission=None,
+                commissionAsset=None,
+                rawResponse=None
+            ),
             "exitOrders": [
-                {
-                    "id": "order-2-exit",
-                    "symbol": "ETHUSDT",
-                    "side": "SELL",
-                    "type": "MARKET",
-                    "status": "FILLED",
-                    "executedQuantity": 0.5,
-                    "executedPrice": 1950.0,
-                    "cost": 975.0,
-                    "fee": 0.975,
-                    "feeAsset": "USDT",
-                    "timestamp": datetime(2024, 1, 2, 16, 0, 0)
-                }
-            ]
+                TradeOrderDetails(
+                    orderId_internal=UUID("a1b2c3d4-e5f6-7890-1234-567890abcdef04"),
+                    type="market",
+                    status="filled",
+                    requestedQuantity=0.5,
+                    executedQuantity=0.5,
+                    executedPrice=1950.0,
+                    timestamp=datetime(2024, 1, 2, 16, 0, 0),
+                    exchangeOrderId=None,
+                    commission=None,
+                    commissionAsset=None,
+                    rawResponse=None
+                )
+            ],
+            "takeProfitPrice": 2050.0,
+            "trailingStopActivationPrice": 1980.0,
+            "trailingStopCallbackRate": 0.005,
+            "currentStopPrice_tsl": 1980.0,
+            "riskRewardAdjustments": []
         },
         {
-            "id": "trade-3",
-            "user_id": "user-123",
+            "id": UUID("123e4567-e89b-12d3-a456-426614174003"),
+            "user_id": UUID("123e4567-e89b-12d3-a456-426614174000"),
             "symbol": "ADAUSDT",
             "side": "BUY",
             "mode": "paper",
@@ -121,36 +131,42 @@ def sample_trade_data():
             "pnl_usd": 25.0,
             "pnl_percentage": 1.25,
             "closingReason": "MANUAL",
-            "entryOrder": {
-                "id": "order-3-entry",
-                "symbol": "ADAUSDT",
-                "side": "BUY",
-                "type": "MARKET",
-                "status": "FILLED",
-                "executedQuantity": 1000.0,
-                "executedPrice": 0.5,
-                "cost": 500.0,
-                "fee": 0.5,
-                "feeAsset": "USDT",
-                "timestamp": datetime(2024, 1, 3, 9, 0, 0)
-            },
+            "entryOrder": TradeOrderDetails(
+                orderId_internal=UUID("a1b2c3d4-e5f6-7890-1234-567890abcdef05"),
+                type="market",
+                status="filled",
+                requestedQuantity=1000.0,
+                executedQuantity=1000.0,
+                executedPrice=0.5,
+                timestamp=datetime(2024, 1, 3, 9, 0, 0),
+                exchangeOrderId=None,
+                commission=None,
+                commissionAsset=None,
+                rawResponse=None
+            ),
             "exitOrders": [
-                {
-                    "id": "order-3-exit",
-                    "symbol": "ADAUSDT",
-                    "side": "SELL",
-                    "type": "MARKET",
-                    "status": "FILLED",
-                    "executedQuantity": 1000.0,
-                    "executedPrice": 0.525,
-                    "cost": 525.0,
-                    "fee": 0.525,
-                    "feeAsset": "USDT",
-                    "timestamp": datetime(2024, 1, 3, 11, 0, 0)
-                }
-            ]
+                TradeOrderDetails(
+                    orderId_internal=UUID("a1b2c3d4-e5f6-7890-1234-567890abcdef06"),
+                    type="market",
+                    status="filled",
+                    requestedQuantity=1000.0,
+                    executedQuantity=1000.0,
+                    executedPrice=0.525,
+                    timestamp=datetime(2024, 1, 3, 11, 0, 0),
+                    exchangeOrderId=None,
+                    commission=None,
+                    commissionAsset=None,
+                    rawResponse=None
+                )
+            ],
+            "takeProfitPrice": 0.55,
+            "trailingStopActivationPrice": 0.49,
+            "trailingStopCallbackRate": 0.005,
+            "currentStopPrice_tsl": 0.49,
+            "riskRewardAdjustments": []
         }
     ]
+    return [Trade(**data) for data in raw_data]
 
 
 class TestTradingReportService:
