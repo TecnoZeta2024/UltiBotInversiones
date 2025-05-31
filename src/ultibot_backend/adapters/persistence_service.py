@@ -5,41 +5,22 @@ from src.ultibot_backend.app_config import settings
 import logging
 import os # Importar os
 from urllib.parse import urlparse, unquote
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, TYPE_CHECKING, LiteralString # Importar LiteralString
 from uuid import UUID
-from src.shared.data_types import APICredential, ServiceName, Notification
+from src.shared.data_types import APICredential, ServiceName, Notification, Opportunity, OpportunityStatus # Importar Opportunity y OpportunityStatus
 from datetime import datetime, timezone
 from psycopg.sql import SQL, Identifier, Literal, Composed # Importar SQL y otros componentes necesarios
 
 logger = logging.getLogger(__name__)
 
+if TYPE_CHECKING: # Bloque para type hints que evitan importaciones circulares en runtime
+    from src.shared.data_types import Opportunity as OpportunityTypeHint
+    from src.shared.data_types import OpportunityStatus as OpportunityStatusTypeHint
+
 class SupabasePersistenceService:
     def __init__(self):
         self.connection: Optional[psycopg.AsyncConnection] = None
-        # self.database_url ya no se establece desde settings aquí para asegurar que se lee la más fresca en connect()
-        # if not settings.DATABASE_URL: # Esta verificación se hará en connect()
-        #     raise ValueError("DATABASE_URL no está configurada.")
-        
-        # self.database_url se leerá directamente de os.getenv() en el método connect
-        # para asegurar que se usa el valor más fresco, especialmente después de cambios en .env
-        # Sin embargo, la lógica de parseo que estaba aquí para el logging de conninfo
-        # puede eliminarse o ajustarse si ya no es necesaria en __init__.
-        # Por ahora, la eliminaremos de __init__ para simplificar, ya que connect() usa el DSN directamente.
-
-        # Parsear la URL una vez para obtener los componentes
-        # y construir el conninfo para psycopg
-        # Ejemplo DSN: postgresql://user:pass@host:port/dbname?sslmode=verify-full&sslrootcert=path/to/cert.crt
-        
-        # No es necesario parsear manualmente si pasamos el DSN directamente a connect,
-        # pero para añadir sslrootcert de forma programática, construir conninfo es más limpio.
-        
-        # parsed = urlparse(self.database_url) # self.database_url no está definido aquí ahora
-        # Dejar que psycopg maneje la decodificación de la contraseña del DSN.
-        # make_conninfo espera la contraseña tal como estaría en un DSN.
-        # Si la DATABASE_URL tiene la contraseña codificada (%2A), make_conninfo la pasará así.
-        # psycopg.Connection.connect luego la decodificará.
-        # No es necesario construir conninfo explícitamente si pasamos el DSN y los parámetros SSL directamente.
-        pass # __init__ ya no necesita construir self.conninfo de esta manera
+        pass
 
 
     async def connect(self):
@@ -48,25 +29,20 @@ class SupabasePersistenceService:
                 logger.info("Ya existe una conexión activa.")
                 return
 
-            # Leer DATABASE_URL directamente de las variables de entorno aquí
-            # para asegurar que se usa el valor más reciente, especialmente después de cambios en .env
             current_database_url = os.getenv("DATABASE_URL")
             if not current_database_url:
                 logger.error("DATABASE_URL no se encontró en las variables de entorno al intentar conectar.")
                 raise ValueError("DATABASE_URL no está configurada en las variables de entorno.")
 
-            # Pasar el DSN directamente y los parámetros SSL por separado.
-            # psycopg decodificará la contraseña del DSN.
             self.connection = await psycopg.AsyncConnection.connect(
-                current_database_url, # Usar la URL leída directamente
+                current_database_url,
                 sslmode='verify-full',
                 sslrootcert='supabase/prod-ca-2021.crt'
-                # row_factory se aplicará al cursor
             )
             logger.info("Conexión a la base de datos Supabase (psycopg) establecida exitosamente usando DSN directo.")
         except Exception as e:
             logger.error(f"Error al conectar a la base de datos Supabase (psycopg): {e}")
-            if isinstance(e, psycopg.Error) and e.diag: # Comprobación más segura para diag
+            if isinstance(e, psycopg.Error) and e.diag:
                  logger.error(f"Detalles del error de PSQL (diag): {e.diag.message_primary}")
             raise
 
@@ -78,15 +54,13 @@ class SupabasePersistenceService:
     async def _ensure_connection(self):
         if not self.connection or self.connection.closed:
             await self.connect()
-        # No es necesario el segundo if not self.connection, connect() ya lanzaría una excepción si falla.
-        # Si connect() no lanza excepción, self.connection debería estar establecido.
 
     async def test_connection(self) -> bool:
         await self._ensure_connection()
         assert self.connection is not None, "Connection must be established by _ensure_connection"
         try:
             async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(SQL("SELECT 1 AS result;")) # Envolver en SQL()
+                await cur.execute(SQL("SELECT 1 AS result;"))
                 result = await cur.fetchone()
                 if result and result.get('result') == 1:
                     logger.info("Conexión de prueba a la base de datos Supabase (psycopg) exitosa.")
@@ -100,7 +74,7 @@ class SupabasePersistenceService:
     async def save_credential(self, credential: APICredential) -> APICredential:
         await self._ensure_connection()
         assert self.connection is not None, "Connection must be established by _ensure_connection"
-        query = SQL("""
+        query: LiteralString = """
         INSERT INTO api_credentials (
             id, user_id, service_name, credential_label, 
             encrypted_api_key, encrypted_api_secret, encrypted_other_details, 
@@ -127,11 +101,11 @@ class SupabasePersistenceService:
             notes = EXCLUDED.notes,
             updated_at = timezone('utc'::text, now())
         RETURNING *;
-        """)
+        """
         try:
             async with self.connection.cursor(row_factory=dict_row) as cur:
                 await cur.execute(
-                    query,
+                    SQL(query), # type: ignore
                     (
                         credential.id, credential.user_id, credential.service_name, credential.credential_label,
                         credential.encrypted_api_key, credential.encrypted_api_secret, credential.encrypted_other_details,
@@ -147,8 +121,22 @@ class SupabasePersistenceService:
             raise ValueError("No se pudo guardar/actualizar la credencial y obtener el registro de retorno (psycopg).")
         except Exception as e:
             logger.error(f"Error al guardar/actualizar credencial (psycopg): {e}")
-            if self.connection and not self.connection.closed: # Asegurar que hay conexión para rollback
-                await self.connection.rollback() # Rollback en caso de error
+            if self.connection and not self.connection.closed:
+                await self.connection.rollback()
+            raise
+
+    async def get_credentials_by_service(self, user_id: UUID, service_name: ServiceName) -> List[APICredential]:
+        """Recupera todas las credenciales para un usuario y servicio específicos."""
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
+        query = SQL("SELECT * FROM api_credentials WHERE user_id = %s AND service_name = %s ORDER BY created_at ASC;")
+        try:
+            async with self.connection.cursor(row_factory=dict_row) as cur:
+                await cur.execute(query, (user_id, service_name.value))
+                records = await cur.fetchall()
+                return [APICredential(**record) for record in records]
+        except Exception as e:
+            logger.error(f"Error al obtener credenciales por servicio para usuario {user_id} y servicio {service_name.value} (psycopg): {e}")
             raise
 
     async def get_credential_by_id(self, credential_id: UUID) -> Optional[APICredential]:
@@ -269,22 +257,24 @@ class SupabasePersistenceService:
         ]
         update_set_str = SQL(", ").join(update_set_parts)
 
-        query = SQL("""
+        query: LiteralString = """
         INSERT INTO user_configurations ({})
         VALUES ({})
         ON CONFLICT (user_id) DO UPDATE SET
             {},
             updated_at = timezone('utc'::text, now())
         RETURNING *;
-        """).format(
-            SQL(", ").join(columns),
-            SQL(", ").join(SQL("%s") for _ in insert_values_dict),
-            update_set_str
-        )
-        
+        """
         try:
             async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(query, tuple(insert_values_dict.values()))
+                await cur.execute(
+                    SQL(query).format(
+                        SQL(", ").join(columns),
+                        SQL(", ").join(SQL("%s") for _ in insert_values_dict),
+                        update_set_str
+                    ),
+                    tuple(insert_values_dict.values())
+                )
                 await self.connection.commit()
             logger.info(f"Configuración de usuario para {user_id} guardada/actualizada exitosamente (psycopg).")
         except Exception as e:
@@ -319,7 +309,7 @@ class SupabasePersistenceService:
     async def save_notification(self, notification: Notification) -> Notification:
         await self._ensure_connection()
         assert self.connection is not None, "Connection must be established by _ensure_connection"
-        query = SQL("""
+        query: LiteralString = """
         INSERT INTO notifications (
             id, user_id, event_type, channel, title_key, message_key, message_params,
             title, message, priority, status, snoozed_until, data_payload, actions,
@@ -338,13 +328,11 @@ class SupabasePersistenceService:
             sent_at = EXCLUDED.sent_at, status_history = EXCLUDED.status_history, generated_by = EXCLUDED.generated_by,
             created_at = EXCLUDED.created_at -- Asegurarse de que created_at se actualice si es parte del EXCLUDED
         RETURNING *;
-        """)
-        # Nota: El ON CONFLICT para created_at = EXCLUDED.created_at puede no ser lo deseado si created_at
-        # solo debe establecerse en la inserción inicial. Ajustar si es necesario.
+        """
         try:
             async with self.connection.cursor(row_factory=dict_row) as cur:
                 await cur.execute(
-                    query,
+                    SQL(query), # type: ignore
                     (
                         notification.id, notification.userId, notification.eventType,
                         notification.channel,
@@ -514,7 +502,141 @@ class SupabasePersistenceService:
             logger.error(f"Error ejecutando SQL crudo (psycopg): {query} con params {params} - {e}")
             if self.connection and not self.connection.closed:
                 await self.connection.rollback()
-            # No relanzar si es para limpieza, pero sí loggear.
-            # Si no es para limpieza, el que llama debería manejar el error.
-            # Para los tests, si la limpieza falla, es informativo pero no debe detener otros tests.
-            # raise # Descomentar si se necesita que el error se propague
+            raise
+
+    async def save_opportunity(self, opportunity: OpportunityTypeHint) -> OpportunityTypeHint:
+        """Guarda una nueva oportunidad o actualiza una existente."""
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
+        
+        query_str: LiteralString = """
+        INSERT INTO opportunities (
+            id, user_id, source_type, source_name, source_data, status, status_reason,
+            symbol, asset_type, exchange, predicted_direction, predicted_price_target,
+            predicted_stop_loss, prediction_timeframe, ai_analysis, confidence_score,
+            suggested_action, ai_model_used, executed_at, executed_price, executed_quantity,
+            related_order_id, created_at, updated_at, expires_at
+        ) VALUES (
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+        )
+        ON CONFLICT (id) DO UPDATE SET
+            user_id = EXCLUDED.user_id,
+            source_type = EXCLUDED.source_type,
+            source_name = EXCLUDED.source_name,
+            source_data = EXCLUDED.source_data,
+            status = EXCLUDED.status,
+            status_reason = EXCLUDED.status_reason,
+            symbol = EXCLUDED.symbol,
+            asset_type = EXCLUDED.asset_type,
+            exchange = EXCLUDED.exchange,
+            predicted_direction = EXCLUDED.predicted_direction,
+            predicted_price_target = EXCLUDED.predicted_price_target,
+            predicted_stop_loss = EXCLUDED.predicted_stop_loss,
+            prediction_timeframe = EXCLUDED.prediction_timeframe,
+            ai_analysis = EXCLUDED.ai_analysis,
+            confidence_score = EXCLUDED.confidence_score,
+            suggested_action = EXCLUDED.suggested_action,
+            ai_model_used = EXCLUDED.ai_model_used,
+            executed_at = EXCLUDED.executed_at,
+            executed_price = EXCLUDED.executed_price,
+            executed_quantity = EXCLUDED.executed_quantity,
+            related_order_id = EXCLUDED.related_order_id,
+            updated_at = timezone('utc'::text, now()),
+            expires_at = EXCLUDED.expires_at
+        RETURNING *;
+        """
+        try:
+            async with self.connection.cursor(row_factory=dict_row) as cur:
+                await cur.execute(
+                    SQL(query_str), # type: ignore
+                    (
+                        opportunity.id, opportunity.user_id, opportunity.source_type.value,
+                        opportunity.source_name, opportunity.source_data, opportunity.status.value,
+                        opportunity.status_reason, opportunity.symbol, opportunity.asset_type,
+                        opportunity.exchange, opportunity.predicted_direction,
+                        opportunity.predicted_price_target, opportunity.predicted_stop_loss,
+                        opportunity.prediction_timeframe, opportunity.ai_analysis,
+                        opportunity.confidence_score, opportunity.suggested_action,
+                        opportunity.ai_model_used, opportunity.executed_at,
+                        opportunity.executed_price, opportunity.executed_quantity,
+                        opportunity.related_order_id, opportunity.created_at,
+                        opportunity.updated_at, opportunity.expires_at
+                    )
+                )
+                record = await cur.fetchone()
+                await self.connection.commit()
+                if record:
+                    return Opportunity(**record)
+            raise ValueError("No se pudo guardar/actualizar la oportunidad y obtener el registro de retorno.")
+        except Exception as e:
+            logger.error(f"Error al guardar/actualizar oportunidad: {e}", exc_info=True)
+            if self.connection and not self.connection.closed:
+                await self.connection.rollback()
+            raise
+
+    async def update_opportunity_status(self, opportunity_id: UUID, new_status: OpportunityStatusTypeHint, status_reason: Optional[str] = None) -> Optional[OpportunityTypeHint]:
+        """Actualiza el estado y la razón del estado de una oportunidad."""
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
+        # Opportunity y OpportunityStatus ya están importados a nivel de módulo para type hints
+
+        query_str: LiteralString = """
+        UPDATE opportunities
+        SET status = %s, status_reason = %s, updated_at = timezone('utc'::text, now())
+        WHERE id = %s
+        RETURNING *;
+        """
+        try:
+            async with self.connection.cursor(row_factory=dict_row) as cur:
+                await cur.execute(SQL(query_str), (new_status.value, status_reason, opportunity_id)) # type: ignore
+                record = await cur.fetchone()
+                await self.connection.commit()
+                if record:
+                    return Opportunity(**record)
+            return None
+        except Exception as e:
+            logger.error(f"Error al actualizar estado de oportunidad {opportunity_id}: {e}", exc_info=True)
+            if self.connection and not self.connection.closed:
+                await self.connection.rollback()
+            raise
+
+    async def update_opportunity_analysis(
+        self, 
+        opportunity_id: UUID, 
+        status: OpportunityStatusTypeHint, 
+        ai_analysis: Optional[str] = None, # JSON string
+        confidence_score: Optional[float] = None,
+        suggested_action: Optional[str] = None,
+        status_reason: Optional[str] = None
+    ) -> Optional[OpportunityTypeHint]:
+        """Actualiza los campos relacionados con el análisis de IA de una oportunidad."""
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
+        # Opportunity y OpportunityStatus ya están importados a nivel de módulo para type hints
+
+        query_str: LiteralString = """
+        UPDATE opportunities
+        SET status = %s, 
+            ai_analysis = %s, 
+            confidence_score = %s, 
+            suggested_action = %s,
+            status_reason = %s,
+            updated_at = timezone('utc'::text, now())
+        WHERE id = %s
+        RETURNING *;
+        """
+        try:
+            async with self.connection.cursor(row_factory=dict_row) as cur:
+                await cur.execute(SQL(query_str), ( # type: ignore
+                    status.value, ai_analysis, confidence_score, suggested_action, status_reason, opportunity_id
+                ))
+                record = await cur.fetchone()
+                await self.connection.commit()
+                if record:
+                    return Opportunity(**record)
+            return None
+        except Exception as e:
+            logger.error(f"Error al actualizar análisis de IA para oportunidad {opportunity_id}: {e}", exc_info=True)
+            if self.connection and not self.connection.closed:
+                await self.connection.rollback()
+            raise
