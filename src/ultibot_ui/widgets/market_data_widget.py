@@ -263,6 +263,62 @@ class MarketDataWidget(QWidget):
         except Exception as e:
             print(f"Error al guardar pares favoritos: {e}")
 
+    def cleanup(self):
+        """
+        Limpia los recursos utilizados por MarketDataWidget.
+        Detiene el temporizador de actualización REST y cancela las suscripciones WebSocket.
+        """
+        print("MarketDataWidget: cleanup called.")
+        # Detener el temporizador de actualización REST
+        if hasattr(self, '_rest_update_timer') and self._rest_update_timer.isActive():
+            print("MarketDataWidget: Stopping REST update timer.")
+            self._rest_update_timer.stop()
+
+        # Cancelar todas las suscripciones WebSocket activas
+        # Es importante hacerlo en un loop de eventos de asyncio si es posible,
+        # o al menos marcar que deben ser canceladas.
+        # La forma correcta de hacerlo depende de cómo se gestiona el loop de asyncio
+        # en el contexto de la aplicación PyQt.
+        # Por ahora, simplemente llamaremos a unsubscribe.
+        # Nota: Esto podría necesitar ejecutarse en el loop de asyncio principal.
+        
+        # Crear una copia de la colección antes de iterar sobre ella para modificarla
+        symbols_to_unsubscribe = list(self._websocket_tasks)
+        if symbols_to_unsubscribe:
+            print(f"MarketDataWidget: Unsubscribing from WebSockets for: {symbols_to_unsubscribe}")
+            # Esta parte es asíncrona, idealmente se manejaría de forma más integrada
+            # con el cierre del loop de asyncio principal de la aplicación.
+            # Por ahora, creamos tareas para desuscribir.
+            # Esto podría no completarse si el loop de asyncio se cierra prematuramente.
+            async def unsubscribe_all():
+                for symbol in symbols_to_unsubscribe:
+                    try:
+                        await self.market_data_service.unsubscribe_from_market_data_websocket(symbol)
+                        if symbol in self._websocket_tasks: # Verificar antes de remover
+                             self._websocket_tasks.remove(symbol)
+                    except Exception as e:
+                        print(f"MarketDataWidget: Error unsubscribing from {symbol}: {e}")
+            
+            # Intentar ejecutar en el loop de eventos existente si está disponible y corriendo
+            try:
+                loop = asyncio.get_running_loop()
+                # Si el loop está corriendo, podemos crear una tarea.
+                # Sin embargo, si estamos en el proceso de cierre, el loop podría no procesarla.
+                # Esta es una limitación de mezclar asyncio con toolkits síncronos como Qt sin un integrador como qasync.
+                # Para una limpieza más robusta, el cierre de WebSockets debería ser manejado
+                # por el market_data_service.close() que se llama en main.py.
+                # Aquí solo nos aseguramos de que el widget no intente usarlos más.
+                # La llamada real a unsubscribe_from_market_data_websocket ya está en market_data_service.close()
+                # por lo que aquí principalmente limpiamos el estado local del widget.
+                print("MarketDataWidget: WebSocket cleanup will be handled by MarketDataService.close(). Clearing local tasks.")
+                self._websocket_tasks.clear()
+
+            except RuntimeError: # No running event loop
+                print("MarketDataWidget: No running asyncio event loop to schedule WebSocket unsubscriptions. MarketDataService.close() should handle this.")
+                self._websocket_tasks.clear() # Limpiar de todas formas el estado local
+
+        print("MarketDataWidget: cleanup finished.")
+
 
 class PairConfigurationDialog(QDialog):
     """

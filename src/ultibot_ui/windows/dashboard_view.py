@@ -152,3 +152,37 @@ class DashboardView(QWidget):
         except Exception as e:
             print(f"Error al hacer polling de nuevas notificaciones: {e}")
             # Manejar el error, quizás mostrando una notificación de error en la UI
+
+    def cleanup(self):
+        """
+        Limpia los recursos utilizados por DashboardView y sus widgets hijos.
+        Principalmente, detiene temporizadores y tareas en segundo plano.
+        """
+        print("DashboardView: cleanup called.")
+
+        # Limpiar MarketDataWidget
+        if hasattr(self.market_data_widget, 'cleanup') and callable(self.market_data_widget.cleanup):
+            print("DashboardView: Calling cleanup on market_data_widget.")
+            self.market_data_widget.cleanup()
+        
+        # Limpiar PortfolioWidget
+        if hasattr(self.portfolio_widget, 'stop_updates') and callable(self.portfolio_widget.stop_updates):
+            print("DashboardView: Calling stop_updates on portfolio_widget.")
+            self.portfolio_widget.stop_updates() # Asumiendo que stop_updates es el método de limpieza
+
+        # Detener el temporizador de polling de notificaciones
+        if hasattr(self, '_notification_polling_timer') and self._notification_polling_timer.isActive():
+            print("DashboardView: Stopping notification polling timer.")
+            self._notification_polling_timer.stop()
+
+        # Limpiar NotificationWidget (si es necesario, por ejemplo, para cancelar suscripciones WebSocket)
+        if hasattr(self.notification_widget, 'cleanup') and callable(self.notification_widget.cleanup):
+            print("DashboardView: Calling cleanup on notification_widget.")
+            self.notification_widget.cleanup()
+            
+        # Limpiar ChartWidget (si es necesario)
+        if hasattr(self.chart_widget, 'cleanup') and callable(self.chart_widget.cleanup):
+            print("DashboardView: Calling cleanup on chart_widget.")
+            self.chart_widget.cleanup()
+        
+        print("DashboardView: cleanup finished.")

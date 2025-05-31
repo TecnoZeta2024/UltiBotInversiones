@@ -22,6 +22,7 @@ class BinanceAdapter:
 
     def __init__(self):
         self.client = httpx.AsyncClient(base_url=self.BASE_URL, timeout=10.0)
+        self._explicitly_closed = False # Flag para indicar si el adaptador ha sido cerrado explícitamente
 
     def _sign_request(self, api_key: str, api_secret: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -36,6 +37,9 @@ class BinanceAdapter:
         """
         Realiza una solicitud a la API de Binance con reintentos y manejo de errores.
         """
+        if self._explicitly_closed:
+            raise RuntimeError("BinanceAdapter ha sido cerrado y no puede realizar nuevas solicitudes.")
+
         if params is None:
             params = {}
 
@@ -247,8 +251,13 @@ class BinanceAdapter:
         asyncio.create_task(self._connect_websocket(stream_url, callback))
 
     async def close(self):
-        """Cierra el cliente HTTP."""
-        await self.client.aclose()
+        """Cierra el cliente HTTP y marca el adaptador como cerrado."""
+        if not self._explicitly_closed:
+            await self.client.aclose()
+            self._explicitly_closed = True
+            print("BinanceAdapter: Cliente HTTP cerrado y adaptador marcado como cerrado.")
+        else:
+            print("BinanceAdapter: Ya estaba cerrado.")
 
 # Ejemplo de uso (para pruebas locales, no parte del código de producción)
 async def main():

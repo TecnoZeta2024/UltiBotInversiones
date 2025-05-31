@@ -18,6 +18,7 @@ class MarketDataService:
         self.credential_service = credential_service
         self.binance_adapter = binance_adapter
         self._active_websocket_tasks: Dict[str, asyncio.Task] = {} # Para mantener un registro de las tareas WebSocket
+        self._closed = False # Flag para indicar si el servicio ha sido cerrado
 
     async def get_binance_connection_status(self, user_id: UUID) -> BinanceConnectionStatus:
         """
@@ -88,6 +89,9 @@ class MarketDataService:
         """
         Obtiene los balances de Spot de Binance para un usuario.
         """
+        if self._closed:
+            logger.warning("MarketDataService está cerrado. No se pueden obtener balances.")
+            return []
         binance_credential = await self.credential_service.get_credential(
             user_id=user_id,
             service_name=ServiceName.BINANCE_SPOT,
@@ -123,6 +127,9 @@ class MarketDataService:
         Obtiene datos de mercado (precio actual, cambio 24h, volumen 24h) para una lista de símbolos
         usando la API REST de Binance.
         """
+        if self._closed:
+            logger.warning("MarketDataService está cerrado. No se pueden obtener datos de mercado REST.")
+            return {s: {"error": "Servicio cerrado"} for s in symbols}
         market_data = {}
         for symbol in symbols:
             try:
@@ -185,6 +192,9 @@ class MarketDataService:
         Obtiene datos históricos de velas (OHLCV) para un par y temporalidad dados,
         procesándolos para ser consumidos por el frontend.
         """
+        if self._closed:
+            logger.warning(f"MarketDataService está cerrado. No se pueden obtener datos de velas para {symbol}-{interval}.")
+            return []
         try:
             # No se requieren credenciales para este endpoint público
             klines_data = await self.binance_adapter.get_klines(
@@ -238,16 +248,24 @@ class MarketDataService:
         """
         Cierra el cliente HTTP y cancela todas las tareas WebSocket activas.
         """
+        if self._closed:
+            return # Ya está cerrado o en proceso de cierre
+        
+        self._closed = True
+        logger.info("MarketDataService: Iniciando cierre...")
+
         for symbol, task in list(self._active_websocket_tasks.items()):
             task.cancel()
             try:
                 await task
             except asyncio.CancelledError:
-                logger.info(f"Tarea de WebSocket para {symbol} cancelada durante el cierre.")
+                logger.info(f"MarketDataService: Tarea de WebSocket para {symbol} cancelada durante el cierre.")
             except Exception as e:
-                logger.error(f"Error al cancelar la tarea de WebSocket para {symbol} durante el cierre: {e}")
+                logger.error(f"MarketDataService: Error al cancelar la tarea de WebSocket para {symbol} durante el cierre: {e}")
         self._active_websocket_tasks.clear()
+        
         await self.binance_adapter.close()
+        logger.info("MarketDataService: Cierre completado.")
 
 # Ejemplo de uso (para pruebas locales)
 async def main():
