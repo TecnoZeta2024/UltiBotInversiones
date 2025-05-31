@@ -202,3 +202,38 @@ class UltiBotAPIClient:
             return True
         except APIError:
             return False
+
+    async def get_user_configuration(self) -> Dict[str, Any]:
+        """
+        Obtiene la configuración actual del usuario.
+        """
+        logger.info("Obteniendo configuración de usuario.")
+        return await self._make_request("GET", "/api/v1/config")
+
+    async def update_user_configuration(self, config_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Actualiza parcialmente la configuración del usuario.
+        """
+        logger.info(f"Actualizando configuración de usuario: {config_data}")
+        return await self._make_request("PATCH", "/api/v1/config", json=config_data)
+
+    async def activate_real_trading_mode(self) -> Dict[str, Any]:
+        """
+        Activa el modo de operativa real limitada.
+        """
+        logger.info("Activando modo de operativa real limitada.")
+        return await self._make_request("POST", "/api/v1/config/real-trading-mode/activate")
+
+    async def deactivate_real_trading_mode(self) -> Dict[str, Any]:
+        """
+        Desactiva el modo de operativa real limitada.
+        """
+        logger.info("Desactivando modo de operativa real limitada.")
+        return await self._make_request("POST", "/api/v1/config/real-trading-mode/deactivate")
+
+    async def get_real_trading_mode_status(self) -> Dict[str, Any]:
+        """
+        Obtiene el estado actual del modo de operativa real limitada y el contador.
+        """
+        logger.info("Obteniendo estado del modo de operativa real limitada.")
+        return await self._make_request("GET", "/api/v1/config/real-trading-mode/status")

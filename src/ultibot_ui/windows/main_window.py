@@ -23,11 +23,12 @@ from src.shared.data_types import UserConfiguration
 from src.ultibot_backend.services.config_service import ConfigService
 from src.ultibot_backend.services.market_data_service import MarketDataService
 from src.ultibot_backend.services.notification_service import NotificationService
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService # Importar SupabasePersistenceService
+from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 from src.ultibot_ui.widgets.sidebar_navigation_widget import SidebarNavigationWidget
 from src.ultibot_ui.windows.dashboard_view import DashboardView
 from src.ultibot_ui.windows.history_view import HistoryView
 from src.ultibot_ui.windows.settings_view import SettingsView
+from src.ultibot_ui.services.api_client import UltiBotAPIClient # Importar UltiBotAPIClient
 
 
 class MainWindow(QMainWindow):
@@ -44,7 +45,7 @@ class MainWindow(QMainWindow):
         market_data_service: MarketDataService,
         config_service: ConfigService,
         notification_service: NotificationService,
-        persistence_service: SupabasePersistenceService, # Añadir persistence_service
+        persistence_service: SupabasePersistenceService,
         parent=None,
     ):
         """Inicializa la ventana principal con los servicios requeridos.
@@ -63,13 +64,16 @@ class MainWindow(QMainWindow):
         self.market_data_service = market_data_service
         self.config_service = config_service
         self.notification_service = notification_service
-        self.persistence_service = persistence_service # Guardar la referencia
+        self.persistence_service = persistence_service
+
+        # Inicializar el cliente API para el frontend
+        self.api_client = UltiBotAPIClient()
 
         # Variables para rastrear el estado de inicialización
         self._initialization_complete = False
 
         self.setWindowTitle("UltiBotInversiones")
-        self.setGeometry(100, 100, 1200, 800)  # x, y, width, height
+        self.setGeometry(100, 100, 1200, 800)
 
         self._create_status_bar()
         self._setup_central_widget()
@@ -78,30 +82,44 @@ class MainWindow(QMainWindow):
         self.settings_view.config_changed.connect(
             self._update_paper_trading_status_display
         )
+        # Conectar la nueva señal de cambio de estado del modo real
+        self.settings_view.real_trading_mode_status_changed.connect(
+            self._update_real_trading_status_display
+        )
 
         # Usar QTimer para cargar el estado inicial de forma asíncrona segura
         self._init_timer = QTimer()
         self._init_timer.singleShot(100, self._schedule_initial_load)
 
     def _schedule_initial_load(self):
-        """Programa la carga inicial del estado de Paper Trading.
+        """Programa la carga inicial del estado de Paper Trading y Real Trading.
 
         Utiliza qasync para ejecutar código asíncrono de forma segura
         en el contexto de Qt.
         """
         import asyncio
 
-        # Obtener el loop de eventos actual
         try:
             loop = asyncio.get_event_loop()
-            # Crear tarea para cargar el estado inicial
-            task = loop.create_task(self._load_initial_paper_trading_status())
-            # Configurar callback para marcar la inicialización como completa
-            task.add_done_callback(lambda _: setattr(self, '_initialization_complete', True))
+            # Crear tareas para cargar ambos estados iniciales
+            task_paper = loop.create_task(self._load_initial_paper_trading_status())
+            task_real = loop.create_task(self._load_initial_real_trading_status())
+            
+            # Configurar callback para marcar la inicialización como completa después de ambas tareas
+            async def wait_for_all_initial_loads():
+                await asyncio.gather(task_paper, task_real)
+                self._initialization_complete = True
+                logging.info("Inicialización completa de los estados de trading.")
+
+            loop.create_task(wait_for_all_initial_loads())
+
         except Exception as e:
             logging.error(f"Error al programar carga inicial: {e}", exc_info=True)
             self.paper_trading_status_label.setText("Modo: Error de Inicialización")
             self.paper_trading_status_label.setStyleSheet("font-weight: bold; color: red;")
+            self.real_trading_status_label.setText("Modo Real: Error")
+            self.real_trading_status_label.setStyleSheet("font-weight: bold; color: red;")
+
 
     def _create_status_bar(self):
         """Crea y configura la barra de estado de la ventana principal."""
@@ -114,11 +132,17 @@ class MainWindow(QMainWindow):
 
         # Etiqueta para el modo Paper Trading
         self.paper_trading_status_label = QLabel("Modo: Real")
-        # Estilo inicial
         self.paper_trading_status_label.setStyleSheet(
             "font-weight: bold; color: green;"
         )
         self.statusBar.addPermanentWidget(self.paper_trading_status_label)
+
+        # Etiqueta para el modo de Operativa Real Limitada (NUEVO)
+        self.real_trading_status_label = QLabel("Modo Real: Inactivo")
+        self.real_trading_status_label.setStyleSheet(
+            "font-weight: bold; color: gray;"
+        )
+        self.statusBar.addPermanentWidget(self.real_trading_status_label)
 
         self.statusBar.showMessage("Listo")
 
@@ -136,9 +160,27 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self.paper_trading_status_label.setText("Modo: Error")
             self.paper_trading_status_label.setStyleSheet("font-weight: bold; color: red;")
-            self.statusBar.showMessage(f"Error al cargar modo: {e}")
+            self.statusBar.showMessage(f"Error al cargar modo Paper: {e}")
             logging.error(
                 f"Error al cargar el estado inicial del Paper Trading: {e}",
+                exc_info=True,
+            )
+
+    async def _load_initial_real_trading_status(self):
+        """Carga el estado inicial del modo de Operativa Real Limitada y actualiza la UI."""
+        try:
+            status_data = await self.api_client.get_real_trading_mode_status()
+            self._update_real_trading_status_label(
+                status_data.get("isActive", False),
+                status_data.get("executedCount", 0),
+                status_data.get("limit", 5)
+            )
+        except Exception as e:
+            self.real_trading_status_label.setText("Modo Real: Error")
+            self.real_trading_status_label.setStyleSheet("font-weight: bold; color: red;")
+            self.statusBar.showMessage(f"Error al cargar modo Real: {e}")
+            logging.error(
+                f"Error al cargar el estado inicial del Real Trading: {e}",
                 exc_info=True,
             )
 
@@ -170,6 +212,23 @@ class MainWindow(QMainWindow):
                 "font-weight: bold; color: green;"
             )
 
+    def _update_real_trading_status_display(self, is_active: bool, executed_count: int, limit: int):
+        """Actualiza la visualización del modo de Operativa Real Limitada en la barra de estado.
+
+        Args:
+            is_active: True si el modo real está activo
+            executed_count: Número de operaciones reales ejecutadas
+            limit: Límite de operaciones reales
+        """
+        if is_active:
+            self.real_trading_status_label.setText(f"MODO REAL LIMITADO ACTIVO ({executed_count}/{limit})")
+            self.real_trading_status_label.setStyleSheet("font-weight: bold; color: red;")
+        else:
+            self.real_trading_status_label.setText("Modo Real: Inactivo")
+            self.real_trading_status_label.setStyleSheet("font-weight: bold; color: gray;")
+        self.statusBar.showMessage("Estado de Operativa Real actualizado.")
+
+
     def _setup_central_widget(self):
         """Configura el widget central con la navegación lateral y las vistas."""
         central_widget = QWidget()
@@ -194,7 +253,7 @@ class MainWindow(QMainWindow):
             self.market_data_service,
             self.config_service,
             self.notification_service,
-            self.persistence_service, # Pasar persistence_service
+            self.persistence_service,
         )
         self.stacked_widget.addWidget(self.dashboard_view)  # Índice 0
 
@@ -211,7 +270,7 @@ class MainWindow(QMainWindow):
         self.history_view = HistoryView(self.user_id)
         self.stacked_widget.addWidget(self.history_view)  # Índice 3
 
-        self.settings_view = SettingsView(str(self.user_id), self.config_service)
+        self.settings_view = SettingsView(str(self.user_id), self.api_client) # Pasar api_client
         self.stacked_widget.addWidget(self.settings_view)  # Índice 4
 
         # Mapeo de nombres a índices del stacked widget

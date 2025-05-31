@@ -3,11 +3,10 @@ from typing import Dict, List, Optional
 from uuid import UUID
 from datetime import datetime
 
-from src.shared.data_types import PortfolioSnapshot, PortfolioSummary, PortfolioAsset, AssetBalance, UserConfiguration, Trade # Importar Trade
+from src.shared.data_types import PortfolioSnapshot, PortfolioSummary, PortfolioAsset, AssetBalance, UserConfiguration, Trade
 from src.ultibot_backend.services.market_data_service import MarketDataService
-from src.ultibot_backend.services.config_service import ConfigService
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService # Importar PersistenceService
-from src.ultibot_backend.core.exceptions import UltiBotError, ConfigurationError, ExternalAPIError, PortfolioError # Importar PortfolioError
+from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from src.ultibot_backend.core.exceptions import UltiBotError, ConfigurationError, ExternalAPIError, PortfolioError
 
 logger = logging.getLogger(__name__)
 
@@ -15,10 +14,9 @@ class PortfolioService:
     """
     Servicio para gestionar y proporcionar el estado del portafolio (paper trading y real).
     """
-    def __init__(self, market_data_service: MarketDataService, config_service: ConfigService, persistence_service: SupabasePersistenceService):
+    def __init__(self, market_data_service: MarketDataService, persistence_service: SupabasePersistenceService):
         self.market_data_service = market_data_service
-        self.config_service = config_service
-        self.persistence_service = persistence_service # Asignar persistence_service
+        self.persistence_service = persistence_service
         self.paper_trading_balance: float = 0.0
         self.paper_trading_assets: Dict[str, PortfolioAsset] = {} # Símbolo -> PortfolioAsset
         self.user_id: Optional[UUID] = None # Se establecerá al inicializar o cargar la configuración
@@ -29,14 +27,18 @@ class PortfolioService:
         """
         self.user_id = user_id
         try:
-            user_config = await self.config_service.get_user_configuration(user_id) # Corregir llamada
-            self.paper_trading_balance = user_config.defaultPaperTradingCapital or 10000.0 # Usar valor por defecto si no está configurado
+            # Obtener la configuración directamente del servicio de persistencia
+            config_data = await self.persistence_service.get_user_configuration(user_id)
+            user_config = UserConfiguration(**config_data) if config_data else None
+            
+            if user_config and user_config.defaultPaperTradingCapital is not None:
+                self.paper_trading_balance = user_config.defaultPaperTradingCapital
+            else:
+                self.paper_trading_balance = 10000.0 # Valor por defecto si no está configurado o no se encuentra
+                logger.info(f"No se encontró defaultPaperTradingCapital para el usuario {user_id}. Usando valor por defecto: {self.paper_trading_balance}")
+
             logger.info(f"Portafolio de paper trading inicializado para el usuario {user_id} con capital: {self.paper_trading_balance}")
             # TODO: Cargar activos de paper trading persistidos si aplica (para futuras historias)
-        except ConfigurationError as e:
-            logger.error(f"Error al cargar la configuración del usuario para inicializar el portafolio: {e}")
-            self.paper_trading_balance = 10000.0 # Fallback a un valor por defecto
-            raise UltiBotError(f"No se pudo inicializar el portafolio de paper trading debido a un error de configuración: {e}")
         except Exception as e:
             logger.critical(f"Error inesperado al inicializar el portafolio para el usuario {user_id}: {e}", exc_info=True)
             self.paper_trading_balance = 10000.0 # Fallback
@@ -220,13 +222,17 @@ class PortfolioService:
 
         self.paper_trading_balance += amount
         try:
-            user_config = await self.config_service.get_user_configuration(user_id) # Corregir llamada
-            user_config.defaultPaperTradingCapital = self.paper_trading_balance
-            await self.config_service.save_user_configuration(user_config) # save_user_configuration solo toma config
-            logger.info(f"Saldo de paper trading actualizado a {self.paper_trading_balance} para el usuario {user_id}.")
-        except ConfigurationError as e:
-            logger.error(f"Error al persistir el saldo de paper trading para el usuario {user_id}: {e}")
-            raise UltiBotError(f"No se pudo persistir el saldo de paper trading: {e}")
+            # Obtener la configuración directamente del servicio de persistencia
+            config_data = await self.persistence_service.get_user_configuration(user_id)
+            user_config = UserConfiguration(**config_data) if config_data else None
+
+            if user_config:
+                user_config.defaultPaperTradingCapital = self.paper_trading_balance
+                await self.persistence_service.upsert_user_configuration(user_id, user_config.model_dump(mode='json', by_alias=True, exclude_none=True))
+                logger.info(f"Saldo de paper trading actualizado a {self.paper_trading_balance} para el usuario {user_id}.")
+            else:
+                logger.error(f"No se encontró la configuración de usuario para {user_id}. No se pudo persistir el capital de paper trading.")
+                raise ConfigurationError(f"No se encontró la configuración de usuario para {user_id}.")
         except Exception as e:
             logger.critical(f"Error inesperado al actualizar y persistir el saldo de paper trading para el usuario {user_id}: {e}", exc_info=True)
             raise UltiBotError(f"Error inesperado al actualizar el saldo de paper trading: {e}")
@@ -296,22 +302,20 @@ class PortfolioService:
             logger.info(f"Activo {symbol} añadido a paper trading. Cantidad: {initial_quantity}, Precio de entrada: {executed_price}")
 
         # 2.4: Persistir el PortfolioSnapshot actualizado
-        # Primero, obtener la configuración del usuario para actualizar el defaultPaperTradingCapital
-        user_config = await self.config_service.get_user_configuration(user_id)
-        user_config.defaultPaperTradingCapital = self.paper_trading_balance
-        
-        # Convertir los activos a una lista de diccionarios para guardar en la configuración
-        # Esto es una simplificación. Idealmente, los activos de paper trading deberían tener su propia tabla.
-        # Para v1.0, los guardaremos como parte de la configuración del usuario si es necesario persistirlos.
-        # Por ahora, solo actualizamos el capital. La persistencia de assetHoldings se pospone.
-        # TODO: Implementar persistencia de assetHoldings de paper trading en futuras historias.
-
+        # Por ahora, solo persistimos el capital actualizado en la configuración del usuario.
+        # La persistencia de assetHoldings de paper trading se pospone.
         try:
-            await self.config_service.save_user_configuration(user_config)
-            logger.info(f"Capital de paper trading persistido: {self.paper_trading_balance}")
+            user_config_dict = await self.persistence_service.get_user_configuration(user_id)
+            if user_config_dict:
+                user_config = UserConfiguration(**user_config_dict)
+                user_config.defaultPaperTradingCapital = self.paper_trading_balance
+                await self.persistence_service.upsert_user_configuration(user_id, user_config.model_dump(mode='json', by_alias=True, exclude_none=True))
+                logger.info(f"Capital de paper trading persistido: {self.paper_trading_balance}")
+            else:
+                logger.error(f"No se encontró la configuración de usuario para {user_id}. No se pudo persistir el capital de paper trading.")
         except Exception as e:
-            logger.error(f"Error al persistir el capital de paper trading para usuario {user_id}: {e}", exc_info=True)
-            raise PortfolioError(f"Fallo al persistir el capital de paper trading: {e}")
+            logger.error(f"Error al persistir el capital de paper trading para usuario {user_id} tras cierre de trade: {e}", exc_info=True)
+            raise PortfolioError(f"Fallo al persistir el capital de paper trading tras cierre: {e}")
 
         logger.info(f"Portafolio de paper trading actualizado. Nuevo balance: {self.paper_trading_balance}")
 
@@ -436,3 +440,24 @@ class PortfolioService:
             asset.quantity -= quantity
             logger.info(f"Cantidad de {quantity} de {symbol} removida de paper trading. Restante: {asset.quantity}")
         # TODO: Persistir activos de paper trading (para futuras historias)
+
+    async def get_real_usdt_balance(self, user_id: UUID) -> float:
+        """
+        Obtiene el saldo disponible de USDT en la cuenta real de Binance para un usuario.
+        Lanza PortfolioError si hay un problema al obtener el saldo.
+        """
+        try:
+            binance_balances: List[AssetBalance] = await self.market_data_service.get_binance_spot_balances(user_id)
+            usdt_balance = 0.0
+            for balance in binance_balances:
+                if balance.asset == "USDT":
+                    usdt_balance = balance.free
+                    break
+            logger.info(f"Saldo de USDT real para el usuario {user_id}: {usdt_balance}")
+            return usdt_balance
+        except ExternalAPIError as e:
+            logger.error(f"Error de API externa al obtener el saldo de USDT para el usuario {user_id}: {str(e)}", exc_info=True)
+            raise PortfolioError(f"No se pudo obtener el saldo de USDT de Binance: {str(e)}") from e
+        except Exception as e:
+            logger.critical(f"Error inesperado al obtener el saldo de USDT para el usuario {user_id}: {str(e)}", exc_info=True)
+            raise PortfolioError(f"Error inesperado al obtener el saldo de USDT: {str(e)}") from e

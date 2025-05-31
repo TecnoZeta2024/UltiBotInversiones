@@ -4,20 +4,19 @@ from uuid import UUID
 from typing import Optional, Dict, Any, List
 from uuid import UUID
 
-from src.shared.data_types import ServiceName, APICredential, Notification, Trade # Importar Trade
+from src.shared.data_types import ServiceName, APICredential, Notification, Trade
 from src.ultibot_backend.adapters.telegram_adapter import TelegramAdapter
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService # Importar PersistenceService
+from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 from src.ultibot_backend.services.credential_service import CredentialService
-from src.ultibot_backend.core.exceptions import CredentialError, NotificationError, TelegramNotificationError, ExternalAPIError # Importar excepciones
+from src.ultibot_backend.core.exceptions import CredentialError, NotificationError, TelegramNotificationError, ExternalAPIError
 
-# Configuración básica de logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class NotificationService:
     def __init__(self, credential_service: CredentialService, persistence_service: SupabasePersistenceService):
         self.credential_service = credential_service
-        self.persistence_service = persistence_service # Inyectar el servicio de persistencia
+        self.persistence_service = persistence_service
         self._telegram_adapter: Optional[TelegramAdapter] = None
 
     async def _get_telegram_adapter(self, user_id: UUID) -> Optional[TelegramAdapter]:
@@ -28,24 +27,22 @@ class NotificationService:
         telegram_credential = await self.credential_service.get_credential(
             user_id=user_id,
             service_name=ServiceName.TELEGRAM_BOT,
-            credential_label="default_telegram_bot" # Asumimos una etiqueta por defecto
+            credential_label="default_telegram_bot"
         )
 
         if not telegram_credential:
             logger.warning(f"No se encontraron credenciales de Telegram para el usuario {user_id}.")
             raise CredentialError(f"No se encontraron credenciales de Telegram para el usuario {user_id}.", code="TELEGRAM_CREDENTIAL_NOT_FOUND")
 
-        bot_token = telegram_credential.encrypted_api_key # El token del bot se almacena aquí
+        bot_token = telegram_credential.encrypted_api_key
         
         if not bot_token:
             logger.error(f"Token de bot de Telegram no encontrado en las credenciales para el usuario {user_id}.")
             return None
 
-        # Reutilizar adaptador si el token es el mismo
         if self._telegram_adapter and self._telegram_adapter.bot_token == bot_token:
             return self._telegram_adapter
         
-        # Cerrar adaptador existente si el token ha cambiado
         if self._telegram_adapter:
             await self._telegram_adapter.close()
 
@@ -112,7 +109,6 @@ class NotificationService:
             logger.warning(f"No se encontraron credenciales de Telegram para el usuario {user_id}. No se puede enviar mensaje de prueba.")
             raise CredentialError(f"No se encontraron credenciales de Telegram para el usuario {user_id}.", code="TELEGRAM_CREDENTIAL_NOT_FOUND")
 
-        # El chat_id está en encrypted_other_details como un JSON blob
         chat_id = None
         if telegram_credential.encrypted_other_details:
             try:
@@ -135,26 +131,22 @@ class NotificationService:
         
         try:
             await telegram_adapter.send_message(chat_id, message)
-            # Actualizar el estado de la credencial a 'active' si la verificación es exitosa
             await self.credential_service.update_credential(
                 credential_id=telegram_credential.id,
                 status="active"
             )
             logger.info(f"Mensaje de prueba de Telegram enviado con éxito para el usuario {user_id}.")
-            # El estado de la credencial ya se actualiza en CredentialService.verify_credential
             return True
         except ExternalAPIError as e:
             logger.error(f"Fallo de API externa al enviar mensaje de prueba de Telegram para el usuario {user_id}: {str(e)}", exc_info=True)
-            # El estado de la credencial ya se actualiza en CredentialService.verify_credential
             raise TelegramNotificationError(
                 message=f"Fallo al enviar mensaje de prueba de Telegram: {str(e)}",
                 code="TELEGRAM_SEND_FAILED",
                 original_exception=e,
-                telegram_response=e.response_data # Pasar la respuesta de Telegram si está disponible
+                telegram_response=e.response_data
             )
         except Exception as e:
             logger.error(f"Fallo inesperado al enviar mensaje de prueba de Telegram para el usuario {user_id}: {e}", exc_info=True)
-            # El estado de la credencial ya se actualiza en CredentialService.verify_credential
             raise TelegramNotificationError(
                 message=f"Fallo inesperado al enviar mensaje de prueba de Telegram: {e}",
                 code="UNEXPECTED_TELEGRAM_ERROR",
@@ -176,7 +168,6 @@ class NotificationService:
         Returns:
             True si la notificación se envió con éxito, False en caso contrario.
         """
-        # Crear la notificación para guardar en la base de datos
         notification_to_save = Notification(
             userId=user_id,
             eventType=event_type,
@@ -184,16 +175,13 @@ class NotificationService:
             title=title,
             message=message,
             dataPayload=dataPayload
-            # Otros campos pueden ser poblados según sea necesario
         )
         
-        # Guardar la notificación en la base de datos
         try:
             await self.save_notification(notification_to_save)
         except NotificationError as e:
             logger.error(f"No se pudo guardar la notificación en la base de datos: {e}")
-            # Continuar con el envío si el guardado falla, pero registrar el error
-            pass # O re-raise si el guardado es crítico para todos los canales
+            pass
 
         if channel == "telegram":
             telegram_credential = await self.credential_service.get_credential(
@@ -245,7 +233,6 @@ class NotificationService:
                 )
         elif channel == "ui":
             logger.info(f"Notificación para UI para el usuario {user_id}: {title} - {message}. (Implementación pendiente)")
-            # Lógica para enviar a la UI (ej. a través de un WebSocket o un sistema de eventos interno)
             return True
         else:
             logger.warning(f"Canal de notificación '{channel}' no soportado.")
@@ -272,7 +259,6 @@ class NotificationService:
             f"ID de Trade: {trade_id}"
         )
         
-        # Enviar a la UI
         try:
             await self.send_notification(
                 user_id=user_id,
@@ -286,10 +272,6 @@ class NotificationService:
         except Exception as e:
             logger.error(f"Error al enviar notificación UI para trade simulado {trade_id}: {e}", exc_info=True)
 
-        # Enviar a Telegram si está configurado
-        # Aquí asumimos que la configuración del usuario (enableTelegramNotifications)
-        # se verifica en un nivel superior o que send_notification ya lo maneja.
-        # Por simplicidad, llamamos directamente a send_notification para Telegram.
         try:
             await self.send_notification(
                 user_id=user_id,
@@ -302,6 +284,77 @@ class NotificationService:
             logger.info(f"Notificación Telegram de trade simulado {trade_id} enviada.")
         except Exception as e:
             logger.error(f"Error al enviar notificación Telegram para trade simulado {trade_id}: {e}", exc_info=True)
+
+    async def send_real_trading_mode_activated_notification(self, user_id: UUID):
+        """
+        Envía una notificación cuando el modo de operativa real limitada se activa exitosamente.
+        """
+        title = "✅ Modo Real Limitado Activado"
+        message = (
+            "¡Felicidades! El modo de Operativa Real Limitada ha sido activado exitosamente.\n"
+            "Las próximas operaciones de alta confianza utilizarán dinero real de tu cuenta de Binance."
+        )
+        data_payload = {"mode": "real", "status": "activated"}
+
+        try:
+            await self.send_notification(
+                user_id=user_id,
+                title=title,
+                message=message,
+                channel="ui",
+                event_type="REAL_TRADING_MODE_ACTIVATED",
+                dataPayload=data_payload
+            )
+        except Exception as e:
+            logger.error(f"Error al enviar notificación UI de activación de modo real para {user_id}: {e}", exc_info=True)
+
+        try:
+            await self.send_notification(
+                user_id=user_id,
+                title=title,
+                message=message,
+                channel="telegram",
+                event_type="REAL_TRADING_MODE_ACTIVATED",
+                dataPayload=data_payload
+            )
+        except Exception as e:
+            logger.error(f"Error al enviar notificación Telegram de activación de modo real para {user_id}: {e}", exc_info=True)
+
+    async def send_real_trading_mode_activation_failed_notification(self, user_id: UUID, error_message: str):
+        """
+        Envía una notificación cuando falla la activación del modo de operativa real limitada.
+        """
+        title = "❌ Fallo al Activar Modo Real Limitado"
+        message = (
+            "No se pudo activar el modo de Operativa Real Limitada.\n"
+            f"Razón: {error_message}\n\n"
+            "Por favor, revisa tus credenciales de Binance, el saldo de USDT o el límite de operaciones."
+        )
+        data_payload = {"mode": "real", "status": "activation_failed", "error": error_message}
+
+        try:
+            await self.send_notification(
+                user_id=user_id,
+                title=title,
+                message=message,
+                channel="ui",
+                event_type="REAL_TRADING_MODE_ACTIVATION_FAILED",
+                dataPayload=data_payload
+            )
+        except Exception as e:
+            logger.error(f"Error al enviar notificación UI de fallo de activación de modo real para {user_id}: {e}", exc_info=True)
+
+        try:
+            await self.send_notification(
+                user_id=user_id,
+                title=title,
+                message=message,
+                channel="telegram",
+                event_type="REAL_TRADING_MODE_ACTIVATION_FAILED",
+                dataPayload=data_payload
+            )
+        except Exception as e:
+            logger.error(f"Error al enviar notificación Telegram de fallo de activación de modo real para {user_id}: {e}", exc_info=True)
 
     async def close(self):
         """Cierra cualquier adaptador de Telegram activo."""
