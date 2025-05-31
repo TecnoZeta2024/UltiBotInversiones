@@ -84,24 +84,41 @@ async def start_application():
 
         # --- Asegurar que la configuración de usuario por defecto exista ---
         # Esto es necesario porque api_credentials tiene una clave foránea a user_configurations.
-        existing_user_config = await config_service.load_user_configuration(user_id) # Cambiado a load_user_configuration
-        if not existing_user_config or existing_user_config.id != user_id: # Verificar si la configuración es realmente para este user_id
-            print(f"Configuración de usuario para {user_id} no encontrada o no válida. Creando configuración por defecto...")
-            default_user_config = UserConfiguration(
-                id=user_id,
-                user_id=user_id,
-                defaultPaperTradingCapital=10000.0, # Capital inicial para paper trading
-                enableTelegramNotifications=False,
-                selectedTheme="dark"
-            )
-            print("DEBUG: Antes de config_service.save_user_configuration") # Log de depuración
-            # logger.info("DEBUG: Antes de config_service.save_user_configuration") # Comentado para evitar dependencia de logger aquí
-            await config_service.save_user_configuration(user_id, default_user_config) # Pasar user_id como primer argumento
-            print("DEBUG: Después de config_service.save_user_configuration") # Log de depuración
-            # logger.info("DEBUG: Después de config_service.save_user_configuration") # Comentado
-            print("Configuración de usuario por defecto creada exitosamente.")
-        else:
-            print(f"Configuración de usuario para {user_id} ya existe.")
+        existing_user_config = await config_service.get_user_configuration(user_id) # Usar get_user_configuration
+        # get_user_configuration siempre devuelve una configuración (por defecto si no existe),
+        # por lo que la verificación de 'not existing_user_config' ya no es necesaria aquí.
+        # Solo necesitamos verificar si la configuración devuelta es la por defecto (recién creada)
+        # o una existente. La lógica de 'get_user_configuration' ya maneja la creación de la por defecto.
+        
+        # Si la configuración devuelta es la por defecto y no tiene el user_id correcto,
+        # o si es una configuración por defecto que no ha sido guardada aún.
+        # La lógica de get_user_configuration ya se encarga de esto.
+        # Aquí solo necesitamos asegurarnos de que la configuración esté guardada si es nueva.
+        
+        # Para simplificar, podemos asumir que get_user_configuration ya ha hecho su trabajo
+        # de cargar o crear la configuración. Si es una configuración por defecto recién creada,
+        # necesitamos guardarla.
+        
+        # Una forma de verificar si es una configuración "nueva" que necesita ser guardada
+        # es si su ID no coincide con el user_id (si el ID de la configuración es un UUID generado
+        # por defecto y no el user_id que se usa como clave primaria en la tabla).
+        # Sin embargo, el método get_default_configuration ahora asigna el user_id al campo 'user_id'
+        # y un nuevo UUID al campo 'id' de la UserConfiguration.
+        # La lógica de `get_user_configuration` ya se encarga de persistir la configuración por defecto
+        # si no la encuentra. Por lo tanto, esta sección puede simplificarse.
+
+        # La lógica actual de `get_user_configuration` en `ConfigService` ya maneja la carga
+        # o la creación de una configuración por defecto si no existe.
+        # No necesitamos una lógica de "asegurar que exista" aquí en `main.py`
+        # si `get_user_configuration` ya lo hace.
+        # Solo necesitamos llamar a `get_user_configuration` para que se inicialice la caché
+        # y se cree la entrada en la DB si es necesario.
+        
+        # Eliminamos la lógica redundante de creación y guardado de configuración por defecto aquí.
+        # La llamada a `get_user_configuration` es suficiente para asegurar que la configuración
+        # del usuario esté cargada y, si no existe, se cree una por defecto en la DB.
+        await config_service.get_user_configuration(user_id)
+        print(f"Configuración de usuario para {user_id} cargada o creada exitosamente.")
         # --- Fin de la lógica de configuración de usuario ---
 
         # --- Cargar y guardar credenciales de Binance si no existen ---

@@ -57,7 +57,7 @@ class MainWindow(QMainWindow):
     async def _load_initial_paper_trading_status(self):
         """Carga el estado inicial del modo Paper Trading y actualiza la UI."""
         try:
-            user_config = await self.config_service.load_user_configuration(self.user_id)
+            user_config = await self.config_service.get_user_configuration(self.user_id) # Usar get_user_configuration
             self._update_paper_trading_status_label(user_config.paperTradingActive or False)
         except Exception as e:
             self.paper_trading_status_label.setText("Modo: Error")

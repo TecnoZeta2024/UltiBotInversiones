@@ -149,6 +149,7 @@ class AiStrategyConfiguration(BaseModel):
     name: str
     appliesToStrategies: Optional[List[str]] = None
     appliesToPairs: Optional[List[str]] = None
+    geminiModelName: Optional[str] = None # Nombre del modelo Gemini a usar (ej. "gemini-1.5-pro")
     geminiPromptTemplate: Optional[str] = None
     indicatorWeights: Optional[Dict[str, float]] = None
     confidenceThresholds: Optional[Dict[str, float]] = None
@@ -265,3 +266,77 @@ class Notification(BaseModel):
         populate_by_name=True,
         arbitrary_types_allowed=True
     )
+
+# --- Tipos para Oportunidades de Trading ---
+class OpportunitySourceType(str, Enum):
+    MCP_SIGNAL = "mcp_signal"
+    MANUAL_ENTRY = "manual_entry"
+    AI_GENERATED = "ai_generated" # Si la IA genera oportunidades directamente
+    STRATEGY_TRIGGER = "strategy_trigger" # Si una estrategia predefinida la genera
+
+class OpportunityStatus(str, Enum):
+    NEW = "new" # Recién creada, antes de cualquier procesamiento.
+    PENDING_AI_ANALYSIS = "pending_ai_analysis"
+    AI_ANALYSIS_IN_PROGRESS = "ai_analysis_in_progress"
+    AI_ANALYSIS_COMPLETE = "ai_analysis_complete"
+    AI_ANALYSIS_FAILED = "ai_analysis_failed"
+    REJECTED_BY_AI = "rejected_by_ai"
+    PENDING_EXECUTION = "pending_execution" # Aprobada por IA, lista para que el motor de trading la considere
+    EXECUTING = "executing" # El motor de trading está intentando ejecutarla
+    EXECUTED_PARTIALLY = "executed_partially"
+    EXECUTED_FULLY = "executed_fully"
+    EXECUTION_FAILED = "execution_failed"
+    EXPIRED = "expired" # No se ejecutó a tiempo o ya no es válida
+    CANCELLED = "cancelled" # Cancelada manualmente o por el sistema
+    COMPLETED_PROFIT = "completed_profit" # Cerrada con ganancia
+    COMPLETED_LOSS = "completed_loss" # Cerrada con pérdida
+    COMPLETED_BREAKEVEN = "completed_breakeven" # Cerrada en punto de equilibrio
+
+class AIAnalysis(BaseModel):
+    calculatedConfidence: Optional[float] = Field(None, description="Nivel de confianza numérico (0.0 a 1.0) de la IA.")
+    suggestedAction: Optional[str] = Field(None, description="Dirección sugerida por la IA (ej. 'BUY', 'SELL', 'HOLD', 'REJECT').")
+    reasoning_ai: Optional[str] = Field(None, description="Justificación del análisis de la IA.")
+    rawAiOutput: Optional[str] = Field(None, description="Salida cruda completa del modelo de IA.")
+    dataVerification: Optional[Dict[str, Any]] = Field(None, description="Resultados de la verificación de datos de activos.")
+    ai_model_used: Optional[str] = Field(None, description="Nombre del modelo de IA utilizado para el análisis.")
+
+class Opportunity(BaseModel):
+    id: UUID = Field(default_factory=uuid4)
+    user_id: UUID
+    
+    source_type: OpportunitySourceType
+    source_name: Optional[str] = None # Ej. ID del MCP, nombre de la estrategia, "manual"
+    source_data: Optional[str] = None # JSON string con los datos originales de la fuente
+
+    status: OpportunityStatus = OpportunityStatus.NEW
+    status_reason: Optional[str] = None # Razón para el estado actual (ej. error de análisis)
+
+    # Detalles de la oportunidad (pueden ser llenados por la fuente o por el análisis IA)
+    symbol: Optional[str] = None # Ej. "BTC/USDT"
+    asset_type: Optional[str] = None # Ej. "SPOT", "FUTURES"
+    exchange: Optional[str] = None # Ej. "BINANCE"
+    
+    # Campos relacionados con la señal/predicción
+    predicted_direction: Optional[str] = None # 'UP', 'DOWN', 'SIDEWAYS'
+    predicted_price_target: Optional[float] = None
+    predicted_stop_loss: Optional[float] = None
+    prediction_timeframe: Optional[str] = None # Ej. "1h", "4h", "1d"
+    
+    # Análisis de IA
+    ai_analysis: Optional[AIAnalysis] = None # Objeto AIAnalysis con el resultado del análisis de IA
+    confidence_score: Optional[float] = None # 0.0 a 1.0 (redundante si está en ai_analysis, pero se mantiene por compatibilidad)
+    suggested_action: Optional[str] = None # Ej. 'BUY', 'SELL', 'HOLD', 'REJECT' (redundante si está en ai_analysis)
+    ai_model_used: Optional[str] = None # Ej. "gemini-1.5-pro" (redundante si está en ai_analysis)
+
+    # Detalles de ejecución (si aplica)
+    executed_at: Optional[datetime] = None
+    executed_price: Optional[float] = None
+    executed_quantity: Optional[float] = None
+    related_order_id: Optional[str] = None # ID de la orden en el exchange
+    
+    # Timestamps
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    expires_at: Optional[datetime] = None # Si la oportunidad tiene una ventana de validez
+
+    model_config = ConfigDict(use_enum_values=True)

@@ -43,3 +43,22 @@ class ConfigurationError(UltiBotError):
 class OrderExecutionError(UltiBotError):
     """Excepción para errores durante la ejecución de órdenes de trading."""
     pass
+
+class MCPError(ExternalAPIError):
+    """Excepción específica para errores al interactuar con un Servidor de Contexto de Modelo (MCP)."""
+    def __init__(self, message: str, mcp_id: str, mcp_url: Optional[str] = None, status_code: Optional[int] = None, response_data: Optional[Dict[str, Any]] = None, original_exception: Optional[Exception] = None):
+        super().__init__(message, service_name=f"MCP_{mcp_id}", status_code=status_code, response_data=response_data, original_exception=original_exception)
+        self.mcp_id = mcp_id
+        self.mcp_url = mcp_url
+
+class AIAnalysisError(UltiBotError):
+    """Excepción para errores durante el proceso de análisis de IA (ej. con Gemini)."""
+    def __init__(self, message: str, llm_provider: Optional[str] = "GEMINI", details: Optional[Dict[str, Any]] = None, original_exception: Optional[Exception] = None):
+        super().__init__(message, code=f"{llm_provider.upper()}_ANALYSIS_ERROR" if llm_provider else "AI_ANALYSIS_ERROR", details=details)
+        self.llm_provider = llm_provider
+        self.original_exception = original_exception
+
+class MobulaAPIError(ExternalAPIError):
+    """Excepción específica para errores al interactuar con la API de Mobula."""
+    def __init__(self, message: str, status_code: Optional[int] = None, response_data: Optional[Dict[str, Any]] = None, original_exception: Optional[Exception] = None):
+        super().__init__(message, service_name="MOBULA", status_code=status_code, response_data=response_data, original_exception=original_exception)

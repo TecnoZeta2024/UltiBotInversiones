@@ -161,7 +161,7 @@ class MarketDataWidget(QWidget):
     async def load_and_subscribe_pairs(self):
         """Carga los pares favoritos del usuario y suscribe a los streams de datos."""
         try:
-            user_config = await self.config_service.load_user_configuration(self.user_id)
+            user_config = await self.config_service.get_user_configuration(self.user_id) # Usar get_user_configuration
             if user_config.favoritePairs:
                 self.set_favorite_pairs(user_config.favoritePairs)
             else:
@@ -256,9 +256,9 @@ class MarketDataWidget(QWidget):
     async def _save_favorite_pairs(self, pairs: List[str]):
         """Guarda la lista de pares favoritos en la configuración del usuario."""
         try:
-            user_config = await self.config_service.load_user_configuration(self.user_id)
+            user_config = await self.config_service.get_user_configuration(self.user_id) # Usar get_user_configuration
             user_config.favoritePairs = pairs
-            await self.config_service.save_user_configuration(self.user_id, user_config)
+            await self.config_service.save_user_configuration(user_config) # Eliminar user_id como argumento
             print(f"Pares favoritos guardados: {pairs}")
         except Exception as e:
             print(f"Error al guardar pares favoritos: {e}")
