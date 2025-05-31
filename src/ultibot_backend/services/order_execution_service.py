@@ -4,7 +4,7 @@ from typing import Dict, Any, Optional, List # Importar List
 from uuid import UUID, uuid4
 from datetime import datetime, timezone # Importar timezone
 
-from src.shared.data_types import TradeOrderDetails, UserConfiguration # UserConfiguration no es estrictamente necesario aquí
+from src.shared.data_types import TradeOrderDetails, UserConfiguration, OrderCategory # Importar OrderCategory
 from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
 from src.ultibot_backend.core.exceptions import OrderExecutionError, ExternalAPIError
 
@@ -24,7 +24,8 @@ class OrderExecutionService:
         side: str, # 'BUY' o 'SELL'
         quantity: float,
         api_key: str,
-        api_secret: str
+        api_secret: str,
+        ocoOrderListId: Optional[str] = None # Añadir este parámetro
     ) -> TradeOrderDetails:
         """
         Ejecuta una orden de mercado real en Binance.
@@ -66,23 +67,28 @@ class OrderExecutionService:
 
             # Mapear la respuesta de Binance a TradeOrderDetails
             order_details = TradeOrderDetails(
-                orderId_internal=str(uuid4()),
-            orderId_exchange=str(simulated_response.get("orderId", uuid4())), # Proporcionar un valor por defecto
-            clientOrderId_exchange=simulated_response.get("clientOrderId", str(uuid4())),
-            type='market',
-            status=simulated_response.get("status", "filled").lower(), # Valor por defecto y .lower()
-            requestedPrice=float(simulated_response.get("price", 0.0)), # Valor por defecto
-            executedPrice=float(simulated_response["fills"][0]["price"]) if simulated_response.get("fills") and simulated_response["fills"] else 0.0, # Manejar lista vacía
-            requestedQuantity=float(simulated_response.get("origQty", 0.0)), # Valor por defecto
-            executedQuantity=float(simulated_response.get("executedQty", 0.0)), # Valor por defecto
-            cumulativeQuoteQty=float(simulated_response.get("cummulativeQuoteQty", 0.0)), # Valor por defecto
-            commissions=[{
-                "amount": float(f.get("commission", 0.0)), # Usar .get() para seguridad
-                "asset": f.get("commissionAsset", "")
-            } for f in simulated_response.get("fills", [])] if simulated_response.get("fills") else [], # Manejar fills como lista vacía
-            timestamp=datetime.fromtimestamp(simulated_response.get("transactTime", datetime.now().timestamp() * 1000) / 1000, tz=timezone.utc), # Usar timezone.utc
-            submittedAt=datetime.fromtimestamp(simulated_response.get("transactTime", datetime.now().timestamp() * 1000) / 1000, tz=timezone.utc),
-            fillTimestamp=datetime.fromtimestamp(simulated_response.get("transactTime", datetime.now().timestamp() * 1000) / 1000, tz=timezone.utc)
+                orderId_internal=uuid4(),
+                orderId_exchange=str(simulated_response.get("orderId", uuid4())), # Proporcionar un valor por defecto
+                clientOrderId_exchange=simulated_response.get("clientOrderId", str(uuid4())),
+                orderCategory=OrderCategory.ENTRY, # Asignar un valor por defecto
+                type='market',
+                status=simulated_response.get("status", "filled").lower(), # Valor por defecto y .lower()
+                requestedPrice=float(simulated_response.get("price", 0.0)), # Valor por defecto
+                requestedQuantity=float(simulated_response.get("origQty", 0.0)), # Valor por defecto
+                executedQuantity=float(simulated_response.get("executedQty", 0.0)), # Valor por defecto
+                executedPrice=float(simulated_response["fills"][0]["price"]) if simulated_response.get("fills") and simulated_response["fills"] else 0.0, # Manejar lista vacía
+                cumulativeQuoteQty=float(simulated_response.get("cummulativeQuoteQty", 0.0)), # Valor por defecto
+                commissions=[{
+                    "amount": float(f.get("commission", 0.0)), # Usar .get() para seguridad
+                    "asset": f.get("commissionAsset", "")
+                } for f in simulated_response.get("fills", [])] if simulated_response.get("fills") else [], # Manejar fills como lista vacía
+                commission=float(simulated_response["fills"][0]["commission"]) if simulated_response.get("fills") and simulated_response["fills"] else None, # Campo legado
+                commissionAsset=simulated_response["fills"][0]["commissionAsset"] if simulated_response.get("fills") and simulated_response["fills"] else None, # Campo legado
+                timestamp=datetime.fromtimestamp(simulated_response.get("transactTime", datetime.now().timestamp() * 1000) / 1000, tz=timezone.utc), # Usar timezone.utc
+                submittedAt=datetime.fromtimestamp(simulated_response.get("transactTime", datetime.now().timestamp() * 1000) / 1000, tz=timezone.utc),
+                fillTimestamp=datetime.fromtimestamp(simulated_response.get("transactTime", datetime.now().timestamp() * 1000) / 1000, tz=timezone.utc),
+                rawResponse=simulated_response,
+                ocoOrderListId=ocoOrderListId
             )
             logger.info(f"Orden REAL ejecutada exitosamente: {order_details.orderId_exchange}")
             return order_details
@@ -109,7 +115,7 @@ class PaperOrderExecutionService:
         symbol: str,
         side: str, # 'BUY' o 'SELL'
         quantity: float,
-        # En paper trading, no necesitamos api_key/secret aquí
+        ocoOrderListId: Optional[str] = None # Añadir este parámetro
     ) -> TradeOrderDetails:
         """
         Simula la ejecución de una orden de mercado.
@@ -144,20 +150,25 @@ class PaperOrderExecutionService:
 
         # Crear un objeto TradeOrderDetails simulado
         order_details = TradeOrderDetails(
-            orderId_internal=str(uuid4()),
+            orderId_internal=uuid4(),
             orderId_exchange=f"PAPER_{uuid4()}",
             clientOrderId_exchange=f"PAPER_CLIENT_{uuid4()}",
+            orderCategory=OrderCategory.ENTRY, # Asignar un valor por defecto
             type='market',
             status='filled',
             requestedPrice=simulated_price,
-            executedPrice=simulated_price,
             requestedQuantity=quantity,
             executedQuantity=quantity,
+            executedPrice=simulated_price,
             cumulativeQuoteQty=cost_or_revenue,
             commissions=[], # Sin comisiones en paper trading por simplicidad
+            commission=None, # Campo legado
+            commissionAsset=None, # Campo legado
             timestamp=datetime.now(timezone.utc),
             submittedAt=datetime.now(timezone.utc),
-            fillTimestamp=datetime.now(timezone.utc)
+            fillTimestamp=datetime.now(timezone.utc),
+            rawResponse=None,
+            ocoOrderListId=ocoOrderListId # Asignar el parámetro
         )
         self.virtual_trades.append(order_details)
         logger.info(f"Orden PAPER simulada exitosamente: {order_details.orderId_internal}")

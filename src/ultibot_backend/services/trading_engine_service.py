@@ -137,6 +137,30 @@ class TradingEngineService:
         while True:
             try:
                 logger.debug("Ejecutando ciclo de monitoreo de Real Trading...")
+
+                # Obtener credenciales de Binance una vez por ciclo de monitoreo
+                # Asumimos que todos los trades reales son del mismo usuario o que las credenciales son globales/por defecto
+                # Si se necesita por usuario, esta lógica debería estar dentro del bucle 'for trade'.
+                # TODO: Adaptar para múltiples usuarios si es necesario.
+                binance_credential = await self.credential_service.get_credential(
+                    user_id=UUID("00000000-0000-0000-0000-000000000001"), # Usar un ID de usuario por defecto o el del primer trade
+                    service_name=ServiceName.BINANCE_SPOT,
+                    credential_label="default_binance_spot"
+                )
+                if not binance_credential:
+                    logger.error("No se encontraron credenciales de Binance para el monitoreo de trades reales.")
+                    await asyncio.sleep(MONITOR_INTERVAL_SECONDS)
+                    continue # Saltar este ciclo y reintentar en el siguiente
+
+                api_key = self.credential_service.decrypt_data(binance_credential.encrypted_api_key)
+                api_secret: Optional[str] = None
+                if binance_credential.encrypted_api_secret:
+                    api_secret = self.credential_service.decrypt_data(binance_credential.encrypted_api_secret)
+
+                if not api_key or api_secret is None:
+                    logger.error("API Key o Secret de Binance no pudieron ser desencriptados para el monitoreo de trades reales.")
+                    await asyncio.sleep(MONITOR_INTERVAL_SECONDS)
+                    continue # Saltar este ciclo y reintentar en el siguiente
                 # Subtask 2.3: Obtener trades abiertos en Real Trading
                 open_real_trades = await self.persistence_service.get_open_real_trades()
                 
@@ -144,23 +168,116 @@ class TradingEngineService:
                     logger.debug("No hay trades abiertos en Real Trading para monitorear.")
                 
                 for trade in open_real_trades:
-                    # Subtask 2.3: Dentro del monitoreo, obtener el precio de mercado actual
-                    # Subtask 2.3: Implementar la lógica para ajustar el TSL
-                    # Subtask 2.3: Implementar la lógica para detectar si el precio alcanza el TSL o TP
-                    # Subtask 2.4: Si se alcanza TSL/TP, enviar orden de cierre real
-                    await self.monitor_and_manage_real_trade_exit(trade)
+                    # Subtask 2.3: Monitorear órdenes OCO en Binance si existen
+                    if trade.ocoOrderListId:
+                        logger.debug(f"Trade REAL {trade.id} tiene ocoOrderListId: {trade.ocoOrderListId}. Monitoreando orden OCO.")
+                        await self._monitor_binance_oco_orders(trade, api_key, api_secret)
+                    else:
+                        # Si no hay orden OCO, continuar con el monitoreo de TSL/TP basado en precio
+                        logger.debug(f"Trade REAL {trade.id} no tiene ocoOrderListId. Monitoreando TSL/TP basado en precio.")
+                        await self.monitor_and_manage_real_trade_exit(trade)
                 
             except Exception as e:
                 logger.error(f"Error en el bucle de monitoreo de Real Trading: {e}", exc_info=True)
             
             await asyncio.sleep(MONITOR_INTERVAL_SECONDS)
 
+    async def _monitor_binance_oco_orders(self, trade: Trade, api_key: str, api_secret: str) -> None:
+        """
+        Monitorea el estado de las órdenes OCO en Binance para un trade real.
+        """
+        logger.info(f"Monitoreando orden OCO {trade.ocoOrderListId} para trade REAL {trade.id} ({trade.symbol})")
+
+        try:
+            # Asegurarse de que ocoOrderListId no sea None antes de pasarlo
+            if trade.ocoOrderListId is None:
+                logger.error(f"Trade REAL {trade.id} tiene ocoOrderListId como None, pero se esperaba un string. Saltando monitoreo OCO.")
+                return
+            
+            oco_order_status = await self.binance_adapter.get_oco_order_by_list_client_order_id(
+                api_key=api_key,
+                api_secret=api_secret,
+                listClientOrderId=str(trade.ocoOrderListId) # Convertir a str expl�citamente
+            )
+            logger.debug(f"Estado de orden OCO {trade.ocoOrderListId}: {oco_order_status}")
+
+            if oco_order_status and oco_order_status.get('listStatusType') == 'ALL_DONE':
+                logger.info(f"Orden OCO {trade.ocoOrderListId} para trade {trade.id} ha sido ejecutada (ALL_DONE).")
+                
+                executed_order_report = None
+                closing_reason = None
+                executed_price = 0.0
+                
+                # Identificar cuál de las órdenes (TP o SL) se ejecutó
+                for order_report in oco_order_status.get('orderReports', []):
+                    if order_report.get('status') == 'FILLED':
+                        executed_order_report = order_report
+                        executed_price = float(order_report.get('price')) if order_report.get('price') else 0.0
+                        if order_report.get('type') == 'TAKE_PROFIT_LIMIT':
+                            closing_reason = 'TP_HIT'
+                        elif order_report.get('type') == 'STOP_LOSS_LIMIT':
+                            closing_reason = 'SL_HIT'
+                        break # Encontramos la orden ejecutada
+
+                if executed_order_report and closing_reason:
+                    logger.info(f"Orden de salida ejecutada para trade {trade.id}: {closing_reason} a precio {executed_price:.4f}")
+                    
+                    # Crear TradeOrderDetails para la orden de salida ejecutada
+                    exit_order_details = TradeOrderDetails(
+                        orderId_internal=uuid4(),
+                        orderId_exchange=str(executed_order_report.get('orderId')),
+                        clientOrderId_exchange=str(executed_order_report.get('clientOrderId', '')), # Añadir clientOrderId_exchange
+                        orderCategory=OrderCategory.TAKE_PROFIT if closing_reason == 'TP_HIT' else OrderCategory.STOP_LOSS,
+                        type=executed_order_report.get('type'),
+                        status='filled', # Ya sabemos que está FILLED
+                        requestedPrice=float(executed_order_report.get('price', 0.0)), # Añadir requestedPrice
+                        requestedQuantity=float(executed_order_report.get('origQty')),
+                        executedQuantity=float(executed_order_report.get('executedQty')),
+                        executedPrice=executed_price,
+                        cumulativeQuoteQty=float(executed_order_report.get('cummulativeQuoteQty', 0.0)), # Añadir cumulativeQuoteQty
+                        commissions=[{ # Añadir commissions
+                            "amount": float(executed_order_report.get('commission', 0.0)),
+                            "asset": executed_order_report.get('commissionAsset', '')
+                        }],
+                        commission=float(executed_order_report.get('commission')) if executed_order_report.get('commission') else None, # Campo legado
+                        commissionAsset=executed_order_report.get('commissionAsset'), # Campo legado
+                        timestamp=datetime.fromtimestamp(executed_order_report.get('updateTime') / 1000, tz=timezone.utc),
+                        submittedAt=datetime.fromtimestamp(executed_order_report.get('updateTime') / 1000, tz=timezone.utc), # Añadir submittedAt
+                        fillTimestamp=datetime.fromtimestamp(executed_order_report.get('updateTime') / 1000, tz=timezone.utc), # Añadir fillTimestamp
+                        rawResponse=executed_order_report,
+                        ocoOrderListId=trade.ocoOrderListId
+                    )
+                    
+                    # Llamar a _close_real_trade para finalizar el trade en la DB y notificar
+                    await self._close_real_trade(trade, executed_price, closing_reason, exit_order_details)
+                else:
+                    logger.warning(f"Orden OCO {trade.ocoOrderListId} ALL_DONE pero no se pudo identificar la orden ejecutada para trade {trade.id}.")
+            elif oco_order_status and oco_order_status.get('listStatusType') == 'REJECT':
+                logger.error(f"Orden OCO {trade.ocoOrderListId} para trade {trade.id} fue RECHAZADA. Necesita atención manual.")
+                await self.notification_service.send_real_trade_status_notification(
+                    trade.user_id, f"CRÍTICO: Orden OCO {trade.ocoOrderListId} para {trade.symbol} fue RECHAZADA. Revise manualmente.", "CRITICAL"
+                )
+            # Si el estado es 'EXECUTING' o 'REJECT' (pero no ALL_DONE), no hacemos nada, seguimos monitoreando.
+            # Si el estado es 'CANCELED', también se podría manejar aquí si se cancela manualmente.
+
+        except Exception as e:
+            logger.error(f"Error al monitorear orden OCO {trade.ocoOrderListId} para trade REAL {trade.id}: {e}", exc_info=True)
+            await self.notification_service.send_real_trade_status_notification(
+                trade.user_id, f"Error al monitorear orden OCO para {trade.symbol}: {str(e)}", "ERROR"
+            )
+
     async def monitor_and_manage_real_trade_exit(self, trade: Trade) -> None:
         """
         Monitorea y gestiona las órdenes de salida (TSL/TP) para un trade en Real Trading.
-        Este método será llamado después de que un trade real se abra.
+        Este método se enfoca en el ajuste del Trailing Stop Loss basado en el precio.
+        La detección de ejecución de TP/SL para órdenes OCO se maneja en _monitor_binance_oco_orders.
         """
-        logger.info(f"Monitoreando TSL/TP para trade REAL {trade.id} ({trade.symbol})")
+        # Si el trade ya tiene una orden OCO asociada, su monitoreo de cierre se hace en _monitor_binance_oco_orders
+        if trade.ocoOrderListId:
+            logger.debug(f"Trade REAL {trade.id} tiene ocoOrderListId. Saltando monitoreo de TSL/TP basado en precio en monitor_and_manage_real_trade_exit.")
+            return
+
+        logger.info(f"Monitoreando TSL/TP basado en precio para trade REAL {trade.id} ({trade.symbol})")
 
         # Subtask 2.3: Obtener el precio de mercado actual
         try:
@@ -209,89 +326,85 @@ class TradingEngineService:
                         await self.persistence_service.upsert_trade(trade.user_id, trade.model_dump(mode='json', by_alias=True, exclude_none=True))
                         logger.info(f"Trade REAL {trade.id} con TSL actualizado persistido.")
 
-            # Subtask 2.3: Implementar la lógica para detectar si el precio alcanza el TSL o TP
-            closing_reason = None
-            if trade.side == 'BUY':
-                if trade.takeProfitPrice is not None and current_price >= trade.takeProfitPrice:
-                    closing_reason = 'TP_HIT'
-                    logger.info(f"TP alcanzado para trade REAL {trade.symbol} (BUY). Precio: {current_price:.4f}, TP: {trade.takeProfitPrice:.4f}")
-                elif trade.currentStopPrice_tsl is not None and current_price <= trade.currentStopPrice_tsl:
-                    closing_reason = 'SL_HIT'
-                    logger.info(f"TSL alcanzado para trade REAL {trade.symbol} (BUY). Precio: {current_price:.4f}, TSL: {trade.currentStopPrice_tsl:.4f}")
-            elif trade.side == 'SELL':
-                if trade.takeProfitPrice is not None and current_price <= trade.takeProfitPrice:
-                    closing_reason = 'TP_HIT'
-                    logger.info(f"TP alcanzado para trade REAL {trade.symbol} (SELL). Precio: {current_price:.4f}, TP: {trade.takeProfitPrice:.4f}")
-                elif trade.currentStopPrice_tsl is not None and current_price >= trade.currentStopPrice_tsl:
-                    closing_reason = 'SL_HIT'
-                    logger.info(f"TSL alcanzado para trade REAL {trade.symbol} (SELL). Precio: {current_price:.4f}, TSL: {trade.currentStopPrice_tsl:.4f}")
 
-            if closing_reason:
-                # Subtask 2.4: Si se alcanza TSL/TP, enviar orden de cierre real
-                await self._close_real_trade(trade, current_price, closing_reason)
-
-    async def _close_real_trade(self, trade: Trade, executed_price: float, closing_reason: str):
+    async def _close_real_trade(self, trade: Trade, executed_price: float, closing_reason: str, exit_order_details: Optional[TradeOrderDetails] = None):
         """
         Cierra una posición real en Binance.
+        Puede ser llamado por la ejecución de una orden OCO o por un cierre manual.
         """
         logger.info(f"Cerrando trade REAL {trade.id} por {closing_reason} a precio {executed_price:.4f}")
 
-        # Obtener credenciales de Binance para cerrar la orden
-        binance_credential = await self.credential_service.get_credential(
-            user_id=trade.user_id,
-            service_name=ServiceName.BINANCE_SPOT,
-            credential_label="default_binance_spot"
-        )
-        if not binance_credential:
-            logger.error(f"No se encontraron credenciales de Binance para cerrar trade {trade.id}.")
-            raise CredentialError(f"No se encontraron credenciales de Binance para cerrar trade {trade.id}.")
+        # Verificar si la posición ya está cerrada o si ya tiene una orden de salida ejecutada
+        if trade.positionStatus == 'closed':
+            logger.info(f"Trade REAL {trade.id} ya está cerrado. Razón: {trade.closingReason}. No se requiere acción adicional.")
+            return
         
-        api_key = self.credential_service.decrypt_data(binance_credential.encrypted_api_key)
-        api_secret: Optional[str] = None
-        if binance_credential.encrypted_api_secret:
-            api_secret = self.credential_service.decrypt_data(binance_credential.encrypted_api_secret)
-
-        if not api_key or api_secret is None:
-            logger.error(f"API Key o Secret de Binance no pudieron ser desencriptados para cerrar trade {trade.id}.")
-            raise CredentialError("API Key o Secret de Binance no válidos para cerrar trade.")
-
-        # Determinar el lado de la orden de cierre
-        close_side = 'SELL' if trade.side == 'BUY' else 'BUY'
-        
-        # Enviar orden de mercado para cerrar la posición
-        exit_order_details: Optional[TradeOrderDetails] = None
-        try:
-            # La orden de cierre real se ejecuta a través de OrderExecutionService, que ya debería manejar TradeOrderDetails
-            # con los nuevos campos. Sin embargo, para asegurar la consistencia, la instanciación aquí debe reflejarlo.
-            # Asumimos que execute_market_order devuelve un TradeOrderDetails ya completo.
-            exit_order_details = await self.order_execution_service.execute_market_order(
+        # Si la orden de salida ya viene pre-cargada (ej. desde el monitoreo OCO), usarla.
+        # De lo contrario, se enviará una nueva orden de mercado.
+        if exit_order_details and exit_order_details.status == 'filled':
+            logger.info(f"Usando detalles de orden de salida pre-existentes para trade {trade.id}.")
+            # Asegurarse de que la orden de salida esté en la lista de exitOrders del trade
+            if not any(o.orderId_exchange == exit_order_details.orderId_exchange for o in trade.exitOrders):
+                trade.exitOrders.append(exit_order_details)
+        else:
+            logger.info(f"Enviando nueva orden de mercado para cerrar trade {trade.id}.")
+            # Obtener credenciales de Binance para cerrar la orden
+            binance_credential = await self.credential_service.get_credential(
                 user_id=trade.user_id,
-                symbol=trade.symbol,
-                side=close_side,
-                quantity=trade.entryOrder.executedQuantity,
-                api_key=api_key,
-                api_secret=api_secret
+                service_name=ServiceName.BINANCE_SPOT,
+                credential_label="default_binance_spot"
             )
-            # Asegurarse de que la categoría de la orden de salida sea correcta
-            # Si la orden de cierre es por TSL/TP, la categoría ya debería ser SL/TP.
-            # Si es un cierre manual, será MANUAL_CLOSE.
-            if closing_reason == 'SL_HIT':
-                exit_order_details.orderCategory = OrderCategory.STOP_LOSS
-            elif closing_reason == 'TP_HIT':
-                exit_order_details.orderCategory = OrderCategory.TAKE_PROFIT
-            else:
-                exit_order_details.orderCategory = OrderCategory.MANUAL_CLOSE # O cualquier otra razón de cierre
-            exit_order_details.ocoOrderListId = None # No aplica para esta orden de cierre directa
+            if not binance_credential:
+                logger.error(f"No se encontraron credenciales de Binance para cerrar trade {trade.id}.")
+                raise CredentialError(f"No se encontraron credenciales de Binance para cerrar trade {trade.id}.")
             
-            logger.info(f"Orden de cierre real enviada a Binance para trade {trade.id}: {exit_order_details.orderId_internal}")
-        except OrderExecutionError as e:
-            logger.error(f"Fallo al enviar orden de cierre real para trade {trade.id}: {e}", exc_info=True)
-            await self.notification_service.send_real_trade_status_notification(
-                trade.user_id, f"Error al cerrar trade real {trade.symbol} por {closing_reason}: {str(e)}", "ERROR"
-            )
-            raise
+            api_key = self.credential_service.decrypt_data(binance_credential.encrypted_api_key)
+            api_secret: Optional[str] = None
+            if binance_credential.encrypted_api_secret:
+                api_secret = self.credential_service.decrypt_data(binance_credential.encrypted_api_secret)
 
-        trade.exitOrders.append(exit_order_details)
+            if not api_key or api_secret is None:
+                logger.error(f"API Key o Secret de Binance no pudieron ser desencriptados para cerrar trade {trade.id}.")
+                raise CredentialError("API Key o Secret de Binance no válidos para cerrar trade.")
+
+            # Determinar el lado de la orden de cierre
+            close_side = 'SELL' if trade.side == 'BUY' else 'BUY'
+            
+            # Enviar orden de mercado para cerrar la posición
+            try:
+                # Pasar ocoOrderListId como None ya que es una orden de cierre directa
+                exit_order_details = await self.order_execution_service.execute_market_order(
+                    user_id=trade.user_id,
+                    symbol=trade.symbol,
+                    side=close_side,
+                    quantity=trade.entryOrder.executedQuantity,
+                    api_key=api_key,
+                    api_secret=api_secret,
+                    ocoOrderListId=None # Asegurar que se pasa None
+                )
+                # Asegurarse de que la categoría de la orden de salida sea correcta
+                if closing_reason == 'SL_HIT':
+                    exit_order_details.orderCategory = OrderCategory.STOP_LOSS
+                elif closing_reason == 'TP_HIT':
+                    exit_order_details.orderCategory = OrderCategory.TAKE_PROFIT
+                else:
+                    exit_order_details.orderCategory = OrderCategory.MANUAL_CLOSE # O cualquier otra razón de cierre
+                # ocoOrderListId ya se asigna como None en la llamada a execute_market_order
+                
+                logger.info(f"Orden de cierre real enviada a Binance para trade {trade.id}: {exit_order_details.orderId_internal}")
+            except OrderExecutionError as e:
+                logger.error(f"Fallo al enviar orden de cierre real para trade {trade.id}: {e}", exc_info=True)
+                await self.notification_service.send_real_trade_status_notification(
+                    trade.user_id, f"Error al cerrar trade real {trade.symbol} por {closing_reason}: {str(e)}", "ERROR"
+                )
+                raise
+            
+            trade.exitOrders.append(exit_order_details)
+
+        # La lógica de obtención de credenciales y envío de orden de mercado ya está dentro del 'else'
+        # de la verificación 'if exit_order_details and exit_order_details.status == 'filled':'
+        # No es necesario duplicarla aquí.
+        # El parámetro exit_order_details ya está definido en la firma de la función.
 
         # Actualizar el Trade con la orden de salida, P&L y estado
         trade.positionStatus = 'closed'
@@ -395,16 +508,22 @@ class TradingEngineService:
         # Subtask 1.4: Crear una instancia de TradeOrderDetails
         simulated_order_details = TradeOrderDetails(
             orderId_internal=uuid4(),
+            orderId_exchange=None, # No aplica para paper trading
+            clientOrderId_exchange=None, # No aplica para paper trading
             orderCategory=OrderCategory.ENTRY, # Nueva categoría
             type='market',
             status='filled',
+            requestedPrice=current_price, # Añadir requestedPrice
             requestedQuantity=quantity,
             executedQuantity=quantity,
             executedPrice=current_price,
+            cumulativeQuoteQty=quantity * current_price, # Añadir cumulativeQuoteQty
+            commissions=[], # Sin comisiones en paper trading
+            commission=None, # Campo legado
+            commissionAsset=None, # Campo legado
             timestamp=datetime.utcnow(),
-            exchangeOrderId=None,
-            commission=None,
-            commissionAsset=None,
+            submittedAt=datetime.utcnow(), # Añadir submittedAt
+            fillTimestamp=datetime.utcnow(), # Añadir fillTimestamp
             rawResponse=None,
             ocoOrderListId=None # No aplica para orden de entrada
         )
@@ -545,19 +664,35 @@ class TradingEngineService:
 
         if opportunity.status != OpportunityStatus.PENDING_USER_CONFIRMATION_REAL:
             logger.error(f"Oportunidad {opportunity_id} no está en estado PENDING_USER_CONFIRMATION_REAL. Estado actual: {opportunity.status}")
+            await self.notification_service.send_real_trade_status_notification(
+                user_id, 
+                f"Error al enviar orden real para {opportunity.symbol} ({opportunity.ai_analysis.suggestedAction}): Oportunidad no está en estado PENDING_USER_CONFIRMATION_REAL. Estado actual: {opportunity.status.value}", 
+                "ERROR"
+            )
+            await self.persistence_service.update_opportunity_status(
+                opportunity_id, OpportunityStatus.EXECUTION_FAILED, f"Oportunidad {opportunity_id} no está en estado PENDING_USER_CONFIRMATION_REAL. Estado actual: {opportunity.status.value}"
+            )
             raise OrderExecutionError(f"Oportunidad {opportunity_id} no está lista para ejecución real.")
 
-        if not opportunity.symbol or not opportunity.ai_analysis or not opportunity.ai_analysis.suggestedAction:
+        if not opportunity.symbol or not opportunity.ai_analysis or opportunity.ai_analysis.suggestedAction is None:
             logger.error(f"Oportunidad {opportunity_id} carece de símbolo o acción sugerida por IA.")
             raise OrderExecutionError(f"Oportunidad {opportunity_id} incompleta para ejecución real.")
 
         symbol = opportunity.symbol
-        side = opportunity.ai_analysis.suggestedAction
+        side = opportunity.ai_analysis.suggestedAction # Ya se verificó que no es None
         
         # 2.3: Calcular la cantidad a operar (requestedQuantity)
         user_config = await self.config_service.get_user_configuration(user_id)
         if not user_config or not user_config.realTradingSettings or not user_config.riskProfileSettings:
             logger.error(f"Configuración de usuario o de trading real/riesgo no encontrada para {user_id}.")
+            await self.notification_service.send_real_trade_status_notification(
+                user_id, 
+                f"Error al enviar orden real para {symbol} ({side}): Configuración de usuario incompleta para operativa real.", 
+                "ERROR"
+            )
+            await self.persistence_service.update_opportunity_status(
+                opportunity_id, OpportunityStatus.EXECUTION_FAILED, "Configuración de usuario incompleta para operativa real."
+            )
             raise ConfigurationError("Configuración de usuario incompleta para operativa real.")
 
         real_trading_settings = user_config.realTradingSettings
@@ -571,6 +706,12 @@ class TradingEngineService:
             logger.info(f"Saldo real disponible para {user_id}: {available_capital} USDT. Capital total real: {total_real_capital} USDT.")
         except PortfolioError as e:
             logger.error(f"Error al obtener el saldo real para {user_id}: {e}", exc_info=True)
+            await self.notification_service.send_real_trade_status_notification(
+                user_id, f"Error al enviar orden real para {symbol} ({side}): No se pudo obtener el saldo real: {str(e)}", "ERROR"
+            )
+            await self.persistence_service.update_opportunity_status(
+                opportunity_id, OpportunityStatus.EXECUTION_FAILED, f"No se pudo obtener el saldo real: {e}"
+            )
             raise OrderExecutionError(f"No se pudo obtener el saldo real: {e}") from e
 
         # Subtask 1.3: Implementar mecanismo para monitorear y resetear daily_capital_risked_usd
@@ -606,10 +747,22 @@ class TradingEngineService:
                          f"Capital arriesgado hoy: {real_trading_settings.daily_capital_risked_usd:.2f}, "
                          f"Límite diario: {max_daily_risk_usd:.2f}.")
             logger.error(error_msg)
+            await self.notification_service.send_real_trade_status_notification(
+                user_id, f"Error al enviar orden real para {symbol} ({side}): Límite de riesgo de capital diario excedido.", "ERROR"
+            )
+            await self.persistence_service.update_opportunity_status(
+                opportunity_id, OpportunityStatus.EXECUTION_FAILED, "Límite de riesgo de capital diario excedido."
+            )
             raise OrderExecutionError("Límite de riesgo de capital diario excedido.")
 
         if capital_to_invest_per_trade <= 0:
             logger.error(f"Capital a invertir es cero o negativo para {user_id}. Capital disponible: {available_capital}.")
+            await self.notification_service.send_real_trade_status_notification(
+                user_id, f"Error al enviar orden real para {symbol} ({side}): Capital insuficiente para la operación real.", "ERROR"
+            )
+            await self.persistence_service.update_opportunity_status(
+                opportunity_id, OpportunityStatus.EXECUTION_FAILED, "Capital insuficiente para la operación real."
+            )
             raise OrderExecutionError("Capital insuficiente para la operación real.")
 
         # Obtener el precio de mercado actual para calcular la cantidad
@@ -618,6 +771,12 @@ class TradingEngineService:
             logger.info(f"Precio actual de {symbol}: {current_price}")
         except MarketDataError as e:
             logger.error(f"Error al obtener precio de mercado para {symbol}: {e}", exc_info=True)
+            await self.notification_service.send_real_trade_status_notification(
+                user_id, f"Error al enviar orden real para {symbol} ({side}): No se pudo obtener el precio de mercado para {symbol}.", "ERROR"
+            )
+            await self.persistence_service.update_opportunity_status(
+                opportunity_id, OpportunityStatus.EXECUTION_FAILED, f"No se pudo obtener el precio de mercado para {symbol}."
+            )
             raise OrderExecutionError(f"No se pudo obtener el precio de mercado para {symbol}.") from e
 
         requested_quantity = capital_to_invest_per_trade / current_price
@@ -638,6 +797,12 @@ class TradingEngineService:
         
         if not binance_credential:
             logger.error(f"No se encontraron credenciales de Binance para el usuario {user_id}.")
+            await self.notification_service.send_real_trade_status_notification(
+                user_id, f"Error al enviar orden real para {symbol} ({side}): No se encontraron credenciales de Binance para el usuario {user_id}.", "ERROR"
+            )
+            await self.persistence_service.update_opportunity_status(
+                opportunity_id, OpportunityStatus.EXECUTION_FAILED, f"No se encontraron credenciales de Binance para el usuario {user_id}."
+            )
             raise CredentialError(f"No se encontraron credenciales de Binance para el usuario {user_id}.")
         
         api_key = self.credential_service.decrypt_data(binance_credential.encrypted_api_key)
@@ -647,6 +812,12 @@ class TradingEngineService:
 
         if not api_key or api_secret is None:
             logger.error(f"API Key o Secret de Binance no pudieron ser desencriptados para {user_id}.")
+            await self.notification_service.send_real_trade_status_notification(
+                user_id, f"Error al enviar orden real para {symbol} ({side}): API Key o Secret de Binance no válidos.", "ERROR"
+            )
+            await self.persistence_service.update_opportunity_status(
+                opportunity_id, OpportunityStatus.EXECUTION_FAILED, "API Key o Secret de Binance no válidos."
+            )
             raise CredentialError("API Key o Secret de Binance no válidos.")
 
         trade_order_details: Optional[TradeOrderDetails] = None
@@ -665,7 +836,7 @@ class TradingEngineService:
             # Asegurarse de que la categoría de la orden de entrada sea correcta
             trade_order_details.orderCategory = OrderCategory.ENTRY
             trade_order_details.ocoOrderListId = None # No aplica para la orden de entrada
-            
+
             logger.info(f"Orden real enviada a Binance: {trade_order_details.orderId_internal}")
             await self.notification_service.send_real_trade_status_notification(
                 user_id, f"Orden real enviada para {symbol} ({side}). Estado: {trade_order_details.status}", "INFO"
@@ -694,6 +865,9 @@ class TradingEngineService:
         # Determinar el lado opuesto para las órdenes de salida
         exit_side = 'SELL' if side == 'BUY' else 'BUY'
         
+        oco_list_client_order_id = None # Inicializar a None
+        oco_exit_orders: List[TradeOrderDetails] = [] # Inicializar a lista vacía
+        
         try:
             # Binance OCO order: STOP_LOSS_LIMIT and TAKE_PROFIT_LIMIT
             # stopPrice es el precio que activa la orden stop-loss
@@ -711,6 +885,8 @@ class TradingEngineService:
             # Por ahora, usaremos la cantidad y precios calculados directamente.
 
             oco_order_response = await self.binance_adapter.create_oco_order(
+                api_key=api_key,
+                api_secret=api_secret,
                 symbol=symbol,
                 side=exit_side,
                 quantity=quantity_to_close,
@@ -725,7 +901,6 @@ class TradingEngineService:
             oco_orders_in_response = oco_order_response.get('orderReports', [])
             
             # Crear TradeOrderDetails para cada orden dentro del OCO
-            oco_exit_orders: List[TradeOrderDetails] = []
             for order_report in oco_orders_in_response:
                 order_type = order_report.get('type')
                 order_category = None
@@ -737,7 +912,7 @@ class TradingEngineService:
                 if order_category:
                     oco_exit_orders.append(TradeOrderDetails(
                         orderId_internal=uuid4(),
-                        exchangeOrderId=str(order_report.get('orderId')),
+                        orderId_exchange=str(order_report.get('orderId')),
                         orderCategory=order_category,
                         type=order_type,
                         status=order_report.get('status'),
@@ -778,6 +953,7 @@ class TradingEngineService:
             pnl_usd=None,
             pnl_percentage=None,
             closingReason=None,
+            ocoOrderListId=oco_list_client_order_id, # Añadir el ID de la lista OCO al trade
             takeProfitPrice=take_profit_price, # Usar el precio calculado
             trailingStopActivationPrice=trailing_stop_activation_price, # Usar el precio calculado
             trailingStopCallbackRate=tsl_callback_rate_real,
@@ -908,16 +1084,22 @@ class TradingEngineService:
         # Subtask 1.8.1: Crear una instancia de TradeOrderDetails para la orden de salida simulada
         exit_order_details = TradeOrderDetails(
             orderId_internal=uuid4(),
+            orderId_exchange=None, # No aplica para paper trading
+            clientOrderId_exchange=None, # No aplica para paper trading
             orderCategory=OrderCategory.TRAILING_STOP_LOSS if closing_reason == 'SL_HIT' else OrderCategory.TAKE_PROFIT,
             type='trailing_stop_loss' if closing_reason == 'SL_HIT' else 'take_profit',
             status='filled',
+            requestedPrice=executed_price, # Añadir requestedPrice
             requestedQuantity=trade.entryOrder.executedQuantity,
             executedQuantity=trade.entryOrder.executedQuantity,
             executedPrice=executed_price,
+            cumulativeQuoteQty=trade.entryOrder.executedQuantity * executed_price, # Añadir cumulativeQuoteQty
+            commissions=[], # Sin comisiones en paper trading
+            commission=None, # Campo legado
+            commissionAsset=None, # Campo legado
             timestamp=datetime.utcnow(),
-            exchangeOrderId=None,
-            commission=None,
-            commissionAsset=None,
+            submittedAt=datetime.utcnow(), # Añadir submittedAt
+            fillTimestamp=datetime.utcnow(), # Añadir fillTimestamp
             rawResponse=None,
             ocoOrderListId=None # No aplica para orden de cierre simulada
         )
@@ -989,7 +1171,8 @@ class TradingEngineService:
                     user_id=user_id,
                     symbol=symbol,
                     side=side,
-                    quantity=quantity
+                    quantity=quantity,
+                    ocoOrderListId=None # Asegurar que se pasa None
                 )
             else:
                 logger.info(f"Modo Real Trading ACTIVO para usuario {user_id}. Ejecutando orden real.")
@@ -1035,4 +1218,3 @@ class TradingEngineService:
         except Exception as e:
             logger.error(f"Error inesperado en el motor de trading para usuario {user_id}: {e}", exc_info=True)
             raise OrderExecutionError(f"Error inesperado en el motor de trading: {e}") from e
-</environment_details>

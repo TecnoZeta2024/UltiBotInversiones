@@ -373,16 +373,22 @@ class TradeOrderDetails(BaseModel):
     Detalles de una orden de trading ejecutada o simulada.
     """
     orderId_internal: UUID = Field(default_factory=uuid4, description="ID interno único de la orden.")
-    exchangeOrderId: Optional[str] = Field(None, description="ID de la orden en el exchange (si es una orden real).")
+    orderId_exchange: Optional[str] = Field(None, description="ID de la orden en el exchange (si es una orden real).")
+    clientOrderId_exchange: Optional[str] = Field(None, description="ID de cliente de la orden en el exchange (si es una orden real).")
     orderCategory: OrderCategory = Field(..., description="Categoría de la orden (ej. 'entry', 'take_profit', 'stop_loss').")
     type: str = Field(..., description="Tipo de orden (ej. 'market', 'limit', 'stop_loss_limit', 'take_profit_limit').")
     status: str = Field(..., description="Estado de la orden (ej. 'filled', 'partial_fill', 'new', 'canceled', 'rejected').")
+    requestedPrice: Optional[float] = Field(None, description="Precio solicitado en la orden (para órdenes limitadas).")
     requestedQuantity: float = Field(..., description="Cantidad solicitada en la orden.")
     executedQuantity: float = Field(..., description="Cantidad ejecutada de la orden.")
     executedPrice: float = Field(..., description="Precio promedio de ejecución de la orden.")
-    commission: Optional[float] = Field(None, description="Comisión pagada por la orden.")
-    commissionAsset: Optional[str] = Field(None, description="Activo en el que se pagó la comisión.")
+    cumulativeQuoteQty: Optional[float] = Field(None, description="Cantidad total de la moneda de cotización ejecutada.")
+    commissions: Optional[List[Dict[str, Any]]] = Field(None, description="Lista de comisiones pagadas por la orden.")
+    commission: Optional[float] = Field(None, description="Comisión pagada por la orden (campo legado, preferir 'commissions').")
+    commissionAsset: Optional[str] = Field(None, description="Activo en el que se pagó la comisión (campo legado, preferir 'commissions').")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Marca de tiempo de la ejecución/actualización de la orden.")
+    submittedAt: Optional[datetime] = Field(None, description="Marca de tiempo de cuando la orden fue enviada al exchange.")
+    fillTimestamp: Optional[datetime] = Field(None, description="Marca de tiempo de cuando la orden fue completamente llenada.")
     rawResponse: Optional[Dict[str, Any]] = Field(None, description="Respuesta cruda del exchange (para órdenes reales).")
     ocoOrderListId: Optional[str] = Field(None, description="ID de la lista de órdenes OCO a la que pertenece esta orden (si aplica).")
     
@@ -408,6 +414,7 @@ class Trade(BaseModel):
     pnl_usd: Optional[float] = Field(None, description="Ganancia o pérdida en USD (para posiciones cerradas).")
     pnl_percentage: Optional[float] = Field(None, description="Ganancia o pérdida en porcentaje (para posiciones cerradas).")
     closingReason: Optional[str] = Field(None, description="Razón del cierre de la posición (ej. 'TP_HIT', 'SL_HIT', 'MANUAL_CLOSE', 'OCO_TRIGGERED').")
+    ocoOrderListId: Optional[str] = Field(None, description="ID de la lista de órdenes OCO asociada a este trade (si aplica).")
 
     # Campos para Trailing Stop Loss y Take Profit
     takeProfitPrice: Optional[float] = Field(None, description="Precio objetivo para Take Profit.")
