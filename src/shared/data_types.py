@@ -138,6 +138,8 @@ class RiskProfileSettings(BaseModel):
     maxDrawdownPercentage: Optional[float] = None
 
 class RealTradingSettings(BaseModel):
+    real_trading_mode_active: bool = Field(default=False, description="Indica si el modo de operativa real limitada está activo.")
+    real_trades_executed_count: int = Field(default=0, description="Contador de operaciones reales ejecutadas en el modo limitado.")
     maxConcurrentOperations: Optional[int] = None
     dailyLossLimitAbsolute: Optional[float] = None
     dailyProfitTargetAbsolute: Optional[float] = None

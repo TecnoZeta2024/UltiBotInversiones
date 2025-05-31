@@ -4,6 +4,7 @@ class UltiBotError(Exception):
     """Excepción base para errores de UltiBotInversiones."""
     def __init__(self, message: str, code: Optional[str] = None, details: Optional[Dict[str, Any]] = None):
         super().__init__(message)
+        self.message = message  # Asegurar que el mensaje sea accesible como atributo
         self.code = code
         self.details = details if details is not None else {}
 
@@ -65,6 +66,30 @@ class MarketDataError(UltiBotError):
 class PortfolioError(UltiBotError):
     """Excepción para errores relacionados con la gestión del portafolio."""
     pass
+
+class InsufficientUSDTBalanceError(PortfolioError):
+    """Excepción para cuando el saldo de USDT es insuficiente para una operación."""
+    def __init__(self, message: str = "Saldo de USDT insuficiente.", available_balance: Optional[float] = None, required_amount: Optional[float] = None, details: Optional[Dict[str, Any]] = None, original_exception: Optional[Exception] = None):
+        super().__init__(message, code="INSUFFICIENT_USDT_BALANCE", details={
+            "available_balance": available_balance,
+            "required_amount": required_amount,
+            **(details if details else {})
+        })
+        self.available_balance = available_balance
+        self.required_amount = required_amount
+        self.original_exception = original_exception
+
+class RealTradeLimitReachedError(ConfigurationError):
+    """Excepción para cuando se ha alcanzado el límite de operaciones reales permitidas."""
+    def __init__(self, message: str = "Límite de operaciones reales alcanzado.", executed_count: Optional[int] = None, limit: Optional[int] = None, details: Optional[Dict[str, Any]] = None, original_exception: Optional[Exception] = None):
+        super().__init__(message, code="REAL_TRADE_LIMIT_REACHED", details={
+            "executed_count": executed_count,
+            "limit": limit,
+            **(details if details else {})
+        })
+        self.executed_count = executed_count
+        self.limit = limit
+        self.original_exception = original_exception
 
 class MobulaAPIError(ExternalAPIError):
     """Excepción específica para errores al interactuar con la API de Mobula."""
