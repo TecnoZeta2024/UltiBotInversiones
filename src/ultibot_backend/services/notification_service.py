@@ -4,7 +4,7 @@ from uuid import UUID
 from typing import Optional, Dict, Any, List
 from uuid import UUID
 
-from src.shared.data_types import ServiceName, APICredential, Notification
+from src.shared.data_types import ServiceName, APICredential, Notification, Trade # Importar Trade
 from src.ultibot_backend.adapters.telegram_adapter import TelegramAdapter
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService # Importar PersistenceService
 from src.ultibot_backend.services.credential_service import CredentialService
@@ -161,7 +161,7 @@ class NotificationService:
                 original_exception=e
             )
 
-    async def send_notification(self, user_id: UUID, title: str, message: str, channel: str = "telegram", event_type: str = "SYSTEM_MESSAGE") -> bool:
+    async def send_notification(self, user_id: UUID, title: str, message: str, channel: str = "telegram", event_type: str = "SYSTEM_MESSAGE", dataPayload: Optional[Dict[str, Any]] = None) -> bool:
         """
         Envía una notificación general al usuario a través del canal especificado.
         Por ahora, soporta Telegram y UI.
@@ -183,6 +183,7 @@ class NotificationService:
             channel=channel,
             title=title,
             message=message,
+            dataPayload=dataPayload
             # Otros campos pueden ser poblados según sea necesario
         )
         
@@ -249,6 +250,58 @@ class NotificationService:
         else:
             logger.warning(f"Canal de notificación '{channel}' no soportado.")
             raise NotificationError(f"Canal de notificación '{channel}' no soportado.", code="UNSUPPORTED_NOTIFICATION_CHANNEL")
+
+    async def send_paper_trade_entry_notification(self, trade: Trade):
+        """
+        Envía una notificación al usuario confirmando la apertura de una operación simulada en paper trading.
+        """
+        user_id = trade.user_id
+        symbol = trade.symbol
+        side = trade.side
+        executed_price = trade.entryOrder.executedPrice
+        quantity = trade.entryOrder.executedQuantity
+        trade_id = trade.id
+
+        title = f"📈 Operación Simulada Abierta: {symbol}"
+        message = (
+            f"Se ha simulado la apertura de una operación en Paper Trading:\n"
+            f"Símbolo: {symbol}\n"
+            f"Acción: {side}\n"
+            f"Cantidad: {quantity:.4f}\n"
+            f"Precio de Entrada: {executed_price:.4f} USDT\n"
+            f"ID de Trade: {trade_id}"
+        )
+        
+        # Enviar a la UI
+        try:
+            await self.send_notification(
+                user_id=user_id,
+                title=title,
+                message=message,
+                channel="ui",
+                event_type="PAPER_TRADE_ENTRY_SIMULATED",
+                dataPayload={"tradeId": str(trade_id), "symbol": symbol, "side": side, "quantity": quantity, "executedPrice": executed_price, "mode": "paper"}
+            )
+            logger.info(f"Notificación UI de trade simulado {trade_id} enviada.")
+        except Exception as e:
+            logger.error(f"Error al enviar notificación UI para trade simulado {trade_id}: {e}", exc_info=True)
+
+        # Enviar a Telegram si está configurado
+        # Aquí asumimos que la configuración del usuario (enableTelegramNotifications)
+        # se verifica en un nivel superior o que send_notification ya lo maneja.
+        # Por simplicidad, llamamos directamente a send_notification para Telegram.
+        try:
+            await self.send_notification(
+                user_id=user_id,
+                title=title,
+                message=message,
+                channel="telegram",
+                event_type="PAPER_TRADE_ENTRY_SIMULATED",
+                dataPayload={"tradeId": str(trade_id), "symbol": symbol, "side": side, "quantity": quantity, "executedPrice": executed_price, "mode": "paper"}
+            )
+            logger.info(f"Notificación Telegram de trade simulado {trade_id} enviada.")
+        except Exception as e:
+            logger.error(f"Error al enviar notificación Telegram para trade simulado {trade_id}: {e}", exc_info=True)
 
     async def close(self):
         """Cierra cualquier adaptador de Telegram activo."""

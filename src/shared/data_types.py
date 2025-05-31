@@ -340,3 +340,62 @@ class Opportunity(BaseModel):
     expires_at: Optional[datetime] = None # Si la oportunidad tiene una ventana de validez
 
     model_config = ConfigDict(use_enum_values=True)
+
+class TradeOrderDetails(BaseModel):
+    """
+    Detalles de una orden de trading ejecutada o simulada.
+    """
+    orderId_internal: UUID = Field(default_factory=uuid4, description="ID interno único de la orden.")
+    exchangeOrderId: Optional[str] = Field(None, description="ID de la orden en el exchange (si es una orden real).")
+    type: str = Field(..., description="Tipo de orden (ej. 'market', 'limit').")
+    status: str = Field(..., description="Estado de la orden (ej. 'filled', 'partial_fill', 'new', 'canceled', 'rejected').")
+    requestedQuantity: float = Field(..., description="Cantidad solicitada en la orden.")
+    executedQuantity: float = Field(..., description="Cantidad ejecutada de la orden.")
+    executedPrice: float = Field(..., description="Precio promedio de ejecución de la orden.")
+    commission: Optional[float] = Field(None, description="Comisión pagada por la orden.")
+    commissionAsset: Optional[str] = Field(None, description="Activo en el que se pagó la comisión.")
+    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Marca de tiempo de la ejecución/actualización de la orden.")
+    rawResponse: Optional[Dict[str, Any]] = Field(None, description="Respuesta cruda del exchange (para órdenes reales).")
+
+class Trade(BaseModel):
+    """
+    Representa una operación de trading completa (entrada y salida).
+    """
+    id: UUID = Field(default_factory=uuid4)
+    user_id: UUID
+    
+    mode: str = Field(..., description="Modo de trading: 'paper' o 'real'.")
+    symbol: str = Field(..., description="Símbolo del par de trading (ej. 'BTCUSDT').")
+    side: str = Field(..., description="Dirección de la operación: 'BUY' o 'SELL'.")
+    
+    entryOrder: TradeOrderDetails = Field(..., description="Detalles de la orden de entrada.")
+    exitOrders: List[TradeOrderDetails] = Field(default_factory=list, description="Lista de órdenes de salida (ej. TSL, TP).")
+    
+    positionStatus: str = Field(..., description="Estado de la posición: 'open', 'closed', 'liquidated'.")
+    
+    opportunityId: Optional[UUID] = Field(None, description="ID de la oportunidad de trading que originó este trade.")
+    aiAnalysisConfidence: Optional[float] = Field(None, description="Confianza de la IA en la oportunidad (si aplica).")
+    
+    pnl_usd: Optional[float] = Field(None, description="Ganancia o pérdida en USD (para posiciones cerradas).")
+    pnl_percentage: Optional[float] = Field(None, description="Ganancia o pérdida en porcentaje (para posiciones cerradas).")
+    closingReason: Optional[str] = Field(None, description="Razón del cierre de la posición (ej. 'TP_HIT', 'SL_HIT', 'MANUAL_CLOSE').")
+
+    # Campos para Trailing Stop Loss y Take Profit
+    takeProfitPrice: Optional[float] = Field(None, description="Precio objetivo para Take Profit.")
+    trailingStopActivationPrice: Optional[float] = Field(None, description="Precio al que se activa el Trailing Stop.")
+    trailingStopCallbackRate: Optional[float] = Field(None, description="Porcentaje de retroceso para el Trailing Stop (ej. 0.01 para 1%).")
+    currentStopPrice_tsl: Optional[float] = Field(None, description="Precio actual del Trailing Stop Loss.")
+    
+    # Para registrar ajustes del TSL (opcional, si se desea trazabilidad detallada)
+    riskRewardAdjustments: List[Dict[str, Any]] = Field(default_factory=list, description="Historial de ajustes de TSL/TP.")
+
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    opened_at: datetime = Field(default_factory=datetime.utcnow) # Timestamp de la apertura de la posición
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    closed_at: Optional[datetime] = Field(None, description="Timestamp del cierre de la posición.")
+
+    model_config = ConfigDict(
+        use_enum_values=True,
+        populate_by_name=True,
+        arbitrary_types_allowed=True
+    )

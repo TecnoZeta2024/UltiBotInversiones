@@ -3,10 +3,11 @@ from typing import Dict, List, Optional
 from uuid import UUID
 from datetime import datetime
 
-from src.shared.data_types import PortfolioSnapshot, PortfolioSummary, PortfolioAsset, AssetBalance, UserConfiguration
+from src.shared.data_types import PortfolioSnapshot, PortfolioSummary, PortfolioAsset, AssetBalance, UserConfiguration, Trade # Importar Trade
 from src.ultibot_backend.services.market_data_service import MarketDataService
 from src.ultibot_backend.services.config_service import ConfigService
-from src.ultibot_backend.core.exceptions import UltiBotError, ConfigurationError, ExternalAPIError
+from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService # Importar PersistenceService
+from src.ultibot_backend.core.exceptions import UltiBotError, ConfigurationError, ExternalAPIError, PortfolioError # Importar PortfolioError
 
 logger = logging.getLogger(__name__)
 
@@ -14,9 +15,10 @@ class PortfolioService:
     """
     Servicio para gestionar y proporcionar el estado del portafolio (paper trading y real).
     """
-    def __init__(self, market_data_service: MarketDataService, config_service: ConfigService):
+    def __init__(self, market_data_service: MarketDataService, config_service: ConfigService, persistence_service: SupabasePersistenceService):
         self.market_data_service = market_data_service
         self.config_service = config_service
+        self.persistence_service = persistence_service # Asignar persistence_service
         self.paper_trading_balance: float = 0.0
         self.paper_trading_assets: Dict[str, PortfolioAsset] = {} # Símbolo -> PortfolioAsset
         self.user_id: Optional[UUID] = None # Se establecerá al inicializar o cargar la configuración
@@ -27,7 +29,7 @@ class PortfolioService:
         """
         self.user_id = user_id
         try:
-            user_config = await self.config_service.load_user_configuration(user_id)
+            user_config = await self.config_service.get_user_configuration(user_id) # Corregir llamada
             self.paper_trading_balance = user_config.defaultPaperTradingCapital or 10000.0 # Usar valor por defecto si no está configurado
             logger.info(f"Portafolio de paper trading inicializado para el usuario {user_id} con capital: {self.paper_trading_balance}")
             # TODO: Cargar activos de paper trading persistidos si aplica (para futuras historias)
@@ -218,9 +220,9 @@ class PortfolioService:
 
         self.paper_trading_balance += amount
         try:
-            user_config = await self.config_service.load_user_configuration(user_id)
+            user_config = await self.config_service.get_user_configuration(user_id) # Corregir llamada
             user_config.defaultPaperTradingCapital = self.paper_trading_balance
-            await self.config_service.save_user_configuration(user_id, user_config)
+            await self.config_service.save_user_configuration(user_config) # save_user_configuration solo toma config
             logger.info(f"Saldo de paper trading actualizado a {self.paper_trading_balance} para el usuario {user_id}.")
         except ConfigurationError as e:
             logger.error(f"Error al persistir el saldo de paper trading para el usuario {user_id}: {e}")
@@ -228,6 +230,90 @@ class PortfolioService:
         except Exception as e:
             logger.critical(f"Error inesperado al actualizar y persistir el saldo de paper trading para el usuario {user_id}: {e}", exc_info=True)
             raise UltiBotError(f"Error inesperado al actualizar el saldo de paper trading: {e}")
+
+    async def update_paper_portfolio_after_entry(self, trade: Trade):
+        """
+        Actualiza el portafolio de paper trading después de una orden de entrada simulada.
+        AC2: Actualizar el saldo de totalCashBalance en el PortfolioSnapshot de Paper Trading, restando el valor de la operación.
+        AC3: Añadir el activo comprado/vendido a assetHoldings en el PortfolioSnapshot de Paper Trading.
+        AC4: Persistir el PortfolioSnapshot actualizado utilizando PersistenceService.
+        """
+        user_id = trade.user_id
+        symbol = trade.symbol
+        quantity = trade.entryOrder.executedQuantity
+        executed_price = trade.entryOrder.executedPrice
+        side = trade.side
+
+        logger.info(f"Actualizando portafolio de paper trading para trade {trade.id}: {side} {quantity} de {symbol} @ {executed_price}")
+
+        if self.user_id is None or self.user_id != user_id:
+            await self.initialize_portfolio(user_id)
+
+        # 2.2: Actualizar el saldo de totalCashBalance
+        trade_value = quantity * executed_price
+        if side == 'BUY':
+            self.paper_trading_balance -= trade_value
+        elif side == 'SELL':
+            # En una orden de entrada 'SELL' en paper trading, asumimos que estamos "vendiendo en corto"
+            # o que estamos abriendo una posición corta. Esto no añade efectivo, sino que crea una deuda
+            # o una posición negativa. Para simplificar en v1.0, solo restaremos el valor del capital
+            # como si fuera una compra, pero esto debería ser revisado para una gestión de cortos más robusta.
+            # Por ahora, para mantener la simetría con BUY en términos de impacto en el capital inicial:
+            self.paper_trading_balance -= trade_value # Esto simula que el capital se "compromete"
+        else:
+            logger.error(f"Side de trade desconocido: {side} para trade {trade.id}. No se actualizó el balance.")
+            raise PortfolioError(f"Side de trade desconocido: {side}")
+
+        # 2.3: Añadir/actualizar el activo en assetHoldings
+        if symbol in self.paper_trading_assets:
+            existing_asset = self.paper_trading_assets[symbol]
+            if side == 'BUY':
+                total_quantity = existing_asset.quantity + quantity
+                new_entry_price = ((existing_asset.entry_price * existing_asset.quantity) + (executed_price * quantity)) / total_quantity if existing_asset.entry_price is not None else executed_price
+                existing_asset.quantity = total_quantity
+                existing_asset.entry_price = new_entry_price
+            elif side == 'SELL':
+                # Para una venta en corto, la cantidad se vuelve negativa.
+                # Esto es una simplificación. Una gestión real de cortos es más compleja.
+                existing_asset.quantity -= quantity
+                # El precio de entrada para cortos es el precio de venta.
+                # Si ya teníamos una posición larga, esto la reduce.
+                # Si no teníamos, o si la cantidad excede la larga, se convierte en corta.
+                # Para v1.0, simplificamos a solo restar la cantidad.
+            logger.info(f"Activo {symbol} actualizado en paper trading. Cantidad: {existing_asset.quantity}, Precio de entrada: {existing_asset.entry_price}")
+        else:
+            # Si el activo no existe, lo creamos. Para 'SELL', la cantidad inicial es negativa.
+            initial_quantity = quantity if side == 'BUY' else -quantity
+            self.paper_trading_assets[symbol] = PortfolioAsset(
+                symbol=symbol,
+                quantity=initial_quantity,
+                entry_price=executed_price,
+                current_price=None,
+                current_value_usd=None,
+                unrealized_pnl_usd=None,
+                unrealized_pnl_percentage=None
+            )
+            logger.info(f"Activo {symbol} añadido a paper trading. Cantidad: {initial_quantity}, Precio de entrada: {executed_price}")
+
+        # 2.4: Persistir el PortfolioSnapshot actualizado
+        # Primero, obtener la configuración del usuario para actualizar el defaultPaperTradingCapital
+        user_config = await self.config_service.get_user_configuration(user_id)
+        user_config.defaultPaperTradingCapital = self.paper_trading_balance
+        
+        # Convertir los activos a una lista de diccionarios para guardar en la configuración
+        # Esto es una simplificación. Idealmente, los activos de paper trading deberían tener su propia tabla.
+        # Para v1.0, los guardaremos como parte de la configuración del usuario si es necesario persistirlos.
+        # Por ahora, solo actualizamos el capital. La persistencia de assetHoldings se pospone.
+        # TODO: Implementar persistencia de assetHoldings de paper trading en futuras historias.
+
+        try:
+            await self.config_service.save_user_configuration(user_config)
+            logger.info(f"Capital de paper trading persistido: {self.paper_trading_balance}")
+        except Exception as e:
+            logger.error(f"Error al persistir el capital de paper trading para usuario {user_id}: {e}", exc_info=True)
+            raise PortfolioError(f"Fallo al persistir el capital de paper trading: {e}")
+
+        logger.info(f"Portafolio de paper trading actualizado. Nuevo balance: {self.paper_trading_balance}")
 
     async def add_paper_trading_asset(self, user_id: UUID, symbol: str, quantity: float, entry_price: float):
         """
@@ -261,6 +347,75 @@ class PortfolioService:
             )
             logger.info(f"Activo {symbol} añadido a paper trading. Cantidad: {quantity}, Precio de entrada: {entry_price}")
         # TODO: Persistir activos de paper trading (para futuras historias)
+
+    async def update_paper_portfolio_after_exit(self, trade: Trade):
+        """
+        Actualiza el portafolio de paper trading después de una orden de salida simulada.
+        AC2: Actualizar el saldo de totalCashBalance en el PortfolioSnapshot de Paper Trading, sumando/restando el P&L de la operación.
+        AC3: Eliminar o ajustar el AssetHolding correspondiente en el PortfolioSnapshot de Paper Trading.
+        AC4: Persistir el PortfolioSnapshot actualizado utilizando PersistenceService.
+        """
+        user_id = trade.user_id
+        symbol = trade.symbol
+        quantity = trade.entryOrder.executedQuantity # Cantidad original de la posición
+        pnl_usd = trade.pnl_usd
+        side = trade.side
+        closing_reason = trade.closingReason
+
+        logger.info(f"Actualizando portafolio de paper trading para trade {trade.id} cerrado por {closing_reason}. P&L: {pnl_usd:.2f} USD")
+
+        if self.user_id is None or self.user_id != user_id:
+            await self.initialize_portfolio(user_id)
+
+        # Subtask 2.2: Actualizar el saldo de totalCashBalance
+        if pnl_usd is not None:
+            self.paper_trading_balance += pnl_usd
+            logger.info(f"Saldo de paper trading ajustado por P&L. Nuevo balance: {self.paper_trading_balance:.2f}")
+        else:
+            logger.warning(f"Trade {trade.id} cerrado sin P&L definido. No se ajustó el balance de paper trading.")
+
+        # Subtask 2.3: Eliminar o ajustar el AssetHolding correspondiente
+        if symbol in self.paper_trading_assets:
+            asset = self.paper_trading_assets[symbol]
+            if side == 'BUY':
+                # Si era una posición larga (BUY), al cerrar se elimina el activo
+                # Asumimos que la cantidad de salida es igual a la de entrada para un cierre completo
+                if asset.quantity == quantity:
+                    del self.paper_trading_assets[symbol]
+                    logger.info(f"Activo {symbol} completamente removido del portafolio de paper trading.")
+                else:
+                    # Si la cantidad no coincide (cierre parcial, no esperado en esta historia), ajustar
+                    asset.quantity -= quantity
+                    logger.warning(f"Cierre parcial o cantidad no coincidente para {symbol}. Cantidad restante: {asset.quantity}")
+            elif side == 'SELL':
+                # Si era una posición corta (SELL), al cerrar se "compra de vuelta" el activo
+                # Esto significa que la cantidad negativa se reduce o se vuelve cero
+                if asset.quantity == -quantity: # Si la cantidad negativa coincide con la cantidad de entrada
+                    del self.paper_trading_assets[symbol]
+                    logger.info(f"Posición corta de {symbol} completamente cerrada en paper trading.")
+                else:
+                    asset.quantity += quantity # Sumar la cantidad para reducir la posición corta
+                    logger.warning(f"Cierre parcial o cantidad no coincidente para posición corta de {symbol}. Cantidad restante: {asset.quantity}")
+        else:
+            logger.warning(f"Activo {symbol} no encontrado en el portafolio de paper trading al intentar cerrar trade {trade.id}.")
+
+        # Subtask 2.4: Persistir el PortfolioSnapshot actualizado
+        # Por ahora, solo persistimos el capital actualizado en la configuración del usuario.
+        # La persistencia de assetHoldings de paper trading se pospone.
+        try:
+            user_config_dict = await self.persistence_service.get_user_configuration(user_id)
+            if user_config_dict:
+                user_config = UserConfiguration(**user_config_dict)
+                user_config.defaultPaperTradingCapital = self.paper_trading_balance
+                await self.persistence_service.upsert_user_configuration(user_id, user_config.model_dump(mode='json', by_alias=True, exclude_none=True))
+                logger.info(f"Capital de paper trading persistido: {self.paper_trading_balance}")
+            else:
+                logger.error(f"No se encontró la configuración de usuario para {user_id}. No se pudo persistir el capital de paper trading.")
+        except Exception as e:
+            logger.error(f"Error al persistir el capital de paper trading para usuario {user_id} tras cierre de trade: {e}", exc_info=True)
+            raise PortfolioError(f"Fallo al persistir el capital de paper trading tras cierre: {e}")
+
+        logger.info(f"Portafolio de paper trading actualizado tras cierre de trade {trade.id}. Nuevo balance: {self.paper_trading_balance}")
 
     async def remove_paper_trading_asset(self, user_id: UUID, symbol: str, quantity: float):
         """

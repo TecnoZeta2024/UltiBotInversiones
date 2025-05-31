@@ -1,12 +1,18 @@
 import logging
-from uuid import UUID
+from uuid import UUID, uuid4 # Importar uuid4
+from datetime import datetime # Importar datetime
 from typing import Optional
+import asyncio # Importar asyncio
 
-from src.shared.data_types import TradeOrderDetails, ServiceName
+from src.shared.data_types import TradeOrderDetails, ServiceName, Opportunity, Trade, PortfolioSnapshot # Importar PortfolioSnapshot
 from src.ultibot_backend.services.config_service import ConfigService
 from src.ultibot_backend.services.order_execution_service import OrderExecutionService, PaperOrderExecutionService
 from src.ultibot_backend.services.credential_service import CredentialService
-from src.ultibot_backend.core.exceptions import OrderExecutionError, ConfigurationError, CredentialError
+from src.ultibot_backend.services.market_data_service import MarketDataService # Importar MarketDataService
+from src.ultibot_backend.services.portfolio_service import PortfolioService # Importar PortfolioService para Task 2
+from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService # Importar PersistenceService para Task 1.6
+from src.ultibot_backend.services.notification_service import NotificationService # Importar NotificationService para Task 3
+from src.ultibot_backend.core.exceptions import OrderExecutionError, ConfigurationError, CredentialError, MarketDataError, PortfolioError # Importar PortfolioError
 
 logger = logging.getLogger(__name__)
 
@@ -20,12 +26,352 @@ class TradingEngineService:
         config_service: ConfigService,
         order_execution_service: OrderExecutionService,
         paper_order_execution_service: PaperOrderExecutionService,
-        credential_service: CredentialService
+        credential_service: CredentialService,
+        market_data_service: MarketDataService, # Añadir MarketDataService
+        portfolio_service: PortfolioService, # Añadir PortfolioService
+        persistence_service: SupabasePersistenceService, # Añadir PersistenceService
+        notification_service: NotificationService # Añadir NotificationService
     ):
         self.config_service = config_service
         self.order_execution_service = order_execution_service
         self.paper_order_execution_service = paper_order_execution_service
         self.credential_service = credential_service
+        self.market_data_service = market_data_service # Asignar
+        self.portfolio_service = portfolio_service # Asignar
+        self.persistence_service = persistence_service # Asignar
+        self.notification_service = notification_service # Asignar
+        self._monitor_task: Optional[asyncio.Task] = None # Para controlar la tarea de monitoreo
+
+    async def start_paper_trading_monitor(self):
+        """
+        Inicia el monitoreo continuo de trades abiertos en Paper Trading.
+        """
+        if self._monitor_task and not self._monitor_task.done():
+            logger.info("El monitor de Paper Trading ya está en ejecución.")
+            return
+
+        logger.info("Iniciando el monitor de Paper Trading...")
+        self._monitor_task = asyncio.create_task(self._run_paper_trading_monitor_loop())
+
+    async def stop_paper_trading_monitor(self):
+        """
+        Detiene el monitoreo continuo de trades abiertos en Paper Trading.
+        """
+        if self._monitor_task:
+            logger.info("Deteniendo el monitor de Paper Trading...")
+            self._monitor_task.cancel()
+            try:
+                await self._monitor_task
+            except asyncio.CancelledError:
+                logger.info("Monitor de Paper Trading detenido.")
+            self._monitor_task = None
+
+    async def _run_paper_trading_monitor_loop(self):
+        """
+        Bucle principal del monitor de Paper Trading.
+        """
+        # TODO: Hacer el intervalo de monitoreo configurable
+        MONITOR_INTERVAL_SECONDS = 5 # Monitorear cada 5 segundos
+
+        while True:
+            try:
+                logger.debug("Ejecutando ciclo de monitoreo de Paper Trading...")
+                # Subtask 1.4: Obtener trades abiertos en Paper Trading
+                open_paper_trades = await self.persistence_service.get_open_paper_trades()
+                
+                if not open_paper_trades:
+                    logger.debug("No hay trades abiertos en Paper Trading para monitorear.")
+                
+                for trade in open_paper_trades:
+                    # Subtask 1.5: Dentro del monitoreo, obtener el precio de mercado actual
+                    # Subtask 1.6: Implementar la lógica para ajustar el TSL
+                    # Subtask 1.7: Implementar la lógica para detectar si el precio alcanza el TSL o TP
+                    # Subtask 1.8: Si se alcanza TSL/TP, simular el cierre de la posición
+                    await self.monitor_and_manage_paper_trade_exit(trade)
+                
+            except Exception as e:
+                logger.error(f"Error en el bucle de monitoreo de Paper Trading: {e}", exc_info=True)
+            
+            await asyncio.sleep(MONITOR_INTERVAL_SECONDS)
+
+    async def simulate_paper_entry_order(self, opportunity: Opportunity) -> Trade:
+        """
+        Simula la ejecución de una orden de entrada en modo Paper Trading
+        para una oportunidad de trading validada por la IA.
+        """
+        logger.info(f"Simulando orden de entrada para oportunidad {opportunity.id} ({opportunity.symbol})")
+        user_id = opportunity.user_id
+        symbol = opportunity.symbol
+        side = opportunity.ai_analysis.suggestedAction if opportunity.ai_analysis else None
+
+        if not symbol or not side:
+            logger.error(f"Oportunidad {opportunity.id} no tiene símbolo o acción sugerida. No se puede simular.")
+            raise OrderExecutionError(f"Oportunidad inválida para simulación: {opportunity.id}")
+
+        # Subtask 1.2: Obtener el precio de mercado actual
+        try:
+            current_price = await self.market_data_service.get_latest_price(symbol)
+            logger.info(f"Precio actual de {symbol}: {current_price}")
+        except MarketDataError as e:
+            logger.error(f"Error al obtener precio de mercado para {symbol}: {e}", exc_info=True)
+            raise OrderExecutionError(f"No se pudo obtener el precio de mercado para {symbol}.") from e
+
+        # Subtask 1.3: Calcular el tamaño de la posición (quantity)
+        user_config = await self.config_service.get_user_configuration(user_id)
+        
+        # Obtener el capital disponible del portafolio de paper trading
+        portfolio_snapshot = await self.portfolio_service.get_portfolio_snapshot(user_id)
+        available_capital = portfolio_snapshot.paper_trading.available_balance_usdt
+
+        # Reglas de gestión de capital (FR3.1 - no más del 50% del capital diario, FR3.2 - ajuste dinámico al 25%)
+        # Simplificación: Usaremos perTradeCapitalRiskPercentage sobre el capital disponible para esta simulación.
+        # La lógica de "capital diario" es más compleja y podría requerir un seguimiento de trades diarios.
+        per_trade_risk_percentage = user_config.riskProfileSettings.perTradeCapitalRiskPercentage if user_config.riskProfileSettings else None
+        
+        if not per_trade_risk_percentage:
+            logger.warning(f"No se encontró 'perTradeCapitalRiskPercentage' para usuario {user_id}. Usando 0.01 (1%).")
+            per_trade_risk_percentage = 0.01 # Valor por defecto si no está configurado
+
+        capital_to_invest = available_capital * per_trade_risk_percentage
+        
+        if capital_to_invest <= 0:
+            logger.warning(f"Capital a invertir es cero o negativo para {user_id}. No se puede simular la orden.")
+            raise OrderExecutionError("Capital insuficiente para simular la orden.")
+
+        # Calcular la cantidad (quantity)
+        # Asumimos que el precio es en USDT y la cantidad es del activo base (ej. BTC en BTCUSDT)
+        quantity = capital_to_invest / current_price
+        
+        # TODO: Considerar la precisión de los símbolos (pasos de cantidad y precio) de Binance para redondear correctamente.
+        # Esto requeriría obtener información de los símbolos de Binance, lo cual puede ser una tarea futura o una mejora.
+        # Por ahora, usaremos la cantidad calculada directamente.
+        logger.info(f"Calculado: Capital disponible={available_capital}, % riesgo por trade={per_trade_risk_percentage}, Capital a invertir={capital_to_invest}, Cantidad={quantity}")
+
+        # Subtask 1.4: Crear una instancia de TradeOrderDetails
+        simulated_order_details = TradeOrderDetails(
+            orderId_internal=uuid4(),
+            type='market',
+            status='filled',
+            requestedQuantity=quantity,
+            executedQuantity=quantity,
+            executedPrice=current_price,
+            timestamp=datetime.utcnow(),
+            # Los campos exchangeOrderId, commission, commissionAsset, rawResponse son opcionales
+        )
+        logger.info(f"Orden simulada creada: {simulated_order_details.orderId_internal}")
+
+        # Subtask 1.2: Calcular los niveles iniciales de TSL y TP (AC1)
+        # Usaremos porcentajes fijos para la v1.0
+        TP_PERCENTAGE = 0.02  # 2% de ganancia
+        TSL_PERCENTAGE = 0.01  # 1% de pérdida inicial
+        TSL_CALLBACK_RATE = 0.005 # 0.5% de retroceso para TSL
+
+        take_profit_price = current_price * (1 + TP_PERCENTAGE) if side == 'BUY' else current_price * (1 - TP_PERCENTAGE)
+        trailing_stop_activation_price = current_price * (1 - TSL_PERCENTAGE) if side == 'BUY' else current_price * (1 + TSL_PERCENTAGE)
+        current_stop_price_tsl = trailing_stop_activation_price # Inicialmente, el stop es el precio de activación
+
+        logger.info(f"Calculado para {symbol} ({side}): TP={take_profit_price:.4f}, TSL Act.={trailing_stop_activation_price:.4f}, TSL Callback={TSL_CALLBACK_RATE}, Current TSL={current_stop_price_tsl:.4f}")
+
+        # Subtask 1.5: Crear una nueva instancia de Trade
+        new_trade = Trade(
+            id=uuid4(),
+            user_id=user_id,
+            mode='paper',
+            symbol=symbol,
+            side=side,
+            entryOrder=simulated_order_details,
+            exitOrders=[], # Asegurar que sea una lista vacía por defecto
+            positionStatus='open',
+            opportunityId=opportunity.id,
+            aiAnalysisConfidence=opportunity.ai_analysis.calculatedConfidence if opportunity.ai_analysis else None,
+            pnl_usd=None,
+            pnl_percentage=None,
+            closingReason=None,
+            takeProfitPrice=take_profit_price,
+            trailingStopActivationPrice=trailing_stop_activation_price,
+            trailingStopCallbackRate=TSL_CALLBACK_RATE,
+            currentStopPrice_tsl=current_stop_price_tsl,
+            riskRewardAdjustments=[], # Asegurar que sea una lista vacía por defecto
+            created_at=datetime.utcnow(),
+            opened_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+            closed_at=None
+        )
+        logger.info(f"Trade simulado creado: {new_trade.id}")
+
+        # Subtask 1.6: Persistir el nuevo Trade
+        try:
+            await self.persistence_service.upsert_trade(new_trade.user_id, new_trade.model_dump(mode='json', by_alias=True, exclude_none=True))
+            logger.info(f"Trade simulado {new_trade.id} persistido exitosamente.")
+        except Exception as e:
+            logger.error(f"Error al persistir el trade simulado {new_trade.id}: {e}", exc_info=True)
+            raise OrderExecutionError(f"Fallo al persistir el trade simulado: {e}") from e
+        
+        # Task 2: Actualizar el portafolio de Paper Trading (Subtasks 2.1 - 2.4)
+        # Esto se hará en PortfolioService, pero lo llamamos desde aquí.
+        try:
+            await self.portfolio_service.update_paper_portfolio_after_entry(new_trade)
+            logger.info(f"Portafolio de paper trading actualizado para trade {new_trade.id}.")
+        except Exception as e:
+            logger.error(f"Error al actualizar el portafolio de paper trading para trade {new_trade.id}: {e}", exc_info=True)
+            # No relanzamos el error aquí para no bloquear la creación del trade, pero lo logueamos.
+            # Podríamos considerar un mecanismo de reintento o compensación.
+
+        # Task 3: Enviar notificaciones al usuario (Subtasks 3.1 - 3.2)
+        try:
+            await self.notification_service.send_paper_trade_entry_notification(new_trade)
+            logger.info(f"Notificación de trade simulado enviada para trade {new_trade.id}.")
+        except Exception as e:
+            logger.error(f"Error al enviar notificación para trade {new_trade.id}: {e}", exc_info=True)
+            # Similar al portafolio, no bloqueamos la operación principal por un fallo en la notificación.
+
+        return new_trade
+
+    async def monitor_and_manage_paper_trade_exit(self, trade: Trade):
+        """
+        Monitorea y gestiona las órdenes de salida (TSL/TP) para un trade en Paper Trading.
+        Este método será llamado después de que un trade de paper trading se abra.
+        """
+        logger.info(f"Monitoreando TSL/TP para trade {trade.id} ({trade.symbol})")
+
+        # Subtask 1.5: Obtener el precio de mercado actual
+        try:
+            current_price = await self.market_data_service.get_latest_price(trade.symbol)
+            logger.debug(f"Precio actual de {trade.symbol}: {current_price}")
+        except MarketDataError as e:
+            logger.error(f"Error al obtener precio de mercado para {trade.symbol} en monitoreo: {e}", exc_info=True)
+            return # No podemos procesar este trade sin precio actual
+
+        # Subtask 1.6: Implementar la lógica para ajustar el TSL si el precio se mueve favorablemente (AC3)
+        # Solo ajustamos TSL si la posición está abierta
+        if trade.positionStatus == 'open':
+            if trade.trailingStopCallbackRate is None or trade.currentStopPrice_tsl is None:
+                logger.warning(f"Trade {trade.id} no tiene TSL configurado correctamente. Saltando ajuste de TSL.")
+                return
+
+            if trade.side == 'BUY':
+                # Para BUY, TSL sube si el precio sube
+                if current_price > trade.entryOrder.executedPrice: # Solo si el precio actual es mayor que el de entrada
+                    # Calcular el nuevo stop potencial basado en el precio actual y el callback rate
+                    new_potential_stop = current_price * (1 - trade.trailingStopCallbackRate)
+                    # Si el nuevo stop potencial es mayor que el stop actual, actualizamos
+                    if new_potential_stop > trade.currentStopPrice_tsl:
+                        trade.currentStopPrice_tsl = new_potential_stop
+                        trade.updated_at = datetime.utcnow()
+                        logger.info(f"TSL para {trade.symbol} (BUY) ajustado a {trade.currentStopPrice_tsl:.4f} (precio actual: {current_price:.4f})")
+                        # Opcional: registrar ajuste en riskRewardAdjustments
+                        trade.riskRewardAdjustments.append({
+                            "timestamp": datetime.utcnow().isoformat(),
+                            "type": "TSL_ADJUSTMENT",
+                            "new_stop_price": new_potential_stop,
+                            "current_price": current_price
+                        })
+                        await self.persistence_service.upsert_trade(trade.user_id, trade.model_dump(mode='json', by_alias=True, exclude_none=True))
+                        logger.info(f"Trade {trade.id} con TSL actualizado persistido.")
+            elif trade.side == 'SELL':
+                # Para SELL, TSL baja si el precio baja
+                if current_price < trade.entryOrder.executedPrice: # Solo si el precio actual es menor que el de entrada
+                    # Calcular el nuevo stop potencial basado en el precio actual y el callback rate
+                    new_potential_stop = current_price * (1 + trade.trailingStopCallbackRate)
+                    # Si el nuevo stop potencial es menor que el stop actual, actualizamos
+                    if new_potential_stop < trade.currentStopPrice_tsl:
+                        trade.currentStopPrice_tsl = new_potential_stop
+                        trade.updated_at = datetime.utcnow()
+                        logger.info(f"TSL para {trade.symbol} (SELL) ajustado a {trade.currentStopPrice_tsl:.4f} (precio actual: {current_price:.4f})")
+                        # Opcional: registrar ajuste en riskRewardAdjustments
+                        trade.riskRewardAdjustments.append({
+                            "timestamp": datetime.utcnow().isoformat(),
+                            "type": "TSL_ADJUSTMENT",
+                            "new_stop_price": new_potential_stop,
+                            "current_price": current_price
+                        })
+                        await self.persistence_service.upsert_trade(trade.user_id, trade.model_dump(mode='json', by_alias=True, exclude_none=True))
+                        logger.info(f"Trade {trade.id} con TSL actualizado persistido.")
+
+            # Subtask 1.7: Implementar la lógica para detectar si el precio alcanza el TSL o TP (AC4)
+            closing_reason = None
+            if trade.side == 'BUY':
+                if trade.takeProfitPrice is not None and current_price >= trade.takeProfitPrice:
+                    closing_reason = 'TP_HIT'
+                    logger.info(f"TP alcanzado para {trade.symbol} (BUY). Precio: {current_price:.4f}, TP: {trade.takeProfitPrice:.4f}")
+                elif trade.currentStopPrice_tsl is not None and current_price <= trade.currentStopPrice_tsl:
+                    closing_reason = 'SL_HIT'
+                    logger.info(f"TSL alcanzado para {trade.symbol} (BUY). Precio: {current_price:.4f}, TSL: {trade.currentStopPrice_tsl:.4f}")
+            elif trade.side == 'SELL':
+                if trade.takeProfitPrice is not None and current_price <= trade.takeProfitPrice:
+                    closing_reason = 'TP_HIT'
+                    logger.info(f"TP alcanzado para {trade.symbol} (SELL). Precio: {current_price:.4f}, TP: {trade.takeProfitPrice:.4f}")
+                elif trade.currentStopPrice_tsl is not None and current_price >= trade.currentStopPrice_tsl:
+                    closing_reason = 'SL_HIT'
+                    logger.info(f"TSL alcanzado para {trade.symbol} (SELL). Precio: {current_price:.4f}, TSL: {trade.currentStopPrice_tsl:.4f}")
+
+            if closing_reason:
+                # Subtask 1.8: Si se alcanza TSL/TP, simular el cierre de la posición
+                await self._close_paper_trade(trade, current_price, closing_reason)
+
+    async def _close_paper_trade(self, trade: Trade, executed_price: float, closing_reason: str):
+        """
+        Simula el cierre de una posición en Paper Trading.
+        """
+        logger.info(f"Cerrando trade {trade.id} por {closing_reason} a precio {executed_price:.4f}")
+
+        # Subtask 1.8.1: Crear una instancia de TradeOrderDetails para la orden de salida simulada
+        exit_order_details = TradeOrderDetails(
+            orderId_internal=uuid4(),
+            type='trailing_stop_loss' if closing_reason == 'SL_HIT' else 'take_profit',
+            status='filled',
+            requestedQuantity=trade.entryOrder.executedQuantity, # Cantidad total de la posición
+            executedQuantity=trade.entryOrder.executedQuantity,
+            executedPrice=executed_price,
+            timestamp=datetime.utcnow()
+        )
+        trade.exitOrders.append(exit_order_details) # Añadir a la lista de órdenes de salida
+
+        # Subtask 1.8.2: Actualizar el Trade con la orden de salida, P&L y estado
+        trade.positionStatus = 'closed'
+        trade.closingReason = closing_reason
+        trade.closed_at = datetime.utcnow()
+
+        # Calcular P&L
+        entry_value = trade.entryOrder.executedQuantity * trade.entryOrder.executedPrice
+        exit_value = exit_order_details.executedQuantity * exit_order_details.executedPrice
+
+        if trade.side == 'BUY':
+            trade.pnl_usd = exit_value - entry_value
+        elif trade.side == 'SELL':
+            trade.pnl_usd = entry_value - exit_value # Para ventas, si el precio baja, se gana
+
+        if entry_value > 0 and trade.pnl_usd is not None:
+            trade.pnl_percentage = (trade.pnl_usd / entry_value) * 100
+        else:
+            trade.pnl_percentage = 0.0
+
+        logger.info(f"Trade {trade.id} cerrado. P&L: {trade.pnl_usd:.2f} USD ({trade.pnl_percentage:.2f}%)")
+
+        # Subtask 1.8.3: Persistir el Trade actualizado
+        try:
+            await self.persistence_service.upsert_trade(trade.user_id, trade.model_dump(mode='json', by_alias=True, exclude_none=True))
+            logger.info(f"Trade {trade.id} cerrado y persistido exitosamente.")
+        except Exception as e:
+            logger.error(f"Error al persistir el trade cerrado {trade.id}: {e}", exc_info=True)
+            # Considerar un mecanismo de reintento o alerta si la persistencia falla aquí.
+            raise OrderExecutionError(f"Fallo al persistir el trade cerrado: {e}") from e
+
+        # Task 2: Actualizar el portafolio de Paper Trading tras el cierre de una posición.
+        try:
+            await self.portfolio_service.update_paper_portfolio_after_exit(trade)
+            logger.info(f"Portafolio de paper trading actualizado para trade {trade.id}.")
+        except Exception as e:
+            logger.error(f"Error al actualizar el portafolio de paper trading tras cierre de trade {trade.id}: {e}", exc_info=True)
+            # No relanzamos el error aquí para no bloquear la operación principal, pero lo logueamos.
+
+        # Task 3: Enviar notificaciones al usuario sobre la ejecución de TSL/TP.
+        try:
+            await self.notification_service.send_paper_trade_exit_notification(trade)
+            logger.info(f"Notificación de cierre de trade simulado enviada para trade {trade.id}.")
+        except Exception as e:
+            logger.error(f"Error al enviar notificación de cierre para trade {trade.id}: {e}", exc_info=True)
+            # Similar al portafolio, no bloqueamos la operación principal por un fallo en la notificación.
 
     async def execute_trade(
         self,
@@ -41,7 +387,7 @@ class TradingEngineService:
         logger.info(f"Solicitud de ejecución de trade para usuario {user_id}: {side} {quantity} de {symbol}")
         
         try:
-            user_config = await self.config_service.load_user_configuration(user_id)
+            user_config = await self.config_service.get_user_configuration(user_id)
             
             if user_config.paperTradingActive:
                 logger.info(f"Modo Paper Trading ACTIVO para usuario {user_id}. Simulando orden.")

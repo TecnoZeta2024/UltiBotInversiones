@@ -5,8 +5,9 @@ from uuid import UUID
 from src.shared.data_types import AssetBalance, ServiceName, BinanceConnectionStatus
 from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
 from src.ultibot_backend.services.credential_service import CredentialService
-from src.ultibot_backend.core.exceptions import BinanceAPIError, CredentialError, UltiBotError, ExternalAPIError
+from src.ultibot_backend.core.exceptions import BinanceAPIError, CredentialError, UltiBotError, ExternalAPIError, MarketDataError # Importar MarketDataError
 from datetime import datetime
+import asyncio # Necesario para asyncio.Task y asyncio.create_task
 
 logger = logging.getLogger(__name__)
 
@@ -148,6 +149,27 @@ class MarketDataService:
                 logger.critical(f"Error inesperado al obtener datos REST de {symbol} para el usuario {user_id}: {e}", exc_info=True)
                 market_data[symbol] = {"error": "Error inesperado"}
         return market_data
+
+    async def get_latest_price(self, symbol: str) -> float:
+        """
+        Obtiene el último precio conocido para un símbolo específico.
+        """
+        if self._closed:
+            logger.warning(f"MarketDataService está cerrado. No se puede obtener el último precio para {symbol}.")
+            raise MarketDataError(f"MarketDataService cerrado. No se puede obtener el precio para {symbol}.")
+        try:
+            ticker_data = await self.binance_adapter.get_ticker_24hr(symbol)
+            last_price = float(ticker_data.get("lastPrice", 0))
+            if last_price == 0:
+                raise MarketDataError(f"Precio 'lastPrice' no encontrado o es cero para el símbolo {symbol}.")
+            logger.info(f"Último precio de {symbol}: {last_price}")
+            return last_price
+        except BinanceAPIError as e:
+            logger.error(f"Error de la API de Binance al obtener el último precio para {symbol}: {e}")
+            raise MarketDataError(f"Fallo al obtener el último precio de Binance para {symbol}: {e}") from e
+        except Exception as e:
+            logger.critical(f"Error inesperado al obtener el último precio para {symbol}: {e}", exc_info=True)
+            raise MarketDataError(f"Error inesperado al obtener el último precio para {symbol}: {e}") from e
 
     async def subscribe_to_market_data_websocket(self, user_id: UUID, symbol: str, callback: Callable):
         """
