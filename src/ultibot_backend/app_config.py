@@ -18,7 +18,7 @@ class AppSettings(BaseSettings):
     DATABASE_URL: str = "postgresql://postgres:your-postgres-password@db.your-supabase-project.supabase.co:5432/postgres" # Valor por defecto para desarrollo
 
     # Credential Encryption
-    CREDENTIAL_ENCRYPTION_KEY: Optional[str] = None # Hacerla opcional y permitir que CredentialService la genere si es None
+    CREDENTIAL_ENCRYPTION_KEY: str
 
     # Logging
     LOG_LEVEL: str = "INFO"

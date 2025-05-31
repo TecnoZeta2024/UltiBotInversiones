@@ -19,5 +19,8 @@ COPY . .
 # Expone el puerto que usará FastAPI
 EXPOSE 8000
 
+# IMPORTANT: Ensure CREDENTIAL_ENCRYPTION_KEY and other necessary environment variables
+# (e.g., SUPABASE_URL, SUPABASE_ANON_KEY, DATABASE_URL)
+# are provided when running the container in production/staging.
 # Comando para ejecutar la aplicación FastAPI
 CMD ["poetry", "run", "uvicorn", "src.ultibot_backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
