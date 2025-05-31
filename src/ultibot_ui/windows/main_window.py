@@ -254,6 +254,7 @@ class MainWindow(QMainWindow):
             self.config_service,
             self.notification_service,
             self.persistence_service,
+            self.api_client,  # Agregar el parámetro faltante
         )
         self.stacked_widget.addWidget(self.dashboard_view)  # Índice 0
 
