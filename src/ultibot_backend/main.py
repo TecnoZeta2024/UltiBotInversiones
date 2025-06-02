@@ -14,6 +14,9 @@ from src.ultibot_backend.services.config_service import ConfigService
 from src.ultibot_backend.services.portfolio_service import PortfolioService
 from src.ultibot_backend.services.order_execution_service import OrderExecutionService, PaperOrderExecutionService # Importar OrderExecutionService
 from src.ultibot_backend.services.trading_engine_service import TradingEngineService # Importar TradingEngineService
+from src.ultibot_backend.services.ai_orchestrator_service import AIOrchestratorService # Importar AIOrchestratorService
+from src.ultibot_backend.adapters.mobula_adapter import MobulaAdapter # Importar MobulaAdapter
+from langchain_google_genai import ChatGoogleGenerativeAI # Importar ChatGoogleGenerativeAI
 from src.shared.data_types import ServiceName, UserConfiguration
 
 # Configuración básica de logging
@@ -34,6 +37,9 @@ config_service: Optional[ConfigService] = None
 order_execution_service: Optional[OrderExecutionService] = None # Añadir OrderExecutionService
 paper_order_execution_service: Optional[PaperOrderExecutionService] = None # Añadir PaperOrderExecutionService
 trading_engine_service: Optional[TradingEngineService] = None # Añadir TradingEngineService
+ai_orchestrator_service: Optional[AIOrchestratorService] = None # Añadir AIOrchestratorService
+mobula_adapter: Optional[MobulaAdapter] = None # Añadir MobulaAdapter
+llm_provider: Optional[ChatGoogleGenerativeAI] = None # Añadir llm_provider
 user_configuration: Optional[UserConfiguration] = None # Para almacenar la configuración cargada
 
 # Asumimos un user_id fijo para la v1.0 de una aplicación local
@@ -85,7 +91,7 @@ async def startup_event():
     Evento que se ejecuta al iniciar la aplicación FastAPI.
     Inicializa servicios y realiza verificaciones iniciales.
     """
-    global credential_service, notification_service, binance_adapter, market_data_service, persistence_service, portfolio_service, config_service, order_execution_service, paper_order_execution_service, trading_engine_service, user_configuration
+    global credential_service, notification_service, binance_adapter, market_data_service, persistence_service, portfolio_service, config_service, order_execution_service, paper_order_execution_service, trading_engine_service, ai_orchestrator_service, mobula_adapter, llm_provider, user_configuration
     logger.info("Iniciando UltiBot Backend...")
     
     from src.ultibot_backend.app_config import settings # Importar settings aquí para asegurar que esté disponible
@@ -112,16 +118,27 @@ async def startup_event():
     await persistence_service.connect() # Conectar a la base de datos al inicio
 
     credential_service = CredentialService(encryption_key=effective_encryption_key)
-    notification_service = NotificationService(credential_service=credential_service, persistence_service=persistence_service)
     binance_adapter = BinanceAdapter() # Inicializar BinanceAdapter
     market_data_service = MarketDataService(credential_service=credential_service, binance_adapter=binance_adapter) # Inicializar MarketDataService
     portfolio_service = PortfolioService(market_data_service=market_data_service, persistence_service=persistence_service) # Inicializar PortfolioService
+    
+    # Initialize ConfigService first (now NotificationService is optional in its constructor)
     config_service = ConfigService(
         persistence_service=persistence_service,
         credential_service=credential_service,
-        portfolio_service=portfolio_service,
-        notification_service=notification_service
-    ) # Inicializar ConfigService con todas sus dependencias
+        portfolio_service=portfolio_service
+        # notification_service is not passed here initially
+    )
+    
+    # Then initialize NotificationService, providing ConfigService to it
+    notification_service = NotificationService(
+        credential_service=credential_service, 
+        persistence_service=persistence_service,
+        config_service=config_service  # Pass ConfigService here
+    )
+
+    # Now, inject NotificationService back into ConfigService
+    config_service.set_notification_service(notification_service)
 
     # Inicializar OrderExecutionService y PaperOrderExecutionService
     order_execution_service = OrderExecutionService(binance_adapter=binance_adapter)
@@ -140,16 +157,61 @@ async def startup_event():
         binance_adapter=binance_adapter
     )
 
-    logger.info("Servicios CredentialService, NotificationService, PersistenceService, MarketDataService, PortfolioService, ConfigService, OrderExecutionService, PaperOrderExecutionService y TradingEngineService inicializados.")
+    # Inicializar MobulaAdapter
+    mobula_adapter = MobulaAdapter()
+
+    # Inicializar LLM Provider (ejemplo con ChatGoogleGenerativeAI)
+    # Asegúrate de que GOOGLE_API_KEY esté configurado en el entorno o settings
+    try:
+        llm_provider = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.7) # Ajusta el modelo y parámetros según necesidad
+        logger.info("LLM Provider (ChatGoogleGenerativeAI) inicializado.")
+    except Exception as e:
+        logger.error(f"Error al inicializar LLM Provider: {e}", exc_info=True)
+        # Considerar si la aplicación debe detenerse si el LLM no se puede inicializar
+        llm_provider = None # Asegurar que es None si falla
+
+    # Inicializar AIOrchestratorService
+    if persistence_service and credential_service and config_service and llm_provider and mobula_adapter and binance_adapter and notification_service:
+        ai_orchestrator_service = AIOrchestratorService(
+            config_service=config_service,
+            credential_service=credential_service,
+            persistence_service=persistence_service,
+            llm_provider=llm_provider,
+            mobula_adapter=mobula_adapter,
+            binance_adapter=binance_adapter,
+            notification_service=notification_service
+        )
+        logger.info("AIOrchestratorService inicializado.")
+        # Llamar a async_init para cargar herramientas MCP
+        await ai_orchestrator_service.async_init(user_id=str(FIXED_USER_ID))
+        logger.info(f"AIOrchestratorService async_init completado para el usuario {FIXED_USER_ID}.")
+    else:
+        logger.error("No se pudo inicializar AIOrchestratorService debido a dependencias faltantes.")
+
+
+    logger.info("Todos los servicios principales inicializados.")
 
     # Cargar la configuración del usuario al inicio
     try:
-        user_configuration = await config_service.get_user_configuration(FIXED_USER_ID) # Corregido: usar get_user_configuration
+        # Ensure user_id is passed as string, as get_user_configuration expects Optional[str]
+        user_configuration = await config_service.get_user_configuration(user_id_str=str(FIXED_USER_ID)) 
         logger.info(f"Configuración de usuario cargada exitosamente para {FIXED_USER_ID}.")
     except Exception as e:
         logger.error(f"Error al cargar la configuración de usuario al inicio: {e}", exc_info=True)
-        user_configuration = config_service.get_default_configuration(FIXED_USER_ID) # Corregido: pasar FIXED_USER_ID
+        user_configuration = config_service.get_default_configuration(user_id=FIXED_USER_ID) 
         logger.warning("Se utilizará la configuración por defecto debido a un error de carga.")
+
+    # Iniciar el monitor de trading real si está habilitado en la configuración del usuario
+    if trading_engine_service and user_configuration and user_configuration.realTradingSettings:
+        if user_configuration.realTradingSettings.real_trading_mode_active:
+            logger.info("Real Trading Mode is active. Starting real trading monitor.")
+            await trading_engine_service.start_real_trading_monitor()
+        else:
+            logger.info("Real Trading Mode is not active. Real trading monitor will not be started.")
+    elif not trading_engine_service:
+        logger.error("TradingEngineService not initialized. Cannot start real trading monitor.")
+    elif not user_configuration or not user_configuration.realTradingSettings:
+        logger.error("User configuration or realTradingSettings not available. Cannot determine if real trading monitor should start.")
 
 
     # Verificar si la URL de la base de datos está configurada antes de intentar la verificación de credenciales
