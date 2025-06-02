@@ -1,5 +1,5 @@
 import logging
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QLabel
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QLabel, QFrame
 from PyQt5.QtCore import Qt, QTimer # Importar QTimer
 from uuid import UUID # Importar UUID
 import asyncio # Importar asyncio para iniciar tareas asíncronas
@@ -11,8 +11,11 @@ from src.shared.data_types import Notification, OpportunityStatus, Opportunity #
 from src.ultibot_ui.widgets.market_data_widget import MarketDataWidget
 from src.ultibot_ui.widgets.chart_widget import ChartWidget
 from src.ultibot_ui.widgets.portfolio_widget import PortfolioWidget # Importar PortfolioWidget
+from src.ultibot_ui.widgets.trading_mode_selector import TradingModeSelector, TradingModeStatusBar
+from src.ultibot_ui.widgets.order_form_widget import OrderFormWidget
 from src.ultibot_ui.widgets.real_trade_confirmation_dialog import RealTradeConfirmationDialog # Importar el nuevo diálogo
 from src.ultibot_ui.services.api_client import UltiBotAPIClient # Importar el cliente API
+from src.ultibot_ui.services.trading_mode_state import get_trading_mode_manager
 
 from src.ultibot_backend.services.market_data_service import MarketDataService
 from src.ultibot_backend.services.config_service import ConfigService
@@ -33,6 +36,9 @@ class DashboardView(QWidget):
         self.api_client = api_client # Guardar la referencia al cliente API
         self.trading_mode_service = trading_mode_service # Store TradingModeService
         
+        # Get trading mode manager for state synchronization
+        self.trading_mode_manager = get_trading_mode_manager()
+        
         # Inicializar PortfolioService aquí, ya que DashboardView tiene sus dependencias
         self.portfolio_service = PortfolioService(self.market_data_service, self.persistence_service)
         
@@ -52,6 +58,40 @@ class DashboardView(QWidget):
     def _setup_ui(self):
         main_layout = QVBoxLayout(self)
         self.setLayout(main_layout)
+
+        # --- Header Area: Trading Mode Selector ---
+        header_frame = QFrame()
+        header_frame.setFrameStyle(QFrame.StyledPanel)
+        header_frame.setMaximumHeight(60)
+        header_frame.setStyleSheet("""
+            QFrame {
+                background-color: #2C2C2C;
+                border-bottom: 1px solid #444;
+                margin: 0px;
+            }
+        """)
+        
+        header_layout = QHBoxLayout(header_frame)
+        header_layout.setContentsMargins(10, 5, 10, 5)
+        
+        # Dashboard title
+        dashboard_title = QLabel("Dashboard - UltiBotInversiones")
+        dashboard_title.setStyleSheet("color: #EEE; font-size: 16px; font-weight: bold;")
+        header_layout.addWidget(dashboard_title)
+        
+        # Spacer
+        header_layout.addStretch()
+        
+        # Trading mode selector
+        self.trading_mode_selector = TradingModeSelector(style="toggle")
+        self.trading_mode_selector.mode_changed.connect(self._on_trading_mode_changed)
+        header_layout.addWidget(self.trading_mode_selector)
+        
+        # Trading mode status bar
+        self.mode_status_bar = TradingModeStatusBar()
+        header_layout.addWidget(self.mode_status_bar)
+        
+        main_layout.addWidget(header_frame)
 
         # --- Top Area: Market Data Widget ---
         # This widget shows overall market tickers, favorite pairs, etc.
@@ -86,14 +126,26 @@ class DashboardView(QWidget):
 
         main_layout.addWidget(center_splitter)
 
-        # Zona Inferior (con QSplitter vertical)
+        # Zona Inferior (con QSplitter vertical y QTabWidget)
         bottom_splitter = QSplitter(Qt.Orientation.Vertical) # Usar Qt.Orientation
         bottom_splitter.setContentsMargins(0, 0, 0, 0)
         bottom_splitter.setChildrenCollapsible(False)
 
-        # Reemplazar con NotificationWidget
-        self.notification_widget = NotificationWidget(self.notification_service, self.user_id) # Pasar notification_service y user_id
-        bottom_splitter.addWidget(self.notification_widget)
+        # Crear QTabWidget para la zona inferior
+        bottom_tab_widget = QTabWidget()
+        bottom_tab_widget.setMaximumHeight(300)  # Limitar altura para no dominar la pantalla
+        
+        # Pestaña de Notificaciones
+        self.notification_widget = NotificationWidget(self.notification_service, self.user_id)
+        bottom_tab_widget.addTab(self.notification_widget, "📢 Notificaciones")
+        
+        # Pestaña de Órdenes de Trading
+        self.order_form_widget = OrderFormWidget(self.user_id, self.api_client)
+        self.order_form_widget.order_executed.connect(self._handle_order_executed)
+        self.order_form_widget.order_failed.connect(self._handle_order_failed)
+        bottom_tab_widget.addTab(self.order_form_widget, "📈 Crear Orden")
+
+        bottom_splitter.addWidget(bottom_tab_widget)
 
         # Añadir el splitter inferior al layout principal
         main_layout.addWidget(bottom_splitter)
@@ -102,6 +154,20 @@ class DashboardView(QWidget):
         # Estos valores pueden necesitar ajuste o ser dinámicos
         center_splitter.setSizes([self.width() // 3, 2 * self.width() // 3])
         # bottom_splitter.setSizes([self.height() // 4]) # No se puede usar self.height() aquí directamente
+
+    def _on_trading_mode_changed(self, new_mode: str):
+        """
+        Handle trading mode changes from the selector.
+        
+        Args:
+            new_mode: The new trading mode ('paper' or 'real')
+        """
+        logger.info(f"Dashboard: Trading mode changed to {new_mode}")
+        
+        # The portfolio widget should automatically update through its connection
+        # to the trading mode state manager, but we can force a refresh if needed
+        if hasattr(self.portfolio_widget, 'refresh_data'):
+            self.portfolio_widget.refresh_data()
 
     def _handle_chart_symbol_selection(self, symbol: str):
         """Slot síncrono para la señal symbol_selected del ChartWidget."""
@@ -244,6 +310,43 @@ class DashboardView(QWidget):
         # Opcional: Actualizar el estado de la oportunidad en la UI a "rechazada por usuario" si se implementa en backend.
         asyncio.create_task(self._refresh_opportunities_ui()) # Refrescar por si el estado cambió en backend
 
+    def _handle_order_executed(self, order_details: Dict[str, Any]):
+        """
+        Maneja una orden ejecutada exitosamente desde el OrderFormWidget.
+        
+        Args:
+            order_details: Detalles de la orden ejecutada
+        """
+        logger.info(f"Orden ejecutada exitosamente: {order_details}")
+        
+        # Forzar actualización del portfolio widget
+        if hasattr(self.portfolio_widget, 'refresh_data'):
+            self.portfolio_widget.refresh_data()
+        
+        # Mostrar notificación de éxito en el sistema de notificaciones
+        symbol = order_details.get('symbol', 'N/A')
+        side = order_details.get('side', 'N/A')
+        quantity = order_details.get('quantity', 0)
+        mode = order_details.get('trading_mode', 'unknown')
+        
+        success_message = f"✅ Orden {side} ejecutada: {quantity:.8f} {symbol} en modo {mode.title()}"
+        
+        # Crear una notificación "local" para mostrar el éxito
+        # (esto podría integrarse con el sistema de notificaciones real)
+        logger.info(success_message)
+
+    def _handle_order_failed(self, error_message: str):
+        """
+        Maneja errores en la ejecución de órdenes desde el OrderFormWidget.
+        
+        Args:
+            error_message: Mensaje de error
+        """
+        logger.error(f"Error en ejecución de orden: {error_message}")
+        
+        # Podrías mostrar una notificación de error en la UI
+        # o registrarlo en el sistema de notificaciones
+
     def cleanup(self):
         """
         Limpia los recursos utilizados por DashboardView y sus widgets hijos.
@@ -280,5 +383,10 @@ class DashboardView(QWidget):
         if hasattr(self.chart_widget, 'cleanup') and callable(self.chart_widget.cleanup):
             print("DashboardView: Calling cleanup on chart_widget.")
             self.chart_widget.cleanup()
+        
+        # Limpiar OrderFormWidget (si es necesario)
+        if hasattr(self.order_form_widget, 'cleanup') and callable(self.order_form_widget.cleanup):
+            print("DashboardView: Calling cleanup on order_form_widget.")
+            self.order_form_widget.cleanup()
         
         print("DashboardView: cleanup finished.")

@@ -13,6 +13,7 @@ from src.ultibot_backend.adapters.persistence_service import SupabasePersistence
 from src.ultibot_backend.services.config_service import ConfigService
 from src.ultibot_backend.services.portfolio_service import PortfolioService
 from src.ultibot_backend.services.order_execution_service import OrderExecutionService, PaperOrderExecutionService # Importar OrderExecutionService
+from src.ultibot_backend.services.unified_order_execution_service import UnifiedOrderExecutionService
 from src.ultibot_backend.services.trading_engine_service import TradingEngineService # Importar TradingEngineService
 from src.ultibot_backend.services.ai_orchestrator_service import AIOrchestratorService # Importar AIOrchestratorService
 from src.ultibot_backend.adapters.mobula_adapter import MobulaAdapter # Importar MobulaAdapter
@@ -85,6 +86,11 @@ def get_config_service() -> ConfigService:
         raise RuntimeError("ConfigService no inicializado.")
     return config_service
 
+def get_unified_order_execution_service() -> UnifiedOrderExecutionService:
+    if unified_order_execution_service is None:
+        raise RuntimeError("UnifiedOrderExecutionService no inicializado.")
+    return unified_order_execution_service
+
 @app.on_event("startup")
 async def startup_event():
     """
@@ -143,6 +149,12 @@ async def startup_event():
     # Inicializar OrderExecutionService y PaperOrderExecutionService
     order_execution_service = OrderExecutionService(binance_adapter=binance_adapter)
     paper_order_execution_service = PaperOrderExecutionService()
+
+    # Inicializar UnifiedOrderExecutionService
+    unified_order_execution_service = UnifiedOrderExecutionService(
+        real_execution_service=order_execution_service,
+        paper_execution_service=paper_order_execution_service
+    )
 
     # Inicializar TradingEngineService
     trading_engine_service = TradingEngineService(
@@ -262,13 +274,14 @@ async def read_root():
     return {"message": "Welcome to UltiBot Backend"}
 
 # Aquí se incluirán los routers de api/v1/endpoints
-from src.ultibot_backend.api.v1.endpoints import telegram_status, binance_status, config, notifications, reports, portfolio
+from src.ultibot_backend.api.v1.endpoints import telegram_status, binance_status, config, notifications, reports, portfolio, trades
 app.include_router(telegram_status.router, prefix="/api/v1", tags=["telegram"]) # Añadir tags
 app.include_router(binance_status.router, prefix="/api/v1", tags=["binance"]) # Incluir el router de Binance
 app.include_router(config.router, prefix="/api/v1", tags=["config"]) # Incluir el router de configuración
 app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["notifications"]) # Incluir el router de notificaciones
 app.include_router(reports.router, prefix="/api/v1", tags=["reports"]) # Incluir el router de reportes
 app.include_router(portfolio.router, prefix="/api/v1/portfolio", tags=["portfolio"]) # Incluir el router de portafolio
+app.include_router(trades.router, prefix="/api/v1/trades", tags=["trades"]) # Incluir el router de operaciones
 
 # Importar y incluir el router de oportunidades por separado para depuración
 from src.ultibot_backend.api.v1.endpoints import opportunities
