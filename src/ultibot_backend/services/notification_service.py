@@ -10,13 +10,17 @@ from src.ultibot_backend.adapters.persistence_service import SupabasePersistence
 from src.ultibot_backend.services.credential_service import CredentialService
 from src.ultibot_backend.core.exceptions import CredentialError, NotificationError, TelegramNotificationError, ExternalAPIError
 
+# Import ConfigService
+from src.ultibot_backend.services.config_service import ConfigService, UserConfiguration
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class NotificationService:
-    def __init__(self, credential_service: CredentialService, persistence_service: SupabasePersistenceService):
+    def __init__(self, credential_service: CredentialService, persistence_service: SupabasePersistenceService, config_service: ConfigService): # Add config_service
         self.credential_service = credential_service
         self.persistence_service = persistence_service
+        self.config_service = config_service # Store config_service
         self._telegram_adapter: Optional[TelegramAdapter] = None
 
     async def _get_telegram_adapter(self, user_id: UUID) -> Optional[TelegramAdapter]:
@@ -153,90 +157,115 @@ class NotificationService:
                 original_exception=e
             )
 
-    async def send_notification(self, user_id: UUID, title: str, message: str, channel: str = "telegram", event_type: str = "SYSTEM_MESSAGE", dataPayload: Optional[Dict[str, Any]] = None) -> bool:
+    async def send_notification(
+        self, 
+        user_id: UUID, # Internally NotificationService might use UUID, AIOrchestrator passes str(opportunity.user_id)
+        title: str, 
+        message: str, 
+        event_type: str, 
+        opportunity_id: Optional[UUID] = None, # Changed from dataPayload to specific opportunity_id
+        dataPayload: Optional[Dict[str, Any]] = None # Keep dataPayload for other generic info
+    ) -> bool:
         """
-        Envía una notificación general al usuario a través del canal especificado.
-        Por ahora, soporta Telegram y UI.
-
-        Args:
-            user_id: El ID del usuario.
-            title: Título de la notificación.
-            message: Contenido del mensaje.
-            channel: Canal de notificación (ej. "telegram", "ui").
-            event_type: Tipo de evento de la notificación.
-
-        Returns:
-            True si la notificación se envió con éxito, False en caso contrario.
+        Envía una notificación al usuario a través de los canales configurados en sus preferencias.
         """
-        notification_to_save = Notification(
-            userId=user_id,
-            eventType=event_type,
-            channel=channel,
-            title=title,
-            message=message,
-            dataPayload=dataPayload
-        )
+        # Convert user_id to string if NotificationService uses it as UUID internally but ConfigService expects str
+        user_id_str = str(user_id)
+        user_config = await self.config_service.get_user_configuration(user_id_str=user_id_str)
+        if not user_config:
+            logger.error(f"No se pudo obtener la configuración para el usuario {user_id_str}. No se pueden enviar notificaciones.")
+            return False
+
+        sent_to_at_least_one_channel = False
         
-        try:
-            await self.save_notification(notification_to_save)
-        except NotificationError as e:
-            logger.error(f"No se pudo guardar la notificación en la base de datos: {e}")
-            pass
+        # Combine opportunity_id with other dataPayload if any
+        effective_payload = dataPayload or {}
+        if opportunity_id:
+            effective_payload['opportunity_id'] = str(opportunity_id)
 
-        if channel == "telegram":
-            telegram_credential = await self.credential_service.get_credential(
-                user_id=user_id,
-                service_name=ServiceName.TELEGRAM_BOT,
-                credential_label="default_telegram_bot"
+
+        # Check UI Notification Preferences
+        send_ui_notification = False
+        if user_config.notificationPreferences:
+            for pref in user_config.notificationPreferences:
+                if pref.eventType == event_type and pref.channel == "ui" and pref.isEnabled:
+                    send_ui_notification = True
+                    break
+        
+        if send_ui_notification:
+            ui_notification_to_save = Notification(
+                userId=user_id, eventType=event_type, channel="ui",
+                title=title, message=message, dataPayload=effective_payload
             )
-            if not telegram_credential:
-                logger.warning(f"No se encontraron credenciales de Telegram para el usuario {user_id}. No se puede enviar notificación.")
-                raise CredentialError(f"No se encontraron credenciales de Telegram para el usuario {user_id}.", code="TELEGRAM_CREDENTIAL_NOT_FOUND")
-
-            chat_id = None
-            if telegram_credential.encrypted_other_details:
-                try:
-                    other_details = json.loads(telegram_credential.encrypted_other_details)
-                    chat_id = other_details.get("chat_id")
-                except json.JSONDecodeError:
-                    logger.error(f"Error al decodificar encrypted_other_details para el usuario {user_id}. No se pudo obtener el chat_id.", exc_info=True)
-                    raise CredentialError(f"Error al decodificar chat_id de Telegram para el usuario {user_id}.", code="TELEGRAM_CHAT_ID_DECODE_ERROR")
-            
-            if not chat_id:
-                logger.error(f"Chat ID de Telegram no encontrado en las credenciales para el usuario {user_id}. No se puede enviar notificación.")
-                raise CredentialError(f"Chat ID de Telegram no encontrado para el usuario {user_id}.", code="TELEGRAM_CHAT_ID_MISSING")
-
-            telegram_adapter = await self._get_telegram_adapter(user_id)
-            if not telegram_adapter:
-                logger.error(f"No se pudo inicializar TelegramAdapter para el usuario {user_id}.")
-                raise TelegramNotificationError(f"No se pudo inicializar TelegramAdapter para el usuario {user_id}.", code="TELEGRAM_ADAPTER_INIT_FAILED")
-
-            full_message = f"<b>{title}</b>\n\n{message}"
             try:
+                await self.save_notification(ui_notification_to_save)
+                logger.info(f"Notificación para UI (OID: {opportunity_id}) para el usuario {user_id} guardada: {title}")
+                # Actual UI dispatch logic would go here (e.g., WebSocket, etc.)
+                # For now, logging and saving acts as "sending" to UI.
+                sent_to_at_least_one_channel = True
+            except NotificationError as e:
+                logger.error(f"No se pudo guardar la notificación UI en la base de datos para OID {opportunity_id}, User {user_id}: {e}")
+
+
+        # Check Telegram Notification Preferences
+        send_telegram_notification = False
+        if user_config.enableTelegramNotifications and user_config.telegramChatId:
+            if user_config.notificationPreferences:
+                for pref in user_config.notificationPreferences:
+                    if pref.eventType == event_type and pref.channel == "telegram" and pref.isEnabled:
+                        send_telegram_notification = True
+                        break
+            # If no specific preference for this event_type, it might default to enabled if global telegram is on.
+            # For now, require explicit eventType preference for Telegram.
+            # If default behavior is desired, this logic needs adjustment.
+
+        if send_telegram_notification:
+            telegram_notification_to_save = Notification(
+                userId=user_id, eventType=event_type, channel="telegram",
+                title=title, message=message, dataPayload=effective_payload
+            )
+            try:
+                # Save first, then attempt send
+                await self.save_notification(telegram_notification_to_save)
+                
+                telegram_credential = await self.credential_service.get_credential(
+                    user_id=user_id, service_name=ServiceName.TELEGRAM_BOT, credential_label="default_telegram_bot"
+                )
+                if not telegram_credential:
+                    logger.warning(f"No se encontraron credenciales de Telegram para el usuario {user_id} para OID {opportunity_id}.")
+                    raise CredentialError(f"No se encontraron credenciales de Telegram para el usuario {user_id}.", code="TELEGRAM_CREDENTIAL_NOT_FOUND")
+
+                chat_id = user_config.telegramChatId # Already available from user_config
+                
+                telegram_adapter = await self._get_telegram_adapter(user_id)
+                if not telegram_adapter:
+                    logger.error(f"No se pudo inicializar TelegramAdapter para el usuario {user_id} para OID {opportunity_id}.")
+                    raise TelegramNotificationError(f"No se pudo inicializar TelegramAdapter.", code="TELEGRAM_ADAPTER_INIT_FAILED")
+
+                full_message = f"<b>{title}</b>\n\n{message}"
+                if opportunity_id: # Add link to opportunity if available
+                    # TODO: Construct a proper URL to the opportunity in the UI if applicable
+                    full_message += f"\n\nOportunidad ID: {opportunity_id}"
+
                 await telegram_adapter.send_message(chat_id, full_message)
-                logger.info(f"Notificación de Telegram enviada con éxito para el usuario {user_id}.")
-                return True
-            except ExternalAPIError as e:
-                logger.error(f"Fallo de API externa al enviar notificación de Telegram para el usuario {user_id}: {str(e)}", exc_info=True)
-                raise TelegramNotificationError(
-                    message=f"Fallo al enviar notificación de Telegram: {str(e)}",
-                    code="TELEGRAM_SEND_FAILED",
-                    original_exception=e,
-                    telegram_response=e.response_data
-                )
-            except Exception as e:
-                logger.error(f"Fallo inesperado al enviar notificación de Telegram para el usuario {user_id}: {e}", exc_info=True)
-                raise TelegramNotificationError(
-                    message=f"Fallo inesperado al enviar notificación de Telegram: {e}",
-                    code="UNEXPECTED_TELEGRAM_ERROR",
-                    original_exception=e
-                )
-        elif channel == "ui":
-            logger.info(f"Notificación para UI para el usuario {user_id}: {title} - {message}. (Implementación pendiente)")
-            return True
-        else:
-            logger.warning(f"Canal de notificación '{channel}' no soportado.")
-            raise NotificationError(f"Canal de notificación '{channel}' no soportado.", code="UNSUPPORTED_NOTIFICATION_CHANNEL")
+                logger.info(f"Notificación de Telegram (OID: {opportunity_id}) enviada con éxito para el usuario {user_id}.")
+                sent_to_at_least_one_channel = True
+            except CredentialError as e: # Catch specific errors from credential fetching
+                logger.error(f"Error de credenciales al intentar enviar notificación Telegram para OID {opportunity_id}, User {user_id}: {e}")
+                # Optionally update the saved notification status to 'error_sending'
+            except TelegramNotificationError as e: # Catch errors from adapter init or send
+                logger.error(f"Error de Telegram al enviar notificación para OID {opportunity_id}, User {user_id}: {e}")
+            except NotificationError as e: # Error saving notification
+                 logger.error(f"No se pudo guardar la notificación Telegram en la base de datos para OID {opportunity_id}, User {user_id}: {e}")
+            except Exception as e: # Catch other unexpected errors
+                logger.error(f"Error inesperado al enviar notificación Telegram para OID {opportunity_id}, User {user_id}: {e}", exc_info=True)
+        
+        if not sent_to_at_least_one_channel:
+            logger.info(f"No se envió notificación para el evento '{event_type}' (OID: {opportunity_id}) para el usuario {user_id} debido a preferencias o configuración.")
+            # Optionally, still save a generic notification record indicating it wasn't dispatched?
+            # For now, if no channel is enabled for the event, no specific record is saved for that dispatch attempt beyond potential earlier saves.
+
+        return sent_to_at_least_one_channel
 
     async def send_paper_trade_entry_notification(self, trade: Trade):
         """

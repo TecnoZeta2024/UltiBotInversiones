@@ -1,7 +1,6 @@
 import json
 import logging
-import json
-import logging
+import re # Importar re para el fallback de regex
 from typing import List, Dict, Any, Optional
 
 from langchain_core.tools import BaseTool
@@ -52,14 +51,14 @@ class AIOrchestratorService:
         # Por ahora, asumiremos que se llama a un método async_init después de la creación.
         # asyncio.create_task(self.async_init(default_user_id_if_known)) # Ejemplo
 
-    async def async_init(self, user_id: Optional[Any] = None): # UUID type hint later
+    async def async_init(self, user_id: Optional[str] = None):
         """Método de inicialización asíncrono para cargar configuraciones y herramientas."""
         # Si ConfigService requiere un user_id para su primera carga, debe proporcionarse.
         # O ConfigService podría tener un user_id por defecto o un método para establecerlo.
         await self._load_mcp_tools(user_id=user_id)
 
 
-    async def _load_mcp_tools(self, user_id: Optional[Any] = None): # UUID type hint later
+    async def _load_mcp_tools(self, user_id: Optional[str] = None):
         """
         Carga y configura las herramientas MCP basadas en la configuración del usuario.
         """
@@ -69,13 +68,15 @@ class AIOrchestratorService:
         # ConfigService ahora maneja la lógica de user_id internamente si se setea en su init o con set_current_user_id.
         # Si AIOrchestratorService es específico de un usuario, ese user_id debe usarse.
         # Si es global, necesitará el user_id para cada operación.
-        
+
         # Si el ConfigService fue inicializado con un user_id, get_user_configuration() podría no necesitarlo.
         # Si no, AIOrchestratorService debe gestionar el user_id.
         # Para este ejemplo, asumimos que ConfigService puede obtener la config del usuario actual
         # o que user_id se pasa explícitamente.
-        
+
         # Si ConfigService tiene un _current_user_id, y AIOrchestratorService también lo conoce:
+        # For global initialization, user_id might be FIXED_USER_ID or None if tools are generic.
+        # If user_id is None, get_user_configuration might fetch a default/global config or no config.
         current_user_config = await self.config_service.get_user_configuration(user_id=user_id)
 
         if current_user_config and current_user_config.mcpServerPreferences: # Corregido a mcpServerPreferences
@@ -86,7 +87,7 @@ class AIOrchestratorService:
                         # basada en mcp_pref.type o mcp_pref.id
                         tool_instance: Optional[BaseMCPTool] = None
                         if mcp_pref.type == "mock_signal_provider": # Ejemplo
-                            logger.info(f"Cargando MockMCPTool para MCP ID: {mcp_pref.id}")
+                            logger.info(f"Cargando MockMCPTool para MCP ID: {mcp_pref.id} para usuario {user_id}")
                             tool_instance = MockMCPTool.from_config(
                                 mcp_config=mcp_pref.model_dump(), # Pasa el dict de la preferencia
                                 credential_service=self.credential_service
@@ -109,7 +110,7 @@ class AIOrchestratorService:
             logger.info(f"Total de {len(self.mcp_tools)} herramientas MCP cargadas.")
 
 
-    async def process_mcp_signal(self, user_id: Any, mcp_id: str, signal_data: Dict[str, Any]) -> Optional[Opportunity]: # UUID type hint later
+    async def process_mcp_signal(self, user_id: str, mcp_id: str, signal_data: Dict[str, Any]) -> Optional[Opportunity]: # UUID type hint later
         """
         Procesa una señal cruda recibida de un servidor MCP.
         Crea una entidad Opportunity en la base de datos.
@@ -219,8 +220,13 @@ class AIOrchestratorService:
                 try:
                     source_data_dict = json.loads(opportunity.source_data)
                 except json.JSONDecodeError as e:
-                    logger.error(f"Error al parsear source_data de la oportunidad {opportunity.id}: {e}", exc_info=True)
-                    raise AIAnalysisError("Datos de origen de la oportunidad inválidos.")
+                    # Log the error with exception info
+                    logger.error(f"Failed to decode source_data JSON for opportunity ID: {opportunity.id}. Error: {e}", exc_info=True)
+                    # Update status in DB immediately
+                    opportunity.status = OpportunityStatus.AI_ANALYSIS_FAILED
+                    await self.persistence_service.update_opportunity_status(opportunity.id, OpportunityStatus.AI_ANALYSIS_FAILED)
+                    # Raise AIAnalysisError to be caught by the broader handler below, which will populate ai_analysis field
+                    raise AIAnalysisError(f"Invalid source_data JSON format for opportunity ID: {opportunity.id}.") from e
             
             # Crear un mensaje humano con los detalles de la oportunidad
             human_message_content = strategy_prompt_template.format(
@@ -264,13 +270,34 @@ class AIOrchestratorService:
                 parsed_output = json.loads(raw_output)
                 suggested_action = parsed_output.get("suggested_action")
                 calculated_confidence = parsed_output.get("confidence")
-                reasoning_ai = parsed_output.get("reasoning", raw_output)
+                reasoning_ai = parsed_output.get("reasoning", raw_output) # Usar raw_output como fallback para reasoning si no está en JSON
             except json.JSONDecodeError:
-                logger.warning(f"La salida de Gemini no es un JSON válido para la oportunidad {opportunity.id}. Procesando como texto plano.")
-                # Si no es JSON, intentar extraer con regex o simplemente usar el texto completo
-                # Para este ejemplo, si no es JSON, la confianza y acción serán None a menos que se implemente un parser de texto.
-                # Podríamos usar otro LLM para extraer esto de texto libre si es necesario.
-                pass # Mantener los valores None o usar el raw_output como razonamiento
+                # El LLM idealmente debería devolver JSON. Si no, la funcionalidad es limitada.
+                logger.warning(
+                    f"Failed to parse LLM output as JSON for opportunity ID: {opportunity.id}. "
+                    f"Raw output: '{raw_output}'. Attempting regex fallback."
+                )
+                
+                # Fallback con Regex - Stretch Goal
+                action_match = re.search(r'"action"\s*:\s*"?(BUY|SELL|HOLD)"?', raw_output, re.IGNORECASE)
+                if action_match:
+                    suggested_action = action_match.group(1).upper()
+                    logger.info(f"Fallback regex extracted action: '{suggested_action}' for OID: {opportunity.id}")
+                else:
+                    logger.warning(f"Fallback regex failed to extract action for OID: {opportunity.id}")
+
+                confidence_match = re.search(r'"confidence"\s*:\s*(\d\.\d+)', raw_output) # Busca ej: "confidence": 0.85
+                if confidence_match:
+                    try:
+                        calculated_confidence = float(confidence_match.group(1))
+                        logger.info(f"Fallback regex extracted confidence: {calculated_confidence} for OID: {opportunity.id}")
+                    except ValueError:
+                        logger.warning(f"Fallback regex extracted confidence value '{confidence_match.group(1)}' is not a valid float for OID: {opportunity.id}.")
+                else:
+                    logger.warning(f"Fallback regex failed to extract confidence for OID: {opportunity.id}")
+                
+                # reasoning_ai ya está seteado a raw_output por defecto, lo cual es un buen fallback.
+                # Si el regex falla, suggested_action y calculated_confidence permanecerán None.
 
             # Actualizar el campo aiAnalysis de la entidad Opportunity
             opportunity.ai_analysis = AIAnalysis(
@@ -284,26 +311,41 @@ class AIOrchestratorService:
             opportunity.status = OpportunityStatus.AI_ANALYSIS_COMPLETE 
 
         except AIAnalysisError as e:
-            logger.error(f"Error de configuración o análisis de IA para la oportunidad {opportunity.id}: {e}", exc_info=True)
+            # This block will catch the AIAnalysisError raised from json.JSONDecodeError
+            # as well as other AIAnalysisErrors raised directly in the try block.
+            logger.error(f"AIAnalysisError for opportunity {opportunity.id}: {e}", exc_info=True)
             opportunity.status = OpportunityStatus.AI_ANALYSIS_FAILED
+            # Ensure gemini_model_name is available or handled if error occurs before its definition
+            current_gemini_model_name = 'N/A'
+            try:
+                current_gemini_model_name = gemini_model_name
+            except NameError:
+                logger.warning("gemini_model_name not defined when AIAnalysisError occurred.")
+
             opportunity.ai_analysis = AIAnalysis(
                 calculatedConfidence=None,
                 suggestedAction=None,
                 rawAiOutput=None,
                 dataVerification=None,
                 reasoning_ai=f"Error de análisis: {str(e)}",
-                ai_model_used=gemini_model_name # Incluir el modelo incluso en caso de error
+                ai_model_used=current_gemini_model_name
             )
         except Exception as e:
-            logger.error(f"Error inesperado durante el análisis de IA para la oportunidad {opportunity.id}: {e}", exc_info=True)
+            logger.error(f"Unexpected error during AI analysis for opportunity {opportunity.id}: {e}", exc_info=True)
             opportunity.status = OpportunityStatus.AI_ANALYSIS_FAILED
+            current_gemini_model_name = 'N/A'
+            try:
+                current_gemini_model_name = gemini_model_name
+            except NameError:
+                logger.warning("gemini_model_name not defined when Exception occurred.")
+            
             opportunity.ai_analysis = AIAnalysis(
                 calculatedConfidence=None,
                 suggestedAction=None,
                 rawAiOutput=None,
                 dataVerification=None,
                 reasoning_ai=f"Error inesperado: {str(e)}",
-                ai_model_used=gemini_model_name # Incluir el modelo incluso en caso de error
+                ai_model_used=current_gemini_model_name
             )
         
         # Convertir el objeto AIAnalysis a JSON string antes de pasarlo a persistence_service
@@ -331,25 +373,50 @@ class AIOrchestratorService:
         
         if should_verify_data:
             # --- INICIO DE MODIFICACIÓN PARA TASK 2.2 ---
-            asset_symbol = opportunity.symbol # Asumir que el símbolo está en opportunity.symbol
-            if not asset_symbol:
-                # Intentar obtener el símbolo de source_data si no está en opportunity.symbol
-                if opportunity.source_data:
-                    try:
-                        source_data_dict = json.loads(opportunity.source_data)
-                        asset_symbol = source_data_dict.get("symbol") or source_data_dict.get("asset") # Comunes nombres de campo
-                    except json.JSONDecodeError:
-                        logger.error(f"No se pudo parsear source_data para OID {opportunity.id} para obtener el símbolo.")
-                
-                if not asset_symbol:
-                    logger.error(f"No se pudo determinar el símbolo del activo para la verificación de datos para OID {opportunity.id}.")
-                    opportunity.status = OpportunityStatus.AI_ANALYSIS_FAILED # O un nuevo estado como DATA_VERIFICATION_FAILED
-                    opportunity.status_reason = "No se pudo determinar el símbolo del activo para la verificación de datos."
-                    # No continuar con la verificación si no hay símbolo
-                    should_verify_data = False # Prevenir la ejecución de la lógica de verificación de datos más abajo
+            asset_symbol = opportunity.symbol if opportunity.symbol and opportunity.symbol.strip() else None # Ensure not empty string
+            
+            if not asset_symbol and opportunity.source_data:
+                logger.info(f"opportunity.symbol is not set for OID: {opportunity.id}. Attempting to extract from source_data.")
+                try:
+                    # source_data_dict is already parsed earlier in the method.
+                    # No need to parse json.loads(opportunity.source_data) again if it's already available.
+                    # Assuming source_data_dict is in scope. If not, it needs to be parsed here.
+                    # For this change, I'll assume source_data_dict from the earlier parsing is available.
+                    # If source_data_dict is not guaranteed to be in scope here (e.g. if JSON parsing failed earlier and led to this path through some other logic)
+                    # then it would need to be parsed here again with its own try-except.
+                    # However, the current structure has JSON parsing of source_data for prompt construction happening before this.
+                    # So, source_data_dict should be available.
 
-            if should_verify_data and asset_symbol: # Volver a comprobar should_verify_data por si cambió
-                logger.info(f"Iniciando verificación de datos para el activo {asset_symbol} (OID: {opportunity.id}).")
+                    potential_keys = [
+                        "symbol", "Symbol", "SYMBOL",
+                        "asset", "Asset", "ASSET",
+                        "instrument", "Instrument", "INSTRUMENT",
+                        "ticker", "Ticker", "TICKER",
+                        "currency_pair", "CurrencyPair", "CURRENCY_PAIR",
+                        "pair", "Pair", "PAIR"
+                    ]
+                    for key in potential_keys:
+                        if key in source_data_dict:
+                            value = source_data_dict[key]
+                            if isinstance(value, str) and value.strip():
+                                asset_symbol = value.strip()
+                                logger.info(f"Extracted asset_symbol '{asset_symbol}' from source_data using key '{key}' for OID: {opportunity.id}.")
+                                break # Found a symbol
+                    
+                    if not asset_symbol:
+                        logger.warning(f"Could not extract a valid symbol from source_data for OID: {opportunity.id} using common keys.")
+
+                except Exception as e: # Catching generic Exception if source_data_dict wasn't as expected or other issues.
+                    logger.error(f"Error while trying to extract symbol from source_data for OID: {opportunity.id}. Error: {e}", exc_info=True)
+            
+            if not asset_symbol: # If still no symbol after all attempts
+                logger.error(f"Failed to determine asset symbol for data verification for OID: {opportunity.id}. opportunity.symbol='{opportunity.symbol}', source_data check also failed.")
+                opportunity.status = OpportunityStatus.AI_ANALYSIS_FAILED
+                opportunity.status_reason = "Asset symbol not found for data verification."
+                should_verify_data = False # Prevent data verification
+            
+            if should_verify_data and asset_symbol: # Re-check as asset_symbol might have been found
+                logger.info(f"Proceeding with data verification for asset: {asset_symbol} (OID: {opportunity.id}).")
                 verification_results: Dict[str, Any] = {"checks": []}
                 data_verified_successfully = True # Asumir éxito inicialmente
 
@@ -388,72 +455,112 @@ class AIOrchestratorService:
                     MIN_VOLUME_THRESHOLD_QUOTE = user_config.aiAnalysisConfidenceThresholds.dataVerificationMinVolumeQuote if user_config.aiAnalysisConfidenceThresholds else 1000.0
 
                     # 1. Verificación de Precio
-                    mobula_price = None
+                    mobula_price: Optional[float] = None
+                    mobula_quote_currency: Optional[str] = None
                     if mobula_data and isinstance(mobula_data.get("price"), (int, float)):
                         mobula_price = float(mobula_data["price"])
-                    
-                    binance_price_str = None
+                        mobula_quote_currency = mobula_data.get("price_currency") or mobula_data.get("quote_symbol") # Common fields for quote currency
+                        if not mobula_quote_currency and isinstance(mobula_data.get("contracts"), list) and mobula_data["contracts"]:
+                            # Fallback if price_currency is not at top level, check under contracts (Mobula specific)
+                            mobula_quote_currency = mobula_data["contracts"][0].get("quote_currency", {}).get("symbol")
+
+
+                    binance_price: Optional[float] = None
+                    binance_quote_currency: Optional[str] = None
                     if binance_data and isinstance(binance_data.get("lastPrice"), str):
-                        binance_price_str = binance_data["lastPrice"]
-                    
-                    binance_price = None
-                    if binance_price_str:
                         try:
-                            binance_price = float(binance_price_str)
+                            binance_price = float(binance_data["lastPrice"])
+                            # Infer Binance quote currency from the trading pair symbol
+                            # Assumes standard pair format like BTCUSDT, ETHBTC etc.
+                            if len(binance_symbol) > 3: # Basic check
+                                if binance_symbol.upper().endswith("USDT"): binance_quote_currency = "USDT"
+                                elif binance_symbol.upper().endswith("USDC"): binance_quote_currency = "USDC"
+                                elif binance_symbol.upper().endswith("BUSD"): binance_quote_currency = "BUSD" # Common stablecoin
+                                elif binance_symbol.upper().endswith("TUSD"): binance_quote_currency = "TUSD" # Common stablecoin
+                                elif binance_symbol.upper().endswith("USD"): binance_quote_currency = "USD" 
+                                elif binance_symbol.upper().endswith("EUR"): binance_quote_currency = "EUR"
+                                elif binance_symbol.upper().endswith("BTC"): binance_quote_currency = "BTC"
+                                elif binance_symbol.upper().endswith("ETH"): binance_quote_currency = "ETH"
+                                # Add more common quote currencies if needed
+                            logger.info(f"Extracted Binance quote currency: {binance_quote_currency} from symbol {binance_symbol}")
                         except ValueError:
-                            logger.warning(f"No se pudo convertir el precio de Binance '{binance_price_str}' a float para {binance_symbol}.")
-                    
-                    # 1. Verificación de Precio
-                    mobula_price = None
-                    if mobula_data and isinstance(mobula_data.get("price"), (int, float)):
-                        mobula_price = float(mobula_data["price"])
-                    
-                    binance_price_str = None
-                    if binance_data and isinstance(binance_data.get("lastPrice"), str):
-                        binance_price_str = binance_data["lastPrice"]
-                    
-                    binance_price = None
-                    if binance_price_str:
-                        try:
-                            binance_price = float(binance_price_str)
-                        except ValueError:
-                            logger.warning(f"No se pudo convertir el precio de Binance '{binance_price_str}' a float para {binance_symbol}.")
-                    
-                    if mobula_price is not None and binance_price is not None:
-                        price_diff_percent = 0.0 # Inicializar como float
-                        if binance_price > 0: # Evitar división por cero
-                            price_diff_percent = (abs(mobula_price - binance_price) / binance_price) * 100
+                            logger.warning(f"No se pudo convertir el precio de Binance '{binance_data['lastPrice']}' a float para {binance_symbol}.")
+
+                    price_check_result = {
+                        "check_type": "price_comparison",
+                        "status": "pending", # Will be updated
+                        "mobula_price": mobula_price,
+                        "mobula_quote_currency": mobula_quote_currency,
+                        "binance_price": binance_price,
+                        "binance_quote_currency": binance_quote_currency,
+                    }
+
+                    if mobula_price is None or binance_price is None:
+                        missing_source = []
+                        if mobula_price is None: missing_source.append("Mobula")
+                        if binance_price is None: missing_source.append("Binance")
+                        message = f"Price data missing from {', '.join(missing_source)}."
+                        logger.warning(f"{message} for {asset_symbol}. Cannot perform price comparison.")
+                        price_check_result["status"] = "failed"
+                        price_check_result["message"] = message
+                        data_verified_successfully = False
+                    else:
+                        # Both prices are available, proceed with comparison
+                        perform_comparison = True
+                        if mobula_quote_currency and binance_quote_currency and mobula_quote_currency.upper() != binance_quote_currency.upper():
+                            # Handle USD vs USDT as a special case (often considered equivalent or close)
+                            if (mobula_quote_currency.upper() == "USD" and binance_quote_currency.upper() == "USDT") or \
+                               (mobula_quote_currency.upper() == "USDT" and binance_quote_currency.upper() == "USD"):
+                                warning_message = f"Quote currency mismatch for {asset_symbol}: Mobula ({mobula_quote_currency}) vs Binance ({binance_quote_currency}). Comparing as if equivalent."
+                                logger.warning(warning_message)
+                                price_check_result["message"] = warning_message # Add to results
+                            else:
+                                error_message = f"Critical quote currency mismatch for {asset_symbol}: Mobula ({mobula_quote_currency}) vs Binance ({binance_quote_currency}). Price comparison skipped."
+                                logger.error(error_message)
+                                price_check_result["status"] = "failed" # Fail if critical mismatch
+                                price_check_result["message"] = error_message
+                                data_verified_successfully = False
+                                perform_comparison = False
                         
-                        if price_diff_percent > PRICE_DISCREPANCY_THRESHOLD_PERCENT:
-                            logger.warning(f"Discrepancia de precio significativa para {asset_symbol}: Mobula={mobula_price}, Binance={binance_price} ({price_diff_percent:.2f}% > {PRICE_DISCREPANCY_THRESHOLD_PERCENT}%)")
-                            verification_results["checks"].append({
-                                "check_type": "price_comparison",
-                                "status": "failed",
-                                "mobula_price": mobula_price,
-                                "binance_price": binance_price,
-                                "difference_percent": round(price_diff_percent, 2),
-                                "threshold_percent": PRICE_DISCREPANCY_THRESHOLD_PERCENT,
-                                "message": "Discrepancia de precio significativa entre Mobula y Binance."
-                            })
-                            data_verified_successfully = False
-                        else:
-                            verification_results["checks"].append({
-                                "check_type": "price_comparison",
-                                "status": "passed",
-                                "mobula_price": mobula_price,
-                                "binance_price": binance_price,
-                                "difference_percent": round(price_diff_percent, 2)
-                            })
-                    else: # Si uno o ambos precios son None
-                        logger.warning(f"No se pudieron obtener precios de Mobula o de Binance para {asset_symbol} para comparación.")
-                        verification_results["checks"].append({
-                            "check_type": "price_comparison",
-                            "status": "warning",
-                            "message": "No se pudieron obtener precios de Mobula o Binance para comparación."
-                        })
-                        # data_verified_successfully = False # Podría ser un fallo si la comparación de precios es crítica
+                        if perform_comparison:
+                            price_diff_percent = 0.0
+                            if binance_price > 0: # Avoid division by zero
+                                price_diff_percent = (abs(mobula_price - binance_price) / binance_price) * 100
+                            price_check_result["difference_percent"] = round(price_diff_percent, 2)
+
+                            if price_diff_percent > PRICE_DISCREPANCY_THRESHOLD_PERCENT:
+                                discrepancy_message = f"Discrepancia de precio significativa para {asset_symbol}: Mobula={mobula_price} {mobula_quote_currency}, Binance={binance_price} {binance_quote_currency} ({price_diff_percent:.2f}% > {PRICE_DISCREPANCY_THRESHOLD_PERCENT}%)"
+                                logger.warning(discrepancy_message)
+                                price_check_result["status"] = "failed"
+                                price_check_result["message"] = price_check_result.get("message", "") + " " + discrepancy_message if price_check_result.get("message") else discrepancy_message
+                                data_verified_successfully = False
+                            else:
+                                price_check_result["status"] = "passed"
+                                if not price_check_result.get("message"): # Avoid overwriting currency mismatch warning
+                                    price_check_result["message"] = "Price comparison passed."
                     
+                    verification_results["checks"].append(price_check_result)
+
                     # 2. Verificación de Volumen (usando Binance como referencia principal para el par de trading)
+                    # Incorporate Mobula Volume
+                    mobula_volume_details = {"source": "Mobula"}
+                    if mobula_data:
+                        mobula_vol = mobula_data.get('volume') or mobula_data.get('volume_24h') # Common keys for volume
+                        if mobula_vol is not None:
+                            mobula_volume_details['volume'] = mobula_vol
+                            # Try to get volume quote currency, might be same as price or specified
+                            mobula_volume_details['quote_currency'] = mobula_data.get('volume_quote_currency') or mobula_quote_currency # Use price quote if specific not found
+                        else:
+                            mobula_volume_details['error'] = "Volume data not found in Mobula response."
+                    else:
+                        mobula_volume_details['error'] = "No Mobula data to extract volume."
+                    
+                    volume_check_binance_details = {
+                        "check_type": "volume_check_binance",
+                        "status": "pending",
+                        "sources": [mobula_volume_details] # Add Mobula volume info here
+                    }
+                    
                     binance_volume_str = None
                     if binance_data and isinstance(binance_data.get("quoteVolume"), str): # 'quoteVolume' es el volumen en la moneda de cotización (ej. USDT)
                         binance_volume_str = binance_data["quoteVolume"]
@@ -465,32 +572,27 @@ class AIOrchestratorService:
                         except ValueError:
                              logger.warning(f"No se pudo convertir el volumen de Binance '{binance_volume_str}' a float para {binance_symbol}.")
                     
+                    binance_volume_source_entry = {"source": "Binance"}
                     if binance_volume is not None: # Asegurarse de que binance_volume no sea None antes de comparar
+                        binance_volume_source_entry['volume'] = binance_volume
+                        binance_volume_source_entry['quote_currency'] = binance_quote_currency # From price check
                         if binance_volume < MIN_VOLUME_THRESHOLD_QUOTE:
-                            logger.warning(f"Volumen de Binance bajo para {binance_symbol}: {binance_volume} < {MIN_VOLUME_THRESHOLD_QUOTE}")
-                            verification_results["checks"].append({
-                                "check_type": "volume_check_binance",
-                                "status": "failed",
-                                "quote_volume": binance_volume,
-                                "threshold_quote": MIN_VOLUME_THRESHOLD_QUOTE,
-                                "message": "Volumen de trading en Binance por debajo del umbral mínimo."
-                            })
+                            logger.warning(f"Volumen de Binance bajo para {binance_symbol}: {binance_volume} {binance_quote_currency} < {MIN_VOLUME_THRESHOLD_QUOTE} {binance_quote_currency}")
+                            volume_check_binance_details["status"] = "failed"
+                            volume_check_binance_details["message"] = f"Volumen de trading en Binance ({binance_volume} {binance_quote_currency}) por debajo del umbral mínimo ({MIN_VOLUME_THRESHOLD_QUOTE} {binance_quote_currency})."
                             data_verified_successfully = False # Considerar si esto debe ser un fallo duro
                         else:
-                            verification_results["checks"].append({
-                                "check_type": "volume_check_binance",
-                                "status": "passed",
-                                "quote_volume": binance_volume
-                            })
+                            volume_check_binance_details["status"] = "passed"
+                            volume_check_binance_details["message"] = f"Binance volume ({binance_volume} {binance_quote_currency}) meets threshold."
                     else:
                         logger.warning(f"No se pudo obtener el volumen de Binance para {binance_symbol} para verificación.")
-                        # Podría ser un fallo si el volumen es crítico
-                        # data_verified_successfully = False 
-                        verification_results["checks"].append({
-                            "check_type": "volume_check_binance",
-                            "status": "warning",
-                            "message": "No se pudo obtener el volumen de Binance para verificación."
-                        })
+                        volume_check_binance_details["status"] = "warning" # Or "failed" if volume is critical
+                        volume_check_binance_details["message"] = "No se pudo obtener el volumen de Binance para verificación."
+                        binance_volume_source_entry['error'] = "Binance volume data not found or invalid."
+                        # data_verified_successfully = False # Decide if this is a hard fail
+                    
+                    volume_check_binance_details["sources"].append(binance_volume_source_entry)
+                    verification_results["checks"].append(volume_check_binance_details)
                     # --- FIN DE LÓGICA PARA SUBTASK 2.3 ---
                     
                     if opportunity.ai_analysis: # Asegurarse de que ai_analysis existe
@@ -569,30 +671,18 @@ class AIOrchestratorService:
                     
                     # Para simplificar aquí, asumimos que NotificationService.send_notification
                     # puede tomar un event_type y luego internamente decide los canales.
-                    # O podemos llamar a send_notification por cada canal deseado.
-                    
-                    # Ejemplo de envío a Telegram (asumiendo que el usuario tiene Telegram configurado)
-                    if user_config.enableTelegramNotifications and user_config.telegramChatId:
-                         await self.notification_service.send_notification(
-                            user_id=opportunity.user_id,
-                            title=title,
-                            message=message,
-                            channel="telegram", # Especificar canal
-                            event_type="OPPORTUNITY_ANALYZED_HIGH_CONFIDENCE_PAPER" # EventType sugerido
-                        )
-                    
-                    # Ejemplo de envío a UI (esto sería más complejo, podría ser un evento WebSocket)
-                    # Por ahora, NotificationService podría loguearlo o emitir un evento interno.
+                    # NotificationService ahora manejará la lógica de canales internamente
+                    # basado en las preferencias del usuario y el event_type.
                     await self.notification_service.send_notification(
-                        user_id=opportunity.user_id,
+                        user_id=opportunity.user_id, # Ya es str
                         title=title,
                         message=message,
-                        channel="ui", # Especificar canal
-                        event_type="OPPORTUNITY_ANALYZED_HIGH_CONFIDENCE_PAPER"
+                        event_type="OPPORTUNITY_ANALYZED_HIGH_CONFIDENCE_PAPER",
+                        opportunity_id=opportunity.id # Pasar opportunity_id
+                        # el campo 'channel' ya no se pasa desde aquí
                     )
-
                 except Exception as e:
-                    logger.error(f"Error al enviar notificación para oportunidad {opportunity.id}: {e}", exc_info=True)
+                    logger.error(f"Error al solicitar el envío de notificación para oportunidad {opportunity.id}: {e}", exc_info=True)
         # --- FIN DE MODIFICACIÓN PARA TASK 3.3 ---
 
         return opportunity
