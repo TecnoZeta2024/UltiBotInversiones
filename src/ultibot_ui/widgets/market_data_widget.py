@@ -13,9 +13,11 @@ import asyncio # Importar asyncio para el loop de eventos
 
 from src.ultibot_backend.services.market_data_service import MarketDataService
 from src.ultibot_backend.services.config_service import ConfigService
+from src.ultibot_ui.services.ui_market_data_service import UIMarketDataService
+from src.ultibot_ui.services.ui_config_service import UIConfigService
 
 class MarketDataWidget(QWidget):
-    data_updated = Signal(dict)  # Emits the updated market_data dictionary
+    data_updated = pyqtSignal(dict)  # Emits the updated market_data dictionary
 
     def __init__(self, user_id: UUID, market_data_service: UIMarketDataService, config_service: UIConfigService, parent: Optional[QWidget] = None):
         super().__init__(parent)
