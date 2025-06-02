@@ -20,9 +20,10 @@ from src.ultibot_backend.services.portfolio_service import PortfolioService
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService # Importar SupabasePersistenceService
 from src.ultibot_backend.services.notification_service import NotificationService # Importar NotificationService
 from src.ultibot_ui.widgets.notification_widget import NotificationWidget # Importar NotificationWidget
+from src.ultibot_ui.services import TradingModeService # Import TradingModeService
 
 class DashboardView(QWidget):
-    def __init__(self, user_id: UUID, market_data_service: MarketDataService, config_service: ConfigService, notification_service: NotificationService, persistence_service: SupabasePersistenceService, api_client: UltiBotAPIClient): # Añadir api_client
+    def __init__(self, user_id: UUID, market_data_service: MarketDataService, config_service: ConfigService, notification_service: NotificationService, persistence_service: SupabasePersistenceService, api_client: UltiBotAPIClient, trading_mode_service: TradingModeService): # Add trading_mode_service
         super().__init__()
         self.user_id = user_id
         self.market_data_service = market_data_service
@@ -30,6 +31,7 @@ class DashboardView(QWidget):
         self.notification_service = notification_service # Guardar la referencia al servicio de notificaciones
         self.persistence_service = persistence_service # Guardar la referencia al servicio de persistencia
         self.api_client = api_client # Guardar la referencia al cliente API
+        self.trading_mode_service = trading_mode_service # Store TradingModeService
         
         # Inicializar PortfolioService aquí, ya que DashboardView tiene sus dependencias
         self.portfolio_service = PortfolioService(self.market_data_service, self.persistence_service)
@@ -65,7 +67,10 @@ class DashboardView(QWidget):
         center_splitter.setChildrenCollapsible(False)
 
         # Panel Izquierdo: Estado del Portafolio (PortfolioWidget)
-        self.portfolio_widget = PortfolioWidget(self.user_id, self.portfolio_service)
+        self.portfolio_widget = PortfolioWidget(user_id=self.user_id, 
+                                                portfolio_service=self.portfolio_service, 
+                                                trading_mode_service=self.trading_mode_service, 
+                                                api_client=self.api_client)
         center_splitter.addWidget(self.portfolio_widget)
         
         # Iniciar las actualizaciones del portfolio_widget
