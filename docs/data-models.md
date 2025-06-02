@@ -441,13 +441,20 @@ export interface PortfolioSnapshot {
   createdAt: Date; 
 }
 
-#### TradingStrategyConfig
+#### TradingStrategyConfig (Updated in Story 5.1)
+
+**Implementation Status**: ✅ **IMPLEMENTED** - Complete modular strategy system with full CRUD operations and parameter validation.
+
+**Location**: 
+- Domain Models: `src/ultibot_backend/core/domain_models/trading_strategy_models.py`
+- Service Layer: `src/ultibot_backend/services/strategy_service.py`
+- API Endpoints: `src/ultibot_backend/api/v1/endpoints/strategies.py`
 
 // Entidad: TradingStrategyConfig
 
 export enum BaseStrategyType {
   SCALPING = "SCALPING",
-  DAY_TRADING = "DAY_TRADING",
+  DAY_TRADING = "DAY_TRADING", 
   SWING_TRADING = "SWING_TRADING",
   ARBITRAGE_SIMPLE = "ARBITRAGE_SIMPLE",
   ARBITRAGE_TRIANGULAR = "ARBITRAGE_TRIANGULAR",
@@ -456,6 +463,65 @@ export enum BaseStrategyType {
   CUSTOM_AI_DRIVEN = "CUSTOM_AI_DRIVEN",
   MCP_SIGNAL_FOLLOWER = "MCP_SIGNAL_FOLLOWER",
 }
+
+**Strategy-Specific Parameter Models (Implemented)**:
+
+export interface ScalpingParameters {
+  profitTargetPercentage: number; // Required: 0 < value <= 1
+  stopLossPercentage: number; // Required: 0 < value <= 1
+  maxHoldingTimeSeconds?: number; // Optional: > 0
+  leverage?: number; // Optional: 0 < value <= 100
+}
+
+export interface DayTradingParameters {
+  rsiPeriod?: number; // Default: 14, > 0
+  rsiOverbought?: number; // Default: 70, 50 <= value <= 100
+  rsiOversold?: number; // Default: 30, 0 <= value <= 50, must be < rsiOverbought
+  macdFastPeriod?: number; // Default: 12, > 0
+  macdSlowPeriod?: number; // Default: 26, > 0, must be > macdFastPeriod
+  macdSignalPeriod?: number; // Default: 9, > 0
+  entryTimeframes: string[]; // Required: min 1 item, e.g., ["5m", "15m"]
+  exitTimeframes?: string[]; // Optional
+}
+
+export interface ArbitrageSimpleParameters {
+  priceDifferencePercentageThreshold: number; // Required: 0 < value <= 1
+  minTradeVolumeQuote?: number; // Optional: > 0
+  exchangeA_credentialLabel: string; // Required: Reference to APICredential.credentialLabel
+  exchangeB_credentialLabel: string; // Required: Reference to APICredential.credentialLabel
+}
+
+export interface CustomAIDrivenParameters {
+  primaryObjectivePrompt: string; // Required: min 10 characters
+  contextWindowConfiguration?: Record<string, any>; // Optional
+  decisionModelParameters?: Record<string, any>; // Optional
+  maxTokensForResponse?: number; // Optional: > 0
+}
+
+export interface MCPSignalFollowerParameters {
+  mcpSourceConfigId: string; // Required: ID reference to UserConfiguration.mcpServerPreferences
+  allowedSignalTypes?: string[]; // Optional
+}
+
+export interface GridTradingParameters {
+  gridUpperPrice: number; // Required: > 0, must be > gridLowerPrice
+  gridLowerPrice: number; // Required: > 0
+  gridLevels: number; // Required: 3 <= value <= 100
+  profitPerGrid: number; // Required: 0 < value <= 1
+}
+
+export interface DCAInvestingParameters {
+  investmentAmount: number; // Required: > 0
+  investmentIntervalHours: number; // Required: > 0
+  maxTotalInvestment?: number; // Optional: > 0
+  priceDeviationTrigger?: number; // Optional: 0 < value <= 1
+}
+
+**Validation Features**:
+- Cross-field validation (e.g., rsiOverbought > rsiOversold)
+- Type-specific parameter validation based on strategy type
+- Pydantic model validation with detailed error messages
+- Custom validators for business logic constraints
 
 export interface ScalpingParameters {
   profitTargetPercentage: number;
@@ -494,13 +560,94 @@ export interface MCPSignalFollowerParameters {
   allowedSignalTypes?: string[];
 }
 
+export interface GridTradingParameters {
+  gridUpperPrice: number;
+  gridLowerPrice: number;
+  gridLevels: number;
+  profitPerGrid: number;
+}
+
+export interface DCAInvestingParameters {
+  investmentAmount: number;
+  investmentIntervalHours: number;
+  maxTotalInvestment?: number;
+  priceDeviationTrigger?: number;
+}
+
 export type StrategySpecificParameters = 
   | ScalpingParameters 
   | DayTradingParameters
   | ArbitrageSimpleParameters
   | CustomAIDrivenParameters
   | MCPSignalFollowerParameters
+  | GridTradingParameters
+  | DCAInvestingParameters
   | Record<string, any>; // Fallback
+
+export interface DynamicFilter {
+  minDailyVolatilityPercentage?: number;
+  maxDailyVolatilityPercentage?: number;
+  minMarketCapUSD?: number;
+  includedWatchlistIds?: string[];
+  assetCategories?: string[];
+}
+
+export interface ApplicabilityRules {
+  explicitPairs?: string[];
+  includeAllSpot?: boolean;
+  dynamicFilter?: DynamicFilter;
+}
+
+export interface RiskParametersOverride {
+  perTradeCapitalRiskPercentage?: number;
+  maxConcurrentTradesForThisStrategy?: number;
+  maxCapitalAllocationQuote?: number;
+}
+
+export interface PerformanceMetrics {
+  totalTradesExecuted?: number;
+  winningTrades?: number;
+  losingTrades?: number;
+  winRate?: number;
+  cumulativePnlQuote?: number;
+  averageWinningTradePnl?: number;
+  averageLosingTradePnl?: number;
+  profitFactor?: number;
+  sharpeRatio?: number;
+  lastCalculatedAt?: Date;
+}
+
+export interface MarketConditionFilter {
+  filterType: string;
+  sourceId?: string;
+  condition: string;
+  thresholdValue: number | number[];
+  actionOnTrigger: string;
+}
+
+export interface ActivationSchedule {
+  cronExpression?: string;
+  timeZone?: string;
+  eventTriggers?: Array<{
+    eventName: string;
+    action: 'activate' | 'deactivate';
+    leadTimeMinutes?: number;
+  }>;
+}
+
+export interface StrategyDependency {
+  strategyConfigId: string;
+  requiredStatusForActivation?: string;
+}
+
+export interface SharingMetadata {
+  isTemplate?: boolean;
+  authorUserId?: string;
+  sharedAt?: Date;
+  userRatingAverage?: number;
+  downloadOrCopyCount?: number;
+  tags?: string[];
+}
 
 export interface TradingStrategyConfig {
   id: string; 
@@ -514,74 +661,18 @@ export interface TradingStrategyConfig {
   isActiveRealMode: boolean;
 
   parameters: StrategySpecificParameters;
-
-  applicabilityRules?: {
-    explicitPairs?: string[];
-    includeAllSpot?: boolean;
-    dynamicFilter?: {
-      minDailyVolatilityPercentage?: number;
-      maxDailyVolatilityPercentage?: number;
-      minMarketCapUSD?: number;
-      includedWatchlistIds?: string[]; // IDs de watchlists de UserConfiguration
-      assetCategories?: string[]; 
-    };
-  };
-
+  applicabilityRules?: ApplicabilityRules;
   aiAnalysisProfileId?: string; // FK a UserConfiguration.aiStrategyConfigurations.id
-
-  riskParametersOverride?: {
-    perTradeCapitalRiskPercentage?: number; 
-    maxConcurrentTradesForThisStrategy?: number;
-    maxCapitalAllocationQuote?: number; // Límite de capital total para esta config
-  };
+  riskParametersOverride?: RiskParametersOverride;
   
   version: number; // Inicia en 1
   parentConfigId?: string; // Si es una versión/optimización de otra
 
-  performanceMetrics?: {
-    totalTradesExecuted?: number;
-    winningTrades?: number;
-    losingTrades?: number;
-    winRate?: number;
-    cumulativePnlQuote?: number;
-    averageWinningTradePnl?: number;
-    averageLosingTradePnl?: number;
-    profitFactor?: number;
-    sharpeRatio?: number;
-    lastCalculatedAt?: Date;
-  };
-
-  marketConditionFilters?: Array<{
-    filterType: 'market_sentiment_index' | 'volatility_index' | 'btc_dominance' | 'overall_market_trend' | 'custom_mcp_data';
-    sourceId?: string; 
-    condition: 'less_than' | 'greater_than' | 'equal_to' | 'between';
-    thresholdValue: number | [number, number];
-    actionOnTrigger: 'activate_strategy' | 'pause_strategy' | 'allow_new_trades' | 'prevent_new_trades';
-  }>;
-
-  activationSchedule?: {
-    cronExpression?: string;
-    timeZone?: string;
-    eventTriggers?: Array<{
-      eventName: string; 
-      action: 'activate' | 'deactivate';
-      leadTimeMinutes?: number; 
-    }>;
-  };
-
-  dependsOnStrategies?: Array<{
-    strategyConfigId: string;
-    requiredStatusForActivation?: 'active_and_profitable' | 'target_achieved' | 'specific_signal_fired';
-  }>;
-
-  sharingMetadata?: {
-    isTemplate?: boolean;
-    authorUserId?: string;
-    sharedAt?: Date;
-    userRatingAverage?: number;
-    downloadOrCopyCount?: number;
-    tags?: string[];
-  };
+  performanceMetrics?: PerformanceMetrics;
+  marketConditionFilters?: MarketConditionFilter[];
+  activationSchedule?: ActivationSchedule;
+  dependsOnStrategies?: StrategyDependency[];
+  sharingMetadata?: SharingMetadata;
   
   createdAt: Date;
   updatedAt: Date;
@@ -758,6 +849,67 @@ export interface CreateOrUpdateApiCredentialRequest {
   verifyAfterSave?: boolean; 
 }
 
+#### CreateTradingStrategyRequest
+
+// API Payload Schema: CreateTradingStrategyRequest
+// Utilizado para POST /api/v1/strategies (crear estrategia)
+
+export interface CreateTradingStrategyRequest {
+  configName: string;
+  baseStrategyType: BaseStrategyType;
+  description?: string;
+  isActivePaperMode: boolean;
+  isActiveRealMode: boolean;
+  parameters: StrategySpecificParameters;
+  applicabilityRules?: ApplicabilityRules;
+  aiAnalysisProfileId?: string;
+  riskParametersOverride?: RiskParametersOverride;
+  parentConfigId?: string;
+  marketConditionFilters?: MarketConditionFilter[];
+  activationSchedule?: ActivationSchedule;
+  dependsOnStrategies?: StrategyDependency[];
+  sharingMetadata?: SharingMetadata;
+}
+
+#### TradingStrategyResponse
+
+// API Response Schema: TradingStrategyResponse
+// Utilizado para respuestas de los endpoints de estrategias
+
+export interface TradingStrategyResponse {
+  id: string;
+  userId: string;
+  configName: string;
+  baseStrategyType: BaseStrategyType;
+  description?: string;
+  isActivePaperMode: boolean;
+  isActiveRealMode: boolean;
+  parameters: StrategySpecificParameters;
+  applicabilityRules?: ApplicabilityRules;
+  aiAnalysisProfileId?: string;
+  riskParametersOverride?: RiskParametersOverride;
+  version: number;
+  parentConfigId?: string;
+  performanceMetrics?: PerformanceMetrics;
+  marketConditionFilters?: MarketConditionFilter[];
+  activationSchedule?: ActivationSchedule;
+  dependsOnStrategies?: StrategyDependency[];
+  sharingMetadata?: SharingMetadata;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+#### StrategyActivationResponse
+
+// API Response Schema: StrategyActivationResponse
+// Utilizado para respuestas de activación/desactivación de estrategias
+
+export interface StrategyActivationResponse {
+  strategyId: string;
+  mode: string;
+  isActive: boolean;
+  message: string;
+}
 
 #### UpdateUserConfigurationRequest
 
@@ -1357,3 +1509,56 @@ export interface SaveTradingStrategyConfigRequest {
     -- Índices GIN opcionales para consultas dentro de los JSONB (considerar para optimizaciones futuras):
     -- CREATE INDEX idx_ps_asset_holdings_gin ON portfolio_snapshots USING GIN (asset_holdings);
     -- CREATE INDEX idx_ps_derivative_holdings_gin ON portfolio_snapshots USING GIN (derivative_position_holdings);
+
+## Trading Strategy API Components (Story 5.1)
+
+The following components have been implemented as part of Story 5.1 for trading strategy management:
+
+### Enhanced Strategy Parameters
+
+Additional strategy types have been added to support comprehensive trading strategy configuration:
+
+- **GridTradingParameters**: Configuration for grid trading strategies with price boundaries and profit targets
+- **DCAInvestingParameters**: Dollar-cost averaging strategy parameters including investment amounts and intervals
+
+### API Request/Response Models
+
+#### CreateTradingStrategyRequest
+Request model for creating new trading strategy configurations with comprehensive validation.
+
+#### TradingStrategyResponse  
+Response model providing complete strategy configuration details including metadata and performance metrics.
+
+#### StrategyActivationResponse
+Response model for strategy activation/deactivation operations with clear status indication.
+
+### REST API Endpoints
+
+The following endpoints provide full CRUD operations for trading strategy management:
+
+- **POST /api/v1/strategies** - Create new trading strategy configuration
+- **GET /api/v1/strategies** - List all trading strategies with optional filtering
+- **GET /api/v1/strategies/{id}** - Retrieve specific strategy configuration
+- **PUT /api/v1/strategies/{id}** - Update existing strategy configuration  
+- **DELETE /api/v1/strategies/{id}** - Delete strategy configuration
+- **PATCH /api/v1/strategies/{id}/activate** - Activate strategy for specific trading mode
+- **PATCH /api/v1/strategies/{id}/deactivate** - Deactivate strategy for specific trading mode
+- **GET /api/v1/strategies/active/{mode}** - Get active strategies by trading mode
+
+### Service Layer Architecture
+
+#### StrategyService
+Comprehensive service providing:
+- CRUD operations for strategy configurations
+- Mode-specific activation/deactivation
+- Parameter validation based on strategy type
+- Database integration via SupabasePersistenceService
+- Type-safe parameter handling with automatic conversion
+
+### Database Integration
+
+Strategy configurations are persisted to the `trading_strategy_configs` table with:
+- JSONB storage for flexible parameter configurations
+- Comprehensive indexing for performance
+- Referential integrity with user configurations
+- Support for strategy versioning and dependencies

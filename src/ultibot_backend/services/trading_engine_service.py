@@ -19,8 +19,8 @@ logger = logging.getLogger(__name__)
 
 class TradingEngineService:
     """
-    Servicio central del motor de trading que decide si ejecutar órdenes
-    en modo real o paper trading, basándose en la configuración del usuario.
+    Servicio central del motor de trading que decide si ejecutar 贸rdenes
+    en modo real o paper trading, bas谩ndose en la configuraci贸n del usuario.
     """
     def __init__(
         self,
@@ -32,7 +32,7 @@ class TradingEngineService:
         portfolio_service: PortfolioService,
         persistence_service: SupabasePersistenceService,
         notification_service: NotificationService,
-        binance_adapter: BinanceAdapter # Añadir BinanceAdapter al constructor
+        binance_adapter: BinanceAdapter # A帽adir BinanceAdapter al constructor
     ):
         self.config_service = config_service
         self.order_execution_service = order_execution_service
@@ -46,9 +46,9 @@ class TradingEngineService:
         self._monitor_task: Optional[asyncio.Task] = None
         self._real_trade_monitor_task: Optional[asyncio.Task] = None
 
-    # Constantes por defecto para cálculo de TSL/TP si no están en la configuración del usuario
+    # Constantes por defecto para c谩lculo de TSL/TP si no est谩n en la configuraci贸n del usuario
     TP_PERCENTAGE_DEFAULT = 0.02  # 2% de ganancia
-    TSL_PERCENTAGE_DEFAULT = 0.01  # 1% de pérdida inicial
+    TSL_PERCENTAGE_DEFAULT = 0.01  # 1% de p茅rdida inicial
     TSL_CALLBACK_RATE_DEFAULT = 0.005 # 0.5% de retroceso para TSL
 
     async def start_paper_trading_monitor(self):
@@ -56,7 +56,7 @@ class TradingEngineService:
         Inicia el monitoreo continuo de trades abiertos en Paper Trading.
         """
         if self._monitor_task and not self._monitor_task.done():
-            logger.info("El monitor de Paper Trading ya está en ejecución.")
+            logger.info("El monitor de Paper Trading ya est谩 en ejecuci贸n.")
             return
 
         logger.info("Iniciando el monitor de Paper Trading...")
@@ -93,9 +93,9 @@ class TradingEngineService:
                 
                 for trade in open_paper_trades:
                     # Subtask 1.5: Dentro del monitoreo, obtener el precio de mercado actual
-                    # Subtask 1.6: Implementar la lógica para ajustar el TSL
-                    # Subtask 1.7: Implementar la lógica para detectar si el precio alcanza el TSL o TP
-                    # Subtask 1.8: Si se alcanza TSL/TP, simular el cierre de la posición
+                    # Subtask 1.6: Implementar la l贸gica para ajustar el TSL
+                    # Subtask 1.7: Implementar la l贸gica para detectar si el precio alcanza el TSL o TP
+                    # Subtask 1.8: Si se alcanza TSL/TP, simular el cierre de la posici贸n
                     await self.monitor_and_manage_paper_trade_exit(trade)
                 
             except Exception as e:
@@ -108,7 +108,7 @@ class TradingEngineService:
         Inicia el monitoreo continuo de trades abiertos en Real Trading.
         """
         if self._real_trade_monitor_task and not self._real_trade_monitor_task.done():
-            logger.info("El monitor de Real Trading ya está en ejecución.")
+            logger.info("El monitor de Real Trading ya est谩 en ejecuci贸n.")
             return
 
         logger.info("Iniciando el monitor de Real Trading...")
@@ -140,8 +140,8 @@ class TradingEngineService:
 
                 # Obtener credenciales de Binance una vez por ciclo de monitoreo
                 # Asumimos que todos los trades reales son del mismo usuario o que las credenciales son globales/por defecto
-                # Si se necesita por usuario, esta lógica debería estar dentro del bucle 'for trade'.
-                # TODO: Adaptar para múltiples usuarios si es necesario.
+                # Si se necesita por usuario, esta l贸gica deber铆a estar dentro del bucle 'for trade'.
+                # TODO: Adaptar para m煤ltiples usuarios si es necesario.
                 binance_credential = await self.credential_service.get_credential(
                     user_id=UUID("00000000-0000-0000-0000-000000000001"), # Usar un ID de usuario por defecto o el del primer trade
                     service_name=ServiceName.BINANCE_SPOT,
@@ -168,7 +168,7 @@ class TradingEngineService:
                     logger.debug("No hay trades abiertos en Real Trading para monitorear.")
                 
                 for trade in open_real_trades:
-                    # Subtask 2.3: Monitorear órdenes OCO en Binance si existen
+                    # Subtask 2.3: Monitorear 贸rdenes OCO en Binance si existen
                     if trade.ocoOrderListId:
                         logger.debug(f"Trade REAL {trade.id} tiene ocoOrderListId: {trade.ocoOrderListId}. Monitoreando orden OCO.")
                         await self._monitor_binance_oco_orders(trade, api_key, api_secret)
@@ -184,7 +184,7 @@ class TradingEngineService:
 
     async def _monitor_binance_oco_orders(self, trade: Trade, api_key: str, api_secret: str) -> None:
         """
-        Monitorea el estado de las órdenes OCO en Binance para un trade real.
+        Monitorea el estado de las 贸rdenes OCO en Binance para un trade real.
         """
         logger.info(f"Monitoreando orden OCO {trade.ocoOrderListId} para trade REAL {trade.id} ({trade.symbol})")
 
@@ -197,7 +197,7 @@ class TradingEngineService:
             oco_order_status = await self.binance_adapter.get_oco_order_by_list_client_order_id(
                 api_key=api_key,
                 api_secret=api_secret,
-                listClientOrderId=str(trade.ocoOrderListId) # Convertir a str expl�citamente
+                listClientOrderId=str(trade.ocoOrderListId) # Convertir a str expl韈itamente
             )
             logger.debug(f"Estado de orden OCO {trade.ocoOrderListId}: {oco_order_status}")
 
@@ -208,7 +208,7 @@ class TradingEngineService:
                 closing_reason = None
                 executed_price = 0.0
                 
-                # Identificar cuál de las órdenes (TP o SL) se ejecutó
+                # Identificar cu谩l de las 贸rdenes (TP o SL) se ejecut贸
                 for order_report in oco_order_status.get('orderReports', []):
                     if order_report.get('status') == 'FILLED':
                         executed_order_report = order_report
@@ -226,24 +226,24 @@ class TradingEngineService:
                     exit_order_details = TradeOrderDetails(
                         orderId_internal=uuid4(),
                         orderId_exchange=str(executed_order_report.get('orderId')),
-                        clientOrderId_exchange=str(executed_order_report.get('clientOrderId', '')), # Añadir clientOrderId_exchange
+                        clientOrderId_exchange=str(executed_order_report.get('clientOrderId', '')), # A帽adir clientOrderId_exchange
                         orderCategory=OrderCategory.TAKE_PROFIT if closing_reason == 'TP_HIT' else OrderCategory.STOP_LOSS,
                         type=executed_order_report.get('type'),
-                        status='filled', # Ya sabemos que está FILLED
-                        requestedPrice=float(executed_order_report.get('price', 0.0)), # Añadir requestedPrice
+                        status='filled', # Ya sabemos que est谩 FILLED
+                        requestedPrice=float(executed_order_report.get('price', 0.0)), # A帽adir requestedPrice
                         requestedQuantity=float(executed_order_report.get('origQty')),
                         executedQuantity=float(executed_order_report.get('executedQty')),
                         executedPrice=executed_price,
-                        cumulativeQuoteQty=float(executed_order_report.get('cummulativeQuoteQty', 0.0)), # Añadir cumulativeQuoteQty
-                        commissions=[{ # Añadir commissions
+                        cumulativeQuoteQty=float(executed_order_report.get('cummulativeQuoteQty', 0.0)), # A帽adir cumulativeQuoteQty
+                        commissions=[{ # A帽adir commissions
                             "amount": float(executed_order_report.get('commission', 0.0)),
                             "asset": executed_order_report.get('commissionAsset', '')
                         }],
                         commission=float(executed_order_report.get('commission')) if executed_order_report.get('commission') else None, # Campo legado
                         commissionAsset=executed_order_report.get('commissionAsset'), # Campo legado
                         timestamp=datetime.fromtimestamp(executed_order_report.get('updateTime') / 1000, tz=timezone.utc),
-                        submittedAt=datetime.fromtimestamp(executed_order_report.get('updateTime') / 1000, tz=timezone.utc), # Añadir submittedAt
-                        fillTimestamp=datetime.fromtimestamp(executed_order_report.get('updateTime') / 1000, tz=timezone.utc), # Añadir fillTimestamp
+                        submittedAt=datetime.fromtimestamp(executed_order_report.get('updateTime') / 1000, tz=timezone.utc), # A帽adir submittedAt
+                        fillTimestamp=datetime.fromtimestamp(executed_order_report.get('updateTime') / 1000, tz=timezone.utc), # A帽adir fillTimestamp
                         rawResponse=executed_order_report,
                         ocoOrderListId=trade.ocoOrderListId
                     )
@@ -253,12 +253,12 @@ class TradingEngineService:
                 else:
                     logger.warning(f"Orden OCO {trade.ocoOrderListId} ALL_DONE pero no se pudo identificar la orden ejecutada para trade {trade.id}.")
             elif oco_order_status and oco_order_status.get('listStatusType') == 'REJECT':
-                logger.error(f"Orden OCO {trade.ocoOrderListId} para trade {trade.id} fue RECHAZADA. Necesita atención manual.")
+                logger.error(f"Orden OCO {trade.ocoOrderListId} para trade {trade.id} fue RECHAZADA. Necesita atenci贸n manual.")
                 await self.notification_service.send_real_trade_status_notification(
-                    trade.user_id, f"CRÍTICO: Orden OCO {trade.ocoOrderListId} para {trade.symbol} fue RECHAZADA. Revise manualmente.", "CRITICAL"
+                    trade.user_id, f"CR脥TICO: Orden OCO {trade.ocoOrderListId} para {trade.symbol} fue RECHAZADA. Revise manualmente.", "CRITICAL"
                 )
             # Si el estado es 'EXECUTING' o 'REJECT' (pero no ALL_DONE), no hacemos nada, seguimos monitoreando.
-            # Si el estado es 'CANCELED', también se podría manejar aquí si se cancela manualmente.
+            # Si el estado es 'CANCELED', tambi茅n se podr铆a manejar aqu铆 si se cancela manualmente.
 
         except Exception as e:
             logger.error(f"Error al monitorear orden OCO {trade.ocoOrderListId} para trade REAL {trade.id}: {e}", exc_info=True)
@@ -268,9 +268,9 @@ class TradingEngineService:
 
     async def monitor_and_manage_real_trade_exit(self, trade: Trade) -> None:
         """
-        Monitorea y gestiona las órdenes de salida (TSL/TP) para un trade en Real Trading.
-        Este método se enfoca en el ajuste del Trailing Stop Loss basado en el precio.
-        La detección de ejecución de TP/SL para órdenes OCO se maneja en _monitor_binance_oco_orders.
+        Monitorea y gestiona las 贸rdenes de salida (TSL/TP) para un trade en Real Trading.
+        Este m茅todo se enfoca en el ajuste del Trailing Stop Loss basado en el precio.
+        La detecci贸n de ejecuci贸n de TP/SL para 贸rdenes OCO se maneja en _monitor_binance_oco_orders.
         """
         # Si el trade ya tiene una orden OCO asociada, su monitoreo de cierre se hace en _monitor_binance_oco_orders
         if trade.ocoOrderListId:
@@ -287,7 +287,7 @@ class TradingEngineService:
             logger.error(f"Error al obtener precio de mercado para trade REAL {trade.symbol} en monitoreo: {e}", exc_info=True)
             return
 
-        # Subtask 2.3: Implementar la lógica para ajustar el TSL si el precio se mueve favorablemente
+        # Subtask 2.3: Implementar la l贸gica para ajustar el TSL si el precio se mueve favorablemente
         if trade.positionStatus == 'open':
             if trade.trailingStopCallbackRate is None or trade.currentStopPrice_tsl is None:
                 logger.warning(f"Trade REAL {trade.id} no tiene TSL configurado correctamente. Saltando ajuste de TSL.")
@@ -329,21 +329,21 @@ class TradingEngineService:
 
     async def _close_real_trade(self, trade: Trade, executed_price: float, closing_reason: str, exit_order_details: Optional[TradeOrderDetails] = None):
         """
-        Cierra una posición real en Binance.
-        Puede ser llamado por la ejecución de una orden OCO o por un cierre manual.
+        Cierra una posici贸n real en Binance.
+        Puede ser llamado por la ejecuci贸n de una orden OCO o por un cierre manual.
         """
         logger.info(f"Cerrando trade REAL {trade.id} por {closing_reason} a precio {executed_price:.4f}")
 
-        # Verificar si la posición ya está cerrada o si ya tiene una orden de salida ejecutada
+        # Verificar si la posici贸n ya est谩 cerrada o si ya tiene una orden de salida ejecutada
         if trade.positionStatus == 'closed':
-            logger.info(f"Trade REAL {trade.id} ya está cerrado. Razón: {trade.closingReason}. No se requiere acción adicional.")
+            logger.info(f"Trade REAL {trade.id} ya est谩 cerrado. Raz贸n: {trade.closingReason}. No se requiere acci贸n adicional.")
             return
         
         # Si la orden de salida ya viene pre-cargada (ej. desde el monitoreo OCO), usarla.
-        # De lo contrario, se enviará una nueva orden de mercado.
+        # De lo contrario, se enviar谩 una nueva orden de mercado.
         if exit_order_details and exit_order_details.status == 'filled':
             logger.info(f"Usando detalles de orden de salida pre-existentes para trade {trade.id}.")
-            # Asegurarse de que la orden de salida esté en la lista de exitOrders del trade
+            # Asegurarse de que la orden de salida est茅 en la lista de exitOrders del trade
             if not any(o.orderId_exchange == exit_order_details.orderId_exchange for o in trade.exitOrders):
                 trade.exitOrders.append(exit_order_details)
         else:
@@ -365,12 +365,12 @@ class TradingEngineService:
 
             if not api_key or api_secret is None:
                 logger.error(f"API Key o Secret de Binance no pudieron ser desencriptados para cerrar trade {trade.id}.")
-                raise CredentialError("API Key o Secret de Binance no válidos para cerrar trade.")
+                raise CredentialError("API Key o Secret de Binance no v谩lidos para cerrar trade.")
 
             # Determinar el lado de la orden de cierre
             close_side = 'SELL' if trade.side == 'BUY' else 'BUY'
             
-            # Enviar orden de mercado para cerrar la posición
+            # Enviar orden de mercado para cerrar la posici贸n
             try:
                 # Pasar ocoOrderListId como None ya que es una orden de cierre directa
                 exit_order_details = await self.order_execution_service.execute_market_order(
@@ -382,13 +382,13 @@ class TradingEngineService:
                     api_secret=api_secret,
                     ocoOrderListId=None # Asegurar que se pasa None
                 )
-                # Asegurarse de que la categoría de la orden de salida sea correcta
+                # Asegurarse de que la categor铆a de la orden de salida sea correcta
                 if closing_reason == 'SL_HIT':
                     exit_order_details.orderCategory = OrderCategory.STOP_LOSS
                 elif closing_reason == 'TP_HIT':
                     exit_order_details.orderCategory = OrderCategory.TAKE_PROFIT
                 else:
-                    exit_order_details.orderCategory = OrderCategory.MANUAL_CLOSE # O cualquier otra razón de cierre
+                    exit_order_details.orderCategory = OrderCategory.MANUAL_CLOSE # O cualquier otra raz贸n de cierre
                 # ocoOrderListId ya se asigna como None en la llamada a execute_market_order
                 
                 logger.info(f"Orden de cierre real enviada a Binance para trade {trade.id}: {exit_order_details.orderId_internal}")
@@ -401,17 +401,17 @@ class TradingEngineService:
             
             trade.exitOrders.append(exit_order_details)
 
-        # La lógica de obtención de credenciales y envío de orden de mercado ya está dentro del 'else'
-        # de la verificación 'if exit_order_details and exit_order_details.status == 'filled':'
-        # No es necesario duplicarla aquí.
-        # El parámetro exit_order_details ya está definido en la firma de la función.
+        # La l贸gica de obtenci贸n de credenciales y env铆o de orden de mercado ya est谩 dentro del 'else'
+        # de la verificaci贸n 'if exit_order_details and exit_order_details.status == 'filled':'
+        # No es necesario duplicarla aqu铆.
+        # El par谩metro exit_order_details ya est谩 definido en la firma de la funci贸n.
 
         # Actualizar el Trade con la orden de salida, P&L y estado
         trade.positionStatus = 'closed'
         trade.closingReason = closing_reason
-        trade.closed_at = datetime.utcnow()
+        trade.closed_at = datetime.now(timezone.utc)
 
-        # Calcular P&L (usando el precio de ejecución de la orden de salida)
+        # Calcular P&L (usando el precio de ejecuci贸n de la orden de salida)
         entry_value = trade.entryOrder.executedQuantity * trade.entryOrder.executedPrice
         exit_value = exit_order_details.executedQuantity * exit_order_details.executedPrice
 
@@ -434,27 +434,27 @@ class TradingEngineService:
         except Exception as e:
             logger.error(f"Error al persistir el trade REAL cerrado {trade.id}: {e}", exc_info=True)
             await self.notification_service.send_real_trade_status_notification(
-                trade.user_id, f"Error crítico: Trade real cerrado en Binance pero fallo al persistir {trade.id}: {str(e)}", "CRITICAL"
+                trade.user_id, f"Error cr铆tico: Trade real cerrado en Binance pero fallo al persistir {trade.id}: {str(e)}", "CRITICAL"
             )
             raise OrderExecutionError(f"Orden real cerrada pero fallo al persistir el trade: {e}") from e
 
-        # Actualizar el portafolio real tras el cierre de una posición.
+        # Actualizar el portafolio real tras el cierre de una posici贸n.
         try:
             await self.portfolio_service.update_real_portfolio_after_exit(trade)
             logger.info(f"Portafolio real actualizado para trade {trade.id}.")
         except Exception as e:
             logger.error(f"Error al actualizar el portafolio real tras cierre de trade {trade.id}: {e}", exc_info=True)
 
-        # Subtask 2.5: Enviar notificaciones al usuario sobre la ejecución de TSL/TP.
+        # Subtask 2.5: Enviar notificaciones al usuario sobre la ejecuci贸n de TSL/TP.
         try:
             await self.notification_service.send_real_trade_exit_notification(trade)
-            logger.info(f"Notificación de cierre de trade real enviada para trade {trade.id}.")
+            logger.info(f"Notificaci贸n de cierre de trade real enviada para trade {trade.id}.")
         except Exception as e:
-            logger.error(f"Error al enviar notificación de cierre para trade REAL {trade.id}: {e}", exc_info=True)
+            logger.error(f"Error al enviar notificaci贸n de cierre para trade REAL {trade.id}: {e}", exc_info=True)
 
     async def simulate_paper_entry_order(self, opportunity: Opportunity) -> Trade:
         """
-        Simula la ejecución de una orden de entrada en modo Paper Trading
+        Simula la ejecuci贸n de una orden de entrada en modo Paper Trading
         para una oportunidad de trading validada por la IA.
         """
         logger.info(f"Simulando orden de entrada para oportunidad {opportunity.id} ({opportunity.symbol})")
@@ -463,8 +463,8 @@ class TradingEngineService:
         side = opportunity.ai_analysis.suggestedAction if opportunity.ai_analysis else None
 
         if not symbol or not side:
-            logger.error(f"Oportunidad {opportunity.id} no tiene símbolo o acción sugerida. No se puede simular.")
-            raise OrderExecutionError(f"Oportunidad inválida para simulación: {opportunity.id}")
+            logger.error(f"Oportunidad {opportunity.id} no tiene s铆mbolo o acci贸n sugerida. No se puede simular.")
+            raise OrderExecutionError(f"Oportunidad inv谩lida para simulaci贸n: {opportunity.id}")
 
         # Subtask 1.2: Obtener el precio de mercado actual
         try:
@@ -474,20 +474,20 @@ class TradingEngineService:
             logger.error(f"Error al obtener precio de mercado para {symbol}: {e}", exc_info=True)
             raise OrderExecutionError(f"No se pudo obtener el precio de mercado para {symbol}.") from e
 
-        # Subtask 1.3: Calcular el tamaño de la posición (quantity)
-        user_config = await self.config_service.get_user_configuration(user_id)
+        # Subtask 1.3: Calcular el tama帽o de la posici贸n (quantity)
+        user_config = await self.config_service.get_user_configuration(str(user_id))
         
         # Obtener el capital disponible del portafolio de paper trading
         portfolio_snapshot = await self.portfolio_service.get_portfolio_snapshot(user_id)
         available_capital = portfolio_snapshot.paper_trading.available_balance_usdt
 
-        # Reglas de gestión de capital (FR3.1 - no más del 50% del capital diario, FR3.2 - ajuste dinámico al 25%)
-        # Simplificación: Usaremos perTradeCapitalRiskPercentage sobre el capital disponible para esta simulación.
-        # La lógica de "capital diario" es más compleja y podría requerir un seguimiento de trades diarios.
+        # Reglas de gesti贸n de capital (FR3.1 - no m谩s del 50% del capital diario, FR3.2 - ajuste din谩mico al 25%)
+        # Simplificaci贸n: Usaremos perTradeCapitalRiskPercentage sobre el capital disponible para esta simulaci贸n.
+        # La l贸gica de "capital diario" es m谩s compleja y podr铆a requerir un seguimiento de trades diarios.
         per_trade_risk_percentage = user_config.riskProfileSettings.perTradeCapitalRiskPercentage if user_config.riskProfileSettings else None
         
         if not per_trade_risk_percentage:
-            logger.warning(f"No se encontró 'perTradeCapitalRiskPercentage' para usuario {user_id}. Usando 0.01 (1%).")
+            logger.warning(f"No se encontr贸 'perTradeCapitalRiskPercentage' para usuario {user_id}. Usando 0.01 (1%).")
             per_trade_risk_percentage = 0.01
 
         capital_to_invest = available_capital * per_trade_risk_percentage
@@ -500,37 +500,37 @@ class TradingEngineService:
         # Asumimos que el precio es en USDT y la cantidad es del activo base (ej. BTC en BTCUSDT)
         quantity = capital_to_invest / current_price
         
-        # TODO: Considerar la precisión de los símbolos (pasos de cantidad y precio) de Binance para redondear correctamente.
-        # Esto requeriría obtener información de los símbolos de Binance, lo cual puede ser una tarea futura o una mejora.
+        # TODO: Considerar la precisi贸n de los s铆mbolos (pasos de cantidad y precio) de Binance para redondear correctamente.
+        # Esto requerir铆a obtener informaci贸n de los s铆mbolos de Binance, lo cual puede ser una tarea futura o una mejora.
         # Por ahora, usaremos la cantidad calculada directamente.
         logger.info(f"Calculado: Capital disponible={available_capital}, % riesgo por trade={per_trade_risk_percentage}, Capital a invertir={capital_to_invest}, Cantidad={quantity}")
 
         # Subtask 1.4: Crear una instancia de TradeOrderDetails
         simulated_order_details = TradeOrderDetails(
             orderId_internal=uuid4(),
-            orderId_exchange=None, # No aplica para paper trading
-            clientOrderId_exchange=None, # No aplica para paper trading
-            orderCategory=OrderCategory.ENTRY, # Nueva categoría
+            orderId_exchange=None, 
+            clientOrderId_exchange=None, 
+            orderCategory=OrderCategory.ENTRY, 
             type='market',
             status='filled',
-            requestedPrice=current_price, # Añadir requestedPrice
+            requestedPrice=current_price, 
             requestedQuantity=quantity,
             executedQuantity=quantity,
             executedPrice=current_price,
-            cumulativeQuoteQty=quantity * current_price, # Añadir cumulativeQuoteQty
-            commissions=[], # Sin comisiones en paper trading
-            commission=None, # Campo legado
-            commissionAsset=None, # Campo legado
-            timestamp=datetime.utcnow(),
-            submittedAt=datetime.utcnow(), # Añadir submittedAt
-            fillTimestamp=datetime.utcnow(), # Añadir fillTimestamp
+            cumulativeQuoteQty=quantity * current_price, 
+            commissions=[], 
+            commission=None, 
+            commissionAsset=None, 
+            timestamp=datetime.now(timezone.utc),
+            submittedAt=datetime.now(timezone.utc), 
+            fillTimestamp=datetime.now(timezone.utc), 
             rawResponse=None,
-            ocoOrderListId=None # No aplica para orden de entrada
+            ocoOrderListId=None 
         )
         logger.info(f"Orden simulada creada: {simulated_order_details.orderId_internal}")
 
         # Subtask 1.2: Calcular los niveles iniciales de TSL y TP (AC1)
-        # Usar la configuración del usuario para los porcentajes de TSL/TP
+        # Usar la configuraci贸n del usuario para los porcentajes de TSL/TP
         tp_percentage = user_config.riskProfileSettings.takeProfitPercentage if user_config.riskProfileSettings and user_config.riskProfileSettings.takeProfitPercentage is not None else self.TP_PERCENTAGE_DEFAULT
         tsl_percentage = user_config.riskProfileSettings.trailingStopLossPercentage if user_config.riskProfileSettings and user_config.riskProfileSettings.trailingStopLossPercentage is not None else self.TSL_PERCENTAGE_DEFAULT
         tsl_callback_rate = user_config.riskProfileSettings.trailingStopCallbackRate if user_config.riskProfileSettings and user_config.riskProfileSettings.trailingStopCallbackRate is not None else self.TSL_CALLBACK_RATE_DEFAULT
@@ -556,14 +556,15 @@ class TradingEngineService:
             pnl_usd=None,
             pnl_percentage=None,
             closingReason=None,
+            ocoOrderListId=None, # Argumento añadido
             takeProfitPrice=take_profit_price,
             trailingStopActivationPrice=trailing_stop_activation_price,
             trailingStopCallbackRate=tsl_callback_rate,
             currentStopPrice_tsl=current_stop_price_tsl,
             riskRewardAdjustments=[],
-            created_at=datetime.utcnow(),
-            opened_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
+            opened_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
             closed_at=None
         )
         logger.info(f"Trade simulado creado: {new_trade.id}")
@@ -577,7 +578,7 @@ class TradingEngineService:
             raise OrderExecutionError(f"Fallo al persistir el trade simulado: {e}") from e
         
         # Task 2: Actualizar el portafolio de Paper Trading (Subtasks 2.1 - 2.4)
-        # Esto se hará en PortfolioService, pero lo llamamos desde aquí.
+        # Esto se har谩 en PortfolioService, pero lo llamamos desde aqu铆.
         try:
             await self.portfolio_service.update_paper_portfolio_after_entry(new_trade)
             logger.info(f"Portafolio de paper trading actualizado para trade {new_trade.id}.")
@@ -587,9 +588,9 @@ class TradingEngineService:
         # Task 3: Enviar notificaciones al usuario (Subtasks 3.1 - 3.2)
         try:
             await self.notification_service.send_paper_trade_entry_notification(new_trade)
-            logger.info(f"Notificación de trade simulado enviada para trade {new_trade.id}.")
+            logger.info(f"Notificaci贸n de trade simulado enviada para trade {new_trade.id}.")
         except Exception as e:
-            logger.error(f"Error al enviar notificación para trade {new_trade.id}: {e}", exc_info=True)
+            logger.error(f"Error al enviar notificaci贸n para trade {new_trade.id}: {e}", exc_info=True)
         
         return new_trade
 
@@ -602,7 +603,7 @@ class TradingEngineService:
         logger.info(f"Procesando oportunidad {opportunity.id} para posible operativa real.")
 
         user_id = opportunity.user_id
-        user_config = await self.config_service.get_user_configuration(user_id)
+        user_config = await self.config_service.get_user_configuration(str(user_id))
 
         # Acceder a realTradingSettings de forma segura
         real_trading_settings = user_config.realTradingSettings
@@ -611,10 +612,10 @@ class TradingEngineService:
             return
 
         if not opportunity.ai_analysis or opportunity.ai_analysis.calculatedConfidence is None:
-            logger.warning(f"Oportunidad {opportunity.id} no tiene análisis de IA o confianza calculada. No se puede procesar para real trading.")
+            logger.warning(f"Oportunidad {opportunity.id} no tiene an谩lisis de IA o confianza calculada. No se puede procesar para real trading.")
             return
 
-        # Subtask 1.1: Filtrar oportunidades basándose en aiAnalysis.calculatedConfidence > 0.95
+        # Subtask 1.1: Filtrar oportunidades bas谩ndose en aiAnalysis.calculatedConfidence > 0.95
         confidence_threshold = 0.95
         if user_config.aiAnalysisConfidenceThresholds and user_config.aiAnalysisConfidenceThresholds.realTrading is not None:
             confidence_threshold = user_config.aiAnalysisConfidenceThresholds.realTrading
@@ -628,12 +629,12 @@ class TradingEngineService:
         max_real_trades = real_trading_settings.max_real_trades if real_trading_settings.max_real_trades is not None else 5
 
         if real_trades_executed_count >= max_real_trades:
-            logger.warning(f"Límite de operaciones reales ({max_real_trades}) alcanzado para usuario {user_id}. Oportunidad {opportunity.id} no presentada para operativa real.")
+            logger.warning(f"L铆mite de operaciones reales ({max_real_trades}) alcanzado para usuario {user_id}. Oportunidad {opportunity.id} no presentada para operativa real.")
             return
 
         # Subtask 1.4: Actualizar el status de la Opportunity a PENDING_USER_CONFIRMATION_REAL
         opportunity.status = OpportunityStatus.PENDING_USER_CONFIRMATION_REAL
-        opportunity.updated_at = datetime.utcnow()
+        opportunity.updated_at = datetime.now(timezone.utc)
         try:
             await self.persistence_service.upsert_opportunity(opportunity.user_id, opportunity.model_dump(mode='json', by_alias=True, exclude_none=True))
             logger.info(f"Oportunidad {opportunity.id} actualizada a 'pending_user_confirmation_real' y persistida.")
@@ -641,59 +642,59 @@ class TradingEngineService:
             logger.error(f"Error al persistir la oportunidad {opportunity.id} con estado 'pending_user_confirmation_real': {e}", exc_info=True)
             return
 
-        # Subtask 4.2: Disparar notificación prioritaria
+        # Subtask 4.2: Disparar notificaci贸n prioritaria
         try:
             await self.notification_service.send_high_confidence_opportunity_notification(opportunity)
-            logger.info(f"Notificación de oportunidad de alta confianza enviada para {opportunity.id}.")
+            logger.info(f"Notificaci贸n de oportunidad de alta confianza enviada para {opportunity.id}.")
         except Exception as e:
-            logger.error(f"Error al enviar notificación de alta confianza para oportunidad {opportunity.id}: {e}", exc_info=True)
+            logger.error(f"Error al enviar notificaci贸n de alta confianza para oportunidad {opportunity.id}: {e}", exc_info=True)
 
-        logger.info(f"Oportunidad {opportunity.id} es una candidata de muy alta confianza para operativa real y ha sido marcada para confirmación del usuario.")
+        logger.info(f"Oportunidad {opportunity.id} es una candidata de muy alta confianza para operativa real y ha sido marcada para confirmaci贸n del usuario.")
 
     async def execute_real_trade(self, opportunity_id: UUID, user_id: UUID) -> Trade:
         """
         Ejecuta una orden real en Binance basada en una oportunidad confirmada por el usuario.
         """
-        logger.info(f"Iniciando ejecución de orden REAL para oportunidad {opportunity_id} y usuario {user_id}.")
+        logger.info(f"Iniciando ejecuci贸n de orden REAL para oportunidad {opportunity_id} y usuario {user_id}.")
 
         # 2.2: Recuperar la Opportunity completa de la base de datos
         opportunity = await self.persistence_service.get_opportunity_by_id(opportunity_id)
         if not opportunity:
-            logger.error(f"Oportunidad {opportunity_id} no encontrada para ejecución real.")
+            logger.error(f"Oportunidad {opportunity_id} no encontrada para ejecuci贸n real.")
             raise OrderExecutionError(f"Oportunidad {opportunity_id} no encontrada.")
 
         if opportunity.status != OpportunityStatus.PENDING_USER_CONFIRMATION_REAL:
-            logger.error(f"Oportunidad {opportunity_id} no está en estado PENDING_USER_CONFIRMATION_REAL. Estado actual: {opportunity.status}")
+            logger.error(f"Oportunidad {opportunity_id} no est谩 en estado PENDING_USER_CONFIRMATION_REAL. Estado actual: {opportunity.status}")
             await self.notification_service.send_real_trade_status_notification(
                 user_id, 
-                f"Error al enviar orden real para {opportunity.symbol} ({opportunity.ai_analysis.suggestedAction}): Oportunidad no está en estado PENDING_USER_CONFIRMATION_REAL. Estado actual: {opportunity.status.value}", 
+                f"Error al enviar orden real para {opportunity.symbol} ({(opportunity.ai_analysis.suggestedAction if opportunity.ai_analysis else 'N/A')}): Oportunidad no est谩 en estado PENDING_USER_CONFIRMATION_REAL. Estado actual: {opportunity.status.value}", 
                 "ERROR"
             )
             await self.persistence_service.update_opportunity_status(
-                opportunity_id, OpportunityStatus.EXECUTION_FAILED, f"Oportunidad {opportunity_id} no está en estado PENDING_USER_CONFIRMATION_REAL. Estado actual: {opportunity.status.value}"
+                opportunity_id, OpportunityStatus.EXECUTION_FAILED, f"Oportunidad {opportunity_id} no est谩 en estado PENDING_USER_CONFIRMATION_REAL. Estado actual: {opportunity.status.value}"
             )
-            raise OrderExecutionError(f"Oportunidad {opportunity_id} no está lista para ejecución real.")
+            raise OrderExecutionError(f"Oportunidad {opportunity_id} no est谩 lista para ejecuci贸n real.")
 
         if not opportunity.symbol or not opportunity.ai_analysis or opportunity.ai_analysis.suggestedAction is None:
-            logger.error(f"Oportunidad {opportunity_id} carece de símbolo o acción sugerida por IA.")
-            raise OrderExecutionError(f"Oportunidad {opportunity_id} incompleta para ejecución real.")
+            logger.error(f"Oportunidad {opportunity_id} carece de s铆mbolo o acci贸n sugerida por IA.")
+            raise OrderExecutionError(f"Oportunidad {opportunity_id} incompleta para ejecuci贸n real.")
 
         symbol = opportunity.symbol
-        side = opportunity.ai_analysis.suggestedAction # Ya se verificó que no es None
+        side = opportunity.ai_analysis.suggestedAction # Ya se verific贸 que no es None
         
         # 2.3: Calcular la cantidad a operar (requestedQuantity)
-        user_config = await self.config_service.get_user_configuration(user_id)
+        user_config = await self.config_service.get_user_configuration(str(user_id))
         if not user_config or not user_config.realTradingSettings or not user_config.riskProfileSettings:
-            logger.error(f"Configuración de usuario o de trading real/riesgo no encontrada para {user_id}.")
+            logger.error(f"Configuraci贸n de usuario o de trading real/riesgo no encontrada para {user_id}.")
             await self.notification_service.send_real_trade_status_notification(
                 user_id, 
-                f"Error al enviar orden real para {symbol} ({side}): Configuración de usuario incompleta para operativa real.", 
+                f"Error al enviar orden real para {symbol} ({side}): Configuraci贸n de usuario incompleta para operativa real.", 
                 "ERROR"
             )
             await self.persistence_service.update_opportunity_status(
-                opportunity_id, OpportunityStatus.EXECUTION_FAILED, "Configuración de usuario incompleta para operativa real."
+                opportunity_id, OpportunityStatus.EXECUTION_FAILED, "Configuraci贸n de usuario incompleta para operativa real."
             )
-            raise ConfigurationError("Configuración de usuario incompleta para operativa real.")
+            raise ConfigurationError("Configuraci贸n de usuario incompleta para operativa real.")
 
         real_trading_settings = user_config.realTradingSettings
         risk_profile_settings = user_config.riskProfileSettings
@@ -715,24 +716,24 @@ class TradingEngineService:
             raise OrderExecutionError(f"No se pudo obtener el saldo real: {e}") from e
 
         # Subtask 1.3: Implementar mecanismo para monitorear y resetear daily_capital_risked_usd
-        today = datetime.utcnow().date()
+        today = datetime.now(timezone.utc).date()
         if real_trading_settings.last_daily_reset.date() != today:
-            logger.info(f"Reiniciando daily_capital_risked_usd para {user_id}. Último reinicio: {real_trading_settings.last_daily_reset.date()}")
+            logger.info(f"Reiniciando daily_capital_risked_usd para {user_id}. 脷ltimo reinicio: {real_trading_settings.last_daily_reset.date()}")
             real_trading_settings.daily_capital_risked_usd = 0.0
-            real_trading_settings.last_daily_reset = datetime.utcnow()
+            real_trading_settings.last_daily_reset = datetime.now(timezone.utc)
             await self.config_service.save_user_configuration(user_config)
 
-        # Subtask 1.2: Asegurar que el cálculo respete dailyCapitalRiskPercentage (50% del capital total)
+        # Subtask 1.2: Asegurar que el c谩lculo respete dailyCapitalRiskPercentage (50% del capital total)
         daily_capital_risk_percentage = risk_profile_settings.dailyCapitalRiskPercentage
         if daily_capital_risk_percentage is None:
             logger.warning(f"dailyCapitalRiskPercentage no configurado para {user_id}. Usando 0.50 (50%) como valor por defecto.")
             daily_capital_risk_percentage = 0.50
         
         max_daily_risk_usd = total_real_capital * daily_capital_risk_percentage
-        logger.info(f"Máximo capital diario a arriesgar para {user_id}: {max_daily_risk_usd:.2f} USDT (basado en {daily_capital_risk_percentage*100}% de {total_real_capital:.2f}).")
+        logger.info(f"M谩ximo capital diario a arriesgar para {user_id}: {max_daily_risk_usd:.2f} USDT (basado en {daily_capital_risk_percentage*100}% de {total_real_capital:.2f}).")
         logger.info(f"Capital ya arriesgado hoy: {real_trading_settings.daily_capital_risked_usd:.2f} USDT.")
 
-        # Subtask 1.1: Calcular el tamaño de la posición basándose en perTradeCapitalRiskPercentage
+        # Subtask 1.1: Calcular el tama帽o de la posici贸n bas谩ndose en perTradeCapitalRiskPercentage
         per_trade_capital_risk_percentage = risk_profile_settings.perTradeCapitalRiskPercentage
         if per_trade_capital_risk_percentage is None:
             logger.warning(f"perTradeCapitalRiskPercentage no configurado para {user_id}. Usando 0.25 (25%) como valor por defecto.")
@@ -740,30 +741,30 @@ class TradingEngineService:
 
         capital_to_invest_per_trade = available_capital * per_trade_capital_risk_percentage
         
-        # Subtask 1.3: Verificar si la nueva operación excede el límite diario
+        # Subtask 1.3: Verificar si la nueva operaci贸n excede el l铆mite diario
         if (real_trading_settings.daily_capital_risked_usd + capital_to_invest_per_trade) > max_daily_risk_usd:
-            error_msg = (f"La operación excedería el límite de riesgo diario para {user_id}. "
+            error_msg = (f"La operaci贸n exceder铆a el l铆mite de riesgo diario para {user_id}. "
                          f"Capital a invertir: {capital_to_invest_per_trade:.2f}, "
                          f"Capital arriesgado hoy: {real_trading_settings.daily_capital_risked_usd:.2f}, "
-                         f"Límite diario: {max_daily_risk_usd:.2f}.")
+                         f"L铆mite diario: {max_daily_risk_usd:.2f}.")
             logger.error(error_msg)
             await self.notification_service.send_real_trade_status_notification(
-                user_id, f"Error al enviar orden real para {symbol} ({side}): Límite de riesgo de capital diario excedido.", "ERROR"
+                user_id, f"Error al enviar orden real para {symbol} ({side}): L铆mite de riesgo de capital diario excedido.", "ERROR"
             )
             await self.persistence_service.update_opportunity_status(
-                opportunity_id, OpportunityStatus.EXECUTION_FAILED, "Límite de riesgo de capital diario excedido."
+                opportunity_id, OpportunityStatus.EXECUTION_FAILED, "L铆mite de riesgo de capital diario excedido."
             )
-            raise OrderExecutionError("Límite de riesgo de capital diario excedido.")
+            raise OrderExecutionError("L铆mite de riesgo de capital diario excedido.")
 
         if capital_to_invest_per_trade <= 0:
             logger.error(f"Capital a invertir es cero o negativo para {user_id}. Capital disponible: {available_capital}.")
             await self.notification_service.send_real_trade_status_notification(
-                user_id, f"Error al enviar orden real para {symbol} ({side}): Capital insuficiente para la operación real.", "ERROR"
+                user_id, f"Error al enviar orden real para {symbol} ({side}): Capital insuficiente para la operaci贸n real.", "ERROR"
             )
             await self.persistence_service.update_opportunity_status(
-                opportunity_id, OpportunityStatus.EXECUTION_FAILED, "Capital insuficiente para la operación real."
+                opportunity_id, OpportunityStatus.EXECUTION_FAILED, "Capital insuficiente para la operaci贸n real."
             )
-            raise OrderExecutionError("Capital insuficiente para la operación real.")
+            raise OrderExecutionError("Capital insuficiente para la operaci贸n real.")
 
         # Obtener el precio de mercado actual para calcular la cantidad
         try:
@@ -784,8 +785,8 @@ class TradingEngineService:
 
         # Verificar cupos disponibles de nuevo (doble chequeo)
         if real_trading_settings.real_trades_executed_count >= real_trading_settings.max_real_trades:
-            logger.error(f"Límite de operaciones reales ({real_trading_settings.max_real_trades}) alcanzado para usuario {user_id}.")
-            raise OrderExecutionError("Límite de operaciones reales alcanzado.")
+            logger.error(f"L铆mite de operaciones reales ({real_trading_settings.max_real_trades}) alcanzado para usuario {user_id}.")
+            raise OrderExecutionError("L铆mite de operaciones reales alcanzado.")
 
         # 2.4: Utilizar el BinanceAdapter para enviar la orden real a Binance
         # Obtener credenciales de Binance
@@ -813,17 +814,17 @@ class TradingEngineService:
         if not api_key or api_secret is None:
             logger.error(f"API Key o Secret de Binance no pudieron ser desencriptados para {user_id}.")
             await self.notification_service.send_real_trade_status_notification(
-                user_id, f"Error al enviar orden real para {symbol} ({side}): API Key o Secret de Binance no válidos.", "ERROR"
+                user_id, f"Error al enviar orden real para {symbol} ({side}): API Key o Secret de Binance no v谩lidos.", "ERROR"
             )
             await self.persistence_service.update_opportunity_status(
-                opportunity_id, OpportunityStatus.EXECUTION_FAILED, "API Key o Secret de Binance no válidos."
+                opportunity_id, OpportunityStatus.EXECUTION_FAILED, "API Key o Secret de Binance no v谩lidos."
             )
-            raise CredentialError("API Key o Secret de Binance no válidos.")
+            raise CredentialError("API Key o Secret de Binance no v谩lidos.")
 
         trade_order_details: Optional[TradeOrderDetails] = None
         try:
-            # La orden de entrada real se ejecuta a través de OrderExecutionService, que ya debería manejar TradeOrderDetails
-            # con los nuevos campos. Sin embargo, para asegurar la consistencia, la instanciación aquí debe reflejarlo.
+            # La orden de entrada real se ejecuta a trav茅s de OrderExecutionService, que ya deber铆a manejar TradeOrderDetails
+            # con los nuevos campos. Sin embargo, para asegurar la consistencia, la instanciaci贸n aqu铆 debe reflejarlo.
             # Asumimos que execute_market_order devuelve un TradeOrderDetails ya completo.
             trade_order_details = await self.order_execution_service.execute_market_order(
                 user_id=user_id,
@@ -831,9 +832,10 @@ class TradingEngineService:
                 side=side,
                 quantity=requested_quantity,
                 api_key=api_key,
-                api_secret=api_secret
+                api_secret=api_secret,
+                ocoOrderListId=None # Asegurar que se pasa None para la orden de entrada directa
             )
-            # Asegurarse de que la categoría de la orden de entrada sea correcta
+            # Asegurarse de que la categor铆a de la orden de entrada sea correcta
             trade_order_details.orderCategory = OrderCategory.ENTRY
             trade_order_details.ocoOrderListId = None # No aplica para la orden de entrada
 
@@ -852,7 +854,7 @@ class TradingEngineService:
             raise
 
         # Subtask 2.1: Calcular los niveles iniciales de TSL y TP para trades reales
-        # Usar la configuración del usuario para los porcentajes de TSL/TP
+        # Usar la configuraci贸n del usuario para los porcentajes de TSL/TP
         tp_percentage_real = risk_profile_settings.takeProfitPercentage if risk_profile_settings and risk_profile_settings.takeProfitPercentage is not None else self.TP_PERCENTAGE_DEFAULT
         tsl_percentage_real = risk_profile_settings.trailingStopLossPercentage if risk_profile_settings and risk_profile_settings.trailingStopLossPercentage is not None else self.TSL_PERCENTAGE_DEFAULT
         tsl_callback_rate_real = risk_profile_settings.trailingStopCallbackRate if risk_profile_settings and risk_profile_settings.trailingStopCallbackRate is not None else self.TSL_CALLBACK_RATE_DEFAULT
@@ -861,27 +863,27 @@ class TradingEngineService:
         trailing_stop_activation_price = current_price * (1 - tsl_percentage_real) if side == 'BUY' else current_price * (1 + tsl_percentage_real)
         current_stop_price_tsl = trailing_stop_activation_price
 
-        # Subtask 2.2: Enviar órdenes de TSL y TP a Binance (usando OCO si es posible)
-        # Determinar el lado opuesto para las órdenes de salida
+        # Subtask 2.2: Enviar 贸rdenes de TSL y TP a Binance (usando OCO si es posible)
+        # Determinar el lado opuesto para las 贸rdenes de salida
         exit_side = 'SELL' if side == 'BUY' else 'BUY'
         
         oco_list_client_order_id = None # Inicializar a None
-        oco_exit_orders: List[TradeOrderDetails] = [] # Inicializar a lista vacía
+        oco_exit_orders: List[TradeOrderDetails] = [] # Inicializar a lista vac铆a
         
         try:
             # Binance OCO order: STOP_LOSS_LIMIT and TAKE_PROFIT_LIMIT
             # stopPrice es el precio que activa la orden stop-loss
             # limitPrice es el precio al que se ejecuta la orden stop-loss (puede ser el mismo que stopPrice o ligeramente peor)
-            # quantity es la cantidad de la posición abierta
+            # quantity es la cantidad de la posici贸n abierta
             
             # Para TSL, el stopPrice es currentStopPrice_tsl
             # Para TP, el price es takeProfitPrice
             
-            # Necesitamos la cantidad de la orden de entrada para las órdenes de salida
+            # Necesitamos la cantidad de la orden de entrada para las 贸rdenes de salida
             quantity_to_close = trade_order_details.executedQuantity
 
-            # TODO: Considerar la precisión de los símbolos (pasos de cantidad y precio) de Binance para redondear correctamente.
-            # Esto requeriría obtener información de los símbolos de Binance, lo cual puede ser una tarea futura o una mejora.
+            # TODO: Considerar la precisi贸n de los s铆mbolos (pasos de cantidad y precio) de Binance para redondear correctamente.
+            # Esto requerir铆a obtener informaci贸n de los s铆mbolos de Binance, lo cual puede ser una tarea futura o una mejora.
             # Por ahora, usaremos la cantidad y precios calculados directamente.
 
             oco_order_response = await self.binance_adapter.create_oco_order(
@@ -892,10 +894,10 @@ class TradingEngineService:
                 quantity=quantity_to_close,
                 price=take_profit_price, # Precio para la orden Take Profit Limit
                 stopPrice=current_stop_price_tsl, # Precio para la orden Stop Loss Limit
-                stopLimitPrice=current_stop_price_tsl * (0.99) if exit_side == 'SELL' else current_stop_price_tsl * (1.01), # Precio límite para la orden Stop Loss (ligeramente peor para asegurar ejecución)
+                stopLimitPrice=current_stop_price_tsl * (0.99) if exit_side == 'SELL' else current_stop_price_tsl * (1.01), # Precio l铆mite para la orden Stop Loss (ligeramente peor para asegurar ejecuci贸n)
                 stopLimitTimeInForce='GTC' # Good Till Cancelled
             )
-            logger.info(f"Órdenes OCO (TSL/TP) enviadas a Binance para trade {opportunity_id}: {oco_order_response}")
+            logger.info(f"脫rdenes OCO (TSL/TP) enviadas a Binance para trade {opportunity_id}: {oco_order_response}")
             
             oco_list_client_order_id = oco_order_response.get('listClientOrderId')
             oco_orders_in_response = oco_order_response.get('orderReports', [])
@@ -918,25 +920,36 @@ class TradingEngineService:
                         status=order_report.get('status'),
                         requestedQuantity=float(order_report.get('origQty')),
                         executedQuantity=float(order_report.get('executedQty')),
-                        executedPrice=float(order_report.get('price')) if order_report.get('price') else 0.0, # Precio de la orden límite
+                        executedPrice=float(order_report.get('price')) if order_report.get('price') else 0.0, # Precio de la orden l铆mite
                         commission=float(order_report.get('commission')) if order_report.get('commission') else None,
-                        commissionAsset=order_report.get('commissionAsset'),
-                        timestamp=datetime.fromtimestamp(order_report.get('updateTime') / 1000, tz=timezone.utc),
+                        commissionAsset=order_report.get('commissionAsset'), # Campo legado
+                        timestamp=datetime.fromtimestamp(order_report.get('updateTime') / 1000, tz=timezone.utc), # Momento de la última actualización del estado de esta orden específica
+                        # --- Campos adicionales requeridos ---
+                        clientOrderId_exchange=str(order_report.get('clientOrderId', '')),
+                        requestedPrice=float(order_report.get('price', 0.0)), # Este es el 'limitPrice' de la orden (TP o SL)
+                        cumulativeQuoteQty=float(order_report.get('cummulativeQuoteQty', 0.0)),
+                        commissions=[{
+                            "amount": float(order_report.get('commission', 0.0)), # Comisión de esta orden específica
+                            "asset": str(order_report.get('commissionAsset', '')) # Activo de la comisión
+                        }],
+                        submittedAt=datetime.fromtimestamp(order_report.get('time') / 1000, tz=timezone.utc) if order_report.get('time') else datetime.fromtimestamp(order_report.get('transactTime') / 1000, tz=timezone.utc) if order_report.get('transactTime') else datetime.fromtimestamp(order_report.get('updateTime') / 1000, tz=timezone.utc), # Preferir 'time' (tiempo de la transacción) o 'transactTime' si existen, sino 'updateTime'
+                        fillTimestamp=datetime.fromtimestamp(order_report.get('updateTime') / 1000, tz=timezone.utc) if order_report.get('status') == 'FILLED' else None,
+                        # --- Fin de campos adicionales ---
                         rawResponse=order_report,
                         ocoOrderListId=oco_list_client_order_id
                     ))
             
             await self.notification_service.send_real_trade_status_notification(
-                user_id, f"Órdenes OCO (TSL/TP) enviadas para {symbol} ({exit_side}). TP: {take_profit_price:.4f}, TSL: {current_stop_price_tsl:.4f}", "INFO"
+                user_id, f"脫rdenes OCO (TSL/TP) enviadas para {symbol} ({exit_side}). TP: {take_profit_price:.4f}, TSL: {current_stop_price_tsl:.4f}", "INFO"
             )
 
         except Exception as e:
-            logger.error(f"Fallo al enviar órdenes OCO (TSL/TP) a Binance para oportunidad {opportunity_id}: {e}", exc_info=True)
+            logger.error(f"Fallo al enviar 贸rdenes OCO (TSL/TP) a Binance para oportunidad {opportunity_id}: {e}", exc_info=True)
             await self.notification_service.send_real_trade_status_notification(
-                user_id, f"Error al enviar órdenes OCO (TSL/TP) para {symbol}: {str(e)}", "ERROR"
+                user_id, f"Error al enviar 贸rdenes OCO (TSL/TP) para {symbol}: {str(e)}", "ERROR"
             )
-            # No se eleva la excepción para no bloquear la ejecución del trade principal, pero se registra el error.
-            oco_exit_orders = [] # Asegurarse de que la lista esté vacía si falla
+            # No se eleva la excepci贸n para no bloquear la ejecuci贸n del trade principal, pero se registra el error.
+            oco_exit_orders = [] # Asegurarse de que la lista est茅 vac铆a si falla
 
         # 2.5: Registrar la orden enviada y su estado inicial en la base de datos (creando una nueva entidad Trade)
         new_trade = Trade(
@@ -946,22 +959,22 @@ class TradingEngineService:
             symbol=symbol,
             side=side,
             entryOrder=trade_order_details,
-            exitOrders=oco_exit_orders, # Las órdenes OCO se añadirán al monitorear su estado
+            exitOrders=oco_exit_orders, # Las 贸rdenes OCO se a帽adir谩n al monitorear su estado
             positionStatus='open',
             opportunityId=opportunity_id,
             aiAnalysisConfidence=opportunity.ai_analysis.calculatedConfidence if opportunity.ai_analysis else None,
             pnl_usd=None,
             pnl_percentage=None,
             closingReason=None,
-            ocoOrderListId=oco_list_client_order_id, # Añadir el ID de la lista OCO al trade
+            ocoOrderListId=oco_list_client_order_id, # A帽adir el ID de la lista OCO al trade
             takeProfitPrice=take_profit_price, # Usar el precio calculado
             trailingStopActivationPrice=trailing_stop_activation_price, # Usar el precio calculado
             trailingStopCallbackRate=tsl_callback_rate_real,
             currentStopPrice_tsl=current_stop_price_tsl, # Usar el precio calculado
-            riskRewardAdjustments=[], # Añadir explícitamente la lista vacía
-            created_at=datetime.utcnow(),
-            opened_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            riskRewardAdjustments=[], # A帽adir expl铆citamente la lista vac铆a
+            created_at=datetime.now(timezone.utc),
+            opened_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
             closed_at=None
         )
         try:
@@ -970,7 +983,7 @@ class TradingEngineService:
         except Exception as e:
             logger.error(f"Error al persistir el trade real {new_trade.id}: {e}", exc_info=True)
             await self.notification_service.send_real_trade_status_notification(
-                user_id, f"Error crítico: Orden real enviada pero fallo al registrar el trade {new_trade.id}: {str(e)}", "CRITICAL"
+                user_id, f"Error cr铆tico: Orden real enviada pero fallo al registrar el trade {new_trade.id}: {str(e)}", "CRITICAL"
             )
             raise OrderExecutionError(f"Orden real enviada pero fallo al registrar el trade: {e}") from e
 
@@ -986,7 +999,7 @@ class TradingEngineService:
                 user_id, f"Advertencia: Orden real enviada, pero fallo al actualizar estado de oportunidad {opportunity_id}: {str(e)}", "WARNING"
             )
 
-        # Subtask 1.4: Integrar con ConfigService para obtener y actualizar la configuración del usuario relacionada con la gestión de capital.
+        # Subtask 1.4: Integrar con ConfigService para obtener y actualizar la configuraci贸n del usuario relacionada con la gesti贸n de capital.
         # Subtask 1.3: Incrementar daily_capital_risked_usd
         try:
             real_trading_settings.real_trades_executed_count += 1
@@ -1004,8 +1017,8 @@ class TradingEngineService:
 
     async def monitor_and_manage_paper_trade_exit(self, trade: Trade) -> None:
         """
-        Monitorea y gestiona las órdenes de salida (TSL/TP) para un trade en Paper Trading.
-        Este método será llamado después de que un trade de paper trading se abra.
+        Monitorea y gestiona las 贸rdenes de salida (TSL/TP) para un trade en Paper Trading.
+        Este m茅todo ser谩 llamado despu茅s de que un trade de paper trading se abra.
         """
         logger.info(f"Monitoreando TSL/TP para trade {trade.id} ({trade.symbol})")
 
@@ -1017,7 +1030,7 @@ class TradingEngineService:
             logger.error(f"Error al obtener precio de mercado para {trade.symbol} en monitoreo: {e}", exc_info=True)
             return
 
-        # Subtask 1.6: Implementar la lógica para ajustar el TSL si el precio se mueve favorablemente (AC3)
+        # Subtask 1.6: Implementar la l贸gica para ajustar el TSL si el precio se mueve favorablemente (AC3)
         if trade.positionStatus == 'open':
             if trade.trailingStopCallbackRate is None or trade.currentStopPrice_tsl is None:
                 logger.warning(f"Trade {trade.id} no tiene TSL configurado correctamente. Saltando ajuste de TSL.")
@@ -1028,10 +1041,10 @@ class TradingEngineService:
                     new_potential_stop = current_price * (1 - trade.trailingStopCallbackRate)
                     if new_potential_stop > trade.currentStopPrice_tsl:
                         trade.currentStopPrice_tsl = new_potential_stop
-                        trade.updated_at = datetime.utcnow()
+                        trade.updated_at = datetime.now(timezone.utc)
                         logger.info(f"TSL para {trade.symbol} (BUY) ajustado a {trade.currentStopPrice_tsl:.4f} (precio actual: {current_price:.4f})")
                         trade.riskRewardAdjustments.append({
-                            "timestamp": datetime.utcnow().isoformat(),
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
                             "type": "TSL_ADJUSTMENT",
                             "new_stop_price": new_potential_stop,
                             "current_price": current_price
@@ -1043,10 +1056,10 @@ class TradingEngineService:
                     new_potential_stop = current_price * (1 + trade.trailingStopCallbackRate)
                     if new_potential_stop < trade.currentStopPrice_tsl:
                         trade.currentStopPrice_tsl = new_potential_stop
-                        trade.updated_at = datetime.utcnow()
+                        trade.updated_at = datetime.now(timezone.utc)
                         logger.info(f"TSL para {trade.symbol} (SELL) ajustado a {trade.currentStopPrice_tsl:.4f} (precio actual: {current_price:.4f})")
                         trade.riskRewardAdjustments.append({
-                            "timestamp": datetime.utcnow().isoformat(),
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
                             "type": "TSL_ADJUSTMENT",
                             "new_stop_price": new_potential_stop,
                             "current_price": current_price
@@ -1054,7 +1067,7 @@ class TradingEngineService:
                         await self.persistence_service.upsert_trade(trade.user_id, trade.model_dump(mode='json', by_alias=True, exclude_none=True))
                         logger.info(f"Trade {trade.id} con TSL actualizado persistido.")
 
-            # Subtask 1.7: Implementar la lógica para detectar si el precio alcanza el TSL o TP (AC4)
+            # Subtask 1.7: Implementar la l贸gica para detectar si el precio alcanza el TSL o TP (AC4)
             closing_reason = None
             if trade.side == 'BUY':
                 if trade.takeProfitPrice is not None and current_price >= trade.takeProfitPrice:
@@ -1072,43 +1085,43 @@ class TradingEngineService:
                     logger.info(f"TSL alcanzado para {trade.symbol} (SELL). Precio: {current_price:.4f}, TSL: {trade.currentStopPrice_tsl:.4f}")
 
             if closing_reason:
-                # Subtask 1.8: Si se alcanza TSL/TP, simular el cierre de la posición
+                # Subtask 1.8: Si se alcanza TSL/TP, simular el cierre de la posici贸n
                 await self._close_paper_trade(trade, current_price, closing_reason)
 
     async def _close_paper_trade(self, trade: Trade, executed_price: float, closing_reason: str):
         """
-        Simula el cierre de una posición en Paper Trading.
+        Simula el cierre de una posici贸n en Paper Trading.
         """
         logger.info(f"Cerrando trade {trade.id} por {closing_reason} a precio {executed_price:.4f}")
 
         # Subtask 1.8.1: Crear una instancia de TradeOrderDetails para la orden de salida simulada
         exit_order_details = TradeOrderDetails(
             orderId_internal=uuid4(),
-            orderId_exchange=None, # No aplica para paper trading
-            clientOrderId_exchange=None, # No aplica para paper trading
+            orderId_exchange=None, 
+            clientOrderId_exchange=None, 
             orderCategory=OrderCategory.TRAILING_STOP_LOSS if closing_reason == 'SL_HIT' else OrderCategory.TAKE_PROFIT,
             type='trailing_stop_loss' if closing_reason == 'SL_HIT' else 'take_profit',
             status='filled',
-            requestedPrice=executed_price, # Añadir requestedPrice
+            requestedPrice=executed_price, 
             requestedQuantity=trade.entryOrder.executedQuantity,
             executedQuantity=trade.entryOrder.executedQuantity,
             executedPrice=executed_price,
-            cumulativeQuoteQty=trade.entryOrder.executedQuantity * executed_price, # Añadir cumulativeQuoteQty
-            commissions=[], # Sin comisiones en paper trading
-            commission=None, # Campo legado
-            commissionAsset=None, # Campo legado
-            timestamp=datetime.utcnow(),
-            submittedAt=datetime.utcnow(), # Añadir submittedAt
-            fillTimestamp=datetime.utcnow(), # Añadir fillTimestamp
+            cumulativeQuoteQty=trade.entryOrder.executedQuantity * executed_price, 
+            commissions=[], 
+            commission=None, 
+            commissionAsset=None, 
+            timestamp=datetime.now(timezone.utc),
+            submittedAt=datetime.now(timezone.utc), 
+            fillTimestamp=datetime.now(timezone.utc), 
             rawResponse=None,
-            ocoOrderListId=None # No aplica para orden de cierre simulada
+            ocoOrderListId=None 
         )
         trade.exitOrders.append(exit_order_details)
 
         # Subtask 1.8.2: Actualizar el Trade con la orden de salida, P&L y estado
         trade.positionStatus = 'closed'
         trade.closingReason = closing_reason
-        trade.closed_at = datetime.utcnow()
+        trade.closed_at = datetime.now(timezone.utc)
 
         # Calcular P&L
         entry_value = trade.entryOrder.executedQuantity * trade.entryOrder.executedPrice
@@ -1134,19 +1147,19 @@ class TradingEngineService:
             logger.error(f"Error al persistir el trade cerrado {trade.id}: {e}", exc_info=True)
             raise OrderExecutionError(f"Fallo al persistir el trade cerrado: {e}") from e
 
-        # Task 2: Actualizar el portafolio de Paper Trading tras el cierre de una posición.
+        # Task 2: Actualizar el portafolio de Paper Trading tras el cierre de una posici贸n.
         try:
             await self.portfolio_service.update_paper_portfolio_after_exit(trade)
             logger.info(f"Portafolio de paper trading actualizado para trade {trade.id}.")
         except Exception as e:
             logger.error(f"Error al actualizar el portafolio de paper trading tras cierre de trade {trade.id}: {e}", exc_info=True)
 
-        # Task 3: Enviar notificaciones al usuario sobre la ejecución de TSL/TP.
+        # Task 3: Enviar notificaciones al usuario sobre la ejecuci贸n de TSL/TP.
         try:
             await self.notification_service.send_paper_trade_exit_notification(trade)
-            logger.info(f"Notificación de cierre de trade simulado enviada para trade {trade.id}.")
+            logger.info(f"Notificaci贸n de cierre de trade simulado enviada para trade {trade.id}.")
         except Exception as e:
-            logger.error(f"Error al enviar notificación de cierre para trade {trade.id}: {e}", exc_info=True)
+            logger.error(f"Error al enviar notificaci贸n de cierre para trade {trade.id}: {e}", exc_info=True)
 
 
     async def execute_trade(
@@ -1158,12 +1171,12 @@ class TradingEngineService:
         credential_label: str = "default_binance_spot"
     ) -> TradeOrderDetails:
         """
-        Ejecuta una operación de trading, decidiendo entre modo real o paper trading.
+        Ejecuta una operaci贸n de trading, decidiendo entre modo real o paper trading.
         """
-        logger.info(f"Solicitud de ejecución de trade para usuario {user_id}: {side} {quantity} de {symbol}")
+        logger.info(f"Solicitud de ejecuci贸n de trade para usuario {user_id}: {side} {quantity} de {symbol}")
         
         try:
-            user_config = await self.config_service.get_user_configuration(user_id)
+            user_config = await self.config_service.get_user_configuration(str(user_id))
             
             if user_config.paperTradingActive:
                 logger.info(f"Modo Paper Trading ACTIVO para usuario {user_id}. Simulando orden.")
@@ -1200,20 +1213,21 @@ class TradingEngineService:
                     side=side,
                     quantity=quantity,
                     api_key=api_key,
-                    api_secret=api_secret
+                    api_secret=api_secret,
+                    ocoOrderListId=None # Asegurar que se pasa None para orden de mercado directa
                 )
             
             logger.info(f"Trade ejecutado exitosamente en modo {'PAPER' if user_config.paperTradingActive else 'REAL'}: {order_details.orderId_internal}")
             return order_details
 
         except ConfigurationError as e:
-            logger.error(f"Error de configuración para usuario {user_id}: {e}", exc_info=True)
-            raise OrderExecutionError(f"Fallo en el motor de trading debido a error de configuración: {e}") from e
+            logger.error(f"Error de configuraci贸n para usuario {user_id}: {e}", exc_info=True)
+            raise OrderExecutionError(f"Fallo en el motor de trading debido a error de configuraci贸n: {e}") from e
         except CredentialError as e:
             logger.error(f"Error de credenciales para usuario {user_id}: {e}", exc_info=True)
             raise OrderExecutionError(f"Fallo en el motor de trading debido a error de credenciales: {e}") from e
         except OrderExecutionError as e:
-            logger.error(f"Error de ejecución de orden para usuario {user_id}: {e}", exc_info=True)
+            logger.error(f"Error de ejecuci贸n de orden para usuario {user_id}: {e}", exc_info=True)
             raise
         except Exception as e:
             logger.error(f"Error inesperado en el motor de trading para usuario {user_id}: {e}", exc_info=True)
