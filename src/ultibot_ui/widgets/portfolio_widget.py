@@ -16,36 +16,38 @@ from src.ultibot_backend.services.portfolio_service import PortfolioService
 from src.ultibot_backend.services.config_service import ConfigService
 from src.ultibot_backend.services.market_data_service import MarketDataService
 from src.ultibot_ui.services.api_client import UltiBotAPIClient
+from src.ultibot_ui.services.trading_mode_state import get_trading_mode_manager, TradingModeStateManager
 
 logger = logging.getLogger(__name__)
 
 class DataUpdateWorker(QRunnable):
     """
-    Worker para actualizar datos del portafolio y operaciones abiertas.
+    Worker para actualizar datos del portafolio y operaciones abiertas según el modo de trading.
     """
-    def __init__(self, user_id: UUID, portfolio_service: PortfolioService, api_client: UltiBotAPIClient):
+    def __init__(self, user_id: UUID, portfolio_service: PortfolioService, api_client: UltiBotAPIClient, trading_mode: str):
         super().__init__()
         self.user_id = user_id
         self.portfolio_service = portfolio_service
         self.api_client = api_client
+        self.trading_mode = trading_mode
         self.signals = WorkerSignals()
 
     def run(self):
         """
-        Ejecuta la actualización de datos en un hilo separado.
+        Ejecuta la actualización de datos en un hilo separado con filtrado por trading mode.
         """
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             
-            # Obtener snapshot del portafolio
+            # Obtener snapshot del portafolio para el modo específico
             portfolio_snapshot = loop.run_until_complete(
                 self.portfolio_service.get_portfolio_snapshot(self.user_id)
             )
             
-            # Obtener trades abiertos
+            # Obtener trades abiertos para el modo específico
             open_trades = loop.run_until_complete(
-                self.api_client.get_open_trades("all")
+                self.api_client.get_open_trades(self.trading_mode)
             )
             
             # Obtener estado de gestión de capital
@@ -56,13 +58,14 @@ class DataUpdateWorker(QRunnable):
             result_data = {
                 "portfolio_snapshot": portfolio_snapshot,
                 "open_trades": open_trades,
-                "capital_status": capital_status
+                "capital_status": capital_status,
+                "trading_mode": self.trading_mode
             }
             
             self.signals.result.emit(result_data)
             
         except Exception as e:
-            error_msg = f"Error actualizando datos del portafolio: {e}"
+            error_msg = f"Error actualizando datos del portafolio (modo {self.trading_mode}): {e}"
             logger.error(error_msg, exc_info=True)
             self.signals.error.emit(error_msg)
         finally:
@@ -78,8 +81,8 @@ class WorkerSignals(QObject):
 
 class PortfolioWidget(QWidget):
     """
-    Widget extendido para la visualización del estado del portafolio incluyendo
-    TSL/TP y gestión de capital.
+    Widget para la visualización del estado del portafolio con soporte completo
+    para diferenciación entre modos de trading (paper vs real).
     """
     portfolio_updated = pyqtSignal(PortfolioSnapshot)
     error_occurred = pyqtSignal(str)
@@ -95,23 +98,23 @@ class PortfolioWidget(QWidget):
         self.open_trades: List[Dict[str, Any]] = []
         self.thread_pool = QThreadPool()
 
+        # Connect to trading mode state manager
+        self.trading_mode_manager: TradingModeStateManager = get_trading_mode_manager()
+        self.trading_mode_manager.trading_mode_changed.connect(self._on_trading_mode_changed)
+
         self.init_ui()
         self.setup_update_timer()
 
     def init_ui(self):
         """
-        Inicializa la interfaz de usuario con pestañas para mejor organización.
+        Inicializa la interfaz de usuario con visualización diferenciada por modo.
         """
         main_layout = QVBoxLayout(self)
         main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         main_layout.setSpacing(10)
 
-        # Título principal
-        title_label = QLabel("Estado del Portafolio y Operaciones")
-        title_font = QFont("Arial", 16, QFont.Bold)
-        title_label.setFont(title_font)
-        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        main_layout.addWidget(title_label)
+        # Header con indicador de modo actual
+        self._create_mode_header(main_layout)
 
         # Crear widget de pestañas
         self.tab_widget = QTabWidget()
@@ -133,76 +136,89 @@ class PortfolioWidget(QWidget):
         self.tab_widget.addTab(self.capital_tab, "Gestión de Capital")
 
         # Barra de estado y última actualización
-        status_layout = QHBoxLayout()
-        self.last_updated_label = QLabel("Última actualización: N/A")
-        self.last_updated_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        
-        self.refresh_button = QPushButton("Actualizar")
-        self.refresh_button.clicked.connect(self._start_update_worker)
-        self.refresh_button.setMaximumWidth(100)
-        
-        status_layout.addWidget(self.last_updated_label)
-        status_layout.addStretch()
-        status_layout.addWidget(self.refresh_button)
-        main_layout.addLayout(status_layout)
+        self._create_status_bar(main_layout)
 
-        # Label de error
-        self.error_label = QLabel("")
-        self.error_label.setStyleSheet("color: red;")
-        self.error_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        main_layout.addWidget(self.error_label)
+    def _create_mode_header(self, layout: QVBoxLayout):
+        """Crea el header con indicador del modo actual."""
+        header_frame = QFrame()
+        header_frame.setFrameStyle(QFrame.Box)
+        header_frame.setMaximumHeight(50)
+        
+        header_layout = QHBoxLayout(header_frame)
+        header_layout.setContentsMargins(10, 5, 10, 5)
+        
+        # Título principal
+        title_label = QLabel("Estado del Portafolio")
+        title_font = QFont("Arial", 14, QFont.Bold)
+        title_label.setFont(title_font)
+        header_layout.addWidget(title_label)
+        
+        header_layout.addStretch()
+        
+        # Indicador de modo actual
+        self.mode_indicator = QLabel()
+        self.mode_indicator.setFont(QFont("Arial", 12, QFont.Bold))
+        self._update_mode_indicator()
+        header_layout.addWidget(self.mode_indicator)
+        
+        layout.addWidget(header_frame)
+
+    def _update_mode_indicator(self):
+        """Actualiza el indicador visual del modo de trading."""
+        mode_info = self.trading_mode_manager.get_mode_display_info()
+        self.mode_indicator.setText(f"{mode_info['icon']} {mode_info['display_name']}")
+        self.mode_indicator.setStyleSheet(f"""
+            QLabel {{
+                color: {mode_info['color']};
+                background-color: {mode_info['color']}22;
+                border: 2px solid {mode_info['color']};
+                border-radius: 5px;
+                padding: 3px 8px;
+            }}
+        """)
 
     def init_portfolio_tab(self):
         """
-        Inicializa la pestaña de resumen del portafolio.
+        Inicializa la pestaña de resumen del portafolio con vista unificada.
         """
         layout = QVBoxLayout(self.portfolio_tab)
         layout.setSpacing(15)
 
-        # Grupo para Paper Trading
-        self.paper_trading_group = self._create_portfolio_group("Paper Trading")
-        self.paper_balance_label = QLabel("Saldo Disponible: N/A")
-        self.paper_total_value_label = QLabel("Valor Total Activos: N/A")
-        self.paper_portfolio_value_label = QLabel("Valor Total Portafolio: N/A")
-        self.paper_assets_table = self._create_assets_table()
+        # Grupo unificado para el modo actual
+        self.current_mode_group = self._create_portfolio_group("Portafolio Actual")
+        self.balance_label = QLabel("Saldo Disponible: N/A")
+        self.total_assets_label = QLabel("Valor Total Activos: N/A")
+        self.portfolio_value_label = QLabel("Valor Total Portafolio: N/A")
+        self.assets_table = self._create_assets_table()
         
-        paper_layout = self.paper_trading_group.layout()
-        if isinstance(paper_layout, QFormLayout):
-            paper_layout.addRow(self.paper_balance_label)
-            paper_layout.addRow(self.paper_total_value_label)
-            paper_layout.addRow(self.paper_portfolio_value_label)
-            paper_layout.addRow(QLabel("Activos Poseídos:"))
-            paper_layout.addRow(self.paper_assets_table)
-        layout.addWidget(self.paper_trading_group)
+        mode_layout = self.current_mode_group.layout()
+        if isinstance(mode_layout, QFormLayout):
+            mode_layout.addRow(self.balance_label)
+            mode_layout.addRow(self.total_assets_label)
+            mode_layout.addRow(self.portfolio_value_label)
+            mode_layout.addRow(QLabel("Activos Poseídos:"))
+            mode_layout.addRow(self.assets_table)
+        layout.addWidget(self.current_mode_group)
 
-        # Grupo para Real Trading
-        self.real_trading_group = self._create_portfolio_group("Real Trading (Binance)")
-        self.real_balance_label = QLabel("Saldo Disponible (USDT): N/A")
-        self.real_total_value_label = QLabel("Valor Total Activos: N/A")
-        self.real_portfolio_value_label = QLabel("Valor Total Portafolio: N/A")
-        self.real_assets_table = self._create_assets_table()
-        
-        real_layout = self.real_trading_group.layout()
-        if isinstance(real_layout, QFormLayout):
-            real_layout.addRow(self.real_balance_label)
-            real_layout.addRow(self.real_total_value_label)
-            real_layout.addRow(self.real_portfolio_value_label)
-            real_layout.addRow(QLabel("Activos Poseídos:"))
-            real_layout.addRow(self.real_assets_table)
-        layout.addWidget(self.real_trading_group)
+        # Información comparativa (opcional)
+        self.comparison_info = QLabel("")
+        self.comparison_info.setStyleSheet("color: #888; font-style: italic; text-align: center;")
+        self.comparison_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.comparison_info)
 
     def init_trades_tab(self):
         """
-        Inicializa la pestaña de operaciones abiertas con TSL/TP.
+        Inicializa la pestaña de operaciones abiertas con filtrado por modo.
         """
         layout = QVBoxLayout(self.trades_tab)
         layout.setSpacing(15)
 
-        # Título
-        trades_title = QLabel("Operaciones Abiertas con TSL/TP Activos")
-        trades_title.setFont(QFont("Arial", 14, QFont.Bold))
-        trades_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(trades_title)
+        # Título dinámico
+        self.trades_title = QLabel("")
+        self.trades_title.setFont(QFont("Arial", 14, QFont.Bold))
+        self.trades_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._update_trades_title()
+        layout.addWidget(self.trades_title)
 
         # Tabla de operaciones abiertas
         self.open_trades_table = self._create_open_trades_table()
@@ -213,6 +229,11 @@ class PortfolioWidget(QWidget):
         self.trades_info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.trades_info_label.setStyleSheet("color: #888; font-style: italic;")
         layout.addWidget(self.trades_info_label)
+
+    def _update_trades_title(self):
+        """Actualiza el título de la pestaña de operaciones."""
+        mode_info = self.trading_mode_manager.get_mode_display_info()
+        self.trades_title.setText(f"Operaciones {mode_info['display_name']} con TSL/TP Activos")
 
     def init_capital_tab(self):
         """
@@ -287,6 +308,27 @@ class PortfolioWidget(QWidget):
         
         layout.addWidget(self.capital_alerts_frame)
         layout.addStretch()
+
+    def _create_status_bar(self, layout: QVBoxLayout):
+        """Crea la barra de estado."""
+        status_layout = QHBoxLayout()
+        self.last_updated_label = QLabel("Última actualización: N/A")
+        self.last_updated_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        
+        self.refresh_button = QPushButton("Actualizar")
+        self.refresh_button.clicked.connect(self._start_update_worker)
+        self.refresh_button.setMaximumWidth(100)
+        
+        status_layout.addWidget(self.last_updated_label)
+        status_layout.addStretch()
+        status_layout.addWidget(self.refresh_button)
+        layout.addLayout(status_layout)
+
+        # Label de error
+        self.error_label = QLabel("")
+        self.error_label.setStyleSheet("color: red;")
+        self.error_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.error_label)
 
     def _create_portfolio_group(self, title: str) -> QGroupBox:
         """
@@ -384,26 +426,55 @@ class PortfolioWidget(QWidget):
         self.update_timer.start()
         logger.info("Timer de actualización del portafolio iniciado.")
 
+    def _on_trading_mode_changed(self, new_mode: str):
+        """
+        Maneja cambios en el modo de trading.
+        
+        Args:
+            new_mode: Nuevo modo de trading ('paper' o 'real')
+        """
+        logger.info(f"PortfolioWidget: Modo de trading cambió a {new_mode}")
+        
+        # Actualizar indicadores visuales
+        self._update_mode_indicator()
+        self._update_trades_title()
+        
+        # Actualizar título del grupo principal
+        mode_info = self.trading_mode_manager.get_mode_display_info()
+        self.current_mode_group.setTitle(f"Portafolio {mode_info['display_name']}")
+        
+        # Refrescar datos inmediatamente
+        self._start_update_worker()
+
     def _start_update_worker(self):
         """
-        Inicia el worker para actualizar datos.
+        Inicia el worker para actualizar datos según el modo actual.
         """
-        worker = DataUpdateWorker(self.user_id, self.portfolio_service, self.api_client)
+        current_mode = self.trading_mode_manager.current_mode
+        worker = DataUpdateWorker(self.user_id, self.portfolio_service, self.api_client, current_mode)
         worker.signals.result.connect(self._handle_update_result)
         worker.signals.error.connect(self._handle_worker_error)
         worker.signals.finished.connect(self._worker_finished)
         self.thread_pool.start(worker)
-        logger.info("Actualizando datos del portafolio...")
+        logger.info(f"Actualizando datos del portafolio para modo: {current_mode}")
 
     def _handle_update_result(self, result_data: Dict[str, Any]):
         """
         Maneja los resultados de la actualización de datos.
         """
         try:
+            current_mode = self.trading_mode_manager.current_mode
+            result_mode = result_data.get("trading_mode", current_mode)
+            
+            # Solo procesar si los datos corresponden al modo actual
+            if result_mode != current_mode:
+                logger.debug(f"Ignorando datos de modo {result_mode}, modo actual es {current_mode}")
+                return
+
             # Actualizar snapshot del portafolio
             if "portfolio_snapshot" in result_data:
                 self.current_snapshot = result_data["portfolio_snapshot"]
-                self._update_portfolio_ui(self.current_snapshot)
+                self._update_portfolio_ui(self.current_snapshot, current_mode)
 
             # Actualizar operaciones abiertas
             if "open_trades" in result_data:
@@ -424,34 +495,38 @@ class PortfolioWidget(QWidget):
             logger.error(error_msg, exc_info=True)
             self.error_label.setText(error_msg)
 
-    def _update_portfolio_ui(self, snapshot: PortfolioSnapshot):
+    def _update_portfolio_ui(self, snapshot: PortfolioSnapshot, mode: str):
         """
-        Actualiza la UI del portafolio con el snapshot.
+        Actualiza la UI del portafolio con el snapshot para el modo específico.
         """
-        # Actualizar Paper Trading
-        self.paper_balance_label.setText(f"Saldo Disponible: {snapshot.paper_trading.available_balance_usdt:,.2f} USDT")
-        self.paper_total_value_label.setText(f"Valor Total Activos: {snapshot.paper_trading.total_assets_value_usd:,.2f} USDT")
-        self.paper_portfolio_value_label.setText(f"Valor Total Portafolio: {snapshot.paper_trading.total_portfolio_value_usd:,.2f} USDT")
-        self._populate_assets_table(self.paper_assets_table, snapshot.paper_trading.assets)
+        if mode == "paper":
+            portfolio_data = snapshot.paper_trading
+            currency = "USDT (Virtual)"
+        else:
+            portfolio_data = snapshot.real_trading
+            currency = "USDT"
 
-        # Actualizar Real Trading
-        self.real_balance_label.setText(f"Saldo Disponible (USDT): {snapshot.real_trading.available_balance_usdt:,.2f} USDT")
-        self.real_total_value_label.setText(f"Valor Total Activos: {snapshot.real_trading.total_assets_value_usd:,.2f} USDT")
-        self.real_portfolio_value_label.setText(f"Valor Total Portafolio: {snapshot.real_trading.total_portfolio_value_usd:,.2f} USDT")
-        self._populate_assets_table(self.real_assets_table, snapshot.real_trading.assets)
+        # Actualizar labels principales
+        self.balance_label.setText(f"Saldo Disponible: {portfolio_data.available_balance_usdt:,.2f} {currency}")
+        self.total_assets_label.setText(f"Valor Total Activos: {portfolio_data.total_assets_value_usd:,.2f} USD")
+        self.portfolio_value_label.setText(f"Valor Total Portafolio: {portfolio_data.total_portfolio_value_usd:,.2f} USD")
+        
+        # Actualizar tabla de activos
+        self._populate_assets_table(self.assets_table, portfolio_data.assets)
+
+        # Actualizar información comparativa
+        other_mode = "real" if mode == "paper" else "paper"
+        other_data = snapshot.real_trading if mode == "paper" else snapshot.paper_trading
+        self.comparison_info.setText(
+            f"Portafolio {other_mode.title()}: {other_data.total_portfolio_value_usd:,.2f} USD"
+        )
 
         # Manejar errores
-        if snapshot.paper_trading.error_message:
-            self.paper_trading_group.setTitle(f"Paper Trading (Error: {snapshot.paper_trading.error_message})")
-            self.paper_trading_group.setStyleSheet("QGroupBox { border: 1px solid red; }")
+        if portfolio_data.error_message:
+            self.current_mode_group.setStyleSheet("QGroupBox { border: 1px solid red; }")
+            self.error_label.setText(f"Error en {mode}: {portfolio_data.error_message}")
         else:
-            self.paper_trading_group.setTitle("Paper Trading")
-
-        if snapshot.real_trading.error_message:
-            self.real_trading_group.setTitle(f"Real Trading (Binance) (Error: {snapshot.real_trading.error_message})")
-            self.real_trading_group.setStyleSheet("QGroupBox { border: 1px solid red; }")
-        else:
-            self.real_trading_group.setTitle("Real Trading (Binance)")
+            self.current_mode_group.setStyleSheet("")
 
     def _update_open_trades_ui(self, trades: List[Dict[str, Any]]):
         """
@@ -663,6 +738,12 @@ class PortfolioWidget(QWidget):
         Callback cuando el worker termina.
         """
         logger.info("Worker de actualización finalizado.")
+
+    def refresh_data(self):
+        """
+        Método público para refrescar datos manualmente.
+        """
+        self._start_update_worker()
 
     def start_updates(self):
         """
