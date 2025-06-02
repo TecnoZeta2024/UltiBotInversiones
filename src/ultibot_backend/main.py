@@ -200,12 +200,13 @@ async def read_root():
     return {"message": "Welcome to UltiBot Backend"}
 
 # Aquí se incluirán los routers de api/v1/endpoints
-from src.ultibot_backend.api.v1.endpoints import telegram_status, binance_status, config, notifications, reports
+from src.ultibot_backend.api.v1.endpoints import telegram_status, binance_status, config, notifications, reports, portfolio
 app.include_router(telegram_status.router, prefix="/api/v1", tags=["telegram"]) # Añadir tags
 app.include_router(binance_status.router, prefix="/api/v1", tags=["binance"]) # Incluir el router de Binance
 app.include_router(config.router, prefix="/api/v1", tags=["config"]) # Incluir el router de configuración
 app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["notifications"]) # Incluir el router de notificaciones
 app.include_router(reports.router, prefix="/api/v1", tags=["reports"]) # Incluir el router de reportes
+app.include_router(portfolio.router, prefix="/api/v1/portfolio", tags=["portfolio"]) # Incluir el router de portafolio
 
 # Importar y incluir el router de oportunidades por separado para depuración
 from src.ultibot_backend.api.v1.endpoints import opportunities

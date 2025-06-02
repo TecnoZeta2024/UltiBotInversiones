@@ -3,7 +3,7 @@ from typing import Optional, Dict, Any, List # Added List
 from uuid import UUID
 from pathlib import Path
 
-from src.ultibot_ui.services.api_client import ApiClient
+from src.ultibot_ui.services.api_client import UltiBotAPIClient
 # Assuming a Pydantic model for configuration might exist in the future, e.g.:
 # from src.ultibot_ui.models import UserConfiguration
 
@@ -12,7 +12,7 @@ DEFAULT_FAVORITE_PAIRS = ["BTC-USD", "ETH-USD", "SOL-USD"]
 CONFIG_FILE_NAME = "ultibot_ui_config.json" # For local storage if needed
 
 class UIConfigService:
-    def __init__(self, api_client: ApiClient, user_id: Optional[UUID] = None): # user_id can be set later
+    def __init__(self, api_client: UltiBotAPIClient, user_id: Optional[UUID] = None): # user_id can be set later
         self.api_client = api_client
         self.user_id = user_id # Store user_id for convenience
         # self.backend_config_service = backend_config_service # Removed

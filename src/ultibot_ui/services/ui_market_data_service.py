@@ -1,11 +1,11 @@
 from typing import Optional, List, Dict, Any # Added Dict, Any
 from uuid import UUID
 
-from src.ultibot_ui.services.api_client import ApiClient
+from src.ultibot_ui.services.api_client import UltiBotAPIClient
 from src.ultibot_ui.models import PortfolioSnapshot, MarketData, Notification, Kline # Added Kline
 
 class UIMarketDataService:
-    def __init__(self, api_client: ApiClient):
+    def __init__(self, api_client: UltiBotAPIClient):
         self.api_client = api_client
         # Removed: self.backend_market_data_service = backend_market_data_service
         # Removed: self.websocket_clients = {}

@@ -21,6 +21,13 @@ from src.ultibot_backend.services.config_service import ConfigService
 from src.ultibot_backend.services.notification_service import NotificationService # Importar NotificationService
 from src.shared.data_types import UserConfiguration # Importar UserConfiguration
 
+# --- Importar qdarkstyle de forma segura ---
+try:
+    import qdarkstyle
+except ImportError:
+    qdarkstyle = None
+    print("Advertencia: qdarkstyle no está instalado. La aplicación usará el tema por defecto de Qt.")
+
 async def start_application():
     # --- Application Configuration ---
     # This application relies on a .env file in its working directory for essential
@@ -31,7 +38,10 @@ async def start_application():
 
     app = QApplication(sys.argv)
     # Apply the dark theme early so QMessageBox is styled.
-    app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    if qdarkstyle:
+        app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    else:
+        print("qdarkstyle no disponible, usando tema por defecto.")
 
     settings = None
     persistence_service = None
@@ -43,11 +53,12 @@ async def start_application():
 
     try:
         load_dotenv(override=True)
-        settings = AppSettings()
-
-        if not settings.CREDENTIAL_ENCRYPTION_KEY:
+        # Obtener la clave de encriptación desde el entorno
+        credential_encryption_key = os.getenv("CREDENTIAL_ENCRYPTION_KEY")
+        if not credential_encryption_key:
             raise ValueError("CREDENTIAL_ENCRYPTION_KEY is not set in .env file or environment.")
-        
+        settings = AppSettings(CREDENTIAL_ENCRYPTION_KEY=credential_encryption_key)
+
         user_id = settings.FIXED_USER_ID # Set user_id after settings are loaded
 
         # Initialize PersistenceService
@@ -78,51 +89,24 @@ async def start_application():
         # Other services
         binance_adapter = BinanceAdapter() # Assumes AppSettings is used internally
         market_data_service = MarketDataService(credential_service, binance_adapter)
-        config_service = ConfigService(persistence_service)
+        # Inicializar PortfolioService para pasar a ConfigService
+        from src.ultibot_backend.services.portfolio_service import PortfolioService
+        portfolio_service = PortfolioService(market_data_service, persistence_service)
         notification_service = NotificationService(credential_service, persistence_service) # Inicializar NotificationService
+        config_service = ConfigService(
+            persistence_service,
+            credential_service=credential_service,
+            portfolio_service=portfolio_service,
+            notification_service=notification_service
+        )
 
         # --- Asegurar que la configuración de usuario por defecto exista ---
-        # Esto es necesario porque api_credentials tiene una clave foránea a user_configurations.
         existing_user_config = await config_service.get_user_configuration(user_id) # Usar get_user_configuration
-        # get_user_configuration siempre devuelve una configuración (por defecto si no existe),
-        # por lo que la verificación de 'not existing_user_config' ya no es necesaria aquí.
-        # Solo necesitamos verificar si la configuración devuelta es la por defecto (recién creada)
-        # o una existente. La lógica de 'get_user_configuration' ya maneja la creación de la por defecto.
-        
-        # Si la configuración devuelta es la por defecto y no tiene el user_id correcto,
-        # o si es una configuración por defecto que no ha sido guardada aún.
-        # La lógica de get_user_configuration ya se encarga de esto.
-        # Aquí solo necesitamos asegurarnos de que la configuración esté guardada si es nueva.
-        
-        # Para simplificar, podemos asumir que get_user_configuration ya ha hecho su trabajo
-        # de cargar o crear la configuración. Si es una configuración por defecto recién creada,
-        # necesitamos guardarla.
-        
-        # Una forma de verificar si es una configuración "nueva" que necesita ser guardada
-        # es si su ID no coincide con el user_id (si el ID de la configuración es un UUID generado
-        # por defecto y no el user_id que se usa como clave primaria en la tabla).
-        # Sin embargo, el método get_default_configuration ahora asigna el user_id al campo 'user_id'
-        # y un nuevo UUID al campo 'id' de la UserConfiguration.
-        # La lógica de `get_user_configuration` ya se encarga de persistir la configuración por defecto
-        # si no la encuentra. Por lo tanto, esta sección puede simplificarse.
-
-        # La lógica actual de `get_user_configuration` en `ConfigService` ya maneja la carga
-        # o la creación de una configuración por defecto si no existe.
-        # No necesitamos una lógica de "asegurar que exista" aquí en `main.py`
-        # si `get_user_configuration` ya lo hace.
-        # Solo necesitamos llamar a `get_user_configuration` para que se inicialice la caché
-        # y se cree la entrada en la DB si es necesario.
-        
-        # Eliminamos la lógica redundante de creación y guardado de configuración por defecto aquí.
-        # La llamada a `get_user_configuration` es suficiente para asegurar que la configuración
-        # del usuario esté cargada y, si no existe, se cree una por defecto en la DB.
         await config_service.get_user_configuration(user_id)
         print(f"Configuración de usuario para {user_id} cargada o creada exitosamente.")
         # --- Fin de la lógica de configuración de usuario ---
 
         # --- Cargar y guardar credenciales de Binance si no existen ---
-        # Esto asegura que las credenciales de Binance estén disponibles en la base de datos
-        # para el CredentialService, que las recupera de allí.
         binance_api_key = os.getenv("BINANCE_API_KEY")
         binance_api_secret = os.getenv("BINANCE_API_SECRET")
 
@@ -130,17 +114,13 @@ async def start_application():
             raise ValueError("BINANCE_API_KEY or BINANCE_API_SECRET not found in .env file or environment.")
 
         try:
-            # Intentar obtener las credenciales para ver si ya están guardadas
             existing_binance_credential = await credential_service.get_credential(
                 user_id=user_id,
                 service_name=ServiceName.BINANCE_SPOT, # Corregido a ServiceName.BINANCE_SPOT
                 credential_label="default"
             )
-            # Se elimina la condición 'if not existing_binance_credential:' para forzar la actualización
-            # de las credenciales desde .env en cada inicio, aprovechando el ON CONFLICT DO UPDATE.
             print("Intentando guardar/actualizar credenciales de Binance desde .env...")
             
-            # Encriptar las claves antes de guardarlas
             encrypted_api_key = credential_service.encrypt_data(binance_api_key)
             encrypted_api_secret = credential_service.encrypt_data(binance_api_secret)
 
@@ -154,7 +134,6 @@ async def start_application():
             )
             await credential_service.save_encrypted_credential(binance_credential) # Usar el nuevo método
             print("Credenciales de Binance guardadas/actualizadas exitosamente desde .env.")
-            # Ya no se necesita el 'else' porque siempre se intenta guardar/actualizar.
         except Exception as e:
             QMessageBox.critical(None, "Error de Credenciales", f"Error al guardar/actualizar credenciales de Binance: {str(e)}\n\nLa aplicación se cerrará.")
             sys.exit(1)
@@ -164,14 +143,13 @@ async def start_application():
         QMessageBox.critical(None, "Configuration Error", f"A configuration error occurred: {str(ve)}\n\nPlease check your .env file or environment variables.\nThe application will now exit.")
         sys.exit(1)
     except Exception as e: # Catch other potential errors during service init (e.g., DB connection, malformed keys)
-        QMessageBox.critical(None, "Service Initialization Error", f"Failed to initialize critical services: {str(e)}\n\nThe application will now exit.")
+        QMessageBox.critical(None, "Service Initialization Error", f"Failed to initialize critical services: {str(e)}\n\nLa aplicación se cerrará.")
         sys.exit(1)
 
     # Ensure persistence_service is available for cleanup, even if MainWindow creation fails
     # (though unlikely if services initialized correctly)
     
     # Crear y mostrar la ventana principal, pasando los servicios
-    # This part is reached only if all initializations were successful
     main_window = MainWindow(user_id, market_data_service, config_service, notification_service, persistence_service) # Pasar persistence_service
     main_window.show()
 
