@@ -1,4 +1,3 @@
-import sys
 import asyncio
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget,
@@ -16,13 +15,9 @@ from src.ultibot_backend.services.market_data_service import MarketDataService
 from src.ultibot_backend.services.config_service import ConfigService
 
 class MarketDataWidget(QWidget):
-    """
-    Widget para la visualización de datos de mercado en tiempo real.
-    Muestra una tabla con pares de criptomonedas, precio actual, cambio 24h y volumen 24h.
-    """
-    data_updated = pyqtSignal(dict) # Señal para notificar actualizaciones de datos
+    data_updated = Signal(dict)  # Emits the updated market_data dictionary
 
-    def __init__(self, user_id: UUID, market_data_service: MarketDataService, config_service: ConfigService, parent=None):
+    def __init__(self, user_id: UUID, market_data_service: UIMarketDataService, config_service: UIConfigService, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.user_id = user_id
         self.market_data_service = market_data_service
@@ -41,12 +36,15 @@ class MarketDataWidget(QWidget):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(5)
 
-        # Título del widget
-        title_label = QLabel("Resumen de Datos de Mercado")
-        title_label.setStyleSheet("font-size: 18px; font-weight: bold; margin-bottom: 10px;")
-        main_layout.addWidget(title_label)
+        # Initial load
+        asyncio.create_task(self.load_and_refresh_data())
 
-        # Tabla para mostrar los datos de mercado
+
+    def _init_ui(self):
+        layout = QVBoxLayout(self)
+        self.setLayout(layout)
+
+        # Table for market data
         self.table_widget = QTableWidget()
         self.table_widget.setColumnCount(4)
         self.table_widget.setHorizontalHeaderLabels(["Símbolo", "Precio Actual", "Cambio 24h (%)", "Volumen 24h"])
@@ -78,23 +76,17 @@ class MarketDataWidget(QWidget):
         """)
         main_layout.addWidget(self.table_widget)
 
-        # Botón para configurar pares favoritos (AC1)
-        self.configure_button = QPushButton("Configurar Pares Favoritos")
-        self.configure_button.setStyleSheet("""
-            QPushButton {
-                background-color: #007bff;
-                color: white;
-                border: none;
-                padding: 8px 15px;
-                border-radius: 5px;
-            }
-            QPushButton:hover {
-                background-color: #0056b3;
-            }
-        """)
+        # Buttons
+        button_layout = QHBoxLayout()
+        self.refresh_button = QPushButton("Refresh Now")
+        self.refresh_button.clicked.connect(self._on_refresh_button_clicked)
+        button_layout.addWidget(self.refresh_button)
+
+        self.configure_button = QPushButton("Configure Pairs")
         self.configure_button.clicked.connect(self.open_pair_configuration_dialog)
         main_layout.addWidget(self.configure_button, alignment=Qt.AlignmentFlag.AlignRight) # Usar AlignmentFlag
 
+        layout.addLayout(button_layout)
         self.data_updated.connect(self.update_table)
 
     def set_favorite_pairs(self, pairs: List[str]):
@@ -177,67 +169,168 @@ class MarketDataWidget(QWidget):
             await self._subscribe_to_websockets()
 
         except Exception as e:
-            print(f"Error al cargar y suscribir pares favoritos: {e}")
-            # Manejar el error en la UI, quizás mostrando un mensaje
+            self.status_label.setText(f"Error during initial load: {e}")
+            QMessageBox.critical(self, "Load Error", f"Failed to load initial data: {e}")
+        finally:
+            self.table_widget.setEnabled(True)
+            self.refresh_button.setEnabled(True)
+            self.configure_button.setEnabled(True)
+
+
+    def _on_rest_update_timeout(self):
+        if self.favorite_pairs:
+            asyncio.create_task(self._fetch_rest_data())
+        else:
+            self.status_label.setText("No pairs to fetch. Configure pairs.")
+            if self.rest_update_timer.isActive():
+                self.rest_update_timer.stop()
+
+
+    def _on_refresh_button_clicked(self):
+        if self.favorite_pairs:
+            asyncio.create_task(self._fetch_rest_data())
+        else:
+            QMessageBox.information(self, "No Pairs", "Please configure favorite pairs first.")
+
 
     async def _fetch_rest_data(self):
-        """Obtiene datos de mercado vía REST API para los pares favoritos."""
+        """Fetches current ticker data for favorite pairs using UIMarketDataService."""
         if not self.favorite_pairs:
+            self.status_label.setText("No favorite pairs to fetch.")
+            self.market_data = {}
+            self.data_updated.emit(self.market_data)
             return
 
+        self.status_label.setText(f"Fetching data for {len(self.favorite_pairs)} pairs...")
+        self.table_widget.setEnabled(False) # Disable table during update
+        self.refresh_button.setEnabled(False)
+
         try:
-            rest_data = await self.market_data_service.get_market_data_rest(self.user_id, self.favorite_pairs)
-            # Fusionar los datos REST con los datos existentes (que pueden incluir actualizaciones de WS)
-            for symbol, data in rest_data.items():
-                self.market_data[symbol] = {**self.market_data.get(symbol, {}), **data}
+            # Using the new batch ticker fetch method
+            tickers_data = await self.market_data_service.fetch_tickers_data(self.favorite_pairs)
+
+            if tickers_data is None:
+                # API call failed or returned None (e.g., network error, server error)
+                self.status_label.setText("Error fetching market data. Check connection or try again.")
+                # Preserve old data but mark as error, or clear and show error per row
+                for pair in self.favorite_pairs:
+                    self.market_data[pair] = {
+                        "lastPrice": "Error",
+                        "priceChangePercent": "Error",
+                        "quoteVolume": "Error",
+                        "error": "Failed to fetch"
+                    }
+            else:
+                # API call succeeded, update market_data
+                # Ensure all favorite pairs have an entry, even if API didn't return them (maybe they are delisted)
+                new_market_data = {}
+                for pair in self.favorite_pairs:
+                    if pair in tickers_data:
+                        new_market_data[pair] = tickers_data[pair]
+                    else:
+                        new_market_data[pair] = {
+                            "lastPrice": "N/A",
+                            "priceChangePercent": "N/A",
+                            "quoteVolume": "N/A",
+                            "error": "Not found"
+                        }
+                self.market_data = new_market_data
+                self.status_label.setText(f"Market data updated. Last: {QDateTime.currentDateTime().toString()}") # type: ignore
+
             self.data_updated.emit(self.market_data)
+
         except Exception as e:
-            print(f"Error al obtener datos REST de mercado: {e}")
-            # Marcar los pares con error en la UI si es necesario
-
-    async def _subscribe_to_websockets(self):
-        """Suscribe a los streams de WebSocket para los pares favoritos."""
-        # Cancelar suscripciones WS existentes que ya no son favoritas
-        for symbol in list(self._websocket_tasks):
-            if symbol not in self.favorite_pairs:
-                await self.market_data_service.unsubscribe_from_market_data_websocket(symbol)
-                self._websocket_tasks.remove(symbol)
-
-        # Suscribirse a nuevos pares favoritos
-        for pair in self.favorite_pairs:
-            if pair not in self._websocket_tasks:
-                try:
-                    await self.market_data_service.subscribe_to_market_data_websocket(
-                        self.user_id, pair, self._handle_websocket_data
-                    )
-                    self._websocket_tasks.add(pair) # Marcar como suscrito
-                except Exception as e:
-                    print(f"Error al suscribirse a WebSocket para {pair}: {e}")
-                    # Marcar el par con error en la UI
-
-    async def _handle_websocket_data(self, data: Dict[str, Any]):
-        """Maneja los datos recibidos del stream de WebSocket."""
-        event_type = data.get('e')
-        if event_type == '24hrTicker':
-            symbol = data.get('s')
-            last_price = float(data.get('c', 0))
-            price_change_percent = float(data.get('P', 0))
-            quote_volume = float(data.get('q', 0))
-
-            # Actualizar solo los campos que vienen del WebSocket (principalmente precio)
-            current_data = self.market_data.get(symbol, {})
-            current_data['lastPrice'] = last_price
-            current_data['priceChangePercent'] = price_change_percent
-            current_data['quoteVolume'] = quote_volume
-            self.market_data[symbol] = current_data
+            self.status_label.setText(f"An error occurred: {e}")
+            # You might want to update the table to show errors for all rows
+            for pair in self.favorite_pairs:
+                 self.market_data[pair] = {"lastPrice": "Error", "priceChangePercent": "N/A", "quoteVolume": "N/A", "error": str(e)}
             self.data_updated.emit(self.market_data)
-        # else:
-            # print(f"Datos WS no reconocidos: {data}")
+        finally:
+            self.table_widget.setEnabled(True)
+            self.refresh_button.setEnabled(True)
+
+    def update_table(self, new_data: Dict[str, Dict[str, Any]]):
+        self.table_widget.setRowCount(0) # Clear existing rows
+
+        if not new_data and self.favorite_pairs: # Data is empty but we have pairs, likely an error state
+             for i, pair_symbol in enumerate(self.favorite_pairs):
+                self.table_widget.insertRow(i)
+                self.table_widget.setItem(i, 0, QTableWidgetItem(pair_symbol))
+                error_item = QTableWidgetItem("Error fetching")
+                error_item.setForeground(Qt.GlobalColor.red) # type: ignore
+                self.table_widget.setItem(i, 1, error_item)
+                self.table_widget.setItem(i, 2, QTableWidgetItem("-"))
+                self.table_widget.setItem(i, 3, QTableWidgetItem("-"))
+             return
+
+        for i, pair_symbol in enumerate(self.favorite_pairs): # Iterate over configured pairs to maintain order
+            self.table_widget.insertRow(i)
+            self.table_widget.setItem(i, 0, QTableWidgetItem(pair_symbol))
+
+            pair_data = new_data.get(pair_symbol)
+            if pair_data:
+                if pair_data.get("error"):
+                    price_item = QTableWidgetItem(str(pair_data.get("lastPrice", "Error"))) # Show error if available
+                    price_item.setForeground(Qt.GlobalColor.red) # type: ignore
+                    change_item = QTableWidgetItem(str(pair_data.get("priceChangePercent", "-")))
+                    volume_item = QTableWidgetItem(str(pair_data.get("quoteVolume", "-")))
+                    if pair_data.get("error") == "Not found":
+                         price_item.setForeground(Qt.GlobalColor.gray) # type: ignore
+                else:
+                    price_item = QTableWidgetItem(str(pair_data.get("lastPrice", "N/A")))
+                    change_val_str = str(pair_data.get("priceChangePercent", "0"))
+                    try:
+                        change_val = float(change_val_str)
+                        change_item = QTableWidgetItem(f"{change_val:.2f}%")
+                        if change_val > 0:
+                            change_item.setForeground(Qt.GlobalColor.green) # type: ignore
+                        elif change_val < 0:
+                            change_item.setForeground(Qt.GlobalColor.red) # type: ignore
+                        else:
+                            change_item.setForeground(Qt.GlobalColor.gray) # type: ignore
+                    except ValueError:
+                        change_item = QTableWidgetItem(change_val_str) # Show as is if not float
+                        change_item.setForeground(Qt.GlobalColor.gray) # type: ignore
+
+                    volume_item = QTableWidgetItem(str(pair_data.get("quoteVolume", "N/A")))
+
+                self.table_widget.setItem(i, 1, price_item)
+                self.table_widget.setItem(i, 2, change_item)
+                self.table_widget.setItem(i, 3, volume_item)
+            else:
+                # Pair was in favorite_pairs but not in new_data (should be handled by _fetch_rest_data)
+                self.table_widget.setItem(i, 1, QTableWidgetItem("Waiting..."))
+                self.table_widget.setItem(i, 2, QTableWidgetItem("-"))
+                self.table_widget.setItem(i, 3, QTableWidgetItem("-"))
+
+
+    def set_favorite_pairs(self, pairs: List[str]):
+        """Updates the list of favorite pairs and refreshes the table structure."""
+        self.favorite_pairs = sorted(list(set(pairs))) # Ensure unique and sorted
+
+        # Update table structure (rows) based on new pairs
+        # This will clear data, but _fetch_rest_data will be called soon after.
+        self.market_data = {pair: {} for pair in self.favorite_pairs} # Reset data with new keys
+        self.update_table(self.market_data) # Display empty rows for new pairs
+
+        if not self.favorite_pairs:
+            self.status_label.setText("No favorite pairs configured.")
+            if self.rest_update_timer.isActive():
+                self.rest_update_timer.stop()
+        else:
+            self.status_label.setText(f"{len(self.favorite_pairs)} pairs configured. Fetching data...")
+            if not self.rest_update_timer.isActive():
+                 self.rest_update_timer.start(30 * 1000) # Restart timer if it was stopped
+
 
     def open_pair_configuration_dialog(self):
-        """Abre un diálogo para configurar los pares favoritos."""
-        dialog = PairConfigurationDialog(self.favorite_pairs, self)
-        if dialog.exec_() == QDialog.Accepted:
+        # TODO: Fetch ALL_AVAILABLE_PAIRS_EXAMPLE from config service or market data service eventually
+        # For now, using the example list.
+        # all_pairs = await self.market_data_service.get_all_available_symbols() or ALL_AVAILABLE_PAIRS_EXAMPLE
+        all_pairs = ALL_AVAILABLE_PAIRS_EXAMPLE
+        
+        dialog = PairConfigurationDialog(self.favorite_pairs, all_pairs, self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
             new_pairs = dialog.get_selected_pairs()
             self.set_favorite_pairs(new_pairs)
             # Guardar los nuevos pares en el backend y re-suscribir

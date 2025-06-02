@@ -49,10 +49,10 @@ class DashboardView(QWidget):
 
     def _setup_ui(self):
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
+        self.setLayout(main_layout)
 
-        # Zona Superior: Resumen de Datos de Mercado (MarketDataWidget)
+        # --- Top Area: Market Data Widget ---
+        # This widget shows overall market tickers, favorite pairs, etc.
         self.market_data_widget = MarketDataWidget(self.user_id, self.market_data_service, self.config_service)
         main_layout.addWidget(self.market_data_widget)
         

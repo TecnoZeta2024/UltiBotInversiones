@@ -234,16 +234,16 @@ class MainWindow(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QHBoxLayout(central_widget)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
+        main_layout.setContentsMargins(0, 0, 0, 0) # No margins for a clean look
+        main_layout.setSpacing(0) # No spacing between sidebar and content
 
-        # Sidebar de navegación
+        # Sidebar Navigation
         self.sidebar = SidebarNavigationWidget()
         self.sidebar.setFixedWidth(200)  # Ancho fijo para la barra lateral
         self.sidebar.navigation_requested.connect(self._switch_view)
         main_layout.addWidget(self.sidebar)
 
-        # Contenedor de vistas principales
+        # Content Area (StackedWidget)
         self.stacked_widget = QStackedWidget()
         main_layout.addWidget(self.stacked_widget)
 
@@ -274,18 +274,19 @@ class MainWindow(QMainWindow):
         self.settings_view = SettingsView(str(self.user_id), self.api_client) # Pasar api_client
         self.stacked_widget.addWidget(self.settings_view)  # Índice 4
 
-        # Mapeo de nombres a índices del stacked widget
+        # View mapping for navigation
         self.view_map = {
             "dashboard": 0,
             "opportunities": 1,
             "strategies": 2,
-            "history": 3,
+            "history": 3, # Corrected from trading_history_view variable name to key "history"
             "settings": 4,
         }
 
-        # Seleccionar la vista inicial (Dashboard)
+        # Set initial view to Dashboard
+        # Ensure sidebar button is checked (if sidebar has checkable buttons)
         dashboard_button = self.sidebar.findChild(QPushButton, "navButton_dashboard")
-        if dashboard_button:
+        if dashboard_button: # This relies on objectName being set in SidebarNavigationWidget
             dashboard_button.setChecked(True)
         self.stacked_widget.setCurrentIndex(self.view_map["dashboard"])
 

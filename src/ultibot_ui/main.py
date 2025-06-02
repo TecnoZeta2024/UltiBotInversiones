@@ -1,5 +1,4 @@
 import sys
-import qdarkstyle
 import asyncio
 from PyQt5.QtWidgets import QApplication, QMessageBox
 from uuid import UUID
