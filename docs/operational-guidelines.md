@@ -266,3 +266,54 @@ Considerando nuestro enfoque en una v1.0 ágil y estable para una aplicación lo
 -   **File System Access:**
     
     -   Si la aplicación necesita leer/escribir en el sistema de archivos local (ej. para logs, configuraciones locales adicionales, exportaciones), debe hacerlo en directorios designados y con los permisos adecuados, evitando accesos a rutas sensibles del sistema.
+
+## Panel de Gestión de Estrategias (UI)
+
+El panel de gestión de estrategias proporciona una interfaz gráfica para administrar todas las configuraciones de estrategias de trading dentro de UltiBotInversiones.
+
+### Funcionalidades Principales:
+
+1.  **Visualización de Estrategias:**
+    *   Una tabla muestra todas las estrategias configuradas, incluyendo su nombre, descripción, modo (Paper/Real) y estado de activación.
+    *   Se pueden ordenar las estrategias haciendo clic en las cabeceras de las columnas.
+
+2.  **Crear Nueva Estrategia:**
+    *   Haz clic en el botón "Crear Nueva Estrategia".
+    *   Se abrirá un diálogo (`StrategyConfigDialog`) donde podrás definir:
+        *   Nombre de la estrategia.
+        *   Descripción.
+        *   Script de la estrategia (nombre del archivo o identificador).
+        *   Parámetros específicos de la estrategia (en formato JSON).
+        *   Modo de operación inicial (Paper/Real).
+    *   Al guardar, la nueva estrategia aparecerá en la lista.
+
+3.  **Editar Estrategia Existente:**
+    *   Selecciona una estrategia de la tabla.
+    *   Haz clic en el botón "Editar Estrategia Seleccionada".
+    *   El diálogo `StrategyConfigDialog` se abrirá con los datos de la estrategia seleccionada, permitiendo su modificación.
+    *   Guarda los cambios para actualizar la estrategia.
+
+4.  **Duplicar Estrategia (Clonar):**
+    *   Selecciona una estrategia de la tabla que desees usar como plantilla.
+    *   Haz clic en el botón "Duplicar Estrategia Seleccionada".
+    *   El diálogo `StrategyConfigDialog` se abrirá con los datos de la estrategia seleccionada, pero en modo de creación (se generará un nuevo ID al guardar).
+    *   Esto es útil para crear variaciones de estrategias existentes rápidamente.
+
+5.  **Eliminar Estrategia:**
+    *   Selecciona una estrategia de la tabla.
+    *   Haz clic en el botón "Eliminar Estrategia Seleccionada".
+    *   Se mostrará un diálogo de confirmación (`QMessageBox`) antes de proceder con la eliminación.
+    *   Si se confirma, la estrategia será eliminada del sistema.
+
+6.  **Activar/Desactivar Estrategia:**
+    *   Cada estrategia en la tabla tiene un interruptor (toggle) en la columna "Activada".
+    *   Para cambiar el estado de activación:
+        *   Haz clic en el interruptor correspondiente a la estrategia.
+        *   Si la estrategia está configurada en modo "Real", se mostrará un diálogo de confirmación adicional antes de activar/desactivar, como medida de seguridad.
+        *   El cambio se refleja visualmente de forma optimista en la UI y luego se confirma con el backend. En caso de error en la comunicación con el backend, el estado visual del interruptor se revertirá.
+    *   Una estrategia debe estar "Activada" para que el motor de trading (`TradingEngine`) la considere para ejecución.
+
+### Consideraciones Adicionales:
+
+*   **Feedback Visual:** Todas las operaciones (crear, editar, duplicar, eliminar, activar/desactivar) proporcionan feedback visual inmediato (mensajes de éxito o error) a través de diálogos `QMessageBox`.
+*   **Modo Paper vs. Real:** Asegúrate de seleccionar el modo correcto para cada estrategia. Las operaciones en modo "Real" interactuarán con fondos reales si la configuración del exchange lo permite.

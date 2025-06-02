@@ -1,7 +1,7 @@
 from __future__ import annotations # Importar para type hints adelantados
 
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, TYPE_CHECKING # Añadir TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from src.shared.data_types import UserConfiguration, RealTradingSettings, AIAnalysisConfidenceThresholds
@@ -15,7 +15,10 @@ from src.ultibot_backend.core.exceptions import (
 )
 from src.ultibot_backend.services.credential_service import CredentialService
 from src.ultibot_backend.services.portfolio_service import PortfolioService
-from src.ultibot_backend.services.notification_service import NotificationService
+# from src.ultibot_backend.services.notification_service import NotificationService # Comentado para TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.ultibot_backend.services.notification_service import NotificationService
 
 logger = logging.getLogger(__name__)
 

@@ -2,7 +2,7 @@ import asyncio
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget,
     QTableWidgetItem, QHeaderView, QApplication, QLineEdit, QPushButton, QDialog,
-    QDialogButtonBox, QCompleter
+    QDialogButtonBox, QCompleter, QMessageBox # Añadir QMessageBox
 )
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QObject, QCoreApplication # Importar QCoreApplication
 from PyQt5.QtGui import QColor, QFont
@@ -28,6 +28,10 @@ class MarketDataWidget(QWidget):
         self.favorite_pairs = [] # Lista de pares favoritos
         self._rest_update_timer = QTimer(self)
         self._websocket_tasks: Set[str] = set() # Para mantener un registro de los símbolos suscritos
+        # Inicializar status_label y table_widget ANTES de cualquier uso
+        self.status_label = QLabel("Cargando datos de mercado...")
+        self.status_label.setStyleSheet("color: #ffc107; font-weight: bold;")
+        self.table_widget = QTableWidget()
         self.init_ui()
         # La carga y suscripción de pares se iniciará de forma asíncrona después de la inicialización del widget
         # Esto se manejará desde el código que instancia el widget (ej. main_window o dashboard_view)
@@ -37,9 +41,73 @@ class MarketDataWidget(QWidget):
         self.setLayout(main_layout)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(5)
+        # Añadir status_label arriba
+        main_layout.addWidget(self.status_label)
+        # Inicializar la tabla si no existe
+        if not hasattr(self, 'table_widget'):
+            self.table_widget = QTableWidget()
+        self.table_widget.setColumnCount(4)
+        self.table_widget.setHorizontalHeaderLabels(["Símbolo", "Precio Actual", "Cambio 24h (%)", "Volumen 24h"])
+        horizontal_header = self.table_widget.horizontalHeader()
+        if horizontal_header:
+            horizontal_header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        vertical_header = self.table_widget.verticalHeader()
+        if vertical_header:
+            vertical_header.setVisible(False)
+        self.table_widget.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.table_widget.setStyleSheet("""
+            QTableWidget {
+                background-color: #2b2b2b;
+                color: #f0f0f0;
+                border: 1px solid #444;
+                gridline-color: #444;
+            }
+            QHeaderView::section {
+                background-color: #3c3c3c;
+                color: #f0f0f0;
+                padding: 5px;
+                border: 1px solid #444;
+            }
+            QTableWidget::item {
+                padding: 5px;
+            }
+        """)
+        main_layout.addWidget(self.table_widget)
+        # Botones
+        button_layout = QHBoxLayout()
+        self.refresh_button = QPushButton("Refresh Now")
+        self.refresh_button.clicked.connect(self._on_refresh_button_clicked)
+        button_layout.addWidget(self.refresh_button)
+        self.configure_button = QPushButton("Configure Pairs")
+        self.configure_button.clicked.connect(self.open_pair_configuration_dialog)
+        main_layout.addWidget(self.configure_button, alignment=Qt.AlignmentFlag.AlignRight)
+        main_layout.addLayout(button_layout)
+        self.data_updated.connect(self.update_table)
+        # No llamar a load_and_subscribe_pairs aquí, debe llamarse después de la construcción completa
 
-        # Initial load
-        asyncio.create_task(self.load_and_refresh_data())
+    async def load_and_subscribe_pairs(self):
+        """Carga los pares favoritos del usuario y suscribe a los streams de datos."""
+        try:
+            user_config = await self.config_service.get_user_configuration(str(self.user_id)) # Usar str(self.user_id)
+            if hasattr(user_config, 'favoritePairs') and user_config.favoritePairs:
+                self.set_favorite_pairs(user_config.favoritePairs)
+            else:
+                self.set_favorite_pairs([])
+            self._rest_update_timer.timeout.connect(self._on_rest_timer_timeout)
+            self._rest_update_timer.start(10000)
+            await self._fetch_rest_data()
+            await self._subscribe_to_websockets()
+        except Exception as e:
+            if hasattr(self, 'status_label'):
+                self.status_label.setText(f"Error during initial load: {e}")
+            QMessageBox.critical(self, "Load Error", f"Failed to load initial data: {e}")
+        finally:
+            if hasattr(self, 'table_widget'):
+                self.table_widget.setEnabled(True)
+            if hasattr(self, 'refresh_button'):
+                self.refresh_button.setEnabled(True)
+            if hasattr(self, 'configure_button'):
+                self.configure_button.setEnabled(True)
 
 
     def _init_ui(self):
@@ -155,8 +223,8 @@ class MarketDataWidget(QWidget):
     async def load_and_subscribe_pairs(self):
         """Carga los pares favoritos del usuario y suscribe a los streams de datos."""
         try:
-            user_config = await self.config_service.get_user_configuration(self.user_id) # Usar get_user_configuration
-            if user_config.favoritePairs:
+            user_config = await self.config_service.get_user_configuration(str(self.user_id)) # Usar str(self.user_id)
+            if hasattr(user_config, 'favoritePairs') and user_config.favoritePairs:
                 self.set_favorite_pairs(user_config.favoritePairs)
             else:
                 self.set_favorite_pairs([]) # Asegurarse de que la lista esté vacía si no hay favoritos
@@ -171,12 +239,16 @@ class MarketDataWidget(QWidget):
             await self._subscribe_to_websockets()
 
         except Exception as e:
-            self.status_label.setText(f"Error during initial load: {e}")
+            if hasattr(self, 'status_label'):
+                self.status_label.setText(f"Error during initial load: {e}")
             QMessageBox.critical(self, "Load Error", f"Failed to load initial data: {e}")
         finally:
-            self.table_widget.setEnabled(True)
-            self.refresh_button.setEnabled(True)
-            self.configure_button.setEnabled(True)
+            if hasattr(self, 'table_widget'):
+                self.table_widget.setEnabled(True)
+            if hasattr(self, 'refresh_button'):
+                self.refresh_button.setEnabled(True)
+            if hasattr(self, 'configure_button'):
+                self.configure_button.setEnabled(True)
 
 
     def _on_rest_update_timeout(self):
@@ -184,8 +256,8 @@ class MarketDataWidget(QWidget):
             asyncio.create_task(self._fetch_rest_data())
         else:
             self.status_label.setText("No pairs to fetch. Configure pairs.")
-            if self.rest_update_timer.isActive():
-                self.rest_update_timer.stop()
+            if self._rest_update_timer.isActive(): # Corregir referencia
+                self._rest_update_timer.stop()
 
 
     def _on_refresh_button_clicked(self):
@@ -317,12 +389,12 @@ class MarketDataWidget(QWidget):
 
         if not self.favorite_pairs:
             self.status_label.setText("No favorite pairs configured.")
-            if self.rest_update_timer.isActive():
-                self.rest_update_timer.stop()
+            if self._rest_update_timer.isActive(): # Corregir referencia
+                self._rest_update_timer.stop()
         else:
             self.status_label.setText(f"{len(self.favorite_pairs)} pairs configured. Fetching data...")
-            if not self.rest_update_timer.isActive():
-                 self.rest_update_timer.start(30 * 1000) # Restart timer if it was stopped
+            if not self._rest_update_timer.isActive(): # Corregir referencia
+                 self._rest_update_timer.start(30 * 1000) # Restart timer if it was stopped
 
 
     def open_pair_configuration_dialog(self):

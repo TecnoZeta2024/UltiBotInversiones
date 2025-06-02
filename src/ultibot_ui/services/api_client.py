@@ -12,7 +12,14 @@ logger = logging.getLogger(__name__)
 
 class APIError(Exception):
     """Excepción personalizada para errores de API."""
-    pass
+    def __init__(self, message: str, status_code: Optional[int] = None, response_json: Optional[Dict[str, Any]] = None):
+        super().__init__(message)
+        self.message = message # El mensaje general del error
+        self.status_code = status_code
+        self.response_json = response_json # El cuerpo JSON de la respuesta de error, si existe
+
+    def __str__(self):
+        return f"APIError(status_code={self.status_code}, message='{self.message}', response_json={self.response_json})"
 
 class UltiBotAPIClient:
     """
@@ -49,18 +56,31 @@ class UltiBotAPIClient:
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.request(method, url, **kwargs)
-                response.raise_for_status()
+                response.raise_for_status() # Lanza HTTPStatusError para 4xx/5xx
+                
+                # Para 204 No Content, response.json() fallaría
+                if response.status_code == 204:
+                    return None 
                 return response.json()
                 
         except httpx.HTTPStatusError as e:
             logger.error(f"HTTP error {e.response.status_code} for {method} {url}: {e.response.text}")
-            raise APIError(f"API request failed with status {e.response.status_code}: {e.response.text}")
-        except httpx.RequestError as e:
+            response_body_json = None
+            try:
+                response_body_json = e.response.json()
+            except Exception: # No es JSON o está vacío
+                pass # response_body_json permanece None
+            raise APIError(
+                message=f"API request failed with status {e.response.status_code}: {e.response.text}",
+                status_code=e.response.status_code,
+                response_json=response_body_json
+            )
+        except httpx.RequestError as e: # Errores de red, DNS, timeout de conexión, etc.
             logger.error(f"Request error for {method} {url}: {e}")
-            raise APIError(f"Failed to connect to API: {str(e)}")
-        except Exception as e:
+            raise APIError(message=f"Failed to connect to API: {str(e)}")
+        except Exception as e: # Otros errores inesperados (ej. al parsear JSON de respuesta exitosa)
             logger.error(f"Unexpected error for {method} {url}: {e}", exc_info=True)
-            raise APIError(f"Unexpected error: {str(e)}")
+            raise APIError(message=f"Unexpected error: {str(e)}")
     
     async def get_paper_trading_history(
         self,
@@ -83,7 +103,7 @@ class UltiBotAPIClient:
         Returns:
             Respuesta con trades, total_count y has_more
         """
-        params = {
+        params: Dict[str, Any] = {
             "limit": limit,
             "offset": offset
         }
@@ -120,7 +140,7 @@ class UltiBotAPIClient:
         Returns:
             Métricas de rendimiento (PerformanceMetrics)
         """
-        params = {}
+        params: Dict[str, Any] = {}
         
         if symbol:
             params["symbol"] = symbol
@@ -148,7 +168,7 @@ class UltiBotAPIClient:
         """
         Obtiene el historial de operaciones de trading real.
         """
-        params = {
+        params: Dict[str, Any] = {
             "limit": limit,
             "offset": offset
         }
@@ -175,7 +195,7 @@ class UltiBotAPIClient:
         """
         Obtiene las métricas de rendimiento de trading real.
         """
-        params = {}
+        params: Dict[str, Any] = {}
         
         if symbol:
             params["symbol"] = symbol
@@ -297,6 +317,93 @@ class UltiBotAPIClient:
         """
         logger.info("Obteniendo snapshot del portafolio con información de capital.")
         return await self._make_request("GET", "/api/v1/portfolio/snapshot/extended")
+
+    async def get_strategies(self) -> List[Dict[str, Any]]:
+        """
+        Obtiene todas las configuraciones de estrategias de trading.
+        """
+        logger.info("Obteniendo todas las configuraciones de estrategias.")
+        return await self._make_request("GET", "/api/v1/strategies")
+
+    async def create_strategy(self, strategy_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Crea una nueva configuración de estrategia de trading.
+        
+        Args:
+            strategy_data: Datos de la estrategia a crear.
+            
+        Returns:
+            La configuración de la estrategia creada.
+        """
+        logger.info(f"Creando nueva estrategia: {strategy_data}")
+        return await self._make_request("POST", "/api/v1/strategies", json=strategy_data)
+
+    async def update_strategy(self, strategy_id: str, strategy_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Actualiza una configuración de estrategia de trading existente.
+        
+        Args:
+            strategy_id: ID de la estrategia a actualizar.
+            strategy_data: Datos para actualizar la estrategia.
+            
+        Returns:
+            La configuración de la estrategia actualizada.
+        """
+        logger.info(f"Actualizando estrategia {strategy_id}: {strategy_data}")
+        return await self._make_request("PUT", f"/api/v1/strategies/{strategy_id}", json=strategy_data)
+
+    async def get_strategy_details(self, strategy_id: str) -> Dict[str, Any]:
+        """
+        Obtiene los detalles de una configuración de estrategia específica.
+        
+        Args:
+            strategy_id: ID de la estrategia a obtener.
+            
+        Returns:
+            La configuración de la estrategia.
+        """
+        logger.info(f"Obteniendo detalles para estrategia {strategy_id}")
+        return await self._make_request("GET", f"/api/v1/strategies/{strategy_id}")
+
+    async def delete_strategy(self, strategy_id: str) -> None:
+        """
+        Elimina una configuración de estrategia de trading.
+        
+        Args:
+            strategy_id: ID de la estrategia a eliminar.
+            
+        Returns:
+            None si la eliminación es exitosa (respuesta 204).
+        """
+        logger.info(f"Eliminando estrategia {strategy_id}")
+        # Esperamos un 204 No Content, que _make_request manejará devolviendo None
+        await self._make_request("DELETE", f"/api/v1/strategies/{strategy_id}")
+        return None
+
+    async def update_strategy_activation_status(self, strategy_id: str, mode: str, active: bool) -> Dict[str, Any]:
+        """
+        Activa o desactiva una estrategia para un modo de operación específico.
+        
+        Args:
+            strategy_id: ID de la estrategia.
+            mode: Modo de operación ('paper' o 'real').
+            active: True para activar, False para desactivar.
+            
+        Returns:
+            La configuración de la estrategia actualizada.
+        """
+        endpoint = f"/api/v1/strategies/{strategy_id}/activate" # Usamos /activate como base
+        # El backend debería interpretar active=false como desactivación.
+        # Si la historia implica estrictamente dos endpoints diferentes, esto necesitaría ajuste.
+        params = {"mode": mode, "active": str(active).lower()} # 'true' o 'false' como strings
+        
+        action = "activando" if active else "desactivando"
+        logger.info(f"Solicitando {action} estrategia {strategy_id} para modo {mode}.")
+        
+        # Un PATCH usualmente no tiene cuerpo si los cambios se pasan por query params,
+        # pero si el backend espera un cuerpo vacío o específico, se ajustaría aquí.
+        # Por ahora, asumimos que los query params son suficientes.
+        return await self._make_request("PATCH", endpoint, params=params)
 
     # ===== New Trading Mode Aware Methods =====
     
@@ -462,34 +569,3 @@ class UltiBotAPIClient:
             
         logger.info(f"Ejecutando orden de mercado {side} {quantity} {symbol} en modo {trading_mode}")
         return await self._make_request("POST", "/api/v1/trading/market-order", json=request_data)
-    
-    async def execute_market_order(self, order_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Ejecuta una orden de mercado usando datos en formato de diccionario.
-        
-        Args:
-            order_data: Diccionario con los datos de la orden:
-                - user_id: ID del usuario
-                - symbol: Símbolo de trading (ej. 'BTCUSDT')
-                - side: Lado de la orden ('BUY' o 'SELL')
-                - quantity: Cantidad de la orden
-                - trading_mode: 'paper' o 'real'
-                - api_key: Clave API (opcional, para trading real)
-                - api_secret: Secreto API (opcional, para trading real)
-                
-        Returns:
-            TradeOrderDetails con los resultados de la ejecución
-        """
-        # Validar campos requeridos
-        required_fields = ['user_id', 'symbol', 'side', 'quantity', 'trading_mode']
-        for field in required_fields:
-            if field not in order_data:
-                raise ValueError(f"Campo requerido faltante: {field}")
-        
-        # Validar credenciales para modo real
-        if order_data['trading_mode'] == 'real':
-            if not order_data.get('api_key') or not order_data.get('api_secret'):
-                raise ValueError("API key y secret son requeridos para el modo de trading real")
-        
-        logger.info(f"Ejecutando orden de mercado {order_data['side']} {order_data['quantity']} {order_data['symbol']} en modo {order_data['trading_mode']}")
-        return await self._make_request("POST", "/api/v1/trading/market-order", json=order_data)

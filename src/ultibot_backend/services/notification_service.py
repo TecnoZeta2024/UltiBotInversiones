@@ -1,7 +1,7 @@
 import logging
 import json
 from uuid import UUID
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, TYPE_CHECKING # Añadir TYPE_CHECKING
 from uuid import UUID
 
 from src.shared.data_types import ServiceName, APICredential, Notification, Trade, Opportunity
@@ -11,13 +11,16 @@ from src.ultibot_backend.services.credential_service import CredentialService
 from src.ultibot_backend.core.exceptions import CredentialError, NotificationError, TelegramNotificationError, ExternalAPIError
 
 # Import ConfigService
-from src.ultibot_backend.services.config_service import ConfigService, UserConfiguration
+# from src.ultibot_backend.services.config_service import ConfigService, UserConfiguration # Comentado para TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.ultibot_backend.services.config_service import ConfigService, UserConfiguration
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class NotificationService:
-    def __init__(self, credential_service: CredentialService, persistence_service: SupabasePersistenceService, config_service: ConfigService): # Add config_service
+    def __init__(self, credential_service: CredentialService, persistence_service: SupabasePersistenceService, config_service: "ConfigService"): # Add config_service, type hint como string
         self.credential_service = credential_service
         self.persistence_service = persistence_service
         self.config_service = config_service # Store config_service
@@ -171,7 +174,8 @@ class NotificationService:
         """
         # Convert user_id to string if NotificationService uses it as UUID internally but ConfigService expects str
         user_id_str = str(user_id)
-        user_config = await self.config_service.get_user_configuration(user_id_str=user_id_str)
+        # Asegurarse que el type hint para user_config sea UserConfiguration
+        user_config: "Optional[UserConfiguration]" = await self.config_service.get_user_configuration(user_id_str=user_id_str)
         if not user_config:
             logger.error(f"No se pudo obtener la configuración para el usuario {user_id_str}. No se pueden enviar notificaciones.")
             return False
@@ -236,6 +240,7 @@ class NotificationService:
                     raise CredentialError(f"No se encontraron credenciales de Telegram para el usuario {user_id}.", code="TELEGRAM_CREDENTIAL_NOT_FOUND")
 
                 chat_id = user_config.telegramChatId # Already available from user_config
+                assert chat_id is not None, "chat_id cannot be None if send_telegram_notification is True and preferences are correctly checked"
                 
                 telegram_adapter = await self._get_telegram_adapter(user_id)
                 if not telegram_adapter:
@@ -293,26 +298,12 @@ class NotificationService:
                 user_id=user_id,
                 title=title,
                 message=message,
-                channel="ui",
                 event_type="PAPER_TRADE_ENTRY_SIMULATED",
                 dataPayload={"tradeId": str(trade_id), "symbol": symbol, "side": side, "quantity": quantity, "executedPrice": executed_price, "mode": "paper"}
             )
-            logger.info(f"Notificación UI de trade simulado {trade_id} enviada.")
+            logger.info(f"Notificación de trade simulado {trade_id} (entrada) procesada para envío.")
         except Exception as e:
-            logger.error(f"Error al enviar notificación UI para trade simulado {trade_id}: {e}", exc_info=True)
-
-        try:
-            await self.send_notification(
-                user_id=user_id,
-                title=title,
-                message=message,
-                channel="telegram",
-                event_type="PAPER_TRADE_ENTRY_SIMULATED",
-                dataPayload={"tradeId": str(trade_id), "symbol": symbol, "side": side, "quantity": quantity, "executedPrice": executed_price, "mode": "paper"}
-            )
-            logger.info(f"Notificación Telegram de trade simulado {trade_id} enviada.")
-        except Exception as e:
-            logger.error(f"Error al enviar notificación Telegram para trade simulado {trade_id}: {e}", exc_info=True)
+            logger.error(f"Error al procesar notificación para trade simulado {trade_id} (entrada): {e}", exc_info=True)
 
     async def send_paper_trade_exit_notification(self, trade: Trade):
         """
@@ -343,26 +334,12 @@ class NotificationService:
                 user_id=user_id,
                 title=title,
                 message=message,
-                channel="ui",
                 event_type="PAPER_TRADE_EXIT_SIMULATED",
                 dataPayload={"tradeId": str(trade_id), "symbol": symbol, "side": side, "executedPrice": executed_price, "pnl_usd": pnl_usd, "pnl_percentage": pnl_percentage, "closingReason": closing_reason, "mode": "paper"}
             )
-            logger.info(f"Notificación UI de cierre de trade simulado {trade_id} enviada.")
+            logger.info(f"Notificación de cierre de trade simulado {trade_id} procesada para envío.")
         except Exception as e:
-            logger.error(f"Error al enviar notificación UI para cierre de trade simulado {trade_id}: {e}", exc_info=True)
-
-        try:
-            await self.send_notification(
-                user_id=user_id,
-                title=title,
-                message=message,
-                channel="telegram",
-                event_type="PAPER_TRADE_EXIT_SIMULATED",
-                dataPayload={"tradeId": str(trade_id), "symbol": symbol, "side": side, "executedPrice": executed_price, "pnl_usd": pnl_usd, "pnl_percentage": pnl_percentage, "closingReason": closing_reason, "mode": "paper"}
-            )
-            logger.info(f"Notificación Telegram de cierre de trade simulado {trade_id} enviada.")
-        except Exception as e:
-            logger.error(f"Error al enviar notificación Telegram para cierre de trade simulado {trade_id}: {e}", exc_info=True)
+            logger.error(f"Error al procesar notificación para cierre de trade simulado {trade_id}: {e}", exc_info=True)
 
     async def send_real_trade_exit_notification(self, trade: Trade):
         """
@@ -404,26 +381,12 @@ class NotificationService:
                 user_id=user_id,
                 title=title,
                 message=message,
-                channel="ui",
                 event_type="REAL_TRADE_EXIT",
                 dataPayload=data_payload
             )
-            logger.info(f"Notificación UI de cierre de trade real {trade_id} enviada.")
+            logger.info(f"Notificación de cierre de trade real {trade_id} procesada para envío.")
         except Exception as e:
-            logger.error(f"Error al enviar notificación UI para cierre de trade real {trade_id}: {e}", exc_info=True)
-
-        try:
-            await self.send_notification(
-                user_id=user_id,
-                title=title,
-                message=message,
-                channel="telegram",
-                event_type="REAL_TRADE_EXIT",
-                dataPayload=data_payload
-            )
-            logger.info(f"Notificación Telegram de cierre de trade real {trade_id} enviada.")
-        except Exception as e:
-            logger.error(f"Error al enviar notificación Telegram para cierre de trade real {trade_id}: {e}", exc_info=True)
+            logger.error(f"Error al procesar notificación para cierre de trade real {trade_id}: {e}", exc_info=True)
 
     async def send_high_confidence_opportunity_notification(self, opportunity: Opportunity):
         """
@@ -461,27 +424,12 @@ class NotificationService:
                 user_id=user_id,
                 title=title,
                 message=message,
-                channel="ui",
                 event_type="OPPORTUNITY_HIGH_CONFIDENCE_REAL_TRADING",
                 dataPayload=data_payload
             )
-            logger.info(f"Notificación UI de oportunidad de alta confianza {opportunity_id} enviada.")
+            logger.info(f"Notificación de oportunidad de alta confianza {opportunity_id} procesada para envío.")
         except Exception as e:
-            logger.error(f"Error al enviar notificación UI para oportunidad de alta confianza {opportunity_id}: {e}", exc_info=True)
-
-        # Notificación Telegram (prioridad alta)
-        try:
-            await self.send_notification(
-                user_id=user_id,
-                title=title,
-                message=message,
-                channel="telegram",
-                event_type="OPPORTUNITY_HIGH_CONFIDENCE_REAL_TRADING",
-                dataPayload=data_payload
-            )
-            logger.info(f"Notificación Telegram de oportunidad de alta confianza {opportunity_id} enviada.")
-        except Exception as e:
-            logger.error(f"Error al enviar notificación Telegram para oportunidad de alta confianza {opportunity_id}: {e}", exc_info=True)
+            logger.error(f"Error al procesar notificación para oportunidad de alta confianza {opportunity_id}: {e}", exc_info=True)
 
     async def send_real_trading_mode_activated_notification(self, user_id: UUID):
         """
@@ -499,24 +447,12 @@ class NotificationService:
                 user_id=user_id,
                 title=title,
                 message=message,
-                channel="ui",
                 event_type="REAL_TRADING_MODE_ACTIVATED",
                 dataPayload=data_payload
             )
+            logger.info(f"Notificación de activación de modo real para {user_id} procesada para envío.")
         except Exception as e:
-            logger.error(f"Error al enviar notificación UI de activación de modo real para {user_id}: {e}", exc_info=True)
-
-        try:
-            await self.send_notification(
-                user_id=user_id,
-                title=title,
-                message=message,
-                channel="telegram",
-                event_type="REAL_TRADING_MODE_ACTIVATED",
-                dataPayload=data_payload
-            )
-        except Exception as e:
-            logger.error(f"Error al enviar notificación Telegram de activación de modo real para {user_id}: {e}", exc_info=True)
+            logger.error(f"Error al procesar notificación de activación de modo real para {user_id}: {e}", exc_info=True)
 
     async def send_real_trading_mode_activation_failed_notification(self, user_id: UUID, error_message: str):
         """
@@ -535,24 +471,12 @@ class NotificationService:
                 user_id=user_id,
                 title=title,
                 message=message,
-                channel="ui",
                 event_type="REAL_TRADING_MODE_ACTIVATION_FAILED",
                 dataPayload=data_payload
             )
+            logger.info(f"Notificación de fallo de activación de modo real para {user_id} procesada para envío.")
         except Exception as e:
-            logger.error(f"Error al enviar notificación UI de fallo de activación de modo real para {user_id}: {e}", exc_info=True)
-
-        try:
-            await self.send_notification(
-                user_id=user_id,
-                title=title,
-                message=message,
-                channel="telegram",
-                event_type="REAL_TRADING_MODE_ACTIVATION_FAILED",
-                dataPayload=data_payload
-            )
-        except Exception as e:
-            logger.error(f"Error al enviar notificación Telegram de fallo de activación de modo real para {user_id}: {e}", exc_info=True)
+            logger.error(f"Error al procesar notificación de fallo de activación de modo real para {user_id}: {e}", exc_info=True)
 
     async def send_real_trade_status_notification(self, user_id: UUID, message: str, status_level: str = "INFO", symbol: Optional[str] = None, trade_id: Optional[UUID] = None):
         """
@@ -589,26 +513,12 @@ class NotificationService:
                 user_id=user_id,
                 title=title,
                 message=message,
-                channel="ui",
                 event_type=f"REAL_TRADE_STATUS_{status_level.upper()}",
                 dataPayload=data_payload
             )
-            logger.info(f"Notificación UI de estado de orden real enviada para {user_id}.")
+            logger.info(f"Notificación de estado de orden real ({status_level}) para {user_id} procesada para envío.")
         except Exception as e:
-            logger.error(f"Error al enviar notificación UI de estado de orden real para {user_id}: {e}", exc_info=True)
-
-        try:
-            await self.send_notification(
-                user_id=user_id,
-                title=title,
-                message=message,
-                channel="telegram",
-                event_type=f"REAL_TRADE_STATUS_{status_level.upper()}",
-                dataPayload=data_payload
-            )
-            logger.info(f"Notificación Telegram de estado de orden real enviada para {user_id}.")
-        except Exception as e:
-            logger.error(f"Error al enviar notificación Telegram de estado de orden real para {user_id}: {e}", exc_info=True)
+            logger.error(f"Error al procesar notificación de estado de orden real ({status_level}) para {user_id}: {e}", exc_info=True)
 
     async def close(self):
         """Cierra cualquier adaptador de Telegram activo."""

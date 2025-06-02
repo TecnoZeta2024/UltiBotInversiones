@@ -7,7 +7,11 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
+try:
+    from pydantic import field_validator  # Pydantic v2
+except ImportError:
+    from pydantic import validator as field_validator  # fallback para v1
 
 
 class OpportunityStatus(str, Enum):
@@ -334,12 +338,11 @@ class Opportunity(BaseModel):
             datetime: lambda v: v.isoformat() if v else None
         }
 
-    @validator('take_profit_target', pre=True)
+    @field_validator('take_profit_target', check_fields=False)
     def validate_take_profit_target(cls, v):
         """Validate take profit target format."""
         if v is None:
             return v
-        
         if isinstance(v, (int, float)):
             return [float(v)]
         elif isinstance(v, list):
@@ -380,7 +383,7 @@ class Opportunity(BaseModel):
     def add_investigation_note(self, note: str, author: str) -> None:
         """Add an investigation note to the opportunity."""
         if not self.investigation_details:
-            self.investigation_details = InvestigationDetails()
+            self.investigation_details = InvestigationDetails(assigned_to=None, investigation_notes=[], next_steps=None, status=None)
         
         if not self.investigation_details.investigation_notes:
             self.investigation_details.investigation_notes = []
