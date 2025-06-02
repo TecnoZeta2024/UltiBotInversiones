@@ -92,17 +92,16 @@ async def start_application():
         # Inicializar PortfolioService para pasar a ConfigService
         from src.ultibot_backend.services.portfolio_service import PortfolioService
         portfolio_service = PortfolioService(market_data_service, persistence_service)
-        notification_service = NotificationService(credential_service, persistence_service) # Inicializar NotificationService
         config_service = ConfigService(
             persistence_service,
             credential_service=credential_service,
-            portfolio_service=portfolio_service,
-            notification_service=notification_service
+            portfolio_service=portfolio_service
         )
+        notification_service = NotificationService(credential_service, persistence_service, config_service) # Corregido: pasar config_service
+        config_service.set_notification_service(notification_service)
 
         # --- Asegurar que la configuración de usuario por defecto exista ---
-        existing_user_config = await config_service.get_user_configuration(user_id) # Usar get_user_configuration
-        await config_service.get_user_configuration(user_id)
+        existing_user_config = await config_service.get_user_configuration(str(user_id)) # Corregido: pasar str(user_id)
         print(f"Configuración de usuario para {user_id} cargada o creada exitosamente.")
         # --- Fin de la lógica de configuración de usuario ---
 
@@ -132,6 +131,9 @@ async def start_application():
                 encrypted_api_key=encrypted_api_key, # Usar clave encriptada
                 encrypted_api_secret=encrypted_api_secret # Usar clave secreta encriptada
             )
+            # Forzar que service_name sea Enum antes de guardar
+            if isinstance(binance_credential.service_name, str):
+                binance_credential.service_name = ServiceName(binance_credential.service_name)
             await credential_service.save_encrypted_credential(binance_credential) # Usar el nuevo método
             print("Credenciales de Binance guardadas/actualizadas exitosamente desde .env.")
         except Exception as e:

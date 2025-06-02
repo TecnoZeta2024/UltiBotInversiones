@@ -14,7 +14,9 @@ from src.ultibot_backend.services.config_service import ConfigService
 from src.ultibot_backend.services.portfolio_service import PortfolioService
 from src.ultibot_backend.services.order_execution_service import OrderExecutionService, PaperOrderExecutionService # Importar OrderExecutionService
 from src.ultibot_backend.services.unified_order_execution_service import UnifiedOrderExecutionService
-from src.ultibot_backend.services.trading_engine_service import TradingEngineService # Importar TradingEngineService
+from src.ultibot_backend.services.trading_engine_service import TradingEngine
+from src.ultibot_backend.services.strategy_service import StrategyService
+from src.ultibot_backend.services.configuration_service import ConfigurationService
 from src.ultibot_backend.services.ai_orchestrator_service import AIOrchestratorService # Importar AIOrchestratorService
 from src.ultibot_backend.adapters.mobula_adapter import MobulaAdapter # Importar MobulaAdapter
 from langchain_google_genai import ChatGoogleGenerativeAI # Importar ChatGoogleGenerativeAI
@@ -37,7 +39,7 @@ portfolio_service: Optional[PortfolioService] = None
 config_service: Optional[ConfigService] = None
 order_execution_service: Optional[OrderExecutionService] = None # Añadir OrderExecutionService
 paper_order_execution_service: Optional[PaperOrderExecutionService] = None # Añadir PaperOrderExecutionService
-trading_engine_service: Optional[TradingEngineService] = None # Añadir TradingEngineService
+trading_engine_service: Optional[TradingEngine] = None # Cambiar a TradingEngine
 ai_orchestrator_service: Optional[AIOrchestratorService] = None # Añadir AIOrchestratorService
 mobula_adapter: Optional[MobulaAdapter] = None # Añadir MobulaAdapter
 llm_provider: Optional[ChatGoogleGenerativeAI] = None # Añadir llm_provider
@@ -156,17 +158,14 @@ async def startup_event():
         paper_execution_service=paper_order_execution_service
     )
 
-    # Inicializar TradingEngineService
-    trading_engine_service = TradingEngineService(
-        config_service=config_service,
-        order_execution_service=order_execution_service,
-        paper_order_execution_service=paper_order_execution_service,
-        credential_service=credential_service,
-        market_data_service=market_data_service,
-        portfolio_service=portfolio_service,
-        persistence_service=persistence_service,
-        notification_service=notification_service,
-        binance_adapter=binance_adapter
+    # Inicializar StrategyService y ConfigurationService
+    strategy_service = StrategyService(persistence_service=persistence_service)
+    configuration_service = ConfigurationService(persistence_service=persistence_service)
+    # Inicializar TradingEngine
+    trading_engine_service = TradingEngine(
+        strategy_service=strategy_service,
+        configuration_service=configuration_service,
+        ai_orchestrator=ai_orchestrator_service
     )
 
     # Inicializar MobulaAdapter
@@ -212,19 +211,6 @@ async def startup_event():
         logger.error(f"Error al cargar la configuración de usuario al inicio: {e}", exc_info=True)
         user_configuration = config_service.get_default_configuration(user_id=FIXED_USER_ID) 
         logger.warning("Se utilizará la configuración por defecto debido a un error de carga.")
-
-    # Iniciar el monitor de trading real si está habilitado en la configuración del usuario
-    if trading_engine_service and user_configuration and user_configuration.realTradingSettings:
-        if user_configuration.realTradingSettings.real_trading_mode_active:
-            logger.info("Real Trading Mode is active. Starting real trading monitor.")
-            await trading_engine_service.start_real_trading_monitor()
-        else:
-            logger.info("Real Trading Mode is not active. Real trading monitor will not be started.")
-    elif not trading_engine_service:
-        logger.error("TradingEngineService not initialized. Cannot start real trading monitor.")
-    elif not user_configuration or not user_configuration.realTradingSettings:
-        logger.error("User configuration or realTradingSettings not available. Cannot determine if real trading monitor should start.")
-
 
     # Verificar si la URL de la base de datos está configurada antes de intentar la verificación de credenciales
     if settings.DATABASE_URL:

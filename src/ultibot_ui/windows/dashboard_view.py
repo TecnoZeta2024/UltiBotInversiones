@@ -1,6 +1,7 @@
 import logging
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QLabel, QFrame
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QLabel, QFrame, QTabWidget # Añadir QTabWidget
 from PyQt5.QtCore import Qt, QTimer # Importar QTimer
+from typing import Any, Optional, List, Callable, Tuple # Añadir importaciones de typing
 from uuid import UUID # Importar UUID
 import asyncio # Importar asyncio para iniciar tareas asíncronas
 
@@ -305,7 +306,7 @@ class DashboardView(QWidget):
         # Opcional: Actualizar el estado de la oportunidad en la UI a "rechazada por usuario" si se implementa en backend.
         asyncio.create_task(self._refresh_opportunities_ui()) # Refrescar por si el estado cambió en backend
 
-    def _handle_order_executed(self, order_details: Dict[str, Any]):
+    def _handle_order_executed(self, order_details: dict[str, Any]):
         """
         Maneja una orden ejecutada exitosamente desde el OrderFormWidget.
         

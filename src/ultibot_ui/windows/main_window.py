@@ -29,6 +29,7 @@ from src.ultibot_ui.windows.dashboard_view import DashboardView
 from src.ultibot_ui.windows.history_view import HistoryView
 from src.ultibot_ui.windows.settings_view import SettingsView
 from src.ultibot_ui.services.api_client import UltiBotAPIClient # Importar UltiBotAPIClient
+from src.ultibot_ui.views.strategy_management_view import StrategyManagementView # Importar StrategyManagementView
 
 
 class MainWindow(QMainWindow):
@@ -153,7 +154,7 @@ class MainWindow(QMainWindow):
         del usuario y actualizar el estado del modo Paper Trading en la interfaz.
         """
         try:
-            user_config = await self.config_service.get_user_configuration(self.user_id)
+            user_config = await self.config_service.get_user_configuration(str(self.user_id)) # Convert UUID to str
             self._update_paper_trading_status_label(
                 user_config.paperTradingActive or False
             )
@@ -263,9 +264,10 @@ class MainWindow(QMainWindow):
         self.opportunities_view.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.stacked_widget.addWidget(self.opportunities_view)  # Índice 1
 
-        self.strategies_view = QLabel("Vista de Estrategias (Placeholder)")
-        self.strategies_view.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.stacked_widget.addWidget(self.strategies_view)  # Índice 2
+        # self.strategies_view = QLabel("Vista de Estrategias (Placeholder)") # Reemplazado
+        # self.strategies_view.setAlignment(Qt.AlignmentFlag.AlignCenter) # Reemplazado
+        self.strategy_management_view = StrategyManagementView(api_client=self.api_client, parent=self) # Pasar api_client
+        self.stacked_widget.addWidget(self.strategy_management_view)  # Índice 2
 
         # Vista de historial con el widget de paper trading report
         self.history_view = HistoryView(self.user_id)
