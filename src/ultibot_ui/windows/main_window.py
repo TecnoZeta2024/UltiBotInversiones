@@ -17,9 +17,12 @@ from PyQt5.QtWidgets import (
     QStackedWidget,
     QStatusBar,
     QWidget,
+    QComboBox, # Added QComboBox (from subtask 2)
 )
 
 from src.shared.data_types import UserConfiguration
+# Import TradingMode and TradingModeService (from subtask 2)
+from src.ultibot_ui.services import TradingMode, TradingModeService
 from src.ultibot_backend.services.config_service import ConfigService
 from src.ultibot_backend.services.market_data_service import MarketDataService
 from src.ultibot_backend.services.notification_service import NotificationService
@@ -75,8 +78,18 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("UltiBotInversiones")
         self.setGeometry(100, 100, 1200, 800)
 
-        self._create_status_bar()
-        self._setup_central_widget()
+        # Instantiate TradingModeService (from subtask 5)
+        self.trading_mode_service = TradingModeService()
+
+        self._create_status_bar() # mode_switcher_combo is created here
+        self._setup_central_widget() # dashboard_view is created here, needs trading_mode_service
+
+        # Connect signals for mode_switcher_combo and trading_mode_service (from subtask 5)
+        self.mode_switcher_combo.currentIndexChanged.connect(self._handle_mode_switch_selection)
+        self.trading_mode_service.mode_changed.connect(self._update_mode_switcher_ui)
+        
+        # Set initial state of the combo box (from subtask 5)
+        self._update_mode_switcher_ui(self.trading_mode_service.get_current_mode())
 
         # Conectar la señal de cambio de configuración de SettingsView
         self.settings_view.config_changed.connect(
@@ -125,6 +138,12 @@ class MainWindow(QMainWindow):
         """Crea y configura la barra de estado de la ventana principal."""
         self.statusBar = QStatusBar()
         self.setStatusBar(self.statusBar)
+
+        # Trading Mode Switcher ComboBox (from subtask 2)
+        self.mode_switcher_combo = QComboBox()
+        self.mode_switcher_combo.addItem(str(TradingMode.PAPER), TradingMode.PAPER)
+        self.mode_switcher_combo.addItem(str(TradingMode.REAL), TradingMode.REAL)
+        self.statusBar.addPermanentWidget(self.mode_switcher_combo)
 
         # Etiqueta para el estado de conexión general
         self.connection_status_label = QLabel("Estado de Conexión: Desconectado")
@@ -254,7 +273,8 @@ class MainWindow(QMainWindow):
             self.config_service,
             self.notification_service,
             self.persistence_service,
-            self.api_client,  # Agregar el parámetro faltante
+            self.api_client,
+            self.trading_mode_service, # Pass TradingModeService (from subtask 5)
         )
         self.stacked_widget.addWidget(self.dashboard_view)  # Índice 0
 
@@ -300,6 +320,33 @@ class MainWindow(QMainWindow):
         index = self.view_map.get(view_name)
         if index is not None:
             self.stacked_widget.setCurrentIndex(index)
+
+    # Handler methods for TradingModeService and QComboBox (from subtask 5)
+    def _handle_mode_switch_selection(self, index: int):
+        """
+        Handles the selection change in the trading mode QComboBox.
+        Updates the TradingModeService with the new mode.
+        """
+        selected_mode_enum = self.mode_switcher_combo.itemData(index)
+        logger.debug(f"MainWindow._handle_mode_switch_selection: QComboBox index {index}, selected mode {selected_mode_enum}")
+        if isinstance(selected_mode_enum, TradingMode):
+            self.trading_mode_service.set_mode(selected_mode_enum)
+        else:
+            logging.warning(f"Invalid data type from mode_switcher_combo: {type(selected_mode_enum)}")
+
+    def _update_mode_switcher_ui(self, new_mode: TradingMode):
+        """
+        Updates the QComboBox selection when the TradingModeService reports a mode change.
+        """
+        logger.debug(f"MainWindow._update_mode_switcher_ui: Updating QComboBox for mode {new_mode}")
+        for i in range(self.mode_switcher_combo.count()):
+            if self.mode_switcher_combo.itemData(i) == new_mode:
+                self.mode_switcher_combo.blockSignals(True)
+                self.mode_switcher_combo.setCurrentIndex(i)
+                self.mode_switcher_combo.blockSignals(False)
+                logging.debug(f"Mode switcher UI set to index {i} for mode {new_mode}") # Added specific log for when index is set
+                return
+        logging.warning(f"Mode {new_mode} not found in mode_switcher_combo.")
 
     def closeEvent(self, event):
         """Maneja el evento de cierre de la ventana principal.

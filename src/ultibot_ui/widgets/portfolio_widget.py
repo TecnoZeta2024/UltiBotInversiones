@@ -16,6 +16,9 @@ from src.ultibot_backend.services.portfolio_service import PortfolioService
 from src.ultibot_backend.services.config_service import ConfigService
 from src.ultibot_backend.services.market_data_service import MarketDataService
 from src.ultibot_ui.services.api_client import UltiBotAPIClient
+# Import TradingModeService and TradingMode (from subtask 3)
+from src.ultibot_ui.services import TradingModeService, TradingMode
+
 
 logger = logging.getLogger(__name__)
 
@@ -84,11 +87,13 @@ class PortfolioWidget(QWidget):
     portfolio_updated = pyqtSignal(PortfolioSnapshot)
     error_occurred = pyqtSignal(str)
 
-    def __init__(self, user_id: UUID, portfolio_service: PortfolioService, 
+    def __init__(self, user_id: UUID, portfolio_service: PortfolioService,
+                 trading_mode_service: TradingModeService, # Added trading_mode_service (from subtask 3)
                  api_client: Optional[UltiBotAPIClient] = None, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.user_id = user_id
         self.portfolio_service = portfolio_service
+        self.trading_mode_service = trading_mode_service # Store trading_mode_service (from subtask 3)
         self.api_client = api_client or UltiBotAPIClient()
         self.current_snapshot: Optional[PortfolioSnapshot] = None
         self.current_capital_status: Optional[Dict[str, Any]] = None
@@ -97,6 +102,10 @@ class PortfolioWidget(QWidget):
 
         self.init_ui()
         self.setup_update_timer()
+
+        # Connect to TradingModeService signal and set initial visibility (from subtask 3)
+        self.trading_mode_service.mode_changed.connect(self._handle_mode_change)
+        self._update_visibility_based_on_mode()
 
     def init_ui(self):
         """
@@ -383,6 +392,35 @@ class PortfolioWidget(QWidget):
         self.update_timer.timeout.connect(self._start_update_worker)
         self.update_timer.start()
         logger.info("Timer de actualización del portafolio iniciado.")
+
+    # Methods for TradingModeService integration (from subtask 3)
+    def _handle_mode_change(self, new_mode: TradingMode):
+        """
+        Handles the trading mode change signal.
+        """
+        # logger.debug(f"PortfolioWidget: Mode change detected to {new_mode}") # Logging to be added in next step
+        self._update_visibility_based_on_mode()
+
+    def _update_visibility_based_on_mode(self):
+        """
+        Updates the visibility of paper and real trading groups based on the current trading mode.
+        """
+        current_mode_from_service = self.trading_mode_service.get_current_mode()
+        logger.debug(f"PortfolioWidget._update_visibility_based_on_mode: Setting visibility for mode {current_mode_from_service}")
+        if current_mode_from_service == TradingMode.PAPER:
+            self.paper_trading_group.setVisible(True)
+            self.real_trading_group.setVisible(False)
+        elif current_mode_from_service == TradingMode.REAL:
+            self.paper_trading_group.setVisible(False)
+            self.real_trading_group.setVisible(True)
+        else:
+            logger.warning(f"PortfolioWidget: Unknown trading mode {current_mode_from_service}, defaulting to show paper.")
+            self.paper_trading_group.setVisible(True)
+            self.real_trading_group.setVisible(False)
+        
+        logger.debug(f"Paper trading group visible: {self.paper_trading_group.isVisible()}")
+        logger.debug(f"Real trading group visible: {self.real_trading_group.isVisible()}")
+
 
     def _start_update_worker(self):
         """
