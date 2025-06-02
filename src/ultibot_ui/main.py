@@ -1,129 +1,226 @@
 import sys
 import asyncio
+from PyQt5.QtWidgets import QApplication, QMessageBox
 from uuid import UUID
+from typing import Optional
+import os # Importar os
 
-from PySide6.QtWidgets import QApplication
-import qdarkstyle # For dark theme
-from qasync import QEventLoopPolicy, run # For asyncio integration with Qt
+from dotenv import load_dotenv
+from src.ultibot_backend.app_config import AppSettings
+from src.shared.data_types import APICredential, ServiceName # Importar APICredential y ServiceName
 
-# UI Main Window
+# Importar la MainWindow
 from src.ultibot_ui.windows.main_window import MainWindow
 
-# New Service Architecture
-from src.ultibot_ui.services.api_client import ApiClient
-from src.ultibot_ui.services.ui_market_data_service import UIMarketDataService
-from src.ultibot_ui.services.ui_config_service import UIConfigService
-
-# Removed old direct backend service imports:
-# from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
-# from src.ultibot_backend.persistence.supabase_service import SupabasePersistenceService
-# from src.ultibot_backend.services.credential_service import CredentialService
-# from src.ultibot_backend.services.market_data_service import MarketDataService as BackendMarketDataService
-# from src.ultibot_backend.services.config_service import ConfigService as BackendConfigService
-
+# Importar servicios de backend
+from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
+from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from src.ultibot_backend.services.credential_service import CredentialService
+from src.ultibot_backend.services.market_data_service import MarketDataService
+from src.ultibot_backend.services.config_service import ConfigService
+from src.ultibot_backend.services.notification_service import NotificationService # Importar NotificationService
+from src.shared.data_types import UserConfiguration # Importar UserConfiguration
 
 async def start_application():
-    """
-    Initializes and starts the UltiBot UI application.
-    """
+    # --- Application Configuration ---
+    # This application relies on a .env file in its working directory for essential
+    # configurations such as database connection strings, API keys, and encryption keys.
+    # Ensure a valid .env file is present. See .env.example for a template.
+    # The AppSettings object will load these configurations.
+    # ---
+
     app = QApplication(sys.argv)
+    # Apply the dark theme early so QMessageBox is styled.
+    app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
 
-    # Apply dark theme
-    # Make sure your qdarkstyle is compatible with PySide6. If not, adjust or remove.
-    try:
-        app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyside6'))
-    except Exception as e:
-        print(f"Warning: Could not apply qdarkstyle: {e}. Using default Qt style.")
-
-    # Dummy User ID for now - replace with actual login mechanism later
-    # This user_id should ideally come from an authentication step.
-    user_id = UUID("00000000-0000-0000-0000-000000000001") 
-
-    # Initialize the ApiClient - this will be shared by UI services
-    api_client = ApiClient() # Base URL defaults to http://localhost:8000/api/v1/
-
-    exit_code = 1  # Default exit code in case of premature exit
+    settings = None
+    persistence_service = None
+    credential_service = None
+    market_data_service = None
+    config_service = None
+    notification_service = None # Añadir notification_service
+    user_id = None
 
     try:
-        # Initialize UI Services with the ApiClient
-        ui_market_data_service = UIMarketDataService(api_client=api_client)
+        load_dotenv(override=True)
+        settings = AppSettings()
 
-        # UIConfigService constructor was updated to take user_id and api_client
-        # It also has a set_user_id method if user_id changes or is loaded later.
-        ui_config_service = UIConfigService(user_id=user_id, api_client=api_client)
+        if not settings.CREDENTIAL_ENCRYPTION_KEY:
+            raise ValueError("CREDENTIAL_ENCRYPTION_KEY is not set in .env file or environment.")
+        
+        user_id = settings.FIXED_USER_ID # Set user_id after settings are loaded
 
-        # Initialize MainWindow with the UI services
-        # Pass api_client to MainWindow if it's responsible for calling api_client.close()
-        main_window = MainWindow(
-            user_id=user_id,
-            market_data_service=ui_market_data_service,
-            config_service=ui_config_service,
-            api_client=api_client # Pass client for lifecycle management (e.g. closing)
-        )
-        main_window.show()
+        # Initialize PersistenceService
+        persistence_service = SupabasePersistenceService()
+        await persistence_service.connect() # Connection attempt
 
-        # qasync's run function (used in if __name__ == "__main__") will handle the event loop.
-        # app.exec_() is called by qasync.run implicitly.
-        # We don't need to call app.exec_() directly here if using qasync.run pattern.
-        # The loop will run until the application quits.
+        # --- Asegurar que el user_id exista en user_configurations antes de cualquier otra operación ---
+        # Esto es una medida de contingencia para la clave foránea.
+        try:
+            await persistence_service.execute_raw_sql(
+                """
+                INSERT INTO user_configurations (user_id, selected_theme)
+                VALUES (%s, %s)
+                ON CONFLICT (user_id) DO NOTHING;
+                """,
+                (user_id, "dark") # Usar un tema por defecto
+            )
+            print(f"Asegurado que user_id {user_id} existe en user_configurations.")
+            await asyncio.sleep(1) # Añadir un pequeño retraso para la consistencia de la base de datos
+        except Exception as e:
+            QMessageBox.critical(None, "Error de Inicialización de Usuario", f"Error al asegurar la existencia del usuario en la base de datos: {str(e)}\n\nLa aplicación se cerrará.")
+            sys.exit(1)
+        # --- Fin de la inicialización de user_id ---
 
-        # For qasync.run to work as expected, this function should typically just set up
-        # and show the window, and the event loop management is external.
-        # However, if we want this function to block until app exits (like a main function),
-        # then app.exec_() would be here.
-        # Given the structure from `if __name__ == "__main__": qasync.run(start_application())`,
-        # this function `start_application` is the "main coroutine" for qasync.
-        # It should complete its setup, and then `qasync.run` keeps the loop going.
-        # The `finally` block here will execute when `start_application` coroutine itself finishes,
-        # which might be *after* the Qt app has already closed if not careful with event loop integration.
+        # Initialize CredentialService
+        credential_service = CredentialService(encryption_key=settings.CREDENTIAL_ENCRYPTION_KEY)
 
-        # Let MainWindow handle the application's main event loop execution implicitly via qasync.run
-        # The `finally` block for `api_client.close()` is crucial.
-        # One way is that `MainWindow.closeEvent` triggers the shutdown of the async part.
-        # Or, `qasync.run` might need to be awaited if it returns a future representing app lifetime.
-        # For now, we assume MainWindow.closeEvent or app.aboutToQuit will handle api_client.close()
-        # by using the passed api_client instance.
+        # Other services
+        binance_adapter = BinanceAdapter() # Assumes AppSettings is used internally
+        market_data_service = MarketDataService(credential_service, binance_adapter)
+        config_service = ConfigService(persistence_service)
+        notification_service = NotificationService(credential_service, persistence_service) # Inicializar NotificationService
 
-        # If start_application is the main task for qasync.run, it needs to "run" the app loop.
-        # This can be done by creating a Future that completes when the app exits.
-        # A simpler way: qasync often means loop.run_forever() or similar is called by qasync.run itself.
-        # Let's assume qasync handles running the app event loop based on QApplication instance.
-        # The key is that api_client must be closed.
-        # The pattern in MainWindow to close client is good.
+        # --- Asegurar que la configuración de usuario por defecto exista ---
+        # Esto es necesario porque api_credentials tiene una clave foránea a user_configurations.
+        existing_user_config = await config_service.get_user_configuration(user_id) # Usar get_user_configuration
+        # get_user_configuration siempre devuelve una configuración (por defecto si no existe),
+        # por lo que la verificación de 'not existing_user_config' ya no es necesaria aquí.
+        # Solo necesitamos verificar si la configuración devuelta es la por defecto (recién creada)
+        # o una existente. La lógica de 'get_user_configuration' ya maneja la creación de la por defecto.
+        
+        # Si la configuración devuelta es la por defecto y no tiene el user_id correcto,
+        # o si es una configuración por defecto que no ha sido guardada aún.
+        # La lógica de get_user_configuration ya se encarga de esto.
+        # Aquí solo necesitamos asegurarnos de que la configuración esté guardada si es nueva.
+        
+        # Para simplificar, podemos asumir que get_user_configuration ya ha hecho su trabajo
+        # de cargar o crear la configuración. Si es una configuración por defecto recién creada,
+        # necesitamos guardarla.
+        
+        # Una forma de verificar si es una configuración "nueva" que necesita ser guardada
+        # es si su ID no coincide con el user_id (si el ID de la configuración es un UUID generado
+        # por defecto y no el user_id que se usa como clave primaria en la tabla).
+        # Sin embargo, el método get_default_configuration ahora asigna el user_id al campo 'user_id'
+        # y un nuevo UUID al campo 'id' de la UserConfiguration.
+        # La lógica de `get_user_configuration` ya se encarga de persistir la configuración por defecto
+        # si no la encuentra. Por lo tanto, esta sección puede simplificarse.
 
-        # This function will complete, but qasync.run will keep the event loop alive.
-        # The 'finally' block below will only run when qasync.run itself is finishing with this coroutine.
-        # This should be after the Qt application has been allowed to exit.
+        # La lógica actual de `get_user_configuration` en `ConfigService` ya maneja la carga
+        # o la creación de una configuración por defecto si no existe.
+        # No necesitamos una lógica de "asegurar que exista" aquí en `main.py`
+        # si `get_user_configuration` ya lo hace.
+        # Solo necesitamos llamar a `get_user_configuration` para que se inicialice la caché
+        # y se cree la entrada en la DB si es necesario.
+        
+        # Eliminamos la lógica redundante de creación y guardado de configuración por defecto aquí.
+        # La llamada a `get_user_configuration` es suficiente para asegurar que la configuración
+        # del usuario esté cargada y, si no existe, se cree una por defecto en la DB.
+        await config_service.get_user_configuration(user_id)
+        print(f"Configuración de usuario para {user_id} cargada o creada exitosamente.")
+        # --- Fin de la lógica de configuración de usuario ---
 
-        # To ensure cleanup, we'll rely on MainWindow.closeEvent, to which api_client is passed.
-        # No explicit app.exec_() or return code from here needed if qasync.run manages the loop.
+        # --- Cargar y guardar credenciales de Binance si no existen ---
+        # Esto asegura que las credenciales de Binance estén disponibles en la base de datos
+        # para el CredentialService, que las recupera de allí.
+        binance_api_key = os.getenv("BINANCE_API_KEY")
+        binance_api_secret = os.getenv("BINANCE_API_SECRET")
 
-    except Exception as e:
-        print(f"Error during application startup or runtime: {e}")
-        # Optionally, show an error dialog to the user here
-    # The `finally` block for closing api_client is now expected to be handled by MainWindow's closeEvent
-    # or a similar mechanism tied to the application lifecycle, using the `api_client` instance
-    # passed to `MainWindow`. If `qasync.run` finishes, it means event loop stopped.
+        if not binance_api_key or not binance_api_secret:
+            raise ValueError("BINANCE_API_KEY or BINANCE_API_SECRET not found in .env file or environment.")
 
-def main():
-    """
-    Sets up the asyncio event loop policy for qasync and runs the application.
-    """
-    # Set the Pyside6 event loop policy for qasync
-    asyncio.set_event_loop_policy(QEventLoopPolicy())
+        try:
+            # Intentar obtener las credenciales para ver si ya están guardadas
+            existing_binance_credential = await credential_service.get_credential(
+                user_id=user_id,
+                service_name=ServiceName.BINANCE_SPOT, # Corregido a ServiceName.BINANCE_SPOT
+                credential_label="default"
+            )
+            # Se elimina la condición 'if not existing_binance_credential:' para forzar la actualización
+            # de las credenciales desde .env en cada inicio, aprovechando el ON CONFLICT DO UPDATE.
+            print("Intentando guardar/actualizar credenciales de Binance desde .env...")
+            
+            # Encriptar las claves antes de guardarlas
+            encrypted_api_key = credential_service.encrypt_data(binance_api_key)
+            encrypted_api_secret = credential_service.encrypt_data(binance_api_secret)
+
+            binance_credential = APICredential( # Usar APICredential
+                id=settings.FIXED_BINANCE_CREDENTIAL_ID, # Pasar el UUID directamente
+                user_id=user_id, # Corregido a user_id
+                service_name=ServiceName.BINANCE_SPOT, # Corregido a ServiceName.BINANCE_SPOT
+                credential_label="default", # Corregido a credential_label
+                encrypted_api_key=encrypted_api_key, # Usar clave encriptada
+                encrypted_api_secret=encrypted_api_secret # Usar clave secreta encriptada
+            )
+            await credential_service.save_encrypted_credential(binance_credential) # Usar el nuevo método
+            print("Credenciales de Binance guardadas/actualizadas exitosamente desde .env.")
+            # Ya no se necesita el 'else' porque siempre se intenta guardar/actualizar.
+        except Exception as e:
+            QMessageBox.critical(None, "Error de Credenciales", f"Error al guardar/actualizar credenciales de Binance: {str(e)}\n\nLa aplicación se cerrará.")
+            sys.exit(1)
+        # --- Fin de la lógica de credenciales de Binance ---
+
+    except ValueError as ve: # Specifically for missing key or other ValueErrors during setup
+        QMessageBox.critical(None, "Configuration Error", f"A configuration error occurred: {str(ve)}\n\nPlease check your .env file or environment variables.\nThe application will now exit.")
+        sys.exit(1)
+    except Exception as e: # Catch other potential errors during service init (e.g., DB connection, malformed keys)
+        QMessageBox.critical(None, "Service Initialization Error", f"Failed to initialize critical services: {str(e)}\n\nThe application will now exit.")
+        sys.exit(1)
+
+    # Ensure persistence_service is available for cleanup, even if MainWindow creation fails
+    # (though unlikely if services initialized correctly)
     
-    # qasync.run will execute the start_application coroutine,
-    # managing the asyncio event loop alongside the Qt event loop.
-    # It typically handles loop.run_forever() or app.exec_() equivalent internally.
-    try:
-        run(start_application()) # qasync.run is blocking until the event loop stops
-    except KeyboardInterrupt:
-        print("Application terminated by user (Ctrl+C).")
-    except Exception as e:
-        print(f"Unhandled exception in main: {e}")
-    finally:
-        print("Application has shut down.")
-        # Any final global cleanup, if not handled by api_client.close() or similar, could go here.
+    # Crear y mostrar la ventana principal, pasando los servicios
+    # This part is reached only if all initializations were successful
+    main_window = MainWindow(user_id, market_data_service, config_service, notification_service, persistence_service) # Pasar persistence_service
+    main_window.show()
+
+    # Ejecutar el loop de eventos de Qt
+    exit_code = app.exec_()
+
+    # --- Limpieza de recursos después de que la aplicación Qt haya terminado ---
+    print("Iniciando limpieza de recursos asíncronos...")
+    if persistence_service:
+        try:
+            print("Desconectando persistence service...")
+            await persistence_service.disconnect()
+            print("Persistence service desconectado.")
+        except Exception as e:
+            print(f"Error durante la desconexión de persistence_service: {e}")
+
+    if market_data_service: # Asegurarse de que market_data_service se inicializó
+        try:
+            print("Cerrando market_data_service...")
+            await market_data_service.close()
+            print("Market_data_service cerrado.")
+        except Exception as e:
+            print(f"Error durante el cierre de market_data_service: {e}")
+    
+    print("Limpieza de recursos asíncronos completada.")
+    # --- Fin de la limpieza ---
+
+    sys.exit(exit_code)
 
 if __name__ == "__main__":
-    main()
+    # --- Running the Application ---
+    # This UI application is part of a larger project structure within the 'src' directory.
+    # To ensure all internal imports (e.g., from 'src.ultibot_backend' or 'ultibot_ui.windows')
+    # resolve correctly, it's recommended to run this script using Poetry from the
+    # project root directory:
+    #
+    #   poetry run python src/ultibot_ui/main.py
+    #
+    # If not using Poetry, ensure the project root directory (containing 'src')
+    # is in your PYTHONPATH, or run the script from the project root directory, e.g.:
+    #
+    #   python -m src.ultibot_ui.main
+    #
+    # or ensure your current working directory is the project root when running:
+    #   python src/ultibot_ui/main.py
+    # ---
+    # Fix for Windows ProactorEventLoop issue with psycopg
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+        
+    # Ejecutar la aplicación asíncrona
+    asyncio.run(start_application())

@@ -1,28 +1,51 @@
-from uuid import UUID
+import logging
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QLabel
+from PyQt5.QtCore import Qt, QTimer # Importar QTimer
+from uuid import UUID # Importar UUID
+import asyncio # Importar asyncio para iniciar tareas asíncronas
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QLabel
-from PySide6.QtCore import Qt
+logger = logging.getLogger(__name__)
 
-# Services (UI Layer)
-from src.ultibot_ui.services.ui_market_data_service import UIMarketDataService
-from src.ultibot_ui.services.ui_config_service import UIConfigService
+from src.shared.data_types import Notification, OpportunityStatus, Opportunity # Importar Notification, OpportunityStatus y Opportunity
 
-# Widgets
 from src.ultibot_ui.widgets.market_data_widget import MarketDataWidget
-from src.ultibot_ui.widgets.portfolio_widget import PortfolioWidget
 from src.ultibot_ui.widgets.chart_widget import ChartWidget
-from src.ultibot_ui.widgets.notification_widget import NotificationWidget
+from src.ultibot_ui.widgets.portfolio_widget import PortfolioWidget # Importar PortfolioWidget
+from src.ultibot_ui.widgets.real_trade_confirmation_dialog import RealTradeConfirmationDialog # Importar el nuevo diálogo
+from src.ultibot_ui.services.api_client import UltiBotAPIClient # Importar el cliente API
 
+from src.ultibot_backend.services.market_data_service import MarketDataService
+from src.ultibot_backend.services.config_service import ConfigService
+from src.ultibot_backend.services.portfolio_service import PortfolioService
+from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService # Importar SupabasePersistenceService
+from src.ultibot_backend.services.notification_service import NotificationService # Importar NotificationService
+from src.ultibot_ui.widgets.notification_widget import NotificationWidget # Importar NotificationWidget
 
 class DashboardView(QWidget):
-    def __init__(self, user_id: UUID, market_data_service: UIMarketDataService, config_service: UIConfigService, parent: QWidget | None = None):
-        super().__init__(parent)
+    def __init__(self, user_id: UUID, market_data_service: MarketDataService, config_service: ConfigService, notification_service: NotificationService, persistence_service: SupabasePersistenceService, api_client: UltiBotAPIClient): # Añadir api_client
+        super().__init__()
         self.user_id = user_id
         self.market_data_service = market_data_service
         self.config_service = config_service
-
-        self.setWindowTitle(f"UltiBot Dashboard - User: {str(self.user_id)[:8]}...") # Show partial user_id
+        self.notification_service = notification_service # Guardar la referencia al servicio de notificaciones
+        self.persistence_service = persistence_service # Guardar la referencia al servicio de persistencia
+        self.api_client = api_client # Guardar la referencia al cliente API
+        
+        # Inicializar PortfolioService aquí, ya que DashboardView tiene sus dependencias
+        self.portfolio_service = PortfolioService(self.market_data_service, self.persistence_service)
+        
         self._setup_ui()
+        
+        # Iniciar la inicialización del portafolio de paper trading
+        asyncio.create_task(self.portfolio_service.initialize_portfolio(self.user_id))
+        # Iniciar la carga de notificaciones y la suscripción en tiempo real
+        asyncio.create_task(self._load_and_subscribe_notifications())
+        # Iniciar el monitoreo de oportunidades de trading real pendientes
+        self._opportunity_monitor_timer = QTimer(self)
+        self._opportunity_monitor_timer.setInterval(10000) # Chequear cada 10 segundos
+        self._opportunity_monitor_timer.timeout.connect(self._on_opportunity_monitor_timeout)
+        self._opportunity_monitor_timer.start()
+        print("Monitor de oportunidades de trading real iniciado.")
 
     def _setup_ui(self):
         main_layout = QVBoxLayout(self)
@@ -31,201 +54,226 @@ class DashboardView(QWidget):
         # --- Top Area: Market Data Widget ---
         # This widget shows overall market tickers, favorite pairs, etc.
         self.market_data_widget = MarketDataWidget(self.user_id, self.market_data_service, self.config_service)
+        main_layout.addWidget(self.market_data_widget)
+        
+        # Iniciar la carga y suscripción de pares para market_data_widget
+        asyncio.create_task(self.market_data_widget.load_and_subscribe_pairs())
 
-        # --- Center Area: Portfolio and Charts ---
-        # This will be split horizontally: Portfolio on the left, Charts on the right.
-        self.portfolio_widget = PortfolioWidget(self.user_id, self.market_data_service)
-        self.chart_widget = ChartWidget(self.user_id, self.market_data_service) # UserID might not be directly used by chart for now
-
+        # Zona Central (con QSplitter horizontal)
         center_splitter = QSplitter(Qt.Orientation.Horizontal)
+        center_splitter.setContentsMargins(0, 0, 0, 0)
+        center_splitter.setChildrenCollapsible(False)
+
+        # Panel Izquierdo: Estado del Portafolio (PortfolioWidget)
+        self.portfolio_widget = PortfolioWidget(self.user_id, self.portfolio_service)
         center_splitter.addWidget(self.portfolio_widget)
+        
+        # Iniciar las actualizaciones del portfolio_widget
+        self.portfolio_widget.start_updates()
+
+        # Panel Derecho (Gráficos Financieros - ChartWidget)
+        self.chart_widget = ChartWidget(self.user_id, self.market_data_service)
         center_splitter.addWidget(self.chart_widget)
-        # Set initial relative sizes for portfolio and chart areas
-        # These are proportions, not fixed pixels, so they adapt to window size.
-        center_splitter.setStretchFactor(0, 1) # Portfolio widget takes 1 part
-        center_splitter.setStretchFactor(1, 2) # Chart widget takes 2 parts (larger)
-        # Or, set initial sizes (can be adjusted by user)
-        # center_splitter.setSizes([300, 600]) # Example initial pixel sizes
 
+        # Conectar señales del ChartWidget para solicitar datos al backend
+        self.chart_widget.symbol_selected.connect(self._handle_chart_symbol_selection)
+        self.chart_widget.interval_selected.connect(self._handle_chart_interval_selection)
 
-        # --- Bottom Area: Notifications ---
-        # This widget will display user notifications.
-        self.notification_widget = NotificationWidget(self.user_id, self.market_data_service) # UIMarketDataService has notification fetching
+        main_layout.addWidget(center_splitter)
 
-        # --- Main Vertical Splitter ---
-        # This splitter will divide the dashboard vertically:
-        # Top: MarketDataWidget
-        # Middle: CenterSplitter (Portfolio + Charts)
-        # Bottom: NotificationWidget
+        # Zona Inferior (con QSplitter vertical)
+        bottom_splitter = QSplitter(Qt.Orientation.Vertical) # Usar Qt.Orientation
+        bottom_splitter.setContentsMargins(0, 0, 0, 0)
+        bottom_splitter.setChildrenCollapsible(False)
 
-        # We can have a top-level splitter for MarketDataWidget vs the rest
-        # And another one for (Portfolio+Charts) vs Notifications
+        # Reemplazar con NotificationWidget
+        self.notification_widget = NotificationWidget(self.notification_service, self.user_id) # Pasar notification_service y user_id
+        bottom_splitter.addWidget(self.notification_widget)
 
-        # Let's try:
-        # Top: MarketDataWidget
-        # Bottom_Half: Splitter ( (Portfolio + Chart_Widget) + Notification_Widget )
+        # Añadir el splitter inferior al layout principal
+        main_layout.addWidget(bottom_splitter)
 
-        # Main layout structure:
-        # MarketDataWidget (top_zone)
-        # MainContentSplitter (vertical)
-        #   -> CenterSplitter (Portfolio | Chart) (center_zone)
-        #   -> NotificationWidget (bottom_zone)
+        # Establecer tamaños iniciales para los splitters (opcional, para una mejor visualización inicial)
+        # Estos valores pueden necesitar ajuste o ser dinámicos
+        center_splitter.setSizes([self.width() // 3, 2 * self.width() // 3])
+        # bottom_splitter.setSizes([self.height() // 4]) # No se puede usar self.height() aquí directamente
 
-        main_content_splitter = QSplitter(Qt.Orientation.Vertical)
-        main_content_splitter.addWidget(center_splitter) # Portfolio and Charts
-        main_content_splitter.addWidget(self.notification_widget) # Notifications
+    def _handle_chart_symbol_selection(self, symbol: str):
+        """Slot síncrono para la señal symbol_selected del ChartWidget."""
+        print(f"Dashboard: Símbolo de gráfico seleccionado: {symbol}")
+        asyncio.create_task(self._fetch_and_update_chart_data())
 
-        # Set initial relative sizes for main content areas
-        main_content_splitter.setStretchFactor(0, 3) # Portfolio/Charts area takes 3 parts
-        main_content_splitter.setStretchFactor(1, 1) # Notifications area takes 1 part
-        # main_content_splitter.setSizes([600, 200]) # Example initial pixel sizes
+    def _handle_chart_interval_selection(self, interval: str):
+        """Slot síncrono para la señal interval_selected del ChartWidget."""
+        print(f"Dashboard: Temporalidad de gráfico seleccionada: {interval}")
+        asyncio.create_task(self._fetch_and_update_chart_data())
 
+    async def _fetch_and_update_chart_data(self):
+        """
+        Obtiene los datos de velas del backend y los pasa al ChartWidget.
+        """
+        if self.chart_widget.current_symbol and self.chart_widget.current_interval:
+            try:
+                candlestick_data = await self.market_data_service.get_candlestick_data(
+                    user_id=self.user_id,
+                    symbol=self.chart_widget.current_symbol,
+                    interval=self.chart_widget.current_interval,
+                    limit=200 # Cantidad de velas a mostrar
+                )
+                self.chart_widget.set_candlestick_data(candlestick_data)
+            except Exception as e:
+                print(f"Error al obtener datos de velas para el gráfico: {e}")
+                self.chart_widget.set_candlestick_data([]) # Limpiar el gráfico en caso de error
+                self.chart_widget.chart_area.setText(f"Error al cargar datos: {e}")
 
-        # Add Market Data Widget and the Main Content Splitter to the main layout
-        main_layout.addWidget(self.market_data_widget, 1) # Give it some stretch factor
-        main_layout.addWidget(main_content_splitter, 3)  # Give more stretch to the main content
+    async def _load_and_subscribe_notifications(self):
+        """
+        Carga el historial de notificaciones y configura la suscripción en tiempo real.
+        """
+        try:
+            # Cargar historial de notificaciones
+            history_notifications = await self.notification_service.get_notification_history(self.user_id)
+            for notification in history_notifications:
+                # notification_data ya es un objeto Notification
+                self.notification_widget.add_notification(notification)
+            
+            # TODO: Implementar suscripción a WebSockets para notificaciones en tiempo real
+            # Por ahora, un polling simple como fallback
+            self._notification_polling_timer = QTimer(self)
+            self._notification_polling_timer.setInterval(30000) # Polling cada 30 segundos
+            self._notification_polling_timer.timeout.connect(self._on_notification_polling_timeout)
+            self._notification_polling_timer.start()
+            print("Polling de notificaciones iniciado.")
 
-        # Set initial window size (optional, can be done by MainWindow)
-        # self.resize(1200, 800)
+        except Exception as e:
+            print(f"Error al cargar o suscribir notificaciones: {e}")
+            # Podríamos añadir una notificación de error al propio widget de notificaciones
+            # o a un sistema de logs de UI.
 
+    def _on_notification_polling_timeout(self):
+        """Slot síncrono para el QTimer que inicia la tarea asíncrona de polling de notificaciones."""
+        asyncio.create_task(self._fetch_new_notifications())
+
+    async def _fetch_new_notifications(self):
+        """Obtiene nuevas notificaciones del backend y las añade al widget."""
+        try:
+            # En una implementación real, esto podría ser un endpoint para "nuevas notificaciones desde X timestamp"
+            # Por simplicidad, aquí solo cargamos el historial de nuevo, lo cual no es eficiente para "nuevas"
+            # pero sirve para el propósito de demostración de polling.
+            # La lógica de add_notification ya maneja duplicados.
+            new_notifications = await self.notification_service.get_notification_history(self.user_id)
+            for notification in new_notifications:
+                self.notification_widget.add_notification(notification)
+        except Exception as e:
+            print(f"Error al hacer polling de nuevas notificaciones: {e}")
+            # Manejar el error, quizás mostrando una notificación de error en la UI
+
+    def _on_opportunity_monitor_timeout(self):
+        """Slot síncrono para el QTimer que inicia la tarea asíncrona de monitoreo de oportunidades."""
+        asyncio.create_task(self._check_pending_real_opportunities())
+
+    async def _check_pending_real_opportunities(self):
+        """
+        Verifica si hay oportunidades de trading real pendientes de confirmación
+        y abre el diálogo correspondiente.
+        """
+        try:
+            opportunities_data = await self.api_client.get_real_trading_candidates()
+            if opportunities_data:
+                # Asumimos que el backend devuelve una lista de diccionarios, convertimos a objetos Opportunity
+                opportunities = [Opportunity(**opp_data) for opp_data in opportunities_data]
+                
+                if opportunities:
+                    # Tomar la primera oportunidad pendiente y mostrar el diálogo
+                    opportunity_to_confirm = opportunities[0]
+                    logger.info(f"Oportunidad pendiente de confirmación encontrada: {opportunity_to_confirm.id}")
+                    
+                    dialog = RealTradeConfirmationDialog(opportunity_to_confirm, self.api_client, self)
+                    dialog.trade_confirmed.connect(self._handle_trade_confirmed)
+                    dialog.trade_cancelled.connect(self._handle_trade_cancelled)
+                    dialog.exec_() # Mostrar el diálogo de forma modal
+                    
+                    # Después de cerrar el diálogo, re-chequear oportunidades o actualizar UI
+                    await self._refresh_opportunities_ui() # Método para actualizar la UI de oportunidades
+                    await self._update_real_trades_count_ui() # Método para actualizar el contador
+            else:
+                logger.debug("No hay oportunidades de trading real pendientes de confirmación.")
+
+        except Exception as e:
+            logger.error(f"Error al verificar oportunidades de trading real pendientes: {e}", exc_info=True)
+            # Podríamos mostrar una notificación de error en la UI
+
+    async def _refresh_opportunities_ui(self):
+        """
+        Método placeholder para actualizar la UI de oportunidades.
+        En una implementación real, esto recargaría el widget de oportunidades.
+        """
+        logger.info("Actualizando UI de oportunidades (placeholder).")
+        # TODO: Implementar la lógica real para recargar el widget de oportunidades
+        # Por ahora, solo loguea.
+
+    async def _update_real_trades_count_ui(self):
+        """
+        Método para actualizar el contador de operaciones reales en la UI.
+        """
+        try:
+            config_status = await self.api_client.get_real_trading_mode_status()
+            if config_status and 'real_trades_executed_count' in config_status:
+                count = config_status['real_trades_executed_count']
+                max_trades = config_status['max_real_trades']
+                logger.info(f"Contador de trades reales actualizado: {count}/{max_trades}")
+                # TODO: Actualizar un QLabel o similar en la UI con este valor
+            else:
+                logger.warning("No se pudo obtener el contador de trades reales del backend.")
+        except Exception as e:
+            logger.error(f"Error al actualizar el contador de trades reales en UI: {e}", exc_info=True)
+
+    def _handle_trade_confirmed(self, opportunity_id: str):
+        logger.info(f"Trade real confirmado para oportunidad {opportunity_id}. Actualizando UI.")
+        # Aquí se podría disparar una actualización más específica de la UI
+        asyncio.create_task(self._refresh_opportunities_ui())
+        asyncio.create_task(self._update_real_trades_count_ui())
+
+    def _handle_trade_cancelled(self, opportunity_id: str):
+        logger.info(f"Trade real cancelado para oportunidad {opportunity_id}. No se requiere acción adicional en UI.")
+        # Opcional: Actualizar el estado de la oportunidad en la UI a "rechazada por usuario" si se implementa en backend.
+        asyncio.create_task(self._refresh_opportunities_ui()) # Refrescar por si el estado cambió en backend
 
     def cleanup(self):
         """
-        Clean up resources used by child widgets.
-        This might involve stopping timers, closing websocket connections (if any), etc.
+        Limpia los recursos utilizados por DashboardView y sus widgets hijos.
+        Principalmente, detiene temporizadores y tareas en segundo plano.
         """
-        print("Cleaning up DashboardView and its child widgets...")
-        if hasattr(self.market_data_widget, 'cleanup') and callable(getattr(self.market_data_widget, 'cleanup')):
+        print("DashboardView: cleanup called.")
+
+        # Limpiar MarketDataWidget
+        if hasattr(self.market_data_widget, 'cleanup') and callable(self.market_data_widget.cleanup):
+            print("DashboardView: Calling cleanup on market_data_widget.")
             self.market_data_widget.cleanup()
-        if hasattr(self.portfolio_widget, 'cleanup') and callable(getattr(self.portfolio_widget, 'cleanup')):
-            self.portfolio_widget.cleanup()
-        if hasattr(self.chart_widget, 'cleanup') and callable(getattr(self.chart_widget, 'cleanup')):
-            self.chart_widget.cleanup()
-        if hasattr(self.notification_widget, 'cleanup') and callable(getattr(self.notification_widget, 'cleanup')):
+        
+        # Limpiar PortfolioWidget
+        if hasattr(self.portfolio_widget, 'stop_updates') and callable(self.portfolio_widget.stop_updates):
+            print("DashboardView: Calling stop_updates on portfolio_widget.")
+            self.portfolio_widget.stop_updates() # Asumiendo que stop_updates es el método de limpieza
+
+        # Detener el temporizador de polling de notificaciones
+        if hasattr(self, '_notification_polling_timer') and self._notification_polling_timer.isActive():
+            print("DashboardView: Stopping notification polling timer.")
+            self._notification_polling_timer.stop()
+
+        # Detener el temporizador de monitoreo de oportunidades
+        if hasattr(self, '_opportunity_monitor_timer') and self._opportunity_monitor_timer.isActive():
+            print("DashboardView: Stopping opportunity monitor timer.")
+            self._opportunity_monitor_timer.stop()
+
+        # Limpiar NotificationWidget (si es necesario, por ejemplo, para cancelar suscripciones WebSocket)
+        if hasattr(self.notification_widget, 'cleanup') and callable(self.notification_widget.cleanup):
+            print("DashboardView: Calling cleanup on notification_widget.")
             self.notification_widget.cleanup()
-        print("DashboardView cleanup finished.")
-
-    def showEvent(self, event):
-        """Adjust splitter sizes after the window is shown and sized."""
-        super().showEvent(event)
-        # It's often better to set stretch factors or use layouts that manage sizes.
-        # Setting fixed sizes in showEvent can be tricky if the window is resized later by user.
-        # However, for initial setup:
-        # self.center_splitter.setSizes([self.width() // 3, 2 * self.width() // 3])
-        # self.main_content_splitter.setSizes([ (self.height() * 3) // 4, self.height() // 4])
-        # Using stretch factors in _setup_ui is generally more robust.
-        # No explicit size setting here if stretch factors are used.
-
-# Example Usage (for testing DashboardView itself)
-if __name__ == '__main__':
-    import sys
-    import qasync
-    from PySide6.QtWidgets import QApplication
-    from src.ultibot_ui.services.api_client import ApiClient # For mock services
-
-    # --- Mock Services ---
-    class MockDashboardApiClient(ApiClient):
-        # Implement mock methods for all endpoints used by the child widgets
-        # For simplicity, we can reuse the mocks from individual widget tests if they are compatible
-        # or create more specific ones here.
-
-        # MarketDataWidget needs: get_user_configuration, save_user_configuration, get_tickers_data
-        async def get_user_configuration(self, user_id: UUID) -> dict | None:
-            print(f"[MockDashboard] get_user_configuration for {user_id}")
-            return {"favoritePairs": ["BTC-USD", "ETH-USD"]}
-
-        async def save_user_configuration(self, user_id: UUID, config_data: dict) -> bool:
-            print(f"[MockDashboard] save_user_configuration for {user_id}: {config_data}")
-            return True
-
-        async def get_tickers_data(self, symbols: list[str]) -> dict | None:
-            print(f"[MockDashboard] get_tickers_data for {symbols}")
-            data = {}
-            for sym in symbols:
-                price = 20000 + sum(ord(c) for c in sym) % 5000 # pseudo-random price
-                change = (sum(ord(c) for c in sym) % 10) - 5
-                data[sym] = {"lastPrice": f"{price:.2f}", "priceChangePercent": f"{change:.2f}", "quoteVolume": f"{price*100:.0f}"}
-            return data
-
-        # PortfolioWidget needs: get_portfolio_summary
-        async def get_portfolio_summary(self, user_id: UUID) -> PortfolioSnapshot | None:
-            from src.ultibot_ui.models import AssetHolding, PortfolioSnapshot # Local import for clarity
-            from datetime import datetime
-            print(f"[MockDashboard] get_portfolio_summary for {user_id}")
-            holdings = [
-                AssetHolding(asset_id="BTC-USD", quantity=0.5, average_purchase_price=30000.00, current_value=32500.00),
-                AssetHolding(asset_id="ETH-USD", quantity=10.0, average_purchase_price=2000.00, current_value=22000.00),
-            ]
-            return PortfolioSnapshot(
-                snapshot_id=uuid.uuid4(), timestamp=datetime.now(), user_id=user_id,
-                holdings=holdings, total_value=54500.00, cash_balance=1234.56
-            )
-
-        # ChartWidget needs: get_market_historical_data
-        async def get_market_historical_data(self, asset_id: str, interval: str) -> MarketData | None:
-            from src.ultibot_ui.models import Kline, MarketData # Local import
-            from datetime import datetime
-            import numpy as np
-            print(f"[MockDashboard] get_market_historical_data for {asset_id} ({interval})")
-            klines_list = []
-            current_time = datetime.now().timestamp() * 1000
-            price = 100.0
-            for i in range(50):
-                open_p = price + np.random.uniform(-1,1)
-                high_p = max(open_p, price + np.random.uniform(0,2))
-                low_p = min(open_p, price - np.random.uniform(0,2))
-                close_p = np.random.uniform(low_p, high_p)
-                kline_ts = int(current_time - (50 - i) * (60000 * (["1m","5m","1h","1d"].index(interval if interval in ["1m","5m","1h","1d"] else "1m") +1 )))
-                klines_list.append(Kline(timestamp=kline_ts, open=open_p, high=high_p, low=low_p, close=close_p, volume=np.random.uniform(100,1000)))
-                price = close_p
-            return MarketData(asset_id=asset_id, interval=interval, klines=klines_list)
-
-        # NotificationWidget needs: get_notification_history
-        async def get_notification_history(self, user_id: UUID) -> list[Notification] | None:
-            from src.ultibot_ui.models import Notification # Local import
-            from datetime import datetime
-            print(f"[MockDashboard] get_notification_history for {user_id}")
-            return [
-                Notification(notification_id=uuid.uuid4(), user_id=user_id, message="Welcome to UltiBot Dashboard!", timestamp=datetime.now(), read_status=False, type="INFO"),
-                Notification(notification_id=uuid.uuid4(), user_id=user_id, message="BTC price alert triggered.", timestamp=datetime.now(), read_status=True, type="PRICE_ALERT"),
-            ]
-
-        async def close(self): # Ensure mock client has a close method
-            print("[MockDashboard] ApiClient closed.")
-
-
-    async def main_async_dashboard():
-        app = QApplication.instance() or QApplication(sys.argv)
-
-        # Setup mock services
-        mock_api_client = MockDashboardApiClient()
-        market_data_service = UIMarketDataService(api_client=mock_api_client)
-        config_service = UIConfigService(api_client=mock_api_client) # UIConfigService also uses ApiClient
-
-        test_user_id = uuid.uuid4()
-        config_service.set_user_id(test_user_id) # Important for UIConfigService operations
-
-        dashboard_view = DashboardView(user_id=test_user_id, market_data_service=market_data_service, config_service=config_service)
-        dashboard_view.resize(1600, 900) # Set a larger default size for the dashboard
-        dashboard_view.show()
-
-        loop = qasync.QEventLoop(app)
-        asyncio.set_event_loop(loop)
-
-        try:
-            await loop.run_forever()
-        except KeyboardInterrupt:
-            pass
-        finally:
-            dashboard_view.cleanup() # Call cleanup on the dashboard
-            await mock_api_client.close() # Close the mock client
-
-    if __name__ == "__main__":
-        try:
-            qasync.run(main_async_dashboard())
-        except RuntimeError as e:
-            if "another loop is running" not in str(e).lower():
-                 raise
-        except KeyboardInterrupt:
-            print("DashboardView test application terminated.")
-        print("Exiting DashboardView example.")
+            
+        # Limpiar ChartWidget (si es necesario)
+        if hasattr(self.chart_widget, 'cleanup') and callable(self.chart_widget.cleanup):
+            print("DashboardView: Calling cleanup on chart_widget.")
+            self.chart_widget.cleanup()
+        
+        print("DashboardView: cleanup finished.")

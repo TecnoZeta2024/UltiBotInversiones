@@ -107,6 +107,14 @@ class CredentialService:
         saved_credential = await self.persistence_service.save_credential(credential_data)
         return saved_credential
 
+    async def save_encrypted_credential(self, credential: APICredential) -> APICredential:
+        """
+        Guarda una credencial APICredential que ya tiene sus campos sensibles encriptados.
+        Este método es útil cuando la encriptación ya se realizó externamente.
+        """
+        saved_credential = await self.persistence_service.save_credential(credential)
+        return saved_credential
+
     async def get_credential(self, user_id: UUID, service_name: ServiceName, credential_label: str) -> Optional[APICredential]:
         """
         Recupera y desencripta una credencial de la base de datos.
@@ -204,6 +212,108 @@ class CredentialService:
         """
         return await self.persistence_service.delete_credential(credential_id)
 
+    async def get_decrypted_credential_by_id(self, credential_id: UUID) -> Optional[APICredential]:
+        """
+        Recupera y desencripta una credencial de la base de datos usando su ID.
+        """
+        encrypted_credential = await self.persistence_service.get_credential_by_id(credential_id)
+        if encrypted_credential:
+            decrypted_api_key = self.decrypt_data(encrypted_credential.encrypted_api_key)
+            if decrypted_api_key is None:
+                logger.error(f"API Key para la credencial ID {credential_id} no pudo ser desencriptada.")
+                # Podríamos lanzar un error o simplemente devolver None si la desencriptación falla.
+                # Por consistencia con get_credential, lanzaremos CredentialError.
+                raise CredentialError(f"API Key para la credencial ID {credential_id} ({encrypted_credential.service_name}) no pudo ser desencriptada.")
+
+            decrypted_api_secret = self.decrypt_data(encrypted_credential.encrypted_api_secret) if encrypted_credential.encrypted_api_secret else None
+            if encrypted_credential.encrypted_api_secret and decrypted_api_secret is None:
+                logger.error(f"API Secret para la credencial ID {credential_id} ({encrypted_credential.service_name}) no pudo ser desencriptado.")
+                raise CredentialError(f"API Secret para la credencial ID {credential_id} ({encrypted_credential.service_name}) no pudo ser desencriptado.")
+            
+            decrypted_other_details_str = self.decrypt_data(encrypted_credential.encrypted_other_details) if encrypted_credential.encrypted_other_details else None
+            decrypted_other_details = json.loads(decrypted_other_details_str) if decrypted_other_details_str else None
+            
+            return APICredential(
+                id=encrypted_credential.id,
+                user_id=encrypted_credential.user_id,
+                service_name=encrypted_credential.service_name,
+                credential_label=encrypted_credential.credential_label,
+                encrypted_api_key=decrypted_api_key,
+                encrypted_api_secret=decrypted_api_secret,
+                encrypted_other_details=json.dumps(decrypted_other_details) if decrypted_other_details else None,
+                status=encrypted_credential.status,
+                last_verified_at=encrypted_credential.last_verified_at,
+                permissions=encrypted_credential.permissions,
+                permissions_checked_at=encrypted_credential.permissions_checked_at,
+                expires_at=encrypted_credential.expires_at,
+                rotation_reminder_policy_days=encrypted_credential.rotation_reminder_policy_days,
+                usage_count=encrypted_credential.usage_count,
+                last_used_at=encrypted_credential.last_used_at,
+                purpose_description=encrypted_credential.purpose_description,
+                tags=encrypted_credential.tags,
+                notes=encrypted_credential.notes,
+                created_at=encrypted_credential.created_at,
+                updated_at=encrypted_credential.updated_at
+            )
+        return None
+
+    async def get_first_decrypted_credential_by_service(self, user_id: UUID, service_name: ServiceName) -> Optional[APICredential]:
+        """
+        Recupera y desencripta la primera credencial encontrada para un servicio y usuario específicos.
+        Útil cuando se espera que solo haya una credencial principal para un servicio.
+        """
+        # Este método asume que persistence_service tiene una forma de listar credenciales por user_id y service_name
+        # o que podemos obtener todas y filtrar. Por simplicidad, si persistence_service no tiene un método directo,
+        # podríamos necesitar listar todas las del usuario y filtrar aquí, o añadirlo a persistence_service.
+        # Asumamos que persistence_service.get_credentials_by_service(user_id, service_name) existe y devuelve una lista.
+        
+        encrypted_credentials = await self.persistence_service.get_credentials_by_service(user_id, service_name)
+        if not encrypted_credentials:
+            logger.info(f"No se encontraron credenciales para el servicio {service_name.value} y usuario {user_id}.")
+            return None
+
+        # Tomar la primera credencial de la lista
+        encrypted_credential = encrypted_credentials[0]
+        
+        # Reutilizar la lógica de desencriptación de get_decrypted_credential_by_id
+        # Para evitar duplicación, podríamos refactorizar la lógica de desencriptación a un método privado.
+        # Por ahora, la copiamos y adaptamos ligeramente.
+        decrypted_api_key = self.decrypt_data(encrypted_credential.encrypted_api_key)
+        if decrypted_api_key is None:
+            logger.error(f"API Key para la credencial ID {encrypted_credential.id} ({service_name.value}) no pudo ser desencriptada.")
+            raise CredentialError(f"API Key para la credencial ID {encrypted_credential.id} ({service_name.value}) no pudo ser desencriptada.")
+
+        decrypted_api_secret = self.decrypt_data(encrypted_credential.encrypted_api_secret) if encrypted_credential.encrypted_api_secret else None
+        if encrypted_credential.encrypted_api_secret and decrypted_api_secret is None:
+            logger.error(f"API Secret para la credencial ID {encrypted_credential.id} ({service_name.value}) no pudo ser desencriptado.")
+            raise CredentialError(f"API Secret para la credencial ID {encrypted_credential.id} ({service_name.value}) no pudo ser desencriptado.")
+        
+        decrypted_other_details_str = self.decrypt_data(encrypted_credential.encrypted_other_details) if encrypted_credential.encrypted_other_details else None
+        decrypted_other_details = json.loads(decrypted_other_details_str) if decrypted_other_details_str else None
+        
+        return APICredential(
+            id=encrypted_credential.id,
+            user_id=encrypted_credential.user_id,
+            service_name=encrypted_credential.service_name,
+            credential_label=encrypted_credential.credential_label,
+            encrypted_api_key=decrypted_api_key,
+            encrypted_api_secret=decrypted_api_secret,
+            encrypted_other_details=json.dumps(decrypted_other_details) if decrypted_other_details else None,
+            status=encrypted_credential.status,
+            last_verified_at=encrypted_credential.last_verified_at,
+            permissions=encrypted_credential.permissions,
+            permissions_checked_at=encrypted_credential.permissions_checked_at,
+            expires_at=encrypted_credential.expires_at,
+            rotation_reminder_policy_days=encrypted_credential.rotation_reminder_policy_days,
+            usage_count=encrypted_credential.usage_count,
+            last_used_at=encrypted_credential.last_used_at,
+            purpose_description=encrypted_credential.purpose_description,
+            tags=encrypted_credential.tags,
+            notes=encrypted_credential.notes,
+            created_at=encrypted_credential.created_at,
+            updated_at=encrypted_credential.updated_at
+        )
+
     async def verify_credential(self, credential: APICredential, notification_service: Optional[Any] = None) -> bool:
         """
         Verifica la validez de una credencial realizando una llamada de prueba no transaccional.
@@ -263,11 +373,11 @@ class CredentialService:
                     await self.persistence_service.update_credential_permissions(credential.id, permissions, datetime.utcnow())
 
                 except BinanceAPIError as e:
-                    logger.error(f"Error de Binance API durante la verificación: {e}")
+                    logger.error(f"Error de Binance API durante la verificación: {str(e)}")
                     is_valid = False
                     # El estado ya se actualiza en el bloque finally
                 except Exception as e:
-                    logger.error(f"Error inesperado durante la verificación de Binance: {e}")
+                    logger.error(f"Error inesperado durante la verificación de Binance: {str(e)}")
                     is_valid = False
             elif credential.service_name == ServiceName.GEMINI_API:
                 logger.info(f"Simulando verificación para Gemini {credential.service_name}...")
@@ -290,3 +400,46 @@ class CredentialService:
         await self.persistence_service.update_credential_status(credential.id, new_status, datetime.utcnow())
         
         return is_valid
+
+    async def verify_binance_api_key(self, user_id: UUID) -> bool:
+        """
+        Verifica la conexión y validez de la API Key de Binance para un usuario.
+        Lanza BinanceAPIError o CredentialError si la verificación falla.
+        """
+        # Obtener la credencial de Binance para el usuario
+        binance_credential = await self.get_first_decrypted_credential_by_service(user_id, ServiceName.BINANCE_SPOT)
+        
+        if not binance_credential:
+            logger.error(f"No se encontró credencial de Binance para el usuario {user_id}.")
+            raise CredentialError(f"No se encontró credencial de Binance para el usuario {user_id}.")
+
+        # Usar el adapter de Binance para verificar la conexión
+        try:
+            # Asumimos que get_account_info es una llamada de prueba no transaccional
+            if binance_credential.encrypted_api_secret is None:
+                raise CredentialError("El API Secret de Binance es requerido pero no se encontró en la credencial.")
+
+            account_info = await self.binance_adapter.get_account_info(
+                api_key=binance_credential.encrypted_api_key, # Aquí encrypted_api_key ya está desencriptado
+                api_secret=binance_credential.encrypted_api_secret # Aquí encrypted_api_secret ya está desencriptado
+            )
+            
+            # Opcional: Verificar permisos específicos si es necesario (ej. canTrade)
+            if not account_info.get("canTrade", False):
+                raise BinanceAPIError(
+                    message="La API Key de Binance no tiene permisos de trading.",
+                    response_data=account_info
+                )
+            
+            # Actualizar el estado de la credencial a 'active' si todo es exitoso
+            await self.persistence_service.update_credential_status(binance_credential.id, "active", datetime.utcnow())
+            logger.info(f"API Key de Binance verificada exitosamente para el usuario {user_id}.")
+            return True
+        except BinanceAPIError as e:
+            logger.error(f"Fallo en la verificación de la API Key de Binance para {user_id}: {str(e)}", exc_info=True)
+            await self.persistence_service.update_credential_status(binance_credential.id, "verification_failed", datetime.utcnow())
+            raise e
+        except Exception as e:
+            logger.error(f"Error inesperado durante la verificación de la API Key de Binance para {user_id}: {str(e)}", exc_info=True)
+            await self.persistence_service.update_credential_status(binance_credential.id, "verification_failed", datetime.utcnow())
+            raise BinanceAPIError(message="Error inesperado al verificar la API Key de Binance.", original_exception=e)
