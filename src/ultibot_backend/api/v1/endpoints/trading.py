@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from uuid import UUID
-from typing import Annotated
+from typing import Annotated, Literal, Optional
+from pydantic import BaseModel, Field
 
-from src.shared.data_types import ConfirmRealTradeRequest, OpportunityStatus, Opportunity
+from src.shared.data_types import ConfirmRealTradeRequest, OpportunityStatus, Opportunity, TradeOrderDetails
 from src.ultibot_backend.services.trading_engine_service import TradingEngineService
 from src.ultibot_backend.services.config_service import ConfigService
+from src.ultibot_backend.services.unified_order_execution_service import UnifiedOrderExecutionService
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 
 router = APIRouter()
@@ -70,4 +72,133 @@ async def confirm_real_opportunity(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to initiate real trade execution: {str(e)}"
+        )
+
+# Trading mode type alias
+TradingMode = Literal["paper", "real"]
+
+class MarketOrderRequest(BaseModel):
+    """Request model for market order execution."""
+    user_id: UUID = Field(..., description="User identifier")
+    symbol: str = Field(..., description="Trading symbol (e.g., 'BTCUSDT')")
+    side: str = Field(..., description="Order side ('BUY' or 'SELL')")
+    quantity: float = Field(..., gt=0, description="Order quantity (must be positive)")
+    trading_mode: TradingMode = Field(..., description="Trading mode ('paper' or 'real')")
+    api_key: Optional[str] = Field(None, description="API key for real trading (required for real mode)")
+    api_secret: Optional[str] = Field(None, description="API secret for real trading (required for real mode)")
+
+@router.post("/market-order", response_model=TradeOrderDetails, status_code=status.HTTP_200_OK)
+async def execute_market_order(
+    request: MarketOrderRequest,
+    unified_execution_service: Annotated[UnifiedOrderExecutionService, Depends(UnifiedOrderExecutionService)]
+):
+    """
+    Execute a market order in the specified trading mode.
+    
+    This endpoint allows execution of market orders in either paper trading or real trading mode.
+    For real trading, API credentials must be provided in the request.
+    """
+    try:
+        # Validate trading mode
+        if not unified_execution_service.validate_trading_mode(request.trading_mode):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid trading mode: {request.trading_mode}. Must be 'paper' or 'real'"
+            )
+        
+        # Execute the order
+        order_details = await unified_execution_service.execute_market_order(
+            user_id=request.user_id,
+            symbol=request.symbol,
+            side=request.side,
+            quantity=request.quantity,
+            trading_mode=request.trading_mode,
+            api_key=request.api_key,
+            api_secret=request.api_secret
+        )
+        
+        return order_details
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to execute market order: {str(e)}"
+        )
+
+@router.get("/paper-balances/{user_id}", status_code=status.HTTP_200_OK)
+async def get_paper_trading_balances(
+    user_id: UUID,
+    unified_execution_service: Annotated[UnifiedOrderExecutionService, Depends(UnifiedOrderExecutionService)]
+):
+    """
+    Get current virtual balances for paper trading.
+    
+    Returns the current virtual balances maintained by the paper trading service.
+    """
+    try:
+        balances = await unified_execution_service.get_virtual_balances()
+        return {
+            "user_id": user_id,
+            "trading_mode": "paper",
+            "balances": balances
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve paper trading balances: {str(e)}"
+        )
+
+@router.post("/paper-balances/{user_id}/reset", status_code=status.HTTP_200_OK)
+async def reset_paper_trading_balances(
+    user_id: UUID,
+    initial_capital: float = Query(..., gt=0, description="Initial capital amount (must be positive)"),
+    unified_execution_service: Annotated[UnifiedOrderExecutionService, Depends(UnifiedOrderExecutionService)]
+):
+    """
+    Reset paper trading balances to initial capital.
+    
+    This endpoint allows resetting the virtual balances for paper trading to a new initial capital amount.
+    """
+    try:
+        unified_execution_service.reset_virtual_balances(initial_capital)
+        return {
+            "user_id": user_id,
+            "trading_mode": "paper",
+            "message": f"Paper trading balances reset to {initial_capital} USDT",
+            "new_balance": initial_capital
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to reset paper trading balances: {str(e)}"
+        )
+
+@router.get("/supported-modes", status_code=status.HTTP_200_OK)
+async def get_supported_trading_modes(
+    unified_execution_service: Annotated[UnifiedOrderExecutionService, Depends(UnifiedOrderExecutionService)]
+):
+    """
+    Get list of supported trading modes.
+    
+    Returns the available trading modes supported by the system.
+    """
+    try:
+        supported_modes = unified_execution_service.get_supported_trading_modes()
+        return {
+            "supported_trading_modes": supported_modes,
+            "description": {
+                "paper": "Simulated trading with virtual funds",
+                "real": "Live trading with real funds via Binance API"
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve supported trading modes: {str(e)}"
         )
