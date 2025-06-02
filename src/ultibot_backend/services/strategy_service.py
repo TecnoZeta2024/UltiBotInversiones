@@ -8,10 +8,13 @@ import json
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from fastapi import HTTPException
 from pydantic import ValidationError
+
+if TYPE_CHECKING:
+    from .configuration_service import ConfigurationService
 
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 from src.ultibot_backend.core.domain_models.trading_strategy_models import (
@@ -26,6 +29,10 @@ from src.ultibot_backend.core.domain_models.trading_strategy_models import (
     GridTradingParameters,
     DCAInvestingParameters,
 )
+from src.ultibot_backend.core.domain_models.user_configuration_models import (
+    AIStrategyConfiguration,
+    ConfidenceThresholds,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -33,13 +40,19 @@ logger = logging.getLogger(__name__)
 class StrategyService:
     """Service for managing trading strategy configurations."""
     
-    def __init__(self, persistence_service: SupabasePersistenceService):
-        """Initialize the strategy service with persistence service dependency.
+    def __init__(
+        self, 
+        persistence_service: SupabasePersistenceService,
+        configuration_service: Optional['ConfigurationService'] = None
+    ):
+        """Initialize the strategy service with dependencies.
         
         Args:
             persistence_service: The persistence service for database operations.
+            configuration_service: The configuration service for AI profile validation.
         """
         self.persistence_service = persistence_service
+        self.configuration_service = configuration_service
     
     async def create_strategy_config(
         self, 
@@ -73,6 +86,18 @@ class StrategyService:
             
             # Validate and create TradingStrategyConfig instance
             strategy_config = TradingStrategyConfig(**strategy_data_copy)
+            
+            # Validate AI profile if specified
+            if strategy_config.ai_analysis_profile_id and self.configuration_service:
+                ai_profile_exists = await self.configuration_service.validate_ai_profile_exists(
+                    user_id, 
+                    strategy_config.ai_analysis_profile_id
+                )
+                if not ai_profile_exists:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"AI analysis profile '{strategy_config.ai_analysis_profile_id}' does not exist"
+                    )
             
             # Convert to database format
             db_data = self._strategy_config_to_db_format(strategy_config)
@@ -211,6 +236,18 @@ class StrategyService:
             
             # Validate updated configuration
             strategy_config = TradingStrategyConfig(**strategy_data_copy)
+            
+            # Validate AI profile if specified
+            if strategy_config.ai_analysis_profile_id and self.configuration_service:
+                ai_profile_exists = await self.configuration_service.validate_ai_profile_exists(
+                    user_id, 
+                    strategy_config.ai_analysis_profile_id
+                )
+                if not ai_profile_exists:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"AI analysis profile '{strategy_config.ai_analysis_profile_id}' does not exist"
+                    )
             
             # Convert to database format and save
             db_data = self._strategy_config_to_db_format(strategy_config)
@@ -790,3 +827,155 @@ class StrategyService:
         except Exception as e:
             logger.error(f"Database error getting active {mode} strategies for user {user_id}: {e}")
             raise
+    
+    # AI Configuration Integration Methods
+    
+    async def validate_ai_profile_for_strategy(
+        self, 
+        strategy: TradingStrategyConfig
+    ) -> bool:
+        """Validate that a strategy's AI profile exists and is valid.
+        
+        Args:
+            strategy: The trading strategy configuration.
+            
+        Returns:
+            True if AI profile is valid or not required, False if invalid.
+        """
+        if not strategy.ai_analysis_profile_id:
+            # No AI profile specified - this is valid (strategy can run without AI)
+            return True
+        
+        if not self.configuration_service:
+            logger.warning("Configuration service not available for AI profile validation")
+            return False
+        
+        try:
+            ai_config = await self.configuration_service.get_ai_strategy_configuration(
+                strategy.user_id, 
+                strategy.ai_analysis_profile_id
+            )
+            return ai_config is not None
+        except Exception as e:
+            logger.error(f"Error validating AI profile {strategy.ai_analysis_profile_id}: {e}")
+            return False
+    
+    async def get_ai_configuration_for_strategy(
+        self, 
+        strategy: TradingStrategyConfig
+    ) -> Optional[AIStrategyConfiguration]:
+        """Get AI configuration for a strategy.
+        
+        Args:
+            strategy: The trading strategy configuration.
+            
+        Returns:
+            The AIStrategyConfiguration if found and valid, None otherwise.
+        """
+        if not strategy.ai_analysis_profile_id or not self.configuration_service:
+            return None
+        
+        try:
+            return await self.configuration_service.get_ai_strategy_configuration(
+                strategy.user_id, 
+                strategy.ai_analysis_profile_id
+            )
+        except Exception as e:
+            logger.error(f"Error getting AI configuration for strategy {strategy.id}: {e}")
+            return None
+    
+    async def get_effective_confidence_thresholds_for_strategy(
+        self, 
+        strategy: TradingStrategyConfig
+    ) -> Optional[ConfidenceThresholds]:
+        """Get effective confidence thresholds for a strategy.
+        
+        Args:
+            strategy: The trading strategy configuration.
+            
+        Returns:
+            Effective confidence thresholds.
+        """
+        if not self.configuration_service:
+            return None
+        
+        try:
+            return await self.configuration_service.get_effective_confidence_thresholds(
+                strategy.user_id, 
+                strategy.ai_analysis_profile_id
+            )
+        except Exception as e:
+            logger.error(f"Error getting confidence thresholds for strategy {strategy.id}: {e}")
+            return None
+    
+    async def strategy_requires_ai_analysis(self, strategy: TradingStrategyConfig) -> bool:
+        """Check if a strategy requires AI analysis.
+        
+        Args:
+            strategy: The trading strategy configuration.
+            
+        Returns:
+            True if strategy requires AI analysis, False otherwise.
+        """
+        if not strategy.ai_analysis_profile_id:
+            return False
+        
+        ai_config = await self.get_ai_configuration_for_strategy(strategy)
+        return ai_config is not None
+    
+    async def strategy_can_operate_autonomously(self, strategy: TradingStrategyConfig) -> bool:
+        """Check if a strategy can operate without AI analysis.
+        
+        Args:
+            strategy: The trading strategy configuration.
+            
+        Returns:
+            True if strategy can operate autonomously, False if it depends on AI.
+        """
+        # If no AI profile is specified, strategy operates autonomously
+        if not strategy.ai_analysis_profile_id:
+            return True
+        
+        # If AI profile is specified but not found/invalid, 
+        # strategy should still be able to operate (degraded mode)
+        ai_config = await self.get_ai_configuration_for_strategy(strategy)
+        if not ai_config:
+            logger.warning(
+                f"Strategy {strategy.id} has AI profile {strategy.ai_analysis_profile_id} "
+                "but configuration not found. Operating in autonomous mode."
+            )
+            return True
+        
+        # If AI config exists, check if it's optional or required
+        # For now, AI is always optional - strategies can fall back to autonomous operation
+        return True
+    
+    async def get_strategies_with_valid_ai_config(
+        self, 
+        user_id: str,
+        mode: Optional[str] = None
+    ) -> List[TradingStrategyConfig]:
+        """Get strategies with valid AI configurations.
+        
+        Args:
+            user_id: The user identifier.
+            mode: Optional mode filter ("paper" or "real").
+            
+        Returns:
+            List of strategies with valid AI configurations.
+        """
+        # Get all strategies
+        if mode:
+            strategies = await self.get_active_strategies(user_id, mode)
+        else:
+            strategies = await self.list_strategy_configs(user_id)
+        
+        # Filter strategies with valid AI configurations
+        valid_ai_strategies = []
+        for strategy in strategies:
+            if strategy.ai_analysis_profile_id:
+                is_valid = await self.validate_ai_profile_for_strategy(strategy)
+                if is_valid:
+                    valid_ai_strategies.append(strategy)
+        
+        return valid_ai_strategies

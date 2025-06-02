@@ -1562,3 +1562,117 @@ Strategy configurations are persisted to the `trading_strategy_configs` table wi
 - Comprehensive indexing for performance
 - Referential integrity with user configurations
 - Support for strategy versioning and dependencies
+
+## AI Integration Components (Story 5.2)
+
+The following components have been implemented as part of Story 5.2 for AI-strategy integration:
+
+### User Configuration Models
+
+#### UserConfiguration
+Central configuration model containing all user settings including AI strategy configurations.
+
+#### AIStrategyConfiguration
+Defines how AI analysis should be performed for specific strategies:
+- **id**: Unique identifier referenced by `TradingStrategyConfig.ai_analysis_profile_id`
+- **name**: Descriptive name for the AI profile
+- **gemini_prompt_template**: Template with placeholders for dynamic prompt generation
+- **tools_available_to_gemini**: List of LangChain tools available to this profile
+- **confidence_thresholds**: Separate thresholds for paper and real trading
+- **output_parser_config**: Configuration for parsing Gemini responses
+
+#### ConfidenceThresholds
+Defines confidence thresholds for different trading modes:
+- **paper_trading**: Threshold for paper trading mode (typically lower)
+- **real_trading**: Threshold for real trading mode (typically higher)
+
+### Opportunity and Trade Models
+
+#### Opportunity
+Represents a trading opportunity that can be analyzed by AI:
+- **initial_signal**: Contains the original signal data
+- **ai_analysis**: Results from AI analysis (if performed)
+- **status**: Tracks the opportunity through various stages
+- Support for investigation workflow and post-trade feedback
+
+#### AIAnalysis
+Contains results from AI analysis of an opportunity:
+- **calculated_confidence**: AI's confidence level (0-1)
+- **suggested_action**: Recommended action (buy, sell, hold, etc.)
+- **reasoning_ai**: AI's reasoning for the recommendation
+- **recommended_trade_params**: Suggested trade parameters
+- **data_verification**: Results from data verification tools
+
+#### Trade
+Enhanced trade model with AI influence tracking:
+- **ai_influence_details**: Comprehensive tracking of AI involvement
+- **ai_analysis_confidence**: Legacy field for backward compatibility
+- Methods for managing AI influence and prediction accuracy
+
+#### AIInfluenceDetails
+Detailed tracking of AI influence on trades:
+- **ai_analysis_profile_id**: Which AI profile was used
+- **ai_confidence**: AI's confidence level
+- **ai_suggested_action**: What AI recommended
+- **ai_reasoning_summary**: Summary of AI's reasoning
+- **decision_override_by_user**: Whether user overrode AI recommendation
+- **ai_prediction_accuracy**: Accuracy evaluation after trade completion
+
+### Service Layer Components
+
+#### ConfigurationService
+Manages user configuration settings:
+- CRUD operations for user configurations
+- AI strategy configuration management
+- Confidence threshold resolution
+- AI profile validation
+
+#### AIOrchestrator
+Orchestrates AI analysis using Google Gemini:
+- **analyze_opportunity_with_strategy_context_async**: Main analysis method
+- Dynamic prompt generation based on strategy and opportunity
+- Integration with LangChain tools
+- Comprehensive logging and auditing
+
+#### TradingEngine (Enhanced)
+Enhanced trading engine with AI integration:
+- Evaluates opportunities using strategy context
+- Integrates AI analysis results with strategy logic
+- Supports autonomous operation when AI is not configured
+- Creates trades with proper AI influence tracking
+- Comprehensive decision logging and auditing
+
+### AI Analysis Workflow
+
+1. **Strategy Evaluation**: TradingEngine checks if strategy requires AI analysis
+2. **AI Configuration Loading**: Loads AI profile from user configuration
+3. **Dynamic Prompt Generation**: AIOrchestrator builds context-aware prompt
+4. **Gemini Analysis**: Executes AI analysis with configured tools
+5. **Decision Integration**: TradingEngine processes AI results with strategy logic
+6. **Trade Creation**: Creates trade with AI influence tracking
+7. **Logging and Auditing**: Comprehensive logging throughout the process
+
+### Autonomous Operation Support
+
+For strategies configured without AI:
+- **Autonomous Evaluation**: Strategies operate using their configured parameters
+- **No AI Dependency**: Full functionality without AI service calls
+- **Performance Optimization**: Fast evaluation without AI overhead
+- **Fallback Capability**: AI strategies can fall back to autonomous mode
+
+### Logging and Auditing
+
+Comprehensive logging system for AI integration:
+- **Prompt Summaries**: Truncated prompts for auditing without data exposure
+- **AI Analysis Results**: Detailed results logging with performance metrics
+- **Decision Tracking**: Complete decision audit trail
+- **AI Influence Documentation**: Clear tracking of AI involvement in trades
+- **Error Handling**: Detailed error logging and fallback behavior
+
+### Database Schema Updates
+
+Enhanced database schemas to support AI integration:
+- **user_configurations**: Stores AI strategy configurations and thresholds
+- **opportunities**: Enhanced with AI analysis results
+- **trades**: Enhanced with AI influence tracking
+- All schemas support JSONB for flexible AI-related data storage
