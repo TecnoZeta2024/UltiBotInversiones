@@ -17,7 +17,8 @@ from src.ultibot_backend.services.unified_order_execution_service import Unified
 from src.ultibot_backend.services.trading_engine_service import TradingEngine
 from src.ultibot_backend.services.strategy_service import StrategyService
 from src.ultibot_backend.services.configuration_service import ConfigurationService
-from src.ultibot_backend.services.ai_orchestrator_service import AIOrchestratorService # Importar AIOrchestratorService
+from src.ultibot_backend.services.performance_service import PerformanceService # Importar PerformanceService
+from src.ultibot_backend.services.ai_orchestrator_service import AIOrchestrator # Cambiado de AIOrchestratorService
 from src.ultibot_backend.adapters.mobula_adapter import MobulaAdapter # Importar MobulaAdapter
 from langchain_google_genai import ChatGoogleGenerativeAI # Importar ChatGoogleGenerativeAI
 from src.shared.data_types import ServiceName, UserConfiguration
@@ -37,10 +38,12 @@ market_data_service: Optional[MarketDataService] = None
 persistence_service: Optional[SupabasePersistenceService] = None
 portfolio_service: Optional[PortfolioService] = None
 config_service: Optional[ConfigService] = None
-order_execution_service: Optional[OrderExecutionService] = None # Añadir OrderExecutionService
-paper_order_execution_service: Optional[PaperOrderExecutionService] = None # Añadir PaperOrderExecutionService
-trading_engine_service: Optional[TradingEngine] = None # Cambiar a TradingEngine
-ai_orchestrator_service: Optional[AIOrchestratorService] = None # Añadir AIOrchestratorService
+order_execution_service: Optional[OrderExecutionService] = None
+paper_order_execution_service: Optional[PaperOrderExecutionService] = None
+unified_order_execution_service: Optional[UnifiedOrderExecutionService] = None # Añadido
+trading_engine_service: Optional[TradingEngine] = None
+performance_service: Optional[PerformanceService] = None # Añadir PerformanceService
+ai_orchestrator: Optional[AIOrchestrator] = None # Renombrado y tipo cambiado
 mobula_adapter: Optional[MobulaAdapter] = None # Añadir MobulaAdapter
 llm_provider: Optional[ChatGoogleGenerativeAI] = None # Añadir llm_provider
 user_configuration: Optional[UserConfiguration] = None # Para almacenar la configuración cargada
@@ -93,13 +96,23 @@ def get_unified_order_execution_service() -> UnifiedOrderExecutionService:
         raise RuntimeError("UnifiedOrderExecutionService no inicializado.")
     return unified_order_execution_service
 
+def get_strategy_service() -> StrategyService: # Añadir getter para StrategyService
+    if strategy_service is None:
+        raise RuntimeError("StrategyService no inicializado.")
+    return strategy_service
+
+def get_performance_service() -> PerformanceService:
+    if performance_service is None:
+        raise RuntimeError("PerformanceService no inicializado.")
+    return performance_service
+
 @app.on_event("startup")
 async def startup_event():
     """
     Evento que se ejecuta al iniciar la aplicación FastAPI.
     Inicializa servicios y realiza verificaciones iniciales.
     """
-    global credential_service, notification_service, binance_adapter, market_data_service, persistence_service, portfolio_service, config_service, order_execution_service, paper_order_execution_service, trading_engine_service, ai_orchestrator_service, mobula_adapter, llm_provider, user_configuration
+    global credential_service, notification_service, binance_adapter, market_data_service, persistence_service, portfolio_service, config_service, order_execution_service, paper_order_execution_service, unified_order_execution_service, trading_engine_service, strategy_service, performance_service, ai_orchestrator, mobula_adapter, llm_provider, user_configuration # Añadir strategy_service y performance_service a globales
     logger.info("Iniciando UltiBot Backend...")
     
     from src.ultibot_backend.app_config import settings # Importar settings aquí para asegurar que esté disponible
@@ -159,14 +172,23 @@ async def startup_event():
     )
 
     # Inicializar StrategyService y ConfigurationService
-    strategy_service = StrategyService(persistence_service=persistence_service)
+    # strategy_service ya se declara globalmente, solo necesitamos asignarle la instancia
+    strategy_service_instance = StrategyService(persistence_service=persistence_service)
+    strategy_service = strategy_service_instance # Asignar a la variable global
+    
     configuration_service = ConfigurationService(persistence_service=persistence_service)
-    # Inicializar TradingEngine
-    trading_engine_service = TradingEngine(
-        strategy_service=strategy_service,
-        configuration_service=configuration_service,
-        ai_orchestrator=ai_orchestrator_service
-    )
+    
+    # Inicializar PerformanceService
+    if persistence_service and strategy_service:
+        performance_service_instance = PerformanceService(
+            persistence_service=persistence_service, 
+            strategy_service=strategy_service
+        )
+        performance_service = performance_service_instance # Asignar a la variable global
+        logger.info("PerformanceService inicializado.")
+    else:
+        logger.error("No se pudo inicializar PerformanceService debido a dependencias faltantes (persistence_service o strategy_service).")
+        performance_service = None
 
     # Inicializar MobulaAdapter
     mobula_adapter = MobulaAdapter()
@@ -178,27 +200,25 @@ async def startup_event():
         logger.info("LLM Provider (ChatGoogleGenerativeAI) inicializado.")
     except Exception as e:
         logger.error(f"Error al inicializar LLM Provider: {e}", exc_info=True)
-        # Considerar si la aplicación debe detenerse si el LLM no se puede inicializar
-        llm_provider = None # Asegurar que es None si falla
+        llm_provider = None 
 
-    # Inicializar AIOrchestratorService
+    # Inicializar AIOrchestrator ANTES de TradingEngine
+    # Aunque el __init__ es simple, mantenemos la estructura condicional por si futuras dependencias se añaden al constructor.
+    # Las dependencias listadas en el if son conceptuales para su funcionamiento, no necesariamente para su __init__.
     if persistence_service and credential_service and config_service and llm_provider and mobula_adapter and binance_adapter and notification_service:
-        ai_orchestrator_service = AIOrchestratorService(
-            config_service=config_service,
-            credential_service=credential_service,
-            persistence_service=persistence_service,
-            llm_provider=llm_provider,
-            mobula_adapter=mobula_adapter,
-            binance_adapter=binance_adapter,
-            notification_service=notification_service
-        )
-        logger.info("AIOrchestratorService inicializado.")
-        # Llamar a async_init para cargar herramientas MCP
-        await ai_orchestrator_service.async_init(user_id=str(FIXED_USER_ID))
-        logger.info(f"AIOrchestratorService async_init completado para el usuario {FIXED_USER_ID}.")
+        ai_orchestrator_instance = AIOrchestrator() 
+        ai_orchestrator = ai_orchestrator_instance # Asignar a la variable global
+        logger.info("AIOrchestrator inicializado.")
     else:
-        logger.error("No se pudo inicializar AIOrchestratorService debido a dependencias faltantes.")
+        logger.error("AIOrchestrator no se pudo inicializar debido a que algunas dependencias conceptuales clave (como llm_provider) no están disponibles.")
+        ai_orchestrator = None
 
+    # Inicializar TradingEngine
+    trading_engine_service = TradingEngine(
+        strategy_service=strategy_service, 
+        configuration_service=configuration_service,
+        ai_orchestrator=ai_orchestrator # Ahora ai_orchestrator ya está (o debería estar) inicializado
+    )
 
     logger.info("Todos los servicios principales inicializados.")
 
@@ -260,7 +280,7 @@ async def read_root():
     return {"message": "Welcome to UltiBot Backend"}
 
 # Aquí se incluirán los routers de api/v1/endpoints
-from src.ultibot_backend.api.v1.endpoints import telegram_status, binance_status, config, notifications, reports, portfolio, trades
+from src.ultibot_backend.api.v1.endpoints import telegram_status, binance_status, config, notifications, reports, portfolio, trades, performance
 app.include_router(telegram_status.router, prefix="/api/v1", tags=["telegram"]) # Añadir tags
 app.include_router(binance_status.router, prefix="/api/v1", tags=["binance"]) # Incluir el router de Binance
 app.include_router(config.router, prefix="/api/v1", tags=["config"]) # Incluir el router de configuración
@@ -268,6 +288,7 @@ app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["
 app.include_router(reports.router, prefix="/api/v1", tags=["reports"]) # Incluir el router de reportes
 app.include_router(portfolio.router, prefix="/api/v1/portfolio", tags=["portfolio"]) # Incluir el router de portafolio
 app.include_router(trades.router, prefix="/api/v1/trades", tags=["trades"]) # Incluir el router de operaciones
+app.include_router(performance.router, prefix="/api/v1/performance", tags=["performance"]) # Incluir el router de performance
 
 # Importar y incluir el router de oportunidades por separado para depuración
 from src.ultibot_backend.api.v1.endpoints import opportunities

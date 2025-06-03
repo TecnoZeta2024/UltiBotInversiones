@@ -569,3 +569,28 @@ class UltiBotAPIClient:
             
         logger.info(f"Ejecutando orden de mercado {side} {quantity} {symbol} en modo {trading_mode}")
         return await self._make_request("POST", "/api/v1/trading/market-order", json=request_data)
+
+    async def get_strategy_performance(
+        self,
+        user_id: UUID, # Asumiendo que el performance es por usuario
+        mode: Optional[str] = None  # 'paper', 'real', o None para 'all'
+    ) -> List[Dict[str, Any]]:
+        """
+        Obtiene el resumen de desempeño por estrategia.
+
+        Args:
+            user_id: ID del usuario para el cual obtener el desempeño.
+            mode: Modo de operación para filtrar ('paper', 'real'). 
+                  Si es None, el backend podría devolver todos los modos o un default.
+
+        Returns:
+            Lista de diccionarios, cada uno con el desempeño de una estrategia.
+            Ej: [{"strategyName": "Scalping BTC", "mode": "paper", "totalOperations": 10, ...}]
+        """
+        endpoint = f"/api/v1/performance/strategies/{user_id}"
+        params: Dict[str, Any] = {}
+        if mode:
+            params["mode"] = mode
+        
+        logger.info(f"Obteniendo desempeño de estrategias para usuario {user_id} con modo: {mode if mode else 'todos'}")
+        return await self._make_request("GET", endpoint, params=params)

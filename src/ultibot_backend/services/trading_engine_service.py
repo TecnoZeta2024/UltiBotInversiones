@@ -578,6 +578,388 @@ class TradingEngine:
                 f"Decision warnings for {decision.decision_id}: {'; '.join(decision.warnings)}"
             )
     
+    async def process_opportunity_with_active_strategies(
+        self,
+        opportunity: Opportunity,
+        user_id: str,
+        mode: str = "paper",  # "paper" or "real"
+    ) -> List[TradingDecision]:
+        """Process an opportunity using only active and applicable strategies.
+        
+        This is the main method implementing Story 5.4 - it ensures that only
+        active strategies are considered for opportunity evaluation.
+        
+        Args:
+            opportunity: The opportunity to process.
+            user_id: The user identifier.
+            mode: Trading mode ("paper" or "real").
+            
+        Returns:
+            List of trading decisions from applicable active strategies.
+            
+        Raises:
+            HTTPException: If processing fails.
+        """
+        try:
+            logger.info(
+                f"Processing opportunity {opportunity.id} for user {user_id} in {mode} mode"
+            )
+            
+            # AC1: Query active strategies before processing any opportunity
+            active_strategies = await self.strategy_service.get_active_strategies(user_id, mode)
+            
+            if not active_strategies:
+                logger.info(f"No active {mode} strategies found for user {user_id}")
+                await self._update_opportunity_status(
+                    opportunity, 
+                    OpportunityStatus.REJECTED_BY_AI,
+                    "no_active_strategies",
+                    f"No active strategies configured for {mode} mode"
+                )
+                return []
+            
+            logger.info(f"Found {len(active_strategies)} active {mode} strategies")
+            
+            # AC2: Filter and determine applicable strategies
+            applicable_strategies = await self._filter_applicable_strategies(
+                opportunity, active_strategies
+            )
+            
+            if not applicable_strategies:
+                logger.info(f"No applicable strategies found for opportunity {opportunity.id}")
+                await self._update_opportunity_status(
+                    opportunity,
+                    OpportunityStatus.REJECTED_BY_AI,
+                    "no_applicable_strategies",
+                    "No active strategies are applicable to this opportunity"
+                )
+                return []
+            
+            logger.info(f"Found {len(applicable_strategies)} applicable strategies")
+            
+            # AC3: Process opportunity with each applicable strategy
+            trading_decisions = []
+            for strategy in applicable_strategies:
+                try:
+                    logger.info(f"Processing opportunity with strategy {strategy.config_name}")
+                    
+                    decision = await self.evaluate_opportunity_with_strategy(
+                        opportunity, strategy, mode
+                    )
+                    
+                    trading_decisions.append(decision)
+                    
+                    # Log the trading decision for auditing
+                    await self.log_trading_decision(decision)
+                    
+                except Exception as e:
+                    logger.error(f"Error processing strategy {strategy.id}: {e}")
+                    # Continue with other strategies even if one fails
+                    continue
+            
+            # AC4: Consolidate decisions and determine execution
+            execution_results = await self._consolidate_and_execute_decisions(
+                trading_decisions, opportunity, mode, user_id
+            )
+            
+            logger.info(
+                f"Completed processing opportunity {opportunity.id}. "
+                f"Generated {len(trading_decisions)} decisions, "
+                f"executed {len(execution_results)} trades"
+            )
+            
+            return trading_decisions
+            
+        except Exception as e:
+            logger.error(f"Error processing opportunity {opportunity.id}: {e}")
+            await self._update_opportunity_status(
+                opportunity,
+                OpportunityStatus.ERROR_IN_PROCESSING,
+                "processing_error",
+                f"Error during processing: {str(e)}"
+            )
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to process opportunity: {str(e)}"
+            )
+    
+    async def _filter_applicable_strategies(
+        self,
+        opportunity: Opportunity,
+        strategies: List[TradingStrategyConfig],
+    ) -> List[TradingStrategyConfig]:
+        """Filter strategies to find those applicable to the opportunity.
+        
+        Args:
+            opportunity: The opportunity to evaluate.
+            strategies: List of active strategies to filter.
+            
+        Returns:
+            List of strategies applicable to the opportunity.
+        """
+        applicable_strategies = []
+        
+        for strategy in strategies:
+            try:
+                is_applicable = await self._is_strategy_applicable_to_opportunity(
+                    opportunity, strategy
+                )
+                
+                if is_applicable:
+                    applicable_strategies.append(strategy)
+                    logger.debug(f"Strategy {strategy.config_name} is applicable to {opportunity.symbol}")
+                else:
+                    logger.debug(f"Strategy {strategy.config_name} is not applicable to {opportunity.symbol}")
+                    
+            except Exception as e:
+                logger.warning(f"Error evaluating applicability of strategy {strategy.id}: {e}")
+                continue
+        
+        return applicable_strategies
+    
+    async def _is_strategy_applicable_to_opportunity(
+        self,
+        opportunity: Opportunity,
+        strategy: TradingStrategyConfig,
+    ) -> bool:
+        """Check if a strategy is applicable to an opportunity.
+        
+        Args:
+            opportunity: The opportunity to check.
+            strategy: The strategy to evaluate.
+            
+        Returns:
+            True if strategy is applicable, False otherwise.
+        """
+        # If no applicability rules defined, strategy applies to all opportunities
+        if not strategy.applicability_rules:
+            logger.debug(f"Strategy {strategy.config_name} has no applicability rules - applies to all")
+            return True
+        
+        rules = strategy.applicability_rules
+        
+        # Check explicit pairs
+        if hasattr(rules, 'explicit_pairs') and rules.explicit_pairs:
+            if opportunity.symbol not in rules.explicit_pairs:
+                logger.debug(f"Symbol {opportunity.symbol} not in explicit pairs for {strategy.config_name}")
+                return False
+        
+        # Check include all spot (if pair is spot)
+        if hasattr(rules, 'include_all_spot') and rules.include_all_spot:
+            # For now, assume all symbols are spot (future enhancement: detect futures/options)
+            logger.debug(f"Strategy {strategy.config_name} includes all spot pairs")
+            return True
+        
+        # Check dynamic filters if defined
+        if hasattr(rules, 'dynamic_filter') and rules.dynamic_filter:
+            # For v1.0, implement basic dynamic filtering
+            # Future enhancement: integrate with market data service for real-time filtering
+            logger.debug(f"Dynamic filtering not fully implemented for strategy {strategy.config_name}")
+            return True
+        
+        # If we get here and explicit_pairs was defined but didn't match, reject
+        if hasattr(rules, 'explicit_pairs') and rules.explicit_pairs:
+            return False
+        
+        # Default: strategy is applicable
+        return True
+    
+    async def _consolidate_and_execute_decisions(
+        self,
+        trading_decisions: List[TradingDecision],
+        opportunity: Opportunity,
+        mode: str,
+        user_id: str,
+    ) -> List[Trade]:
+        """Consolidate trading decisions and execute approved trades.
+        
+        Args:
+            trading_decisions: List of decisions from applicable strategies.
+            opportunity: The opportunity being processed.
+            mode: Trading mode ("paper" or "real").
+            user_id: The user identifier.
+            
+        Returns:
+            List of executed trades.
+        """
+        executed_trades = []
+        
+        # Filter decisions that recommend execution
+        execution_decisions = [
+            decision for decision in trading_decisions 
+            if decision.decision == "execute_trade"
+        ]
+        
+        if not execution_decisions:
+            logger.info(f"No strategies recommended execution for opportunity {opportunity.id}")
+            await self._update_opportunity_status(
+                opportunity,
+                OpportunityStatus.REJECTED_BY_AI,
+                "no_execution_signals",
+                "No active strategies generated execution signals"
+            )
+            return []
+        
+        # AC4: Check confidence thresholds and execute trades
+        for decision in execution_decisions:
+            try:
+                # Get the strategy that made this decision
+                strategy = await self.strategy_service.get_strategy_config(
+                    decision.strategy_id, user_id
+                )
+                
+                if not strategy:
+                    logger.warning(f"Strategy {decision.strategy_id} not found")
+                    continue
+                
+                # Check confidence threshold
+                confidence_thresholds = await self.strategy_service.get_effective_confidence_thresholds_for_strategy(strategy)
+                threshold = self._get_confidence_threshold_for_mode(confidence_thresholds, mode)
+                
+                if decision.confidence < threshold:
+                    logger.info(
+                        f"Decision {decision.decision_id} confidence {decision.confidence:.3f} "
+                        f"below threshold {threshold:.3f} for {mode} mode"
+                    )
+                    continue
+                
+                # AC4.3: Execute based on mode
+                trade = await self._execute_decision_by_mode(
+                    decision, opportunity, strategy, mode, user_id
+                )
+                
+                if trade:
+                    executed_trades.append(trade)
+                    
+            except Exception as e:
+                logger.error(f"Error executing decision {decision.decision_id}: {e}")
+                continue
+        
+        # Update opportunity status based on execution results
+        if executed_trades:
+            if mode == "paper":
+                await self._update_opportunity_status(
+                    opportunity,
+                    OpportunityStatus.CONVERTED_TO_TRADE_PAPER,
+                    "trades_executed",
+                    f"Executed {len(executed_trades)} paper trades"
+                )
+            else:
+                await self._update_opportunity_status(
+                    opportunity,
+                    OpportunityStatus.CONVERTED_TO_TRADE_REAL,
+                    "trades_executed", 
+                    f"Executed {len(executed_trades)} real trades"
+                )
+        else:
+            await self._update_opportunity_status(
+                opportunity,
+                OpportunityStatus.REJECTED_BY_AI,
+                "confidence_too_low",
+                "All strategy decisions below confidence threshold"
+            )
+        
+        return executed_trades
+    
+    async def _execute_decision_by_mode(
+        self,
+        decision: TradingDecision,
+        opportunity: Opportunity,
+        strategy: TradingStrategyConfig,
+        mode: str,
+        user_id: str,
+    ) -> Optional[Trade]:
+        """Execute a trading decision based on the mode (paper or real).
+        
+        Args:
+            decision: The trading decision to execute.
+            opportunity: The opportunity being processed.
+            strategy: The strategy that generated the decision.
+            mode: Trading mode ("paper" or "real").
+            user_id: The user identifier.
+            
+        Returns:
+            Created Trade if executed, None otherwise.
+        """
+        if mode == "paper":
+            # Paper trading: Create trade directly
+            trade = await self.create_trade_from_decision(decision, opportunity, strategy)
+            if trade:
+                logger.info(f"Created paper trade {trade.id} from decision {decision.decision_id}")
+            return trade
+        
+        else:  # mode == "real"
+            # Real trading: Check if user confirmation is required
+            user_config = await self.configuration_service.get_user_configuration(user_id)
+            requires_confirmation = self._requires_user_confirmation_for_real_trade(user_config)
+            
+            if requires_confirmation:
+                # Update opportunity to pending confirmation
+                await self._update_opportunity_status(
+                    opportunity,
+                    OpportunityStatus.PENDING_USER_CONFIRMATION_REAL,
+                    "awaiting_user_confirmation",
+                    f"Real trade requires user confirmation for strategy {strategy.config_name}"
+                )
+                
+                # TODO: Notify UI about pending confirmation
+                logger.info(f"Real trade requires user confirmation for opportunity {opportunity.id}")
+                return None
+            
+            else:
+                # Execute real trade directly
+                trade = await self.create_trade_from_decision(decision, opportunity, strategy)
+                if trade:
+                    # TODO: Send to OrderExecutionService for real execution
+                    logger.info(f"Created real trade {trade.id} from decision {decision.decision_id}")
+                return trade
+    
+    def _requires_user_confirmation_for_real_trade(self, user_config) -> bool:
+        """Check if user confirmation is required for real trades.
+        
+        Args:
+            user_config: User configuration object.
+            
+        Returns:
+            True if confirmation is required, False otherwise.
+        """
+        if not user_config or not hasattr(user_config, 'real_trading_settings'):
+            return True  # Default to requiring confirmation
+        
+        real_settings = user_config.real_trading_settings
+        if not real_settings:
+            return True
+        
+        # For v1.0, always require confirmation for safety
+        # Future enhancement: make this configurable
+        return True
+    
+    async def _update_opportunity_status(
+        self,
+        opportunity: Opportunity,
+        status: OpportunityStatus,
+        reason_code: str,
+        reason_text: str,
+    ) -> None:
+        """Update opportunity status with reason.
+        
+        Args:
+            opportunity: The opportunity to update.
+            status: New status.
+            reason_code: Reason code for the status change.
+            reason_text: Human-readable reason for the status change.
+        """
+        opportunity.status = status
+        opportunity.status_reason_code = reason_code
+        opportunity.status_reason_text = reason_text
+        opportunity.updated_at = datetime.now(timezone.utc)
+        
+        logger.info(
+            f"Updated opportunity {opportunity.id} status to {status.value}: {reason_text}"
+        )
+        
+        # TODO: Persist opportunity status update to database
+
     async def create_trade_from_decision(
         self, 
         decision: TradingDecision, 
@@ -599,18 +981,24 @@ class TradingEngine:
             return None
         
         try:
+            # Determine trade side from opportunity signal
+            trade_side = self._determine_trade_side_from_opportunity(opportunity)
+            
+            # Determine trade mode from decision context or default to paper
+            trade_mode = getattr(decision, 'mode', 'paper')
+            
             # Create basic trade structure
             trade = Trade(
                 id=str(uuid.uuid4()),
                 user_id=strategy.user_id,
-                mode="paper",  # Default to paper mode for now
+                mode=trade_mode,
                 symbol=opportunity.symbol,
-                side="buy",  # Default side, should be determined from opportunity/strategy
-                strategy_id=strategy.id,
+                side=trade_side,
+                strategy_id=strategy.id,  # AC5: Ensure strategy_id is populated
                 opportunity_id=opportunity.id,
                 position_status="pending_entry_conditions",
                 entry_order=self._create_entry_order_from_decision(decision, opportunity),
-                notes=f"Trade created from decision {decision.decision_id}. {decision.reasoning}",
+                notes=f"Trade created from strategy '{strategy.config_name}' (ID: {strategy.id}) via decision {decision.decision_id}. {decision.reasoning}",
                 created_at=datetime.now(timezone.utc),
             )
             
@@ -821,3 +1209,23 @@ class TradingEngine:
             summary_parts.append(f"max_tokens={ai_config.max_context_window_tokens}")
         
         return ", ".join(summary_parts)
+    
+    def _determine_trade_side_from_opportunity(self, opportunity: Opportunity) -> str:
+        """Determine trade side (buy/sell) from opportunity signal.
+        
+        Args:
+            opportunity: The opportunity with initial signal.
+            
+        Returns:
+            Trade side ("buy" or "sell").
+        """
+        if opportunity.initial_signal and hasattr(opportunity.initial_signal, 'direction_sought'):
+            direction = opportunity.initial_signal.direction_sought
+            if direction in ["buy", "long"]:
+                return "buy"
+            elif direction in ["sell", "short"]:
+                return "sell"
+        
+        # Default to buy if direction not specified or unclear
+        logger.warning(f"Could not determine trade side from opportunity {opportunity.id}, defaulting to 'buy'")
+        return "buy"

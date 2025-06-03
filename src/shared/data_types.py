@@ -408,6 +408,7 @@ class Trade(BaseModel):
     
     positionStatus: str = Field(..., description="Estado de la posición: 'open', 'closed', 'liquidated'.")
     
+    strategyId: Optional[UUID] = Field(None, description="ID de la estrategia asociada a este trade.") # Campo añadido
     opportunityId: Optional[UUID] = Field(None, description="ID de la oportunidad de trading que originó este trade.")
     aiAnalysisConfidence: Optional[float] = Field(None, description="Confianza de la IA en la oportunidad (si aplica).")
     
