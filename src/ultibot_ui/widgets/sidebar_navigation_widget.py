@@ -24,6 +24,7 @@ class SidebarNavigationWidget(QWidget):
         # Botones de navegación
         self._add_nav_button(layout, "Dashboard", "dashboard")
         self._add_nav_button(layout, "Oportunidades", "opportunities")
+        self._add_nav_button(layout, "Portafolio", "portfolio") # Added Portfolio button
         self._add_nav_button(layout, "Estrategias", "strategies")
         self._add_nav_button(layout, "Historial", "history")
         self._add_nav_button(layout, "Configuración", "settings")
