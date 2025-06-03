@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch, MagicMock
 from uuid import uuid4, UUID
 from datetime import datetime, timezone
 
-from src.ultibot_backend.services.trading_engine_service import TradingEngineService
+from src.ultibot_backend.services.trading_engine_service import TradingEngine
 from src.ultibot_backend.services.config_service import ConfigService
 from src.ultibot_backend.services.order_execution_service import OrderExecutionService
 from src.ultibot_backend.services.credential_service import CredentialService

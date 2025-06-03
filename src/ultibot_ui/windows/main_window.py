@@ -6,9 +6,11 @@ intercambiables para diferentes funcionalidades del bot de trading.
 """
 
 import logging
+logger = logging.getLogger(__name__)
+
 from uuid import UUID
 
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer, QThread
 from PyQt5.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -34,7 +36,6 @@ from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
 from src.ultibot_ui.views.strategy_management_view import StrategyManagementView
 from src.ultibot_ui.views.opportunities_view import OpportunitiesView
 from src.ultibot_ui.views.portfolio_view import PortfolioView
-from src.ultibot_ui.main import ApiWorker, apply_application_style # Import the new style function
 
 
 class MainWindow(QMainWindow):
@@ -153,14 +154,23 @@ class MainWindow(QMainWindow):
         self.statusBar.showMessage("Listo")
 
     def _create_menu_bar(self):
-        """Creates the main menu bar with theme switching options."""
+        """Creates the main menu bar with theme switching options. Si el menú no está soportado, no falla."""
         menu_bar = self.menuBar()
+        if menu_bar is None:
+            logger.warning("No se pudo crear la barra de menú (menuBar() es None). El entorno puede no soportar menús nativos.")
+            return
 
         # View Menu (or Settings/Preferences Menu)
-        view_menu = menu_bar.addMenu("&View")
+        view_menu = menu_bar.addMenu("&View") if menu_bar else None
+        if view_menu is None:
+            logger.warning("No se pudo crear el menú 'View'. El entorno puede no soportar menús nativos.")
+            return
 
         # Theme Submenu or Direct Actions
-        theme_menu = view_menu.addMenu("Switch &Theme")
+        theme_menu = view_menu.addMenu("Switch &Theme") if view_menu else None
+        if theme_menu is None:
+            logger.warning("No se pudo crear el submenú de temas. El entorno puede no soportar menús nativos.")
+            return
 
         dark_theme_action = QAction("Dark Theme", self)
         dark_theme_action.triggered.connect(lambda: self._apply_theme_selection("dark"))
@@ -173,6 +183,7 @@ class MainWindow(QMainWindow):
     def _apply_theme_selection(self, theme_name: str):
         """Applies the selected theme by calling the centralized function."""
         logger.info(f"MainWindow: User selected {theme_name} theme.")
+        from src.ultibot_ui.main import apply_application_style
         apply_application_style(theme_name) # Call the function imported from main.py
         # Note: If specific widgets need to be explicitly repainted or updated
         # after a theme change, that logic could be added here (e.g., custom plot redraws).
@@ -189,6 +200,7 @@ class MainWindow(QMainWindow):
 
         # Ensure user_id is string for API calls if needed by client, though get_user_configuration might not need it.
         # The current api_client.get_user_configuration takes no args.
+        from src.ultibot_ui.main import ApiWorker
         worker = ApiWorker(self.api_client.get_user_configuration())
         thread = QThread()
         self.active_threads.append(thread)
@@ -231,6 +243,7 @@ class MainWindow(QMainWindow):
         """Carga el estado inicial del modo de Operativa Real Limitada usando ApiWorker."""
         logging.info("Iniciando ApiWorker para _load_initial_real_trading_status.")
 
+        from src.ultibot_ui.main import ApiWorker
         worker = ApiWorker(self.api_client.get_real_trading_mode_status())
         thread = QThread()
         self.active_threads.append(thread)

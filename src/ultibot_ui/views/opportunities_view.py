@@ -7,11 +7,11 @@ from PyQt5.QtWidgets import (
     QHeaderView, QPushButton, QMessageBox, QAbstractItemView, QFrame,
     QGraphicsDropShadowEffect
 )
-from PyQt5.QtCore import Qt, QThread, QTimer # Added QTimer
-from PyQt5.QtGui import QColor # Added QColor
+from PyQt5.QtCore import Qt, QThread, QTimer  # Added QTimer, Qt
+from PyQt5.QtGui import QColor
+from PyQt5.QtCore import QObject, pyqtSignal  # Import for mocks/signals
 
 from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
-from src.ultibot_ui.main import ApiWorker
 
 logger = logging.getLogger(__name__)
 
@@ -76,8 +76,13 @@ class OpportunitiesView(QWidget):
         self.opportunities_table.setHorizontalHeaderLabels([
             "Symbol", "Side", "Entry Price", "Score", "Strategy", "Exchange", "Timestamp"
         ])
-        self.opportunities_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.opportunities_table.verticalHeader().setVisible(False)
+        # Usar ResizeMode para compatibilidad con PyQt5 >= 5.11
+        header = self.opportunities_table.horizontalHeader()
+        if header:
+            header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        vheader = self.opportunities_table.verticalHeader()
+        if vheader:
+            vheader.setVisible(False)
         self.opportunities_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.opportunities_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.opportunities_table.setAlternatingRowColors(True)
@@ -114,7 +119,13 @@ class OpportunitiesView(QWidget):
         self.opportunities_table.setRowCount(0) # Clear table while loading
 
         coroutine = self.api_client.get_real_trading_candidates()
-        worker = ApiWorker(coroutine)
+        self._start_api_worker(coroutine)
+
+    def _start_api_worker(self, *args, **kwargs):
+        # Import local para evitar ciclo de importación
+        from src.ultibot_ui.main import ApiWorker
+
+        worker = ApiWorker(*args, **kwargs)
         thread = QThread()
         self.active_threads.append(thread)
         worker.moveToThread(thread)
@@ -153,7 +164,7 @@ class OpportunitiesView(QWidget):
             if self.opportunities_table.rowCount() == 0:
                 self.opportunities_table.setRowCount(1)
                 placeholder_item = QTableWidgetItem("No opportunities to display.")
-                placeholder_item.setTextAlignment(Qt.AlignCenter)
+                placeholder_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 self.opportunities_table.setItem(0, 0, placeholder_item)
                 self.opportunities_table.setSpan(0, 0, 1, self.opportunities_table.columnCount())
 
@@ -169,7 +180,7 @@ class OpportunitiesView(QWidget):
         # Clear table or show error message in table
         self.opportunities_table.setRowCount(1)
         error_item = QTableWidgetItem(f"Error loading data: {error_message}")
-        error_item.setTextAlignment(Qt.AlignCenter)
+        error_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         self.opportunities_table.setItem(0, 0, error_item)
         self.opportunities_table.setSpan(0, 0, 1, self.opportunities_table.columnCount())
 
@@ -242,12 +253,3 @@ if __name__ == '__main__':
     mock_client_error = MockUltiBotAPIClient()
     # For error, the MockApiWorker will raise based on the function name, so we assign the error mock
     mock_client_error.get_real_trading_candidates = _mock_get_real_trading_candidates_error # type: ignore
-
-    view_error = OpportunitiesView(user_id=UUID("00000000-0000-0000-0000-000000000000"), api_client=mock_client_error) # type: ignore
-    view_error.setWindowTitle("Opportunities View - Error Test")
-    view_error.setGeometry(150, 150, 600, 400) # Offset it
-    view_error.show()
-
-    ApiWorker = OriginalApiWorker # Restore original ApiWorker
-
-    sys.exit(app.exec_())
