@@ -256,3 +256,44 @@ El backend de "UltiBotInversiones", desarrollado con FastAPI, expondrá una API 
         * Description: Permite a la UI solicitar análisis específicos al `AI_Orchestrator` o recuperar resultados de análisis asíncronos.
         * Consumers: `AI_Orchestrator`.
         * Example Endpoints: `POST /analysis/request`, `GET /analysis/results/{request_id}`.
+    * **`/performance/`**:
+        * Description: Provee endpoints para obtener datos de desempeño consolidados, como el desempeño por estrategia.
+        * Consumers: UI (DashboardView).
+        * Example Endpoints:
+            * **`GET /performance/strategies`**:
+                * Description: Obtiene la lista de desempeño de todas las estrategias activas del usuario, con la opción de filtrar por modo de operación.
+                * Query Parameters:
+                    * `mode` (string, opcional): Filtra los resultados por modo de operación. Valores válidos: `"paper"`, `"real"`. Si se omite, se devuelven los datos para todos los modos aplicables o según la configuración predeterminada del backend.
+                * Success Response (200 OK):
+                    * Body: Un array de objetos JSON. Cada objeto representa el desempeño de una estrategia en un modo específico.
+                    ```json
+                    [
+                      {
+                        "strategyName": "Scalping BTC Intenso",
+                        "strategyId": "uuid-scalping-btc",
+                        "mode": "paper",
+                        "totalOperations": 50,
+                        "totalPnl": 125.75,
+                        "winRate": 60.0
+                      },
+                      {
+                        "strategyName": "Day Trading ETH Conservador",
+                        "strategyId": "uuid-daytrading-eth",
+                        "mode": "real",
+                        "totalOperations": 5,
+                        "totalPnl": -25.50,
+                        "winRate": 20.0
+                      }
+                      // ... más estrategias
+                    ]
+                    ```
+                    * Campos del Objeto de Estrategia:
+                        * `strategyName` (string): Nombre legible de la estrategia.
+                        * `strategyId` (string): Identificador único (UUID) de la configuración de la estrategia.
+                        * `mode` (string): Modo de operación (`"paper"` o `"real"`).
+                        * `totalOperations` (integer): Número total de operaciones cerradas ejecutadas por esta estrategia en este modo.
+                        * `totalPnl` (float): Profit & Loss total generado por esta estrategia en este modo.
+                        * `winRate` (float): Porcentaje de operaciones ganadoras (P&L > 0) sobre el total de operaciones cerradas para esta estrategia en este modo.
+                * Error Responses:
+                    * `401 Unauthorized`: Si se implementa autenticación y falla.
+                    * `500 Internal Server Error`: Si ocurre un error inesperado en el servidor al procesar la solicitud.

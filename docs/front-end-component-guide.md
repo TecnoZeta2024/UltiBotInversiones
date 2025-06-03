@@ -71,6 +71,19 @@ Estos componentes combinan varios elementos atómicos o widgets estándar para c
     -   Descripción: Muestra los detalles de un activo en el desglose del portafolio.
     -   Columnas: Símbolo, Cantidad, Precio Prom. Compra, Precio Actual, Valor Actual, P&L No Realizado, % Portafolio.
     -   Referencia: `docs/Front-end-spec.md` (Bloque 2.3 en Dashboard).
+-   **`StrategyPerformanceTableView(QWidget)`:**
+    -   Archivo: `src/ultibot_ui/widgets/strategy_performance_table_view.py`
+    -   Clase Principal: `StrategyPerformanceTableView`
+    -   Modelo de Datos Asociado: `StrategyPerformanceTableModel` (definido en el mismo archivo).
+    -   Propósito: Mostrar una tabla con el resumen del desempeño de las estrategias de trading. La tabla incluye columnas como Nombre de la Estrategia, Modo de Operación, Número de Operaciones, P&L Total y Win Rate.
+    -   Dependencias Clave: `PyQt5.QtWidgets.QWidget`, `QTableView`, `QAbstractTableModel`.
+    -   Métodos Públicos Clave:
+        -   `set_data(data: List[Dict[str, Any]])`: Actualiza los datos que se muestran en la tabla. Los datos son una lista de diccionarios, donde cada diccionario representa el desempeño de una estrategia.
+    -   Interacción y Características:
+        -   Recibe los datos de desempeño desde `DashboardView`.
+        -   Utiliza `StrategyPerformanceTableModel` para manejar la lógica de presentación de datos, incluyendo el formato de números y la alineación del texto.
+        -   Implementa un coloreado de fondo para las filas basado en el modo de operación ("paper" o "real") para mejorar la diferenciación visual cuando se muestran datos de múltiples modos.
+    -   Uso en la Aplicación: Se integra en `DashboardView` como una pestaña, permitiendo al usuario consultar y analizar el desempeño de sus estrategias de trading. Se puede filtrar por modo de operación (Todos, Paper, Real) mediante un `QComboBox` gestionado en `DashboardView`.
 
 ## 4. Vistas Principales / Contenedores de Layout
 

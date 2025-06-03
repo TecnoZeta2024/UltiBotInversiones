@@ -1,5 +1,5 @@
 import logging
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QLabel, QFrame, QTabWidget # Añadir QTabWidget
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QLabel, QFrame, QTabWidget, QComboBox # Añadir QTabWidget y QComboBox
 from PyQt5.QtCore import Qt, QTimer # Importar QTimer
 from typing import Any, Optional, List, Callable, Tuple # Añadir importaciones de typing
 from uuid import UUID # Importar UUID
@@ -24,7 +24,7 @@ from src.ultibot_backend.services.portfolio_service import PortfolioService
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService # Importar SupabasePersistenceService
 from src.ultibot_backend.services.notification_service import NotificationService # Importar NotificationService
 from src.ultibot_ui.widgets.notification_widget import NotificationWidget # Importar NotificationWidget
-from src.ultibot_ui.services import TradingModeService # Import TradingModeService
+from src.ultibot_ui.widgets.strategy_performance_table_view import StrategyPerformanceTableView # Importar el nuevo widget
 
 class DashboardView(QWidget):
     def __init__(self, user_id: UUID, market_data_service: MarketDataService, config_service: ConfigService, notification_service: NotificationService, persistence_service: SupabasePersistenceService, api_client: UltiBotAPIClient, trading_mode_service: TradingModeService): # Add trading_mode_service
@@ -55,6 +55,9 @@ class DashboardView(QWidget):
         self._opportunity_monitor_timer.timeout.connect(self._on_opportunity_monitor_timeout)
         self._opportunity_monitor_timer.start()
         print("Monitor de oportunidades de trading real iniciado.")
+
+        # Cargar datos de desempeño de estrategias
+        asyncio.create_task(self._load_strategy_performance_data())
 
     def _setup_ui(self):
         main_layout = QVBoxLayout(self)
@@ -146,6 +149,26 @@ class DashboardView(QWidget):
         self.order_form_widget.order_failed.connect(self._handle_order_failed)
         bottom_tab_widget.addTab(self.order_form_widget, "📈 Crear Orden")
 
+        # Pestaña de Desempeño por Estrategia
+        strategy_performance_tab_content = QWidget()
+        strategy_performance_layout = QVBoxLayout(strategy_performance_tab_content)
+        strategy_performance_layout.setContentsMargins(5, 5, 5, 5)
+
+        # Controles de filtro para el desempeño de estrategias
+        filter_layout = QHBoxLayout()
+        filter_layout.addWidget(QLabel("Filtrar por Modo:"))
+        self.performance_mode_filter_combo = QComboBox()
+        self.performance_mode_filter_combo.addItems(["Todos", "Paper Trading", "Operativa Real"])
+        self.performance_mode_filter_combo.currentIndexChanged.connect(self._on_performance_filter_changed)
+        filter_layout.addWidget(self.performance_mode_filter_combo)
+        filter_layout.addStretch()
+        strategy_performance_layout.addLayout(filter_layout)
+
+        self.strategy_performance_widget = StrategyPerformanceTableView()
+        strategy_performance_layout.addWidget(self.strategy_performance_widget)
+        
+        bottom_tab_widget.addTab(strategy_performance_tab_content, "📊 Desempeño Estrategias")
+
         bottom_splitter.addWidget(bottom_tab_widget)
 
         # Añadir el splitter inferior al layout principal
@@ -169,6 +192,54 @@ class DashboardView(QWidget):
         # to the trading mode state manager, but we can force a refresh if needed
         if hasattr(self.portfolio_widget, 'refresh_data'):
             self.portfolio_widget.refresh_data()
+        
+        # Recargar datos de desempeño de estrategias cuando cambia el modo global
+        # También actualiza el filtro de desempeño si es relevante
+        selected_filter_mode = self.performance_mode_filter_combo.currentText()
+        if new_mode == 'paper' and selected_filter_mode != "Paper Trading":
+            self.performance_mode_filter_combo.setCurrentText("Paper Trading")
+        elif new_mode == 'real' and selected_filter_mode != "Operativa Real":
+            self.performance_mode_filter_combo.setCurrentText("Operativa Real")
+        else: # Si el modo global cambia a algo que no es paper/real o el filtro ya está en "Todos" o coincide
+            asyncio.create_task(self._load_strategy_performance_data())
+
+
+    def _on_performance_filter_changed(self, index: int):
+        """
+        Maneja el cambio en el ComboBox de filtro de modo de desempeño.
+        """
+        asyncio.create_task(self._load_strategy_performance_data())
+
+    async def _load_strategy_performance_data(self):
+        """
+        Carga los datos de desempeño de las estrategias desde el backend y los muestra,
+        utilizando el filtro de modo seleccionado en la UI.
+        """
+        try:
+            selected_filter_text = self.performance_mode_filter_combo.currentText()
+            mode_param_for_api: Optional[str] = None
+            if selected_filter_text == "Paper Trading":
+                mode_param_for_api = "paper"
+            elif selected_filter_text == "Operativa Real":
+                mode_param_for_api = "real"
+            # Si es "Todos", mode_param_for_api permanece None, lo que implica "todos los modos" para el backend.
+
+            logger.info(f"Cargando datos de desempeño de estrategias para el modo de filtro: {selected_filter_text} (API param: {mode_param_for_api})")
+            
+            performance_data = await self.api_client.get_strategy_performance(
+                user_id=self.user_id,
+                mode=mode_param_for_api
+            )
+            if performance_data is not None:
+                self.strategy_performance_widget.set_data(performance_data)
+                logger.info(f"Datos de desempeño de estrategias cargados y mostrados: {len(performance_data)} registros.")
+            else:
+                self.strategy_performance_widget.set_data([]) # Limpiar tabla si no hay datos
+                logger.info("No se recibieron datos de desempeño de estrategias o fueron None.")
+        except Exception as e:
+            logger.error(f"Error al cargar datos de desempeño de estrategias: {e}", exc_info=True)
+            self.strategy_performance_widget.set_data([]) # Limpiar tabla en caso de error
+            # Considerar mostrar un mensaje de error en la UI, tal vez en la misma tabla o una notificación.
 
     def _handle_chart_symbol_selection(self, symbol: str):
         """Slot síncrono para la señal symbol_selected del ChartWidget."""
@@ -236,6 +307,13 @@ class DashboardView(QWidget):
             new_notifications = await self.notification_service.get_notification_history(self.user_id)
             for notification in new_notifications:
                 self.notification_widget.add_notification(notification)
+            
+            # Si se obtuvieron notificaciones, es una buena oportunidad para actualizar el desempeño
+            # Asumimos que alguna de estas notificaciones podría ser de un trade cerrado.
+            if new_notifications:
+                logger.info("Nuevas notificaciones recibidas, actualizando desempeño de estrategias.")
+                await self._load_strategy_performance_data()
+                
         except Exception as e:
             print(f"Error al hacer polling de nuevas notificaciones: {e}")
             # Manejar el error, quizás mostrando una notificación de error en la UI
@@ -305,6 +383,8 @@ class DashboardView(QWidget):
         # Aquí se podría disparar una actualización más específica de la UI
         asyncio.create_task(self._refresh_opportunities_ui())
         asyncio.create_task(self._update_real_trades_count_ui())
+        # Un trade confirmado podría llevar a un trade cerrado pronto, actualizar desempeño.
+        asyncio.create_task(self._load_strategy_performance_data())
 
     def _handle_trade_cancelled(self, opportunity_id: str):
         logger.info(f"Trade real cancelado para oportunidad {opportunity_id}. No se requiere acción adicional en UI.")
@@ -323,6 +403,10 @@ class DashboardView(QWidget):
         # Forzar actualización del portfolio widget
         if hasattr(self.portfolio_widget, 'refresh_data'):
             self.portfolio_widget.refresh_data()
+        
+        # Actualizar desempeño de estrategias después de ejecutar una orden
+        # (aunque la orden solo abre el trade, es un punto de cambio)
+        asyncio.create_task(self._load_strategy_performance_data())
         
         # Mostrar notificación de éxito en el sistema de notificaciones
         symbol = order_details.get('symbol', 'N/A')
@@ -389,5 +473,10 @@ class DashboardView(QWidget):
         if hasattr(self.order_form_widget, 'cleanup') and callable(self.order_form_widget.cleanup):
             print("DashboardView: Calling cleanup on order_form_widget.")
             self.order_form_widget.cleanup()
+
+        # Limpiar StrategyPerformanceTableView (si es necesario)
+        if hasattr(self, 'strategy_performance_widget') and hasattr(self.strategy_performance_widget, 'cleanup') and callable(self.strategy_performance_widget.cleanup):
+            print("DashboardView: Calling cleanup on strategy_performance_widget.")
+            self.strategy_performance_widget.cleanup()
         
         print("DashboardView: cleanup finished.")

@@ -920,7 +920,7 @@ class SupabasePersistenceService:
             SQL("SELECT * FROM trades WHERE user_id = {} AND mode = {} AND position_status = {}").format(
                 Literal(str(UUID(filters["user_id"]))), # Convertir UUID a string
                 Literal(filters["mode"]),
-                Literal(filters["positionStatus"])
+                Literal(filters["positionStatus"])  # type: ignore[arg-type]
             )
         ]
         
@@ -1022,6 +1022,117 @@ class SupabasePersistenceService:
         except Exception as e:
             logger.error(f"Error al contar trades cerrados para user {user_id}, real_trade={is_real_trade}: {e}", exc_info=True)
             raise # Re-lanzar la excepción para que el llamador pueda manejarla
+
+    async def get_all_trades_for_user(self, user_id: UUID, mode: Optional[str] = None) -> List[Trade]:
+        """
+        Recupera todos los trades para un usuario específico, opcionalmente filtrados por modo.
+        """
+        await self._ensure_connection()
+        assert self.connection is not None, "Connection must be established by _ensure_connection"
+
+        query_parts = [SQL("SELECT * FROM trades WHERE user_id = %s")]
+        params: List[Any] = [user_id]
+
+        if mode:
+            query_parts.append(SQL("AND mode = %s"))
+            params.append(mode)
+        
+        query_parts.append(SQL("ORDER BY created_at DESC;"))
+        final_query = Composed(query_parts)
+        
+        try:
+            async with self.connection.cursor(row_factory=dict_row) as cur:
+                await cur.execute(final_query, tuple(params))
+                records = await cur.fetchall()
+                
+                trades = []
+                for record_dict in records:
+                    record_copy = record_dict.copy() # Usar el dict directamente
+                    
+                    # Convertir UUIDs de string a UUID objects
+                    for key_uuid in ['id', 'user_id', 'strategy_id', 'opportunity_id']:
+                        if key_uuid in record_copy and record_copy[key_uuid] is not None:
+                            try:
+                                record_copy[key_uuid] = UUID(str(record_copy[key_uuid]))
+                            except ValueError:
+                                logger.warning(f"Invalid UUID format for {key_uuid}: {record_copy[key_uuid]} in trade {record_copy.get('id')}")
+                                record_copy[key_uuid] = None
+
+
+                    # Convertir entry_order y exit_orders de dict a TradeOrderDetails
+                    if 'entry_order' in record_copy and record_copy['entry_order'] and isinstance(record_copy['entry_order'], dict):
+                        entry_order_data = record_copy.pop('entry_order')
+                        entry_order_data['orderCategory'] = entry_order_data.pop('order_category', None)
+                        entry_order_data['ocoOrderListId'] = entry_order_data.pop('oco_order_list_id', None)
+                        if 'timestamp' in entry_order_data and isinstance(entry_order_data['timestamp'], str):
+                            entry_order_data['timestamp'] = datetime.fromisoformat(entry_order_data['timestamp'])
+                        record_copy['entryOrder'] = TradeOrderDetails(**entry_order_data)
+                    else:
+                        record_copy['entryOrder'] = None
+                    
+                    if 'exit_orders' in record_copy and record_copy['exit_orders'] and isinstance(record_copy['exit_orders'], list):
+                        exit_orders_list = []
+                        for eo_data_dict in record_copy.pop('exit_orders'):
+                            if isinstance(eo_data_dict, dict):
+                                eo_data_dict['orderCategory'] = eo_data_dict.pop('order_category', None)
+                                eo_data_dict['ocoOrderListId'] = eo_data_dict.pop('oco_order_list_id', None)
+                                if 'timestamp' in eo_data_dict and isinstance(eo_data_dict['timestamp'], str):
+                                     eo_data_dict['timestamp'] = datetime.fromisoformat(eo_data_dict['timestamp'])
+                                exit_orders_list.append(TradeOrderDetails(**eo_data_dict))
+                        record_copy['exitOrders'] = exit_orders_list
+                    else:
+                        record_copy['exitOrders'] = []
+
+                    # Convertir timestamps de string ISO a datetime
+                    datetime_fields = ['created_at', 'opened_at', 'updated_at', 'closed_at']
+                    for field in datetime_fields:
+                        if field in record_copy and isinstance(record_copy[field], str):
+                            try:
+                                record_copy[field] = datetime.fromisoformat(record_copy[field])
+                            except (ValueError, TypeError):
+                                logger.warning(f"No se pudo convertir campo datetime {field}: {record_copy[field]} for trade {record_copy.get('id')}")
+                                record_copy[field] = None
+                    
+                    # Mapear nombres de columnas de BD (snake_case) a nombres de campos de Pydantic
+                    field_mappings = {
+                        "position_status": "positionStatus",
+                        "opportunity_id": "opportunityId", 
+                        "strategy_id": "strategyId",
+                        "ai_analysis_confidence": "aiAnalysisConfidence",
+                        "pnl_usd": "pnlUsd", # Corregido a camelCase
+                        "pnl_percentage": "pnlPercentage",
+                        "closing_reason": "closingReason",
+                        "take_profit_price": "takeProfitPrice",
+                        "trailing_stop_activation_price": "trailingStopActivationPrice",
+                        "trailing_stop_callback_rate": "trailingStopCallbackRate",
+                        "current_stop_price_tsl": "currentStopPriceTsl", # Corregido a camelCase
+                        "risk_reward_adjustments": "riskRewardAdjustments",
+                        "initial_risk_quote_amount": "initialRiskQuoteAmount",
+                        "initial_reward_to_risk_ratio": "initialRewardToRiskRatio",
+                        "current_risk_quote_amount": "currentRiskQuoteAmount",
+                        "current_reward_to_risk_ratio": "currentRewardToRiskRatio",
+                        "market_context_snapshots": "marketContextSnapshots",
+                        "external_event_or_analysis_link": "externalEventOrAnalysisLink",
+                        "backtest_details": "backtestDetails",
+                        "ai_influence_details": "aiInfluenceDetails",
+                        "strategy_execution_instance_id": "strategyExecutionInstanceId"
+                    }
+                    
+                    final_record_data = {}
+                    for db_key, value in record_copy.items():
+                        pydantic_key = field_mappings.get(db_key, db_key)
+                        final_record_data[pydantic_key] = value
+                    
+                    # Asegurar que los campos requeridos por Trade estén presentes o tengan un default
+                    # Esto es importante si la tabla de BD tiene columnas nullable que Pydantic espera.
+                    # Trade.__fields__ puede dar los campos requeridos.
+                    # Por simplicidad, asumimos que los datos de la BD son suficientes.
+
+                    trades.append(Trade(**final_record_data))
+                return trades
+        except Exception as e:
+            logger.error(f"Error al obtener todos los trades para el usuario {user_id} (psycopg): {e}", exc_info=True)
+            raise
 
     async def get_opportunity_by_id(self, opportunity_id: UUID) -> Optional[OpportunityTypeHint]:
         """
