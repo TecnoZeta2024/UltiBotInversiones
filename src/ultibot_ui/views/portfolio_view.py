@@ -4,14 +4,13 @@ from typing import List, Dict, Any, Optional
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget, QTableWidgetItem,
-    QHeaderView, QPushButton, QMessageBox, QFrame, QSplitter, QScrollArea
+    QHeaderView, QPushButton, QMessageBox, QFrame, QSplitter, QScrollArea, QGroupBox, QAbstractItemView
 )
-from PyQt5.QtCore import Qt, QThread, QTimer
-from PyQt5.QtGui import QPainter, QFont # Added QFont
+from PyQt5.QtCore import Qt, QThread, QTimer, pyqtSignal, QObject
+from PyQt5.QtGui import QPainter, QFont, QColor # Added QFont, QColor
 from PyQt5.QtChart import QChart, QChartView, QPieSeries, QPieSlice # Import QtCharts
 
 from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
-from src.ultibot_ui.main import ApiWorker # Assuming ApiWorker is in main or a shared util
 from src.ultibot_ui.services.trading_mode_state import get_trading_mode_manager, TradingModeStateManager
 
 
@@ -128,6 +127,8 @@ class PortfolioView(QWidget):
 
         # Use user_id from self.user_id and mode from trading_mode_manager
         coroutine = self.api_client.get_portfolio_snapshot(user_id=self.user_id, trading_mode=self.trading_mode_manager.current_mode)
+        # Importar ApiWorker aquí para evitar import circular
+        from src.ultibot_ui.main import ApiWorker
         worker = ApiWorker(coroutine)
         thread = QThread()
         self.active_threads.append(thread)

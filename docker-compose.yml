@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+      - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY:-m-28Nzt6UpR8G9AiQWNGqh0X3on5mYcxPjlHKKXzjoM=}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - ultibot-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "5900:5900"  # VNC port
+    volumes:
+      - ./logs:/app/logs
+    environment:
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+      - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY:-m-28Nzt6UpR8G9AiQWNGqh0X3on5mYcxPjlHKKXzjoM=}
+      - BACKEND_URL=http://backend:8000
+      - VNC_PASSWORD=${VNC_PASSWORD:-1234}
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "5900"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - ultibot-network
+
+  mcp-server:
+    build:
+      context: ./mcp_service
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"  # MCP server port
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./mcp_service:/app
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - ultibot-network
+
+networks:
+  ultibot-network:
+    driver: bridge
+
+volumes:
+  logs:
+    driver: local
+

@@ -13,7 +13,8 @@ O asegúrese de que el directorio raíz del proyecto esté en PYTHONPATH.
 import asyncio
 import os
 import sys
-from typing import Optional, Any, Callable, Coroutine
+import logging
+from typing import Optional, Any, Callable, Coroutine, List
 from uuid import UUID
 
 from PyQt5.QtCore import QObject, QThread, pyqtSignal, pyqtSlot # Added for ApiWorker
@@ -21,8 +22,8 @@ from PyQt5.QtWidgets import QApplication, QMessageBox
 from dotenv import load_dotenv
 
 # Importaciones organizadas por grupos
-from ..shared.data_types import APICredential, ServiceName, UserConfiguration # ServiceName might be unused now
-from ..ultibot_backend.app_config import AppSettings
+from src.shared.data_types import APICredential, ServiceName, UserConfiguration # ServiceName might be unused now
+from src.ultibot_backend.app_config import AppSettings
 # Backend service imports will be removed or replaced by API client usage
 # from ..ultibot_backend.adapters.binance_adapter import BinanceAdapter
 # from ..ultibot_backend.adapters.persistence_service import SupabasePersistenceService
@@ -42,6 +43,8 @@ except ImportError:
     qdarkstyle = None
     DARK_STYLE_AVAILABLE = False
     print("Advertencia: qdarkstyle no está instalado. La aplicación usará el tema por defecto de Qt.")
+
+logger = logging.getLogger(__name__)
 
 # --- Global Stylesheet for Dark Mode ---
 DARK_GLOBAL_STYLESHEET = """
@@ -537,21 +540,24 @@ QProgressBar::chunk {
 
 def apply_application_style(theme_name: str):
     """Applies the global stylesheet for the given theme."""
+    from PyQt5.QtWidgets import QApplication
     app = QApplication.instance()
     if not app:
-        logger.error("QApplication instance not found. Cannot apply style.")
+        print("QApplication instance not found. Cannot apply style.")
         return
-
+    # Defensive: try to get the top-level widgets and apply stylesheet to all
     base_style = ""
     if DARK_STYLE_AVAILABLE and qdarkstyle:
         base_style = qdarkstyle.load_stylesheet_pyqt5()
-
-    if theme_name == "light":
-        logger.info("Applying Light Theme.")
-        app.setStyleSheet(base_style + LIGHT_GLOBAL_STYLESHEET)
-    else: # Default to dark
-        logger.info("Applying Dark Theme.")
-        app.setStyleSheet(base_style + DARK_GLOBAL_STYLESHEET)
+    stylesheet = base_style + (LIGHT_GLOBAL_STYLESHEET if theme_name == "light" else DARK_GLOBAL_STYLESHEET)
+    try:
+        # Try to apply to all top-level widgets
+        for widget in QApplication.topLevelWidgets():
+            if hasattr(widget, 'setStyleSheet'):
+                widget.setStyleSheet(stylesheet)
+        logger.info(f"Applied {theme_name} theme to all top-level widgets.")
+    except Exception as e:
+        print(f"Failed to apply stylesheet to top-level widgets: {e}")
 
 class ApiWorker(QObject): # ApiWorker definition moved slightly to accommodate the function above
     """
@@ -685,91 +691,40 @@ class UltiBotApplication:
         except APIError as e:
             raise RuntimeError(f"Failed to connect or initialize with API backend: {e}")
 
-    async def ensure_user_configuration(self) -> None:
+    async def ensure_user_configuration(self) -> Any:
         """
-        Ensures that user configuration is loaded via the API.
-        Ensures that user configuration is loaded via the API.
-        
-        Raises:
-            Exception: If loading the configuration fails.
-        """
-        if not self.api_client:
-            raise RuntimeError("API Client not initialized")
-        if not self.user_id: # user_id is typically needed for user-specific config
-            raise RuntimeError("User ID not initialized")
-
-        try:
-            # This will be an async call. UI needs to handle this.
         Ensures that user configuration is loaded via the API using a non-blocking worker.
-        
-        Raises:
-            RuntimeError: If API Client or User ID is not initialized.
+        Returns the user configuration or raises an exception if it fails.
         """
         if not self.api_client:
             raise RuntimeError("API Client not initialized for ensure_user_configuration")
         if not self.user_id:
             raise RuntimeError("User ID not initialized for ensure_user_configuration")
 
-        print(f"Starting to fetch user configuration for {self.user_id} via API worker...")
-
-        # This method will now set up the worker and connect signals.
-        # The actual result processing will happen in a slot.
-        # For the initial startup sequence, this means `run_application` needs to handle
-        # the asynchronous nature of this call.
-
-        # For now, to integrate into the existing async run_application,
-        # we might need a way to "await" the QThread's completion using an asyncio Future
-        # that gets resolved when the QThread finishes.
-        # This is a bit complex. Let's first define the worker and how it's called.
-        # The challenge is that `run_application` is async, while QThread is not directly awaitable.
-
-        # This method will be called from an async context, so we need to bridge QThread signals to asyncio.
-        # One simple way for startup is to use a QEventLoop if we must block an async setup step,
-        # but the goal is to avoid blocking.
-
-        # For now, let's assume this function is called and we need to proceed AFTER it's done.
-        # We'll need a signal from UltiBotApplication itself, or pass a callback.
-
-        Ensures that user configuration is loaded via the API using a non-blocking worker.
-        This method is now synchronous and returns an asyncio.Future that can be awaited.
-        
-        Raises:
-            RuntimeError: If API Client or User ID is not initialized.
-        Returns:
-            asyncio.Future: A future that will be resolved with the user configuration
-                            or an exception if an error occurs.
-        """
-        if not self.api_client:
-            # This case should ideally be handled before calling, or raise an immediate error
-            # rather than a future that resolves to an error, for programming errors.
-            raise RuntimeError("API Client not initialized for ensure_user_configuration")
-        if not self.user_id:
-            raise RuntimeError("User ID not initialized for ensure_user_configuration")
-
-        print(f"Starting to fetch user configuration for {self.user_id} via API worker...")
-        
+        logger.info(f"Starting to fetch user configuration for {self.user_id} via API worker...")
         loop = asyncio.get_running_loop()
         future = loop.create_future()
 
         worker = ApiWorker(self.api_client.get_user_configuration())
         thread = QThread()
-        self.active_threads.append(thread) # Keep track of the thread
+        self.active_threads.append(thread)
         worker.moveToThread(thread)
 
-        # Connect signals from worker to resolve the future
-        worker.result_ready.connect(lambda result: loop.call_soon_threadsafe(future.set_result, result))
-        worker.error_occurred.connect(lambda error_msg: loop.call_soon_threadsafe(future.set_exception, Exception(error_msg)))
+        def _on_result(result):
+            loop.call_soon_threadsafe(future.set_result, result)
+        def _on_error(error_msg):
+            loop.call_soon_threadsafe(future.set_exception, Exception(error_msg))
 
-        # Connect thread signals
+        worker.result_ready.connect(_on_result)
+        worker.error_occurred.connect(_on_error)
         thread.started.connect(worker.run)
-        worker.result_ready.connect(thread.quit) # Worker signals thread to quit
-        worker.error_occurred.connect(thread.quit) # Worker signals thread to quit
-        thread.finished.connect(worker.deleteLater) # Clean up worker
-        thread.finished.connect(thread.deleteLater) # Clean up thread
-        thread.finished.connect(lambda: self.active_threads.remove(thread)) # Remove from active list
-
+        worker.result_ready.connect(thread.quit)
+        worker.error_occurred.connect(thread.quit)
+        thread.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        thread.finished.connect(lambda: self.active_threads.remove(thread) if thread in self.active_threads else None)
         thread.start()
-        return future
+        return await future
 
     async def setup_binance_credentials(self) -> None:
         """

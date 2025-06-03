@@ -4,23 +4,37 @@ FROM python:3.11.9-slim-bullseye
 # Establece el directorio de trabajo en /app
 WORKDIR /app
 
-# Instala Poetry
-RUN pip install poetry
+# Instala Poetry y configura para no crear entornos virtuales dentro del contenedor
+RUN pip install poetry && \
+    poetry config virtualenvs.create false
+
+# Crea el directorio de logs
+RUN mkdir -p /app/logs && \
+    chmod 777 /app/logs
 
 # Copia pyproject.toml y poetry.lock (si existe) para instalar dependencias
 COPY pyproject.toml poetry.lock* ./
 
-# Instala las dependencias del proyecto
-RUN poetry install --no-root --no-dev
+# Instala solo las dependencias necesarias para el backend
+# Excluimos dependencias de desarrollo y UI
+RUN poetry install --no-root --no-interaction \
+    && rm -rf /root/.cache/pypoetry
 
-# Copia el resto del código fuente
-COPY . .
+# Copia el código fuente - solo lo necesario para el backend
+COPY src/ultibot_backend /app/src/ultibot_backend
+COPY src/shared /app/src/shared
+COPY src/__init__.py /app/src/__init__.py
 
 # Expone el puerto que usará FastAPI
 EXPOSE 8000
 
+# Variables de entorno predeterminadas (se deben sobrescribir en producción)
+ENV PYTHONPATH=/app \
+    PYTHONUNBUFFERED=1
+
 # IMPORTANT: Ensure CREDENTIAL_ENCRYPTION_KEY and other necessary environment variables
 # (e.g., SUPABASE_URL, SUPABASE_ANON_KEY, DATABASE_URL)
 # are provided when running the container in production/staging.
+
 # Comando para ejecutar la aplicación FastAPI
-CMD ["poetry", "run", "uvicorn", "src.ultibot_backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "src.ultibot_backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
