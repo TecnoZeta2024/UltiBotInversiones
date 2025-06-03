@@ -11,12 +11,18 @@ O asegúrese de que el directorio raíz del proyecto esté en PYTHONPATH.
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import sys
 from contextlib import asynccontextmanager
 from typing import Optional
 from uuid import UUID
 
 from fastapi import FastAPI
+
+# Solución para Windows ProactorEventLoop con psycopg
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 # Importaciones organizadas: stdlib, third-party, local
 from langchain_google_genai import ChatGoogleGenerativeAI

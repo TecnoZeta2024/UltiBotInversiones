@@ -73,11 +73,9 @@ class UltiBotApplication:
             QApplication: Instancia de la aplicación Qt configurada.
         """
         app = QApplication(sys.argv)
-        
-        # Aplicar el tema oscuro si está disponible
-        if DARK_STYLE_AVAILABLE:
+        # Aplicar el tema oscuro si está disponible y qdarkstyle está importado correctamente
+        if DARK_STYLE_AVAILABLE and qdarkstyle is not None:
             app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-        
         self.app = app
         return app
     
@@ -92,18 +90,14 @@ class UltiBotApplication:
             ValueError: Si faltan configuraciones críticas.
         """
         load_dotenv(override=True)
-        
-        # Verificar clave de encriptación
         credential_encryption_key = os.getenv("CREDENTIAL_ENCRYPTION_KEY")
         if not credential_encryption_key:
             raise ValueError(
                 "CREDENTIAL_ENCRYPTION_KEY no está configurada en .env file o variables de entorno."
             )
-        
         settings = AppSettings(CREDENTIAL_ENCRYPTION_KEY=credential_encryption_key)
         self.settings = settings
         self.user_id = settings.FIXED_USER_ID
-        
         return settings
     
     async def initialize_persistence_service(self) -> SupabasePersistenceService:
@@ -155,14 +149,13 @@ class UltiBotApplication:
         """
         if not self.settings or not self.persistence_service:
             raise RuntimeError("Configuración o servicio de persistencia no inicializados")
-        
-        # Inicializar CredentialService
-        self.credential_service = CredentialService(
-            encryption_key=self.settings.CREDENTIAL_ENCRYPTION_KEY
-        )
-        
         # Inicializar adaptadores
         self.binance_adapter = BinanceAdapter()
+        # Inicializar CredentialService pasando dependencias explícitas
+        self.credential_service = CredentialService(
+            persistence_service=self.persistence_service,
+            binance_adapter=self.binance_adapter
+        )
         
         # Inicializar MarketDataService
         self.market_data_service = MarketDataService(
@@ -219,12 +212,14 @@ class UltiBotApplication:
         """
         binance_api_key = os.getenv("BINANCE_API_KEY")
         binance_api_secret = os.getenv("BINANCE_API_SECRET")
-        
         if not binance_api_key or not binance_api_secret:
             raise ValueError(
                 "BINANCE_API_KEY o BINANCE_API_SECRET no encontradas en .env o variables de entorno."
             )
-        
+        if not self.credential_service:
+            raise RuntimeError("CredentialService no inicializado")
+        if not self.user_id:
+            raise RuntimeError("user_id no inicializado")
         try:
             # Verificar si ya existen credenciales
             existing_credential = await self.credential_service.get_credential(
@@ -232,33 +227,21 @@ class UltiBotApplication:
                 service_name=ServiceName.BINANCE_SPOT,
                 credential_label="default"
             )
-            
-            print("Guardando/actualizando credenciales de Binance desde .env...")
-            
-            # Encriptar credenciales
-            encrypted_api_key = self.credential_service.encrypt_data(binance_api_key)
-            encrypted_api_secret = self.credential_service.encrypt_data(binance_api_secret)
-            
-            # Crear credencial
-            binance_credential = APICredential(
-                id=self.settings.FIXED_BINANCE_CREDENTIAL_ID,
+            if existing_credential:
+                print("Credenciales de Binance ya existen para este usuario y etiqueta. Se omite creación.")
+                return
+            print("Guardando credenciales de Binance desde .env...")
+            await self.credential_service.add_credential(
                 user_id=self.user_id,
                 service_name=ServiceName.BINANCE_SPOT,
                 credential_label="default",
-                encrypted_api_key=encrypted_api_key,
-                encrypted_api_secret=encrypted_api_secret
+                api_key=binance_api_key,
+                api_secret=binance_api_secret
             )
-            
-            # Asegurar que service_name sea Enum
-            if isinstance(binance_credential.service_name, str):
-                binance_credential.service_name = ServiceName(binance_credential.service_name)
-            
-            await self.credential_service.save_encrypted_credential(binance_credential)
-            print("Credenciales de Binance guardadas/actualizadas exitosamente.")
-            
+            print("Credenciales de Binance guardadas exitosamente.")
         except Exception as e:
             raise Exception(f"Error al guardar/actualizar credenciales de Binance: {str(e)}")
-    
+
     def create_main_window(self) -> MainWindow:
         """
         Crea y configura la ventana principal.
@@ -269,14 +252,16 @@ class UltiBotApplication:
         Raises:
             RuntimeError: Si los servicios requeridos no están inicializados.
         """
-        required_services = [
-            self.user_id, self.market_data_service, self.config_service,
-            self.notification_service, self.persistence_service
-        ]
-        
-        if any(service is None for service in required_services):
-            raise RuntimeError("Servicios requeridos no están inicializados")
-        
+        if self.user_id is None:
+            raise RuntimeError("user_id no inicializado")
+        if self.market_data_service is None:
+            raise RuntimeError("market_data_service no inicializado")
+        if self.config_service is None:
+            raise RuntimeError("config_service no inicializado")
+        if self.notification_service is None:
+            raise RuntimeError("notification_service no inicializado")
+        if self.persistence_service is None:
+            raise RuntimeError("persistence_service no inicializado")
         main_window = MainWindow(
             self.user_id,
             self.market_data_service,
@@ -284,7 +269,6 @@ class UltiBotApplication:
             self.notification_service,
             self.persistence_service
         )
-        
         self.main_window = main_window
         return main_window
     

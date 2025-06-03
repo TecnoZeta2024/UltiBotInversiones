@@ -1,0 +1,54 @@
+INFO:     Will watch for changes in these directories: ['c:\\Users\\zamor\\UltiBotInversiones']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [29652] using WatchFiles
+2025-06-02 22:30:28,855 - src.ultibot_backend.api.v1.endpoints.opportunities - INFO - Router de oportunidades inicializado: <fastapi.routing.APIRouter object at 0x000001EF579F2210>
+INFO:     Started server process [28820]
+INFO:     Waiting for application startup.
+2025-06-02 22:30:28,885 - src.ultibot_backend.main - INFO - Iniciando UltiBot Backend...
+2025-06-02 22:30:28,885 - src.ultibot_backend.main - INFO - Inicializando servicios base...
+2025-06-02 22:30:29,625 - src.ultibot_backend.adapters.persistence_service - INFO - Conexión a la base de datos Supabase (psycopg) establecida exitosamente usando DSN directo.
+2025-06-02 22:30:29,625 - src.ultibot_backend.services.credential_service - INFO - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
+2025-06-02 22:30:29,625 - src.ultibot_backend.services.credential_service - INFO - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-02 22:30:29,800 - src.ultibot_backend.main - INFO - Inicializando servicios dependientes...
+2025-06-02 22:30:29,800 - src.ultibot_backend.main - INFO - Inicializando servicios de trading...
+2025-06-02 22:30:29,800 - src.ultibot_backend.services.order_execution_service - INFO - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-02 22:30:29,800 - src.ultibot_backend.services.unified_order_execution_service - INFO - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-02 22:30:29,800 - src.ultibot_backend.main - INFO - Inicializando servicios avanzados...
+2025-06-02 22:30:29,800 - src.ultibot_backend.main - INFO - PerformanceService inicializado.
+2025-06-02 22:30:41,959 - src.ultibot_backend.main - ERROR - Error al inicializar LLM Provider: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
+2025-06-02 22:30:41,959 - src.ultibot_backend.main - ERROR - Error durante la inicialización de servicios: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
+Traceback (most recent call last):
+  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 202, in initialize_services
+    ai_orchestrator = AIOrchestrator(credential_service=credential_service)
+TypeError: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
+2025-06-02 22:30:41,960 - src.ultibot_backend.main - ERROR - Error durante el startup: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
+Traceback (most recent call last):
+  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 322, in lifespan
+    await initialize_services()
+  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 202, in initialize_services
+    ai_orchestrator = AIOrchestrator(credential_service=credential_service)
+TypeError: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
+2025-06-02 22:30:41,961 - src.ultibot_backend.main - INFO - Iniciando limpieza de servicios...
+2025-06-02 22:30:41,961 - src.ultibot_backend.main - INFO - NotificationService cerrado correctamente.
+2025-06-02 22:30:41,966 - src.ultibot_backend.main - INFO - BinanceAdapter cerrado correctamente.
+2025-06-02 22:30:41,966 - src.ultibot_backend.adapters.persistence_service - INFO - Conexión a la base de datos Supabase (psycopg) cerrada.
+2025-06-02 22:30:41,966 - src.ultibot_backend.main - INFO - PersistenceService cerrado correctamente.
+2025-06-02 22:30:41,966 - src.ultibot_backend.main - INFO - Limpieza de servicios completada.
+2025-06-02 22:30:41,966 - src.ultibot_backend.main - INFO - Aplicación cerrada correctamente.
+ERROR:    Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\starlette\routing.py", line 732, in lifespan
+    async with self.lifespan_context(app) as maybe_state:
+               ~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "C:\Users\zamor\AppData\Local\Programs\Python\Python313\Lib\contextlib.py", line 214, in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 322, in lifespan
+    await initialize_services()
+  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 202, in initialize_services
+    ai_orchestrator = AIOrchestrator(credential_service=credential_service)
+TypeError: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
+
+ERROR:    Application startup failed. Exiting.
+DEBUG: Router de oportunidades inicializado: <fastapi.routing.APIRouter object at 0x000001EF579F2210>
+BinanceAdapter: Cliente HTTP cerrado y adaptador marcado como cerrado.
+^C^C
