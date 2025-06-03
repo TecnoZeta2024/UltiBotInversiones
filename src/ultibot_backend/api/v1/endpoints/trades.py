@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from typing import Annotated, Optional, List, Literal
+from typing import Annotated, Optional, List, Literal, Any
 from uuid import UUID
 from datetime import datetime, date
 
@@ -14,14 +14,14 @@ TradingMode = Literal["paper", "real", "both"]
 @router.get("/trades/{user_id}", response_model=List[Trade], status_code=status.HTTP_200_OK)
 async def get_user_trades(
     user_id: UUID,
+    persistence_service: Annotated[SupabasePersistenceService, Depends(SupabasePersistenceService)],
     trading_mode: Annotated[TradingMode, Query(description="Trading mode filter: 'paper', 'real', or 'both'")] = "both",
     status_filter: Annotated[Optional[str], Query(description="Position status filter: 'open', 'closed', etc.")] = None,
     symbol_filter: Annotated[Optional[str], Query(description="Symbol filter (e.g., 'BTCUSDT')")] = None,
     date_from: Annotated[Optional[date], Query(description="Start date filter (YYYY-MM-DD)")] = None,
     date_to: Annotated[Optional[date], Query(description="End date filter (YYYY-MM-DD)")] = None,
     limit: Annotated[int, Query(description="Maximum number of trades to return", ge=1, le=1000)] = 100,
-    offset: Annotated[int, Query(description="Number of trades to skip", ge=0)] = 0,
-    persistence_service: Annotated[SupabasePersistenceService, Depends(SupabasePersistenceService)]
+    offset: Annotated[int, Query(description="Number of trades to skip", ge=0)] = 0
 ):
     """
     Get trades for the specified user filtered by trading mode and other criteria.
@@ -41,7 +41,7 @@ async def get_user_trades(
     """
     try:
         # Build filter conditions
-        filters = {"user_id": user_id}
+        filters: dict[str, Any] = {"user_id": user_id}
         
         # Add trading mode filter
         if trading_mode == "paper":
@@ -89,8 +89,8 @@ async def get_user_trades(
 @router.get("/trades/{user_id}/open", response_model=List[Trade], status_code=status.HTTP_200_OK)
 async def get_open_trades(
     user_id: UUID,
-    trading_mode: Annotated[TradingMode, Query(description="Trading mode filter: 'paper', 'real', or 'both'")] = "both",
-    persistence_service: Annotated[SupabasePersistenceService, Depends(SupabasePersistenceService)]
+    persistence_service: Annotated[SupabasePersistenceService, Depends(SupabasePersistenceService)],
+    trading_mode: Annotated[TradingMode, Query(description="Trading mode filter: 'paper', 'real', or 'both'")] = "both"
 ):
     """
     Get only open trades for the specified user and trading mode.
@@ -120,10 +120,10 @@ async def get_open_trades(
 @router.get("/trades/{user_id}/performance", response_model=PerformanceMetrics, status_code=status.HTTP_200_OK)
 async def get_trading_performance(
     user_id: UUID,
+    persistence_service: Annotated[SupabasePersistenceService, Depends(SupabasePersistenceService)],
     trading_mode: Annotated[TradingMode, Query(description="Trading mode: 'paper' or 'real'")] = "paper",
     date_from: Annotated[Optional[date], Query(description="Start date for metrics calculation (YYYY-MM-DD)")] = None,
-    date_to: Annotated[Optional[date], Query(description="End date for metrics calculation (YYYY-MM-DD)")] = None,
-    persistence_service: Annotated[SupabasePersistenceService, Depends(SupabasePersistenceService)]
+    date_to: Annotated[Optional[date], Query(description="End date for metrics calculation (YYYY-MM-DD)")] = None
 ):
     """
     Get trading performance metrics for the specified mode and period.
@@ -176,11 +176,11 @@ async def get_trading_performance(
 @router.get("/trades/{user_id}/count", status_code=status.HTTP_200_OK)
 async def get_trades_count(
     user_id: UUID,
+    persistence_service: Annotated[SupabasePersistenceService, Depends(SupabasePersistenceService)],
     trading_mode: Annotated[TradingMode, Query(description="Trading mode filter: 'paper', 'real', or 'both'")] = "both",
     status_filter: Annotated[Optional[str], Query(description="Position status filter: 'open', 'closed', etc.")] = None,
     date_from: Annotated[Optional[date], Query(description="Start date filter (YYYY-MM-DD)")] = None,
-    date_to: Annotated[Optional[date], Query(description="End date filter (YYYY-MM-DD)")] = None,
-    persistence_service: Annotated[SupabasePersistenceService, Depends(SupabasePersistenceService)]
+    date_to: Annotated[Optional[date], Query(description="End date filter (YYYY-MM-DD)")] = None
 ):
     """
     Get count of trades matching the specified criteria.

@@ -5,6 +5,7 @@ from typing import Optional, Dict, Any
 from cryptography.fernet import Fernet, InvalidToken
 from uuid import UUID
 from dotenv import load_dotenv # Importar load_dotenv
+from fastapi import Depends, HTTPException, status # Añadido
 
 from src.shared.data_types import APICredential, ServiceName, BinanceConnectionStatus, AssetBalance
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
@@ -19,51 +20,37 @@ logger = logging.getLogger(__name__) # Configurar logger
 load_dotenv()
 
 class CredentialService:
-    def __init__(self, encryption_key: Optional[str] = None):
+    def __init__(self, 
+                 persistence_service: SupabasePersistenceService = Depends(SupabasePersistenceService),
+                 binance_adapter: BinanceAdapter = Depends(BinanceAdapter)
+                 # encryption_key se manejará internamente desde ENV
+                 ):
         """
         Inicializa CredentialService.
-        :param encryption_key: Clave de encriptación Fernet URL-safe base64-encoded.
-                               Si es None, se intentará obtener de las variables de entorno.
+        La clave de encriptación se obtiene de las variables de entorno.
         """
-        # Si no se proporciona una clave, intentar obtenerla de las variables de entorno
-        if encryption_key is None:
-            encryption_key = os.getenv("CREDENTIAL_ENCRYPTION_KEY")
-            logger.info(f"CredentialService __init__ obtuvo encryption_key de ENV: {encryption_key}")
+        encryption_key_str = os.getenv("CREDENTIAL_ENCRYPTION_KEY")
+        logger.info(f"CredentialService __init__ intentando obtener encryption_key de ENV: {'Presente' if encryption_key_str else 'Ausente'}")
 
-        if not isinstance(encryption_key, str) or not encryption_key:
-            logger.error("CREDENTIAL_ENCRYPTION_KEY debe ser una cadena no vacía.")
-            raise ValueError("CREDENTIAL_ENCRYPTION_KEY inválida en __init__.")
+        if not encryption_key_str: # encryption_key_str puede ser None o una cadena vacía
+            logger.critical("CREDENTIAL_ENCRYPTION_KEY no está configurada en las variables de entorno o está vacía.")
+            # En un contexto de API, esto debería ser manejado por una dependencia de configuración
+            # o resultar en un error de inicio del servidor si es crítico.
+            # Por ahora, lanzamos ValueError para indicar un problema de configuración fundamental.
+            raise ValueError("CREDENTIAL_ENCRYPTION_KEY es requerida y no está configurada o está vacía.")
         
-        logger.info(f"Pasando la siguiente clave (str) a Fernet: {encryption_key}")
-        self.fernet = Fernet(encryption_key.encode('utf-8')) # Fernet espera bytes
-        self.persistence_service = SupabasePersistenceService()
-        self.binance_adapter = BinanceAdapter()
+        logger.info(f"Pasando la siguiente clave (str) a Fernet: {encryption_key_str[:5]}... (truncada por seguridad)") # Log truncado
+        try:
+            self.fernet = Fernet(encryption_key_str.encode('utf-8')) # Fernet espera bytes
+        except Exception as e:
+            logger.critical(f"Error al inicializar Fernet con la clave de encriptación: {e}", exc_info=True)
+            raise ValueError(f"Error al inicializar Fernet: {e}")
+
+        self.persistence_service = persistence_service
+        self.binance_adapter = binance_adapter
         # self.telegram_adapter = TelegramAdapter()
         # self.gemini_adapter = GeminiAdapter()
         # self.mobula_adapter = MobulaAdapter()
-
-    def _get_encryption_key(self, provided_key: Optional[str]) -> bytes:
-        """
-        Valida la clave de encriptación proporcionada.
-        Este método ya no genera una clave, solo valida.
-        """
-        if provided_key:
-            try:
-                key_bytes = provided_key.encode('utf-8')
-                decoded_key = base64.urlsafe_b64decode(key_bytes)
-                if len(decoded_key) == 32:
-                    logger.info("Usando clave de encriptación proporcionada.")
-                    return decoded_key
-                else:
-                    logger.error(f"La clave de encriptación decodificada no tiene 32 bytes de longitud: {len(decoded_key)} bytes. Clave original: {provided_key}")
-                    raise ValueError("La clave de encriptación Fernet debe ser de 32 bytes después de la decodificación base64.")
-            except Exception as e:
-                logger.error(f"Error al procesar la clave de encriptación proporcionada '{provided_key}': {e}. Esto es un error crítico.")
-                raise ValueError(f"La clave de encriptación proporcionada no es válida: {e}")
-        else:
-            # Este caso ya debería ser manejado por el constructor, pero se mantiene para robustez.
-            logger.error("No se proporcionó CREDENTIAL_ENCRYPTION_KEY. Este es un valor requerido.")
-            raise ValueError("CREDENTIAL_ENCRYPTION_KEY no puede ser None.")
 
     def encrypt_data(self, data: str) -> str:
         """

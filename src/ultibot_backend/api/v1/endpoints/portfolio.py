@@ -15,8 +15,8 @@ TradingMode = Literal["paper", "real", "both"]
 @router.get("/snapshot/{user_id}", response_model=PortfolioSnapshot, status_code=status.HTTP_200_OK)
 async def get_portfolio_snapshot(
     user_id: UUID,
-    trading_mode: Annotated[TradingMode, Query(description="Trading mode filter: 'paper', 'real', or 'both'")] = "both",
-    portfolio_service: Annotated[PortfolioService, Depends(PortfolioService)]
+    portfolio_service: Annotated[PortfolioService, Depends(PortfolioService)],
+    trading_mode: Annotated[TradingMode, Query(description="Trading mode filter: 'paper', 'real', or 'both'")] = "both"
 ):
     """
     Get portfolio snapshot for the specified user and trading mode.
@@ -78,8 +78,8 @@ async def get_portfolio_snapshot(
 @router.get("/summary/{user_id}", response_model=PortfolioSummary, status_code=status.HTTP_200_OK)
 async def get_portfolio_summary(
     user_id: UUID,
-    trading_mode: Annotated[TradingMode, Query(description="Trading mode: 'paper' or 'real'")] = "paper",
-    portfolio_service: Annotated[PortfolioService, Depends(PortfolioService)]
+    portfolio_service: Annotated[PortfolioService, Depends(PortfolioService)],
+    trading_mode: Annotated[TradingMode, Query(description="Trading mode: 'paper' or 'real'")] = "paper"
 ):
     """
     Get portfolio summary for a specific trading mode.
@@ -119,8 +119,8 @@ async def get_portfolio_summary(
 @router.get("/balance/{user_id}", status_code=status.HTTP_200_OK)
 async def get_available_balance(
     user_id: UUID,
-    trading_mode: Annotated[TradingMode, Query(description="Trading mode: 'paper' or 'real'")] = "paper",
-    portfolio_service: Annotated[PortfolioService, Depends(PortfolioService)]
+    portfolio_service: Annotated[PortfolioService, Depends(PortfolioService)],
+    trading_mode: Annotated[TradingMode, Query(description="Trading mode: 'paper' or 'real'")] = "paper"
 ):
     """
     Get available balance for trading in the specified mode.
