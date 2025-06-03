@@ -1,4 +1,10 @@
+import asyncio
+import sys
 import psycopg
+
+# Solución para Windows ProactorEventLoop con psycopg
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 from psycopg.rows import dict_row # Usar dict_row, se aplica al cursor
 from psycopg.conninfo import make_conninfo
 from src.ultibot_backend.app_config import settings
