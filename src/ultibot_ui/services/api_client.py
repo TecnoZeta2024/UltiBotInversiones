@@ -594,3 +594,110 @@ class UltiBotAPIClient:
         
         logger.info(f"Obteniendo desempeño de estrategias para usuario {user_id} con modo: {mode if mode else 'todos'}")
         return await self._make_request("GET", endpoint, params=params)
+
+    async def get_ticker_data(self, symbols: List[str]) -> List[Dict[str, Any]]:
+        """
+        Obtiene datos de ticker para una lista de símbolos.
+        Assumed Endpoint: GET /api/v1/market/tickers?symbols=BTCUSDT,ETHUSDT
+
+        Args:
+            symbols: Lista de símbolos de trading (ej. ["BTCUSDT", "ETHUSDT"])
+
+        Returns:
+            Lista de diccionarios, cada uno representando datos de ticker para un símbolo.
+            Ej: [{"symbol": "BTCUSDT", "lastPrice": "60000.0", ...}, ...]
+        """
+        if not symbols:
+            return []
+
+        params = {"symbols": ",".join(symbols)}
+        logger.info(f"Obteniendo datos de ticker para los símbolos: {symbols}")
+        # Assuming the backend returns a list of ticker data directly
+        return await self._make_request("GET", "/api/v1/market/tickers", params=params)
+
+    async def get_candlestick_data(
+        self,
+        symbol: str,
+        interval: str,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+        limit: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Obtiene datos de velas (k-lines) para un símbolo y temporalidad específicos.
+        Assumed Endpoint: GET /api/v1/market/klines
+
+        Args:
+            symbol: Símbolo de trading (ej. "BTCUSDT")
+            interval: Temporalidad de las velas (ej. "1h", "1d", "5m")
+            start_time: Fecha de inicio opcional para los datos (datetime object)
+            end_time: Fecha de fin opcional para los datos (datetime object)
+            limit: Número máximo opcional de velas a devolver
+
+        Returns:
+            Lista de diccionarios, cada uno representando una vela (OHLCV).
+            Ej: [{"open_time": 1678886400000, "open": "20000.0", ...}, ...]
+        """
+        params: Dict[str, Any] = {
+            "symbol": symbol,
+            "interval": interval
+        }
+        if start_time:
+            params["startTime"] = int(start_time.timestamp() * 1000) # Convert to milliseconds timestamp
+        if end_time:
+            params["endTime"] = int(end_time.timestamp() * 1000) # Convert to milliseconds timestamp
+        if limit:
+            params["limit"] = limit
+
+        logger.info(f"Obteniendo datos de velas para {symbol} ({interval}) con parámetros: {params}")
+        # Assuming the backend returns a list of kline data directly
+        return await self._make_request("GET", "/api/v1/market/klines", params=params)
+
+    async def get_notification_history(
+        self,
+        user_id: UUID, # Assuming user_id might be part of the path or a query param based on backend design
+        limit: int = 100,
+        offset: int = 0
+    ) -> Dict[str, Any]: # Return type changed to Dict to match get_paper_trading_history
+        """
+        Obtiene el historial de notificaciones para el usuario.
+        Assumed Endpoint: GET /api/v1/users/{user_id}/notifications/history or /api/v1/notifications/history?user_id=...
+        For this implementation, let's assume user_id is part of the path.
+        If user_id is implicitly handled by backend context (e.g. from auth token), it can be removed.
+
+        Args:
+            user_id: ID del usuario para el cual obtener las notificaciones.
+            limit: Número máximo de notificaciones a devolver.
+            offset: Número de notificaciones a saltar (para paginación).
+
+        Returns:
+            Un diccionario conteniendo una lista de notificaciones y detalles de paginación.
+            Ej: {"notifications": [{"id": "...", "title": "...", ...}], "total_count": 10, "has_more": false}
+        """
+        params: Dict[str, Any] = {
+            "limit": limit,
+            "offset": offset
+        }
+        # Path could be /api/v1/notifications/history and user_id passed as query param if not implicit
+        # Or, if user_id is part of the path:
+        # endpoint = f"/api/v1/users/{user_id}/notifications/history"
+        # For now, assuming a general endpoint and user_id is handled by backend context or not strictly enforced for this call.
+        # Let's use /api/v1/notifications/history as per front-end-api-interaction.md, and assume user_id is implicit or not needed in query.
+        # If user_id is strictly required by this endpoint as a query param: params["user_id"] = str(user_id)
+
+        logger.info(f"Obteniendo historial de notificaciones para usuario {user_id} con paginación: limit={limit}, offset={offset}")
+        # Assuming the backend returns a dict with 'notifications' list and pagination details
+        return await self._make_request("GET", "/api/v1/notifications/history", params=params)
+
+    # --- WebSocket Support (Conceptual) ---
+    # Full WebSocket client implementation is complex and typically involves a dedicated library
+    # or class to manage the persistent connection, message handling, and state.
+    # An API client might provide a method to get a WebSocket URL if the backend uses token-based auth for WebSockets.
+    # async def get_market_data_websocket_url(self) -> str:
+    #     """
+    #     Obtiene la URL para conectar al WebSocket de datos de mercado.
+    #     Esto es conceptual. La autenticación y el manejo del stream serían separados.
+    #     """
+    #     # Example: return await self._make_request("GET", "/api/v1/market/websocket/url")
+    #     logger.warning("WebSocket URL fetching is conceptual and not implemented.")
+    #     return "ws://localhost:8000/api/v1/market/ws" # Placeholder

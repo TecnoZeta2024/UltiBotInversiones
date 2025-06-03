@@ -462,6 +462,11 @@ class PortfolioWidget(QWidget):
         worker.signals.result.connect(self._handle_update_result)
         worker.signals.error.connect(self._handle_worker_error)
         worker.signals.finished.connect(self._worker_finished)
+
+        # Feedback before starting worker
+        self.last_updated_label.setText(f"Actualizando portafolio ({current_mode.title()})...")
+        if hasattr(self, 'refresh_button'): self.refresh_button.setEnabled(False)
+
         self.thread_pool.start(worker)
         logger.info(f"Actualizando datos del portafolio para modo: {current_mode}")
 
@@ -473,67 +478,81 @@ class PortfolioWidget(QWidget):
             current_mode = self.trading_mode_manager.current_mode
             result_mode = result_data.get("trading_mode", current_mode)
             
-            # Solo procesar si los datos corresponden al modo actual
             if result_mode != current_mode:
                 logger.debug(f"Ignorando datos de modo {result_mode}, modo actual es {current_mode}")
+                # Do not re-enable buttons here if another update is expected for the current mode.
+                # However, if this is the only worker response, then re-enable.
+                # For simplicity, assume this worker is the one for the current mode.
+                if hasattr(self, 'refresh_button'): self.refresh_button.setEnabled(True)
                 return
 
             # Actualizar snapshot del portafolio
+            # The API returns a dict, PortfolioSnapshot is a Pydantic model.
+            # _update_portfolio_ui needs to handle a dict or we need to parse here.
+            # Assuming _update_portfolio_ui can handle the dict directly for now.
             if "portfolio_snapshot" in result_data:
-                self.current_snapshot = result_data["portfolio_snapshot"]
-                self._update_portfolio_ui(self.current_snapshot, current_mode)
+                self.current_snapshot_dict = result_data["portfolio_snapshot"] # Store as dict
+                self._update_portfolio_ui(self.current_snapshot_dict, current_mode)
 
             # Actualizar operaciones abiertas
             if "open_trades" in result_data:
-                self.open_trades = result_data["open_trades"]
+                self.open_trades = result_data["open_trades"] # List of dicts
                 self._update_open_trades_ui(self.open_trades)
 
             # Actualizar estado de gestión de capital
             if "capital_status" in result_data:
-                self.current_capital_status = result_data["capital_status"]
+                self.current_capital_status = result_data["capital_status"] # Dict
                 self._update_capital_management_ui(self.current_capital_status)
 
-            # Actualizar timestamp
             self.last_updated_label.setText(f"Última actualización: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-            self.error_label.setText("")
+            self.error_label.setText("") # Clear previous errors
 
         except Exception as e:
-            error_msg = f"Error procesando resultados: {e}"
+            error_msg = f"Error procesando datos actualizados del portafolio: {e}"
             logger.error(error_msg, exc_info=True)
-            self.error_label.setText(error_msg)
+            self.error_label.setText(error_msg) # Display error on dedicated label
+            QMessageBox.warning(self, "Portfolio Update Error",
+                                f"Hubo un error al procesar los datos del portafolio.\n"
+                                f"Detalles: {error_msg}")
+        finally:
+            if hasattr(self, 'refresh_button'): self.refresh_button.setEnabled(True)
 
-    def _update_portfolio_ui(self, snapshot: PortfolioSnapshot, mode: str):
+
+    def _update_portfolio_ui(self, snapshot_dict: Dict[str, Any], mode: str): # Changed snapshot type to dict
         """
-        Actualiza la UI del portafolio con el snapshot para el modo específico.
+        Actualiza la UI del portafolio con el snapshot_dict para el modo específico.
         """
-        if mode == "paper":
-            portfolio_data = snapshot.paper_trading
-            currency = "USDT (Virtual)"
-        else:
-            portfolio_data = snapshot.real_trading
-            currency = "USDT"
+        # Extract the correct part of the snapshot dict based on the mode
+        portfolio_mode_dict = snapshot_dict.get(f"{mode}_trading", {}) if snapshot_dict else {}
+
+        currency = "USDT (Virtual)" if mode == "paper" else "USDT"
 
         # Actualizar labels principales
-        self.balance_label.setText(f"Saldo Disponible: {portfolio_data.available_balance_usdt:,.2f} {currency}")
-        self.total_assets_label.setText(f"Valor Total Activos: {portfolio_data.total_assets_value_usd:,.2f} USD")
-        self.portfolio_value_label.setText(f"Valor Total Portafolio: {portfolio_data.total_portfolio_value_usd:,.2f} USD")
+        self.balance_label.setText(f"Saldo Disponible: {portfolio_mode_dict.get('available_balance_usdt', 0.0):,.2f} {currency}")
+        self.total_assets_label.setText(f"Valor Total Activos: {portfolio_mode_dict.get('total_assets_value_usd', 0.0):,.2f} USD")
+        self.portfolio_value_label.setText(f"Valor Total Portafolio: {portfolio_mode_dict.get('total_portfolio_value_usd', 0.0):,.2f} USD")
         
         # Actualizar tabla de activos
-        self._populate_assets_table(self.assets_table, portfolio_data.assets)
+        # The assets list is expected to be a list of dicts, matching PortfolioAsset structure
+        assets_list = portfolio_mode_dict.get('assets', [])
+        self._populate_assets_table(self.assets_table, assets_list)
 
         # Actualizar información comparativa
         other_mode = "real" if mode == "paper" else "paper"
-        other_data = snapshot.real_trading if mode == "paper" else snapshot.paper_trading
+        other_mode_dict = snapshot_dict.get(f"{other_mode}_trading", {}) if snapshot_dict else {}
         self.comparison_info.setText(
-            f"Portafolio {other_mode.title()}: {other_data.total_portfolio_value_usd:,.2f} USD"
+            f"Portafolio {other_mode.title()}: {other_mode_dict.get('total_portfolio_value_usd', 0.0):,.2f} USD"
         )
 
-        # Manejar errores
-        if portfolio_data.error_message:
+        # Manejar errores (assuming error_message is a field in portfolio_mode_dict)
+        error_message = portfolio_mode_dict.get("error_message")
+        if error_message:
             self.current_mode_group.setStyleSheet("QGroupBox { border: 1px solid red; }")
-            self.error_label.setText(f"Error en {mode}: {portfolio_data.error_message}")
+            # self.error_label is a general error label, this specific one might be different
+            logger.warning(f"Error message in portfolio data ({mode}): {error_message}")
+            # Consider showing this specific error more prominently if needed
         else:
-            self.current_mode_group.setStyleSheet("")
+            self.current_mode_group.setStyleSheet("") # Reset border
 
     def _update_open_trades_ui(self, trades: List[Dict[str, Any]]):
         """
@@ -736,9 +755,28 @@ class PortfolioWidget(QWidget):
         """
         Maneja errores reportados por el worker.
         """
-        self.error_label.setText(f"Error: {error_msg}")
+        logger.error(f"PortfolioWidget: Error en DataUpdateWorker: {error_msg}")
+        QMessageBox.critical(self, "Portfolio Data Error",
+                             f"No se pudieron cargar los datos del portafolio.\n"
+                             f"Detalles: {error_msg}\n\n"
+                             "Por favor, intente actualizar manualmente o revise la conexión.")
+        self.error_label.setText(f"Error al cargar datos. Ver logs.")
+        self.last_updated_label.setText("Actualización fallida.")
+        # Ensure UI is re-enabled
+        if hasattr(self, 'refresh_button'): self.refresh_button.setEnabled(True)
+        # Clear potentially stale data from tables by populating with empty lists
+        self._populate_assets_table(self.assets_table, [])
+        self._update_open_trades_ui([]) # This will show "No hay operaciones abiertas"
+        # Reset capital management UI elements to default/error state
+        self.total_capital_label.setText("Capital Total: Error")
+        self.available_capital_label.setText("Disponible para Nuevas Operaciones: Error")
+        self.committed_capital_label.setText("Capital Comprometido Hoy: Error")
+        self.daily_limit_label.setText("Límite Diario (50%): Error")
+        self.daily_usage_progress.setValue(0)
+        self.capital_alerts_frame.setVisible(False)
+
         self.error_occurred.emit(error_msg)
-        logger.error(f"Error en el worker de actualización: {error_msg}")
+
 
     def _worker_finished(self):
         """
