@@ -5,17 +5,19 @@ from uuid import UUID
 
 from src.shared.data_types import UserConfiguration
 from src.ultibot_backend.services.config_service import ConfigService
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService # Restaurar importación
-from src.ultibot_backend.services.credential_service import CredentialService # Restaurar importación
-from src.ultibot_backend.services.portfolio_service import PortfolioService # Restaurar importación
-from src.ultibot_backend.services.notification_service import NotificationService # Restaurar importación
-from src.ultibot_backend.main import ( # Importar las funciones de dependencia
+from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService # Restaurar importaciรณn
+from src.ultibot_backend.services.credential_service import CredentialService # Restaurar importaciรณn
+from src.ultibot_backend.services.portfolio_service import PortfolioService
+from src.ultibot_backend.services.notification_service import NotificationService
+# Importar desde el nuevo mรณdulo de dependencias
+from src.ultibot_backend.dependencies import (
     get_persistence_service,
     get_credential_service,
     get_portfolio_service,
     get_notification_service,
-    get_config_service as get_global_config_service # Renombrar para evitar conflicto
+    get_config_service as get_global_config_service # Mantener el alias si es necesario en este archivo
 )
+from src.ultibot_backend.app_config import settings # Importar settings
 from src.ultibot_backend.core.exceptions import (
     ConfigurationError,
     BinanceAPIError,
@@ -25,7 +27,7 @@ from src.ultibot_backend.core.exceptions import (
 
 router = APIRouter()
 
-FIXED_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
+# FIXED_USER_ID se accede a través de settings
 
 # Dependencia para obtener el ConfigService con sus dependencias
 def get_config_service_dependency(
@@ -44,17 +46,17 @@ async def get_user_config(config_service: ConfigService = Depends(get_config_ser
     Retorna la configuración actual del usuario.
     """
     try:
-        config = await config_service.get_user_configuration(FIXED_USER_ID)
+        config = await config_service.get_user_configuration(str(settings.FIXED_USER_ID))
         return config
     except ConfigurationError as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al cargar la configuración: {e}"
+            detail=f"Error al cargar la configuraciรณn: {e}"
         )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error inesperado al cargar la configuración: {e}"
+            detail=f"Error inesperado al cargar la configuraciรณn: {e}"
         )
 
 @router.patch("/config", response_model=UserConfiguration)
@@ -63,10 +65,10 @@ async def update_user_config(
     config_service: ConfigService = Depends(get_config_service_dependency)
 ):
     """
-    Permite actualizar parcialmente la configuración del usuario.
+    Permite actualizar parcialmente la configuraciรณn del usuario.
     """
     try:
-        current_config = await config_service.get_user_configuration(FIXED_USER_ID)
+        current_config = await config_service.get_user_configuration(str(settings.FIXED_USER_ID))
         
         update_data = updated_config.model_dump(exclude_unset=True, by_alias=True)
         
@@ -77,17 +79,17 @@ async def update_user_config(
 
         merged_config = current_config.model_copy(update=update_data)
 
-        await config_service.save_user_configuration(merged_config) # Corregido: no pasar user_id aquí
+        await config_service.save_user_configuration(merged_config) # Corregido: no pasar user_id aquรญ
         return merged_config
     except ConfigurationError as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al guardar la configuración: {e}"
+            detail=f"Error al guardar la configuraciรณn: {e}"
         )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error inesperado al actualizar la configuración: {e}"
+            detail=f"Error inesperado al actualizar la configuraciรณn: {e}"
         )
 
 @router.post("/config/real-trading-mode/activate", response_model=dict)
@@ -98,7 +100,7 @@ async def activate_real_trading_mode_endpoint(
     Intenta activar el modo de operativa real limitada.
     """
     try:
-        await config_service.activate_real_trading_mode(FIXED_USER_ID)
+        await config_service.activate_real_trading_mode(str(settings.FIXED_USER_ID))
         return {"message": "Modo de operativa real limitada activado exitosamente."}
     except RealTradeLimitReachedError as e:
         raise HTTPException(
@@ -118,7 +120,7 @@ async def activate_real_trading_mode_endpoint(
     except ConfigurationError as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error de configuración: {e}"
+            detail=f"Error de configuraciรณn: {e}"
         )
     except Exception as e:
         raise HTTPException(
@@ -134,12 +136,12 @@ async def deactivate_real_trading_mode_endpoint(
     Desactiva el modo de operativa real limitada.
     """
     try:
-        await config_service.deactivate_real_trading_mode(FIXED_USER_ID)
+        await config_service.deactivate_real_trading_mode(str(settings.FIXED_USER_ID))
         return {"message": "Modo de operativa real limitada desactivado."}
     except ConfigurationError as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error de configuración: {e}"
+            detail=f"Error de configuraciรณn: {e}"
         )
     except Exception as e:
         raise HTTPException(
@@ -155,12 +157,12 @@ async def get_real_trading_mode_status_endpoint(
     Retorna el estado actual del modo de operativa real limitada y el contador.
     """
     try:
-        status_data = await config_service.get_real_trading_status(FIXED_USER_ID)
+        status_data = await config_service.get_real_trading_status(str(settings.FIXED_USER_ID))
         return status_data
     except ConfigurationError as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error de configuración: {e}"
+            detail=f"Error de configuraciรณn: {e}"
         )
     except Exception as e:
         raise HTTPException(

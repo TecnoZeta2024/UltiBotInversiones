@@ -1,6 +1,7 @@
 import logging
 from typing import List, Optional, Dict, Set, Callable, Any
 from uuid import UUID
+from fastapi import Depends # Añadido
 
 from src.shared.data_types import AssetBalance, ServiceName, BinanceConnectionStatus
 from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
@@ -15,7 +16,10 @@ class MarketDataService:
     """
     Servicio para obtener datos de mercado, incluyendo balances de exchanges y streams en tiempo real.
     """
-    def __init__(self, credential_service: CredentialService, binance_adapter: BinanceAdapter):
+    def __init__(self, 
+                 credential_service: CredentialService = Depends(CredentialService), 
+                 binance_adapter: BinanceAdapter = Depends(BinanceAdapter)
+                 ):
         self.credential_service = credential_service
         self.binance_adapter = binance_adapter
         self._active_websocket_tasks: Dict[str, asyncio.Task] = {} # Para mantener un registro de las tareas WebSocket

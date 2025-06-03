@@ -1,72 +1,137 @@
-import sys
+"""
+UltiBot Frontend Main Application
+
+Este módulo inicializa y configura la aplicación PyQt5 del frontend UltiBot,
+incluyendo la configuración de servicios backend y la interfaz de usuario.
+
+Para ejecutar correctamente la aplicación, use desde la raíz del proyecto:
+    poetry run python src/ultibot_ui/main.py
+    
+O asegúrese de que el directorio raíz del proyecto esté en PYTHONPATH.
+"""
+
 import asyncio
-from PyQt5.QtWidgets import QApplication, QMessageBox
-from uuid import UUID
+import os
+import sys
 from typing import Optional
-import os # Importar os
+from uuid import UUID
 
+from PyQt5.QtWidgets import QApplication, QMessageBox
 from dotenv import load_dotenv
-from src.ultibot_backend.app_config import AppSettings
-from src.shared.data_types import APICredential, ServiceName # Importar APICredential y ServiceName
 
-# Importar la MainWindow
-from src.ultibot_ui.windows.main_window import MainWindow
+# Importaciones organizadas por grupos
+from ..shared.data_types import APICredential, ServiceName, UserConfiguration
+from ..ultibot_backend.adapters.binance_adapter import BinanceAdapter
+from ..ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from ..ultibot_backend.app_config import AppSettings
+from ..ultibot_backend.services.config_service import ConfigService
+from ..ultibot_backend.services.credential_service import CredentialService
+from ..ultibot_backend.services.market_data_service import MarketDataService
+from ..ultibot_backend.services.notification_service import NotificationService
+from ..ultibot_backend.services.portfolio_service import PortfolioService
+from .windows.main_window import MainWindow
 
-# Importar servicios de backend
-from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend.services.credential_service import CredentialService
-from src.ultibot_backend.services.market_data_service import MarketDataService
-from src.ultibot_backend.services.config_service import ConfigService
-from src.ultibot_backend.services.notification_service import NotificationService # Importar NotificationService
-from src.shared.data_types import UserConfiguration # Importar UserConfiguration
-
-# --- Importar qdarkstyle de forma segura ---
+# Importar qdarkstyle de forma segura
 try:
     import qdarkstyle
+    DARK_STYLE_AVAILABLE = True
 except ImportError:
     qdarkstyle = None
+    DARK_STYLE_AVAILABLE = False
     print("Advertencia: qdarkstyle no está instalado. La aplicación usará el tema por defecto de Qt.")
 
-async def start_application():
-    # --- Application Configuration ---
-    # This application relies on a .env file in its working directory for essential
-    # configurations such as database connection strings, API keys, and encryption keys.
-    # Ensure a valid .env file is present. See .env.example for a template.
-    # The AppSettings object will load these configurations.
-    # ---
 
-    app = QApplication(sys.argv)
-    # Apply the dark theme early so QMessageBox is styled.
-    if qdarkstyle:
-        app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-    else:
-        print("qdarkstyle no disponible, usando tema por defecto.")
-
-    settings = None
-    persistence_service = None
-    credential_service = None
-    market_data_service = None
-    config_service = None
-    notification_service = None # Añadir notification_service
-    user_id = None
-
-    try:
+class UltiBotApplication:
+    """
+    Clase principal para manejar la aplicación UltiBot UI.
+    
+    Encapsula la inicialización de servicios, configuración y UI.
+    """
+    
+    def __init__(self):
+        self.app: Optional[QApplication] = None
+        self.main_window: Optional[MainWindow] = None
+        self.settings: Optional[AppSettings] = None
+        self.user_id: Optional[UUID] = None
+        
+        # Servicios backend
+        self.persistence_service: Optional[SupabasePersistenceService] = None
+        self.credential_service: Optional[CredentialService] = None
+        self.market_data_service: Optional[MarketDataService] = None
+        self.config_service: Optional[ConfigService] = None
+        self.notification_service: Optional[NotificationService] = None
+        self.portfolio_service: Optional[PortfolioService] = None
+        
+        # Adaptadores
+        self.binance_adapter: Optional[BinanceAdapter] = None
+    
+    def setup_qt_application(self) -> QApplication:
+        """
+        Configura la aplicación PyQt5.
+        
+        Returns:
+            QApplication: Instancia de la aplicación Qt configurada.
+        """
+        app = QApplication(sys.argv)
+        
+        # Aplicar el tema oscuro si está disponible
+        if DARK_STYLE_AVAILABLE:
+            app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+        
+        self.app = app
+        return app
+    
+    def load_configuration(self) -> AppSettings:
+        """
+        Carga la configuración desde variables de entorno.
+        
+        Returns:
+            AppSettings: Configuración de la aplicación.
+            
+        Raises:
+            ValueError: Si faltan configuraciones críticas.
+        """
         load_dotenv(override=True)
-        # Obtener la clave de encriptación desde el entorno
+        
+        # Verificar clave de encriptación
         credential_encryption_key = os.getenv("CREDENTIAL_ENCRYPTION_KEY")
         if not credential_encryption_key:
-            raise ValueError("CREDENTIAL_ENCRYPTION_KEY is not set in .env file or environment.")
+            raise ValueError(
+                "CREDENTIAL_ENCRYPTION_KEY no está configurada en .env file o variables de entorno."
+            )
+        
         settings = AppSettings(CREDENTIAL_ENCRYPTION_KEY=credential_encryption_key)
-
-        user_id = settings.FIXED_USER_ID # Set user_id after settings are loaded
-
-        # Initialize PersistenceService
+        self.settings = settings
+        self.user_id = settings.FIXED_USER_ID
+        
+        return settings
+    
+    async def initialize_persistence_service(self) -> SupabasePersistenceService:
+        """
+        Inicializa el servicio de persistencia.
+        
+        Returns:
+            SupabasePersistenceService: Servicio de persistencia inicializado.
+            
+        Raises:
+            Exception: Si falla la conexión a la base de datos.
+        """
         persistence_service = SupabasePersistenceService()
-        await persistence_service.connect() # Connection attempt
-
-        # --- Asegurar que el user_id exista en user_configurations antes de cualquier otra operación ---
-        # Esto es una medida de contingencia para la clave foránea.
+        await persistence_service.connect()
+        
+        # Asegurar que el user_id exista en user_configurations
+        await self._ensure_user_exists_in_db(persistence_service)
+        
+        self.persistence_service = persistence_service
+        return persistence_service
+    
+    async def _ensure_user_exists_in_db(self, persistence_service: SupabasePersistenceService) -> None:
+        """
+        Asegura que el user_id exista en la tabla user_configurations.
+        
+        Args:
+            persistence_service: Servicio de persistencia para ejecutar SQL.
+        """
         try:
             await persistence_service.execute_raw_sql(
                 """
@@ -74,133 +139,259 @@ async def start_application():
                 VALUES (%s, %s)
                 ON CONFLICT (user_id) DO NOTHING;
                 """,
-                (user_id, "dark") # Usar un tema por defecto
+                (self.user_id, "dark")
             )
-            print(f"Asegurado que user_id {user_id} existe en user_configurations.")
-            await asyncio.sleep(1) # Añadir un pequeño retraso para la consistencia de la base de datos
+            print(f"Asegurado que user_id {self.user_id} existe en user_configurations.")
+            await asyncio.sleep(0.1)  # Pequeño retraso para consistencia de BD
         except Exception as e:
-            QMessageBox.critical(None, "Error de Inicialización de Usuario", f"Error al asegurar la existencia del usuario en la base de datos: {str(e)}\n\nLa aplicación se cerrará.")
-            sys.exit(1)
-        # --- Fin de la inicialización de user_id ---
-
-        # Initialize CredentialService
-        credential_service = CredentialService(encryption_key=settings.CREDENTIAL_ENCRYPTION_KEY)
-
-        # Other services
-        binance_adapter = BinanceAdapter() # Assumes AppSettings is used internally
-        market_data_service = MarketDataService(credential_service, binance_adapter)
-        # Inicializar PortfolioService para pasar a ConfigService
-        from src.ultibot_backend.services.portfolio_service import PortfolioService
-        portfolio_service = PortfolioService(market_data_service, persistence_service)
-        config_service = ConfigService(
-            persistence_service,
-            credential_service=credential_service,
-            portfolio_service=portfolio_service
+            raise Exception(f"Error al asegurar la existencia del usuario en la base de datos: {str(e)}")
+    
+    async def initialize_core_services(self) -> None:
+        """
+        Inicializa los servicios core de la aplicación.
+        
+        Raises:
+            Exception: Si falla la inicialización de algún servicio crítico.
+        """
+        if not self.settings or not self.persistence_service:
+            raise RuntimeError("Configuración o servicio de persistencia no inicializados")
+        
+        # Inicializar CredentialService
+        self.credential_service = CredentialService(
+            encryption_key=self.settings.CREDENTIAL_ENCRYPTION_KEY
         )
-        notification_service = NotificationService(credential_service, persistence_service, config_service) # Corregido: pasar config_service
-        config_service.set_notification_service(notification_service)
-
-        # --- Asegurar que la configuración de usuario por defecto exista ---
-        existing_user_config = await config_service.get_user_configuration(str(user_id)) # Corregido: pasar str(user_id)
-        print(f"Configuración de usuario para {user_id} cargada o creada exitosamente.")
-        # --- Fin de la lógica de configuración de usuario ---
-
-        # --- Cargar y guardar credenciales de Binance si no existen ---
+        
+        # Inicializar adaptadores
+        self.binance_adapter = BinanceAdapter()
+        
+        # Inicializar MarketDataService
+        self.market_data_service = MarketDataService(
+            self.credential_service,
+            self.binance_adapter
+        )
+        
+        # Inicializar PortfolioService
+        self.portfolio_service = PortfolioService(
+            self.market_data_service,
+            self.persistence_service
+        )
+        
+        # Inicializar ConfigService
+        self.config_service = ConfigService(
+            self.persistence_service,
+            credential_service=self.credential_service,
+            portfolio_service=self.portfolio_service
+        )
+        
+        # Inicializar NotificationService
+        self.notification_service = NotificationService(
+            self.credential_service,
+            self.persistence_service,
+            self.config_service
+        )
+        
+        # Inyectar NotificationService en ConfigService
+        self.config_service.set_notification_service(self.notification_service)
+    
+    async def ensure_user_configuration(self) -> None:
+        """
+        Asegura que exista una configuración de usuario válida.
+        
+        Raises:
+            Exception: Si falla la carga/creación de la configuración.
+        """
+        if not self.config_service:
+            raise RuntimeError("ConfigService no inicializado")
+        
+        try:
+            existing_config = await self.config_service.get_user_configuration(str(self.user_id))
+            print(f"Configuración de usuario para {self.user_id} cargada exitosamente.")
+        except Exception as e:
+            raise Exception(f"Error al cargar configuración de usuario: {str(e)}")
+    
+    async def setup_binance_credentials(self) -> None:
+        """
+        Configura las credenciales de Binance desde variables de entorno.
+        
+        Raises:
+            ValueError: Si faltan las credenciales de Binance.
+            Exception: Si falla el guardado de credenciales.
+        """
         binance_api_key = os.getenv("BINANCE_API_KEY")
         binance_api_secret = os.getenv("BINANCE_API_SECRET")
-
+        
         if not binance_api_key or not binance_api_secret:
-            raise ValueError("BINANCE_API_KEY or BINANCE_API_SECRET not found in .env file or environment.")
-
+            raise ValueError(
+                "BINANCE_API_KEY o BINANCE_API_SECRET no encontradas en .env o variables de entorno."
+            )
+        
         try:
-            existing_binance_credential = await credential_service.get_credential(
-                user_id=user_id,
-                service_name=ServiceName.BINANCE_SPOT, # Corregido a ServiceName.BINANCE_SPOT
+            # Verificar si ya existen credenciales
+            existing_credential = await self.credential_service.get_credential(
+                user_id=self.user_id,
+                service_name=ServiceName.BINANCE_SPOT,
                 credential_label="default"
             )
-            print("Intentando guardar/actualizar credenciales de Binance desde .env...")
             
-            encrypted_api_key = credential_service.encrypt_data(binance_api_key)
-            encrypted_api_secret = credential_service.encrypt_data(binance_api_secret)
-
-            binance_credential = APICredential( # Usar APICredential
-                id=settings.FIXED_BINANCE_CREDENTIAL_ID, # Pasar el UUID directamente
-                user_id=user_id, # Corregido a user_id
-                service_name=ServiceName.BINANCE_SPOT, # Corregido a ServiceName.BINANCE_SPOT
-                credential_label="default", # Corregido a credential_label
-                encrypted_api_key=encrypted_api_key, # Usar clave encriptada
-                encrypted_api_secret=encrypted_api_secret # Usar clave secreta encriptada
+            print("Guardando/actualizando credenciales de Binance desde .env...")
+            
+            # Encriptar credenciales
+            encrypted_api_key = self.credential_service.encrypt_data(binance_api_key)
+            encrypted_api_secret = self.credential_service.encrypt_data(binance_api_secret)
+            
+            # Crear credencial
+            binance_credential = APICredential(
+                id=self.settings.FIXED_BINANCE_CREDENTIAL_ID,
+                user_id=self.user_id,
+                service_name=ServiceName.BINANCE_SPOT,
+                credential_label="default",
+                encrypted_api_key=encrypted_api_key,
+                encrypted_api_secret=encrypted_api_secret
             )
-            # Forzar que service_name sea Enum antes de guardar
+            
+            # Asegurar que service_name sea Enum
             if isinstance(binance_credential.service_name, str):
                 binance_credential.service_name = ServiceName(binance_credential.service_name)
-            await credential_service.save_encrypted_credential(binance_credential) # Usar el nuevo método
-            print("Credenciales de Binance guardadas/actualizadas exitosamente desde .env.")
+            
+            await self.credential_service.save_encrypted_credential(binance_credential)
+            print("Credenciales de Binance guardadas/actualizadas exitosamente.")
+            
         except Exception as e:
-            QMessageBox.critical(None, "Error de Credenciales", f"Error al guardar/actualizar credenciales de Binance: {str(e)}\n\nLa aplicación se cerrará.")
-            sys.exit(1)
-        # --- Fin de la lógica de credenciales de Binance ---
-
-    except ValueError as ve: # Specifically for missing key or other ValueErrors during setup
-        QMessageBox.critical(None, "Configuration Error", f"A configuration error occurred: {str(ve)}\n\nPlease check your .env file or environment variables.\nThe application will now exit.")
-        sys.exit(1)
-    except Exception as e: # Catch other potential errors during service init (e.g., DB connection, malformed keys)
-        QMessageBox.critical(None, "Service Initialization Error", f"Failed to initialize critical services: {str(e)}\n\nLa aplicación se cerrará.")
-        sys.exit(1)
-
-    # Ensure persistence_service is available for cleanup, even if MainWindow creation fails
-    # (though unlikely if services initialized correctly)
+            raise Exception(f"Error al guardar/actualizar credenciales de Binance: {str(e)}")
     
-    # Crear y mostrar la ventana principal, pasando los servicios
-    main_window = MainWindow(user_id, market_data_service, config_service, notification_service, persistence_service) # Pasar persistence_service
-    main_window.show()
-
-    # Ejecutar el loop de eventos de Qt
-    exit_code = app.exec_()
-
-    # --- Limpieza de recursos después de que la aplicación Qt haya terminado ---
-    print("Iniciando limpieza de recursos asíncronos...")
-    if persistence_service:
-        try:
-            print("Desconectando persistence service...")
-            await persistence_service.disconnect()
-            print("Persistence service desconectado.")
-        except Exception as e:
-            print(f"Error durante la desconexión de persistence_service: {e}")
-
-    if market_data_service: # Asegurarse de que market_data_service se inicializó
-        try:
-            print("Cerrando market_data_service...")
-            await market_data_service.close()
-            print("Market_data_service cerrado.")
-        except Exception as e:
-            print(f"Error durante el cierre de market_data_service: {e}")
+    def create_main_window(self) -> MainWindow:
+        """
+        Crea y configura la ventana principal.
+        
+        Returns:
+            MainWindow: Instancia de la ventana principal configurada.
+            
+        Raises:
+            RuntimeError: Si los servicios requeridos no están inicializados.
+        """
+        required_services = [
+            self.user_id, self.market_data_service, self.config_service,
+            self.notification_service, self.persistence_service
+        ]
+        
+        if any(service is None for service in required_services):
+            raise RuntimeError("Servicios requeridos no están inicializados")
+        
+        main_window = MainWindow(
+            self.user_id,
+            self.market_data_service,
+            self.config_service,
+            self.notification_service,
+            self.persistence_service
+        )
+        
+        self.main_window = main_window
+        return main_window
     
-    print("Limpieza de recursos asíncronos completada.")
-    # --- Fin de la limpieza ---
+    async def cleanup_resources(self) -> None:
+        """
+        Limpia todos los recursos asíncronos.
+        """
+        print("Iniciando limpieza de recursos asíncronos...")
+        
+        cleanup_tasks = [
+            ("PersistenceService", self.persistence_service),
+            ("MarketDataService", self.market_data_service),
+        ]
+        
+        for service_name, service in cleanup_tasks:
+            if service:
+                try:
+                    print(f"Limpiando {service_name}...")
+                    if hasattr(service, 'disconnect'):
+                        await service.disconnect()
+                    elif hasattr(service, 'close'):
+                        await service.close()
+                    print(f"{service_name} limpiado correctamente.")
+                except Exception as e:
+                    print(f"Error durante la limpieza de {service_name}: {e}")
+        
+        print("Limpieza de recursos asíncronos completada.")
+    
+    def show_error_and_exit(self, title: str, message: str, exit_code: int = 1) -> None:
+        """
+        Muestra un mensaje de error y termina la aplicación.
+        
+        Args:
+            title: Título del mensaje de error.
+            message: Mensaje de error detallado.
+            exit_code: Código de salida de la aplicación.
+        """
+        if self.app:
+            QMessageBox.critical(None, title, f"{message}\\n\\nLa aplicación se cerrará.")
+        else:
+            print(f"ERROR - {title}: {message}")
+        sys.exit(exit_code)
 
-    sys.exit(exit_code)
 
-if __name__ == "__main__":
-    # --- Running the Application ---
-    # This UI application is part of a larger project structure within the 'src' directory.
-    # To ensure all internal imports (e.g., from 'src.ultibot_backend' or 'ultibot_ui.windows')
-    # resolve correctly, it's recommended to run this script using Poetry from the
-    # project root directory:
-    #
-    #   poetry run python src/ultibot_ui/main.py
-    #
-    # If not using Poetry, ensure the project root directory (containing 'src')
-    # is in your PYTHONPATH, or run the script from the project root directory, e.g.:
-    #
-    #   python -m src.ultibot_ui.main
-    #
-    # or ensure your current working directory is the project root when running:
-    #   python src/ultibot_ui/main.py
-    # ---
-    # Fix for Windows ProactorEventLoop issue with psycopg
+async def run_application() -> None:
+    """
+    Función principal para ejecutar la aplicación UltiBot.
+    """
+    ultibot_app = UltiBotApplication()
+    
+    try:
+        # 1. Configurar aplicación PyQt5
+        qt_app = ultibot_app.setup_qt_application()
+        
+        # 2. Cargar configuración
+        settings = ultibot_app.load_configuration()
+        
+        # 3. Inicializar servicio de persistencia
+        await ultibot_app.initialize_persistence_service()
+        
+        # 4. Inicializar servicios core
+        await ultibot_app.initialize_core_services()
+        
+        # 5. Asegurar configuración de usuario
+        await ultibot_app.ensure_user_configuration()
+        
+        # 6. Configurar credenciales de Binance
+        await ultibot_app.setup_binance_credentials()
+        
+        # 7. Crear y mostrar ventana principal
+        main_window = ultibot_app.create_main_window()
+        main_window.show()
+        
+        # 8. Ejecutar loop de eventos de Qt
+        exit_code = qt_app.exec_()
+        
+        # 9. Limpieza de recursos
+        await ultibot_app.cleanup_resources()
+        
+        sys.exit(exit_code)
+        
+    except ValueError as ve:
+        ultibot_app.show_error_and_exit(
+            "Error de Configuración",
+            f"Error de configuración: {str(ve)}\\n\\nPor favor verifique su archivo .env o variables de entorno."
+        )
+    
+    except Exception as e:
+        ultibot_app.show_error_and_exit(
+            "Error de Inicialización de Servicios",
+            f"Falló la inicialización de servicios críticos: {str(e)}"
+        )
+
+
+def main() -> None:
+    """
+    Punto de entrada principal de la aplicación.
+    
+    Configura el event loop apropiado para Windows y ejecuta la aplicación.
+    """
+    # Solución para Windows ProactorEventLoop con psycopg
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-        
+    
     # Ejecutar la aplicación asíncrona
-    asyncio.run(start_application())
+    asyncio.run(run_application())
+
+
+if __name__ == "__main__":
+    main()

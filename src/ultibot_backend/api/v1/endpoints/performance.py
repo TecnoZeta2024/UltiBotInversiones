@@ -2,18 +2,19 @@ from fastapi import APIRouter, Depends, Query
 from typing import Optional
 from uuid import UUID
 
-from ultibot_backend.api.v1.models.performance_models import (
+from ..models.performance_models import (
     StrategyPerformanceResponse,
     OperatingMode
 )
-from ultibot_backend.services.performance_service import PerformanceService
-from src.ultibot_backend.main import get_performance_service, FIXED_USER_ID # Importar servicio y FIXED_USER_ID
+from ....services.performance_service import PerformanceService
+from src.ultibot_backend.dependencies import get_performance_service # Importar desde dependencies
+from src.ultibot_backend.app_config import settings # Importar settings
 
 router = APIRouter()
 
-# Dependencia para obtener el User ID (usando FIXED_USER_ID para v1.0)
+# Dependencia para obtener el User ID (usando settings.FIXED_USER_ID para v1.0)
 async def get_current_user_id() -> UUID:
-    return FIXED_USER_ID
+    return settings.FIXED_USER_ID
 
 @router.get(
     "/strategies",

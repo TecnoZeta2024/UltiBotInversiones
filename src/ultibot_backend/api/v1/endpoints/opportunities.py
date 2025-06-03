@@ -6,11 +6,11 @@ from src.shared.data_types import Opportunity, OpportunityStatus, UserConfigurat
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 from src.ultibot_backend.services.config_service import ConfigService
 import logging # Importar logging
-from src.ultibot_backend.main import ( # Importar las funciones de dependencia
+from src.ultibot_backend.dependencies import ( # Importar desde el nuevo módulo de dependencias
     get_persistence_service,
-    get_config_service,
-    FIXED_USER_ID
+    get_config_service
 )
+from src.ultibot_backend.app_config import settings # Importar settings
 
 logger = logging.getLogger(__name__) # Inicializar logger
 
@@ -31,7 +31,7 @@ async def get_real_trading_candidates(
 
     # config_service.get_user_configuration ya devuelve una instancia de UserConfiguration
     # o una configuración por defecto si no se encuentra en la BD.
-    user_config: UserConfiguration = await config_service.get_user_configuration(FIXED_USER_ID)
+    user_config: UserConfiguration = await config_service.get_user_configuration(str(settings.FIXED_USER_ID))
 
     # Asegurarse de que realTradingSettings no sea None
     real_trading_settings = user_config.realTradingSettings
@@ -53,7 +53,7 @@ async def get_real_trading_candidates(
 
     # Obtener el número de operaciones reales cerradas para el usuario
     closed_real_trades_count = await persistence_service.get_closed_trades_count(
-        user_id=FIXED_USER_ID,
+        user_id=settings.FIXED_USER_ID,
         is_real_trade=True
     )
 
@@ -65,7 +65,7 @@ async def get_real_trading_candidates(
 
     # Obtener oportunidades con estado PENDING_USER_CONFIRMATION_REAL
     opportunities = await persistence_service.get_opportunities_by_status(
-        user_id=FIXED_USER_ID,
+        user_id=settings.FIXED_USER_ID,
         status=OpportunityStatus.PENDING_USER_CONFIRMATION_REAL
     )
 

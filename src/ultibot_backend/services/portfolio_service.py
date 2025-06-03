@@ -2,6 +2,7 @@ import logging
 from typing import Dict, List, Optional
 from uuid import UUID
 from datetime import datetime
+from fastapi import Depends # Añadido
 
 from src.shared.data_types import PortfolioSnapshot, PortfolioSummary, PortfolioAsset, AssetBalance, UserConfiguration, Trade
 from src.ultibot_backend.services.market_data_service import MarketDataService
@@ -14,7 +15,10 @@ class PortfolioService:
     """
     Servicio para gestionar y proporcionar el estado del portafolio (paper trading y real).
     """
-    def __init__(self, market_data_service: MarketDataService, persistence_service: SupabasePersistenceService):
+    def __init__(self, 
+                 market_data_service: MarketDataService = Depends(MarketDataService), 
+                 persistence_service: SupabasePersistenceService = Depends(SupabasePersistenceService)
+                 ):
         self.market_data_service = market_data_service
         self.persistence_service = persistence_service
         self.paper_trading_balance: float = 0.0
