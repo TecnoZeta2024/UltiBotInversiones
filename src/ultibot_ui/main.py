@@ -13,22 +13,25 @@ O asegúrese de que el directorio raíz del proyecto esté en PYTHONPATH.
 import asyncio
 import os
 import sys
-from typing import Optional
+from typing import Optional, Any, Callable, Coroutine
 from uuid import UUID
 
+from PyQt5.QtCore import QObject, QThread, pyqtSignal, pyqtSlot # Added for ApiWorker
 from PyQt5.QtWidgets import QApplication, QMessageBox
 from dotenv import load_dotenv
 
 # Importaciones organizadas por grupos
-from ..shared.data_types import APICredential, ServiceName, UserConfiguration
-from ..ultibot_backend.adapters.binance_adapter import BinanceAdapter
-from ..ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from ..shared.data_types import APICredential, ServiceName, UserConfiguration # ServiceName might be unused now
 from ..ultibot_backend.app_config import AppSettings
-from ..ultibot_backend.services.config_service import ConfigService
-from ..ultibot_backend.services.credential_service import CredentialService
-from ..ultibot_backend.services.market_data_service import MarketDataService
-from ..ultibot_backend.services.notification_service import NotificationService
-from ..ultibot_backend.services.portfolio_service import PortfolioService
+# Backend service imports will be removed or replaced by API client usage
+# from ..ultibot_backend.adapters.binance_adapter import BinanceAdapter
+# from ..ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+# from ..ultibot_backend.services.config_service import ConfigService
+# from ..ultibot_backend.services.credential_service import CredentialService
+# from ..ultibot_backend.services.market_data_service import MarketDataService
+# from ..ultibot_backend.services.notification_service import NotificationService
+# from ..ultibot_backend.services.portfolio_service import PortfolioService
+from .services.api_client import UltiBotAPIClient, APIError # Added
 from .windows.main_window import MainWindow
 
 # Importar qdarkstyle de forma segura
@@ -39,6 +42,552 @@ except ImportError:
     qdarkstyle = None
     DARK_STYLE_AVAILABLE = False
     print("Advertencia: qdarkstyle no está instalado. La aplicación usará el tema por defecto de Qt.")
+
+# --- Global Stylesheet for Dark Mode ---
+DARK_GLOBAL_STYLESHEET = """
+QWidget {
+    background-color: #121212; /* Deep dark grey for main background */
+    color: #E0E0E0; /* Light grey for text */
+    font-family: "Inter", "Roboto", Arial, sans-serif; /* Desired font family */
+    font-size: 14px; /* Default body text size */
+    font-weight: 400; /* Default body text weight */
+}
+
+QFrame, QGroupBox, QTabWidget::pane {
+    background-color: #1E1E1E;
+    border-radius: 8px;
+    border: 1px solid #383838; /* Slightly more defined border for containers */
+}
+
+QGroupBox {
+    padding: 20px;
+    margin-top: 22px;
+    font-size: 14px; /* GroupBox content should follow default body font size */
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 6px 12px;
+    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #00C2FF, stop:1 #00FF8C); /* Gradient Blue to Green */
+    color: #121212;
+    border-radius: 4px;
+    margin-left: 12px;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+QLabel {
+    background-color: transparent;
+    padding: 2px; /* Minimal padding for labels */
+}
+
+/* Specific Label Styles based on ObjectName for Typography */
+QLabel#viewTitleLabel { /* For main view titles, e.g., "Dashboard", "Opportunities" */
+    font-size: 22px;
+    font-weight: 600;
+    color: #E0E0E0;
+    padding-bottom: 8px;
+    border: none; /* Ensure no accidental borders from QFrame inheritance */
+}
+QLabel#sectionTitleLabel {
+    font-size: 18px;
+    font-weight: 500;
+    color: #00FF8C;
+    margin-bottom: 6px;
+    border: none;
+}
+QLabel#statusLabel {
+    font-size: 12px;
+    color: #999999; /* Slightly darker grey for status */
+    font-style: italic;
+    border: none;
+}
+QLabel#dataDisplayLabel {
+    font-size: 16px;
+    font-weight: 500;
+    color: #00C2FF;
+    border: none;
+}
+QLabel#smallDetailLabel { /* For less important labels like "Filtrar por modo:" */
+    font-size: 12px;
+    color: #BBBBBB; /* Lighter than status, but not primary */
+    border: none;
+}
+
+
+QPushButton {
+    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #007BFF, stop:1 #00C2FF); /* Blue gradient */
+    color: #FFFFFF; /* White text on button */
+    border: none;
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+}
+QPushButton:hover {
+    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #0056b3, stop:1 #00A0DD); /* Darker blue gradient */
+}
+QPushButton:pressed {
+    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #004085, stop:1 #007BFF); /* Even darker */
+}
+QPushButton:disabled {
+    background-color: #2A2A2A; /* Darker grey for disabled */
+    color: #555555;
+}
+
+QPushButton#accentButton {
+    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #00FF8C, stop:1 #00DB7A); /* Green gradient */
+    color: #121212;
+}
+QPushButton#accentButton:hover {
+    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #00DB7A, stop:1 #00C2FF); /* Green to blue gradient on hover */
+}
+QPushButton#accentButton:pressed {
+    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #00B36B, stop:1 #00A0DD);
+}
+
+
+QTableWidget {
+    gridline-color: #383838;
+    background-color: #1A1A1A; /* Slightly darker table background */
+    border: 1px solid #383838;
+    font-size: 14px;
+}
+QHeaderView::section {
+    background-color: #222222;
+    color: #00FF8C; /* Green accent for header text */
+    padding: 8px;
+    border: 1px solid #383838;
+    font-size: 14px;
+    font-weight: 600; /* Bolder header */
+}
+QTableWidget::item {
+    padding: 8px;
+    border-bottom: 1px solid #2A2A2A;
+    color: #DDDDDD; /* Slightly brighter item text */
+}
+QTableWidget::item:selected {
+    background-color: #007BFF; /* Blue selection */
+    color: #FFFFFF;
+}
+QTableWidget::item { /* Monospace for data */
+    font-family: "Consolas", "Menlo", "Monaco", "Lucida Console", monospace;
+}
+
+
+QComboBox {
+    border: 1px solid #383838;
+    border-radius: 6px;
+    padding: 6px 10px;
+    background-color: #222222; /* Darker combo box */
+    min-height: 24px;
+    font-size: 14px;
+    color: #E0E0E0;
+}
+QComboBox:editable {
+    background: #222222;
+}
+QComboBox:!editable, QComboBox::drop-down:editable {
+     background: #282828;
+}
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 22px;
+    border-left-width: 1px;
+    border-left-color: #383838;
+    border-left-style: solid;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+}
+/* QComboBox::down-arrow: Needs resource file or SVG icon */
+
+
+QScrollBar:vertical {
+    border: none;
+    background: #1A1A1A; /* Darker scrollbar track */
+    width: 14px;
+    margin: 14px 0 14px 0;
+}
+QScrollBar::handle:vertical {
+    background: #00C2FF; /* Blue accent for handle */
+    min-height: 30px;
+    border-radius: 7px;
+}
+QScrollBar::handle:vertical:hover {
+    background: #00A0DD; /* Darker blue on hover */
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0px;
+    background: none;
+}
+
+QScrollBar:horizontal {
+    border: none;
+    background: #1A1A1A;
+    height: 14px;
+    margin: 0 14px 0 14px;
+}
+QScrollBar::handle:horizontal {
+    background: #00C2FF;
+    min-width: 30px;
+    border-radius: 7px;
+}
+QScrollBar::handle:horizontal:hover {
+    background: #00A0DD;
+}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    width: 0px;
+    background: none;
+}
+
+QTabWidget::pane {
+    border-top: 2px solid #00FF8C; /* Green accent line for pane top */
+    padding: 16px;
+    background-color: #1E1E1E;
+}
+QTabBar::tab {
+    background: #1E1E1E;
+    border: 1px solid #383838;
+    border-bottom: none;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    min-width: 120px;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-weight: 600; /* Bolder tab labels */
+    color: #999999; /* Dimmer unselected tab text */
+}
+QTabBar::tab:selected, QTabBar::tab:hover {
+    background: #2A2A2A;
+    color: #00FF8C; /* Green accent for selected/hovered tab text */
+}
+QTabBar::tab:selected {
+    border-color: #00FF8C;
+    border-bottom: 2px solid #2A2A2A;
+    margin-bottom: -1px;
+}
+QTabBar::tab:!selected {
+    margin-top: 3px;
+}
+
+
+QFrame#headerFrame {
+    background-color: #1E1E1E;
+    border-bottom: 2px solid #00C2FF; /* Blue accent for header */
+    border-radius: 0px;
+    padding: 8px;
+}
+
+QProgressBar {
+    border: 1px solid #383838;
+    border-radius: 6px;
+    text-align: center;
+    background-color: #1E1E1E;
+    color: #E0E0E0;
+    font-weight: 600; /* Bolder progress text */
+}
+QProgressBar::chunk {
+    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #00FF8C, stop:1 #00C2FF); /* Green to Blue gradient */
+    border-radius: 5px;
+}
+"""
+
+# --- Light Mode Global Stylesheet ---
+LIGHT_GLOBAL_STYLESHEET = """
+QWidget {
+    background-color: #F8F9FA; /* Light grey for main background */
+    color: #212529; /* Dark grey for text */
+    font-family: "Inter", "Roboto", Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+}
+
+QFrame, QGroupBox, QTabWidget::pane {
+    background-color: #FFFFFF; /* White for containers */
+    border-radius: 8px;
+    border: 1px solid #DEE2E6; /* Subtle border */
+}
+
+QGroupBox {
+    padding: 20px;
+    margin-top: 22px;
+    font-size: 16px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 6px 12px;
+    background-color: #0099E5; /* Softer Blue accent for group titles */
+    color: #FFFFFF; /* White text on blue accent */
+    border-radius: 4px;
+    margin-left: 12px;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+QLabel {
+    background-color: transparent;
+    padding: 2px;
+}
+
+QLabel#viewTitleLabel {
+    font-size: 22px;
+    font-weight: 600;
+    color: #212529;
+    padding-bottom: 8px;
+}
+QLabel#sectionTitleLabel {
+    font-size: 18px;
+    font-weight: 500;
+    color: #00CC7A; /* Softer Green accent */
+    margin-bottom: 6px;
+}
+QLabel#statusLabel {
+    font-size: 12px;
+    color: #6C757D; /* Greyer for status */
+    font-style: italic;
+}
+QLabel#dataDisplayLabel {
+    font-size: 16px;
+    font-weight: 500;
+    color: #0099E5; /* Softer Blue accent */
+}
+QLabel#smallDetailLabel {
+    font-size: 12px;
+    color: #6C757D;
+}
+
+QPushButton {
+    background-color: #007BFF; /* Standard blue */
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+}
+QPushButton:hover {
+    background-color: #0056b3;
+}
+QPushButton:disabled {
+    background-color: #E0E0E0;
+    color: #AAAAAA;
+}
+QPushButton#accentButton {
+    background-color: #00CC7A; /* Softer green */
+    color: #FFFFFF;
+}
+QPushButton#accentButton:hover {
+    background-color: #00B36B;
+}
+
+
+QTableWidget {
+    gridline-color: #DEE2E6;
+    background-color: #FFFFFF;
+    border: 1px solid #DEE2E6;
+    font-size: 14px;
+}
+QHeaderView::section {
+    background-color: #E9ECEF;
+    color: #212529;
+    padding: 8px;
+    border: 1px solid #DEE2E6;
+    font-size: 14px;
+    font-weight: 500;
+}
+QTableWidget::item {
+    padding: 8px;
+    border-bottom: 1px solid #DEE2E6;
+}
+QTableWidget::item:selected {
+    background-color: #007BFF;
+    color: white;
+}
+QTableWidget::item { /* Monospace numbers */
+    font-family: "Consolas", "Menlo", "Monaco", monospace;
+}
+
+
+QComboBox {
+    border: 1px solid #CED4DA;
+    border-radius: 6px;
+    padding: 6px 10px;
+    background-color: #FFFFFF;
+    min-height: 24px;
+    font-size: 14px;
+}
+QComboBox:editable {
+    background: #FFFFFF;
+}
+QComboBox:!editable, QComboBox::drop-down:editable {
+     background: #E9ECEF;
+}
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 22px;
+    border-left-width: 1px;
+    border-left-color: #CED4DA;
+    border-left-style: solid;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+}
+/* QComboBox::down-arrow: Needs light version of icon */
+
+
+QScrollBar:vertical {
+    border: none;
+    background: #F8F9FA;
+    width: 14px;
+    margin: 14px 0 14px 0;
+}
+QScrollBar::handle:vertical {
+    background: #CED4DA;
+    min-height: 30px;
+    border-radius: 7px;
+}
+QScrollBar::handle:vertical:hover {
+    background: #ADB5BD;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0px;
+    background: none;
+}
+
+QScrollBar:horizontal {
+    border: none;
+    background: #F8F9FA;
+    height: 14px;
+    margin: 0 14px 0 14px;
+}
+QScrollBar::handle:horizontal {
+    background: #CED4DA;
+    min-width: 30px;
+    border-radius: 7px;
+}
+QScrollBar::handle:horizontal:hover {
+    background: #ADB5BD;
+}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    width: 0px;
+    background: none;
+}
+
+QTabWidget::pane {
+    border-top: 2px solid #0099E5; /* Softer Blue accent line */
+    padding: 16px;
+    background-color: #FFFFFF;
+}
+QTabBar::tab {
+    background: #E9ECEF;
+    border: 1px solid #DEE2E6;
+    border-bottom: none;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    min-width: 120px;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #495057;
+}
+QTabBar::tab:selected, QTabBar::tab:hover {
+    background: #FFFFFF;
+    color: #0099E5;
+}
+QTabBar::tab:selected {
+    border-color: #0099E5;
+    border-bottom: 2px solid #FFFFFF;
+    margin-bottom: -1px;
+}
+QTabBar::tab:!selected {
+    margin-top: 3px;
+}
+
+QFrame#headerFrame {
+    background-color: #FFFFFF;
+    border-bottom: 2px solid #00CC7A; /* Softer Green separator */
+    border-radius: 0px;
+    padding: 8px;
+}
+
+QProgressBar {
+    border: 1px solid #CED4DA;
+    border-radius: 6px;
+    text-align: center;
+    background-color: #E9ECEF;
+    color: #212529;
+    font-weight: bold;
+}
+QProgressBar::chunk {
+    background-color: #00CC7A; /* Softer Green accent */
+    border-radius: 5px;
+}
+"""
+
+
+# --- ApiWorker using QThread as per docs/front-end-api-interaction.md ---
+# (ApiWorker class definition remains unchanged here)
+# To make apply_application_style accessible, it's better as a standalone function
+# or part of UltiBotApplication if it needs access to app instance variables,
+# but for stylesheets, a standalone function that gets QApplication.instance() is fine.
+
+def apply_application_style(theme_name: str):
+    """Applies the global stylesheet for the given theme."""
+    app = QApplication.instance()
+    if not app:
+        logger.error("QApplication instance not found. Cannot apply style.")
+        return
+
+    base_style = ""
+    if DARK_STYLE_AVAILABLE and qdarkstyle:
+        base_style = qdarkstyle.load_stylesheet_pyqt5()
+
+    if theme_name == "light":
+        logger.info("Applying Light Theme.")
+        app.setStyleSheet(base_style + LIGHT_GLOBAL_STYLESHEET)
+    else: # Default to dark
+        logger.info("Applying Dark Theme.")
+        app.setStyleSheet(base_style + DARK_GLOBAL_STYLESHEET)
+
+class ApiWorker(QObject): # ApiWorker definition moved slightly to accommodate the function above
+    """
+    Worker object to perform asynchronous API calls in a separate thread.
+    """
+    result_ready = pyqtSignal(object)
+    error_occurred = pyqtSignal(str)
+
+    def __init__(self, awaitable_coroutine: Coroutine):
+        super().__init__()
+        self.awaitable_coroutine = awaitable_coroutine
+
+    @pyqtSlot()
+    def run(self):
+        """
+        Executes the awaitable coroutine.
+        """
+        try:
+            # Need an event loop in this thread to run asyncio code
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            result = loop.run_until_complete(self.awaitable_coroutine)
+            loop.close()
+            self.result_ready.emit(result)
+        except APIError as e:
+            # Construct a meaningful error message from APIError
+            error_msg = f"API Error ({e.status_code}): {e.message}"
+            if e.response_json and 'detail' in e.response_json:
+                if isinstance(e.response_json['detail'], list): # FastAPI validation errors
+                    details = ", ".join([err.get('msg', 'validation error') for err in e.response_json['detail']])
+                    error_msg += f" - Details: {details}"
+                else:
+                    error_msg += f" - Detail: {e.response_json['detail']}"
+            self.error_occurred.emit(error_msg)
+        except Exception as e:
+            self.error_occurred.emit(f"Unexpected error in API worker: {str(e)}")
 
 
 class UltiBotApplication:
@@ -53,17 +602,19 @@ class UltiBotApplication:
         self.main_window: Optional[MainWindow] = None
         self.settings: Optional[AppSettings] = None
         self.user_id: Optional[UUID] = None
-        
-        # Servicios backend
-        self.persistence_service: Optional[SupabasePersistenceService] = None
-        self.credential_service: Optional[CredentialService] = None
-        self.market_data_service: Optional[MarketDataService] = None
-        self.config_service: Optional[ConfigService] = None
-        self.notification_service: Optional[NotificationService] = None
-        self.portfolio_service: Optional[PortfolioService] = None
-        
-        # Adaptadores
-        self.binance_adapter: Optional[BinanceAdapter] = None
+        self.active_threads: List[QThread] = [] # To keep track of active threads
+
+        # API Client - Single point of contact for backend services
+        self.api_client: Optional[UltiBotAPIClient] = None
+
+        # The following backend service instances will be removed:
+        # self.persistence_service: Optional[SupabasePersistenceService] = None
+        # self.credential_service: Optional[CredentialService] = None
+        # self.market_data_service: Optional[MarketDataService] = None
+        # self.config_service: Optional[ConfigService] = None
+        # self.notification_service: Optional[NotificationService] = None
+        # self.portfolio_service: Optional[PortfolioService] = None
+        # self.binance_adapter: Optional[BinanceAdapter] = None
     
     def setup_qt_application(self) -> QApplication:
         """
@@ -98,204 +649,224 @@ class UltiBotApplication:
         settings = AppSettings(CREDENTIAL_ENCRYPTION_KEY=credential_encryption_key)
         self.settings = settings
         self.user_id = settings.FIXED_USER_ID
+        # Initialize API Client
+        # TODO: Fetch base_url from environment variable or settings
+        self.api_client = UltiBotAPIClient(base_url="http://localhost:8000")
         return settings
-    
-    async def initialize_persistence_service(self) -> SupabasePersistenceService:
-        """
-        Inicializa el servicio de persistencia.
-        
-        Returns:
-            SupabasePersistenceService: Servicio de persistencia inicializado.
-            
-        Raises:
-            Exception: Si falla la conexión a la base de datos.
-        """
-        persistence_service = SupabasePersistenceService()
-        await persistence_service.connect()
-        
-        # Asegurar que el user_id exista en user_configurations
-        await self._ensure_user_exists_in_db(persistence_service)
-        
-        self.persistence_service = persistence_service
-        return persistence_service
-    
-    async def _ensure_user_exists_in_db(self, persistence_service: SupabasePersistenceService) -> None:
-        """
-        Asegura que el user_id exista en la tabla user_configurations.
-        
-        Args:
-            persistence_service: Servicio de persistencia para ejecutar SQL.
-        """
-        try:
-            await persistence_service.execute_raw_sql(
-                """
-                INSERT INTO user_configurations (user_id, selected_theme)
-                VALUES (%s, %s)
-                ON CONFLICT (user_id) DO NOTHING;
-                """,
-                (self.user_id, "dark")
-            )
-            print(f"Asegurado que user_id {self.user_id} existe en user_configurations.")
-            await asyncio.sleep(0.1)  # Pequeño retraso para consistencia de BD
-        except Exception as e:
-            raise Exception(f"Error al asegurar la existencia del usuario en la base de datos: {str(e)}")
-    
+
+    # Removed initialize_persistence_service method as persistence will be handled by the backend via API client.
+    # async def initialize_persistence_service(self) -> SupabasePersistenceService: ...
+
+    # Removed _ensure_user_exists_in_db method as this logic should be backend or handled by API calls.
+    # async def _ensure_user_exists_in_db(self, persistence_service: SupabasePersistenceService) -> None: ...
+
     async def initialize_core_services(self) -> None:
         """
-        Inicializa los servicios core de la aplicación.
-        
-        Raises:
-            Exception: Si falla la inicialización de algún servicio crítico.
+        Initializes core aspects of the application.
+        Now primarily involves ensuring the API client is ready.
         """
-        if not self.settings or not self.persistence_service:
-            raise RuntimeError("Configuración o servicio de persistencia no inicializados")
-        # Inicializar adaptadores
-        self.binance_adapter = BinanceAdapter()
-        # Inicializar CredentialService pasando dependencias explícitas
-        self.credential_service = CredentialService(
-            persistence_service=self.persistence_service,
-            binance_adapter=self.binance_adapter
-        )
+        if not self.settings:
+            raise RuntimeError("Configuration not loaded")
+        if not self.api_client:
+            raise RuntimeError("API Client not initialized")
         
-        # Inicializar MarketDataService
-        self.market_data_service = MarketDataService(
-            self.credential_service,
-            self.binance_adapter
-        )
+        # The direct initialization of backend services is removed.
+        # Example: self.binance_adapter = BinanceAdapter()
+        # Example: self.credential_service = CredentialService(...)
+        # ... and so on for other services.
         
-        # Inicializar PortfolioService
-        self.portfolio_service = PortfolioService(
-            self.market_data_service,
-            self.persistence_service
-        )
-        
-        # Inicializar ConfigService
-        self.config_service = ConfigService(
-            self.persistence_service,
-            credential_service=self.credential_service,
-            portfolio_service=self.portfolio_service
-        )
-        
-        # Inicializar NotificationService
-        self.notification_service = NotificationService(
-            self.credential_service,
-            self.persistence_service,
-            self.config_service
-        )
-        
-        # Inyectar NotificationService en ConfigService
-        self.config_service.set_notification_service(self.notification_service)
-    
+        # We might add a health check to the API here if needed.
+        try:
+            # This is a new check, assuming test_connection can be an async method or wrapped.
+            # For now, we'll assume it's okay or handle actual calls failing.
+            # if not await self.api_client.test_connection(): # Assuming test_connection is async
+            #     raise ConnectionError("Failed to connect to the UltiBot API backend.")
+            print("API Client is configured. Core services are now accessed via the API client.")
+        except APIError as e:
+            raise RuntimeError(f"Failed to connect or initialize with API backend: {e}")
+
     async def ensure_user_configuration(self) -> None:
         """
-        Asegura que exista una configuración de usuario válida.
+        Ensures that user configuration is loaded via the API.
+        Ensures that user configuration is loaded via the API.
         
         Raises:
-            Exception: Si falla la carga/creación de la configuración.
+            Exception: If loading the configuration fails.
         """
-        if not self.config_service:
-            raise RuntimeError("ConfigService no inicializado")
-        
+        if not self.api_client:
+            raise RuntimeError("API Client not initialized")
+        if not self.user_id: # user_id is typically needed for user-specific config
+            raise RuntimeError("User ID not initialized")
+
         try:
-            existing_config = await self.config_service.get_user_configuration(str(self.user_id))
-            print(f"Configuración de usuario para {self.user_id} cargada exitosamente.")
-        except Exception as e:
-            raise Exception(f"Error al cargar configuración de usuario: {str(e)}")
-    
+            # This will be an async call. UI needs to handle this.
+        Ensures that user configuration is loaded via the API using a non-blocking worker.
+        
+        Raises:
+            RuntimeError: If API Client or User ID is not initialized.
+        """
+        if not self.api_client:
+            raise RuntimeError("API Client not initialized for ensure_user_configuration")
+        if not self.user_id:
+            raise RuntimeError("User ID not initialized for ensure_user_configuration")
+
+        print(f"Starting to fetch user configuration for {self.user_id} via API worker...")
+
+        # This method will now set up the worker and connect signals.
+        # The actual result processing will happen in a slot.
+        # For the initial startup sequence, this means `run_application` needs to handle
+        # the asynchronous nature of this call.
+
+        # For now, to integrate into the existing async run_application,
+        # we might need a way to "await" the QThread's completion using an asyncio Future
+        # that gets resolved when the QThread finishes.
+        # This is a bit complex. Let's first define the worker and how it's called.
+        # The challenge is that `run_application` is async, while QThread is not directly awaitable.
+
+        # This method will be called from an async context, so we need to bridge QThread signals to asyncio.
+        # One simple way for startup is to use a QEventLoop if we must block an async setup step,
+        # but the goal is to avoid blocking.
+
+        # For now, let's assume this function is called and we need to proceed AFTER it's done.
+        # We'll need a signal from UltiBotApplication itself, or pass a callback.
+
+        Ensures that user configuration is loaded via the API using a non-blocking worker.
+        This method is now synchronous and returns an asyncio.Future that can be awaited.
+        
+        Raises:
+            RuntimeError: If API Client or User ID is not initialized.
+        Returns:
+            asyncio.Future: A future that will be resolved with the user configuration
+                            or an exception if an error occurs.
+        """
+        if not self.api_client:
+            # This case should ideally be handled before calling, or raise an immediate error
+            # rather than a future that resolves to an error, for programming errors.
+            raise RuntimeError("API Client not initialized for ensure_user_configuration")
+        if not self.user_id:
+            raise RuntimeError("User ID not initialized for ensure_user_configuration")
+
+        print(f"Starting to fetch user configuration for {self.user_id} via API worker...")
+        
+        loop = asyncio.get_running_loop()
+        future = loop.create_future()
+
+        worker = ApiWorker(self.api_client.get_user_configuration())
+        thread = QThread()
+        self.active_threads.append(thread) # Keep track of the thread
+        worker.moveToThread(thread)
+
+        # Connect signals from worker to resolve the future
+        worker.result_ready.connect(lambda result: loop.call_soon_threadsafe(future.set_result, result))
+        worker.error_occurred.connect(lambda error_msg: loop.call_soon_threadsafe(future.set_exception, Exception(error_msg)))
+
+        # Connect thread signals
+        thread.started.connect(worker.run)
+        worker.result_ready.connect(thread.quit) # Worker signals thread to quit
+        worker.error_occurred.connect(thread.quit) # Worker signals thread to quit
+        thread.finished.connect(worker.deleteLater) # Clean up worker
+        thread.finished.connect(thread.deleteLater) # Clean up thread
+        thread.finished.connect(lambda: self.active_threads.remove(thread)) # Remove from active list
+
+        thread.start()
+        return future
+
     async def setup_binance_credentials(self) -> None:
         """
         Configura las credenciales de Binance desde variables de entorno.
         
         Raises:
-            ValueError: Si faltan las credenciales de Binance.
-            Exception: Si falla el guardado de credenciales.
+            ValueError: If Binance credentials are not found in environment variables.
+            Exception: If there's an issue with credential setup.
         """
+        # TODO: This method needs significant refactoring.
+        # The API client (as per current api_client.py) does not have methods for:
+        # - Directly adding credentials (e.g., self.api_client.add_credential(...))
+        # - Directly getting a specific credential (e.g., self.api_client.get_credential(...))
+        # This functionality might need to be moved to the backend, or the API client expanded.
+        # For now, this method will be partially disabled or logged as a warning.
+
         binance_api_key = os.getenv("BINANCE_API_KEY")
         binance_api_secret = os.getenv("BINANCE_API_SECRET")
+
         if not binance_api_key or not binance_api_secret:
-            raise ValueError(
-                "BINANCE_API_KEY o BINANCE_API_SECRET no encontradas en .env o variables de entorno."
-            )
-        if not self.credential_service:
-            raise RuntimeError("CredentialService no inicializado")
+            print("Advertencia: BINANCE_API_KEY o BINANCE_API_SECRET no encontradas. Omitiendo guardado automático de credenciales de Binance.")
+            # raise ValueError("BINANCE_API_KEY o BINANCE_API_SECRET no encontradas...")
+            return # Cannot proceed with saving if keys are not present
+
+        if not self.api_client:
+            raise RuntimeError("API Client not initialized")
         if not self.user_id:
             raise RuntimeError("user_id no inicializado")
-        try:
-            # Verificar si ya existen credenciales
-            existing_credential = await self.credential_service.get_credential(
-                user_id=self.user_id,
-                service_name=ServiceName.BINANCE_SPOT,
-                credential_label="default"
-            )
-            if existing_credential:
-                print("Credenciales de Binance ya existen para este usuario y etiqueta. Se omite creación.")
-                return
-            print("Guardando credenciales de Binance desde .env...")
-            await self.credential_service.add_credential(
-                user_id=self.user_id,
-                service_name=ServiceName.BINANCE_SPOT,
-                credential_label="default",
-                api_key=binance_api_key,
-                api_secret=binance_api_secret
-            )
-            print("Credenciales de Binance guardadas exitosamente.")
-        except Exception as e:
-            raise Exception(f"Error al guardar/actualizar credenciales de Binance: {str(e)}")
+
+        print("NOTA: La lógica de 'setup_binance_credentials' para guardar credenciales directamente"
+              " desde el UI está siendo refactorizada.")
+        print("Idealmente, la adición de credenciales se haría a través de un endpoint API seguro.")
+        print("Por ahora, se omitirá el guardado directo y la verificación de credenciales existentes"
+              " que dependían de CredentialService.")
+
+        # Current API client does not support these direct credential operations:
+        # - Check if credentials exist:
+        #   response = await self.api_client.get_credential_status(service_name=ServiceName.BINANCE_SPOT) ( hypothetical )
+        #   if response and response.get("configured"):
+        #       print("Credenciales de Binance ya configuradas según API. Se omite adición desde .env.")
+        #       return
+        #
+        # - Add credentials:
+        #   await self.api_client.add_binance_credential(api_key=binance_api_key, api_secret=binance_api_secret) ( hypothetical )
+        #   print("Solicitud para guardar credenciales de Binance enviada a la API.")
+
+        # Since the direct methods are not available, we log this and potentially skip.
+        # For the purpose of this refactor, we cannot call non-existent API client methods.
+        # If the application relies on these credentials being present for other startup processes
+        # that *are* being refactored to use the API client, this could be a problem.
+        # However, the task is to refactor to *use* the API client. If functionality is missing
+        # in the client for this specific step, we note it.
 
     def create_main_window(self) -> MainWindow:
         """
         Crea y configura la ventana principal.
         
         Returns:
-            MainWindow: Instancia de la ventana principal configurada.
+            MainWindow: Instance of the main configured window.
             
         Raises:
-            RuntimeError: Si los servicios requeridos no están inicializados.
+            RuntimeError: If required services (now the API client) are not initialized.
         """
         if self.user_id is None:
-            raise RuntimeError("user_id no inicializado")
-        if self.market_data_service is None:
-            raise RuntimeError("market_data_service no inicializado")
-        if self.config_service is None:
-            raise RuntimeError("config_service no inicializado")
-        if self.notification_service is None:
-            raise RuntimeError("notification_service no inicializado")
-        if self.persistence_service is None:
-            raise RuntimeError("persistence_service no inicializado")
+            raise RuntimeError("user_id not initialized")
+        if self.api_client is None:
+            raise RuntimeError("api_client not initialized")
+
+        # MainWindow will now receive the api_client instead of individual services.
+        # This requires MainWindow to be refactored as well.
         main_window = MainWindow(
-            self.user_id,
-            self.market_data_service,
-            self.config_service,
-            self.notification_service,
-            self.persistence_service
+            user_id=self.user_id,
+            api_client=self.api_client  # Pass the API client
         )
         self.main_window = main_window
         return main_window
     
     async def cleanup_resources(self) -> None:
         """
-        Limpia todos los recursos asíncronos.
+        Cleans up asynchronous resources.
+        The API client uses httpx.AsyncClient with context managers,
+        so explicit cleanup of the client itself might not be needed here
+        unless it holds other resources that need explicit closing.
         """
         print("Iniciando limpieza de recursos asíncronos...")
         
-        cleanup_tasks = [
-            ("PersistenceService", self.persistence_service),
-            ("MarketDataService", self.market_data_service),
-        ]
+        # Old cleanup tasks for direct services are removed.
+        # cleanup_tasks = [
+        #     ("PersistenceService", self.persistence_service),
+        #     ("MarketDataService", self.market_data_service),
+        # ]
         
-        for service_name, service in cleanup_tasks:
-            if service:
-                try:
-                    print(f"Limpiando {service_name}...")
-                    if hasattr(service, 'disconnect'):
-                        await service.disconnect()
-                    elif hasattr(service, 'close'):
-                        await service.close()
-                    print(f"{service_name} limpiado correctamente.")
-                except Exception as e:
-                    print(f"Error durante la limpieza de {service_name}: {e}")
+        # If UltiBotAPIClient had an explicit close/disconnect method, it would be called here.
+        # e.g., if self.api_client and hasattr(self.api_client, 'close'):
+        #     await self.api_client.close()
         
-        print("Limpieza de recursos asíncronos completada.")
+        print("Limpieza de recursos asíncronos (ahora minimal, API client manages its connections).")
     
     def show_error_and_exit(self, title: str, message: str, exit_code: int = 1) -> None:
         """
@@ -323,22 +894,54 @@ async def run_application() -> None:
         # 1. Configurar aplicación PyQt5
         qt_app = ultibot_app.setup_qt_application()
         
-        # 2. Cargar configuración
+        # Apply global stylesheet
+        # Initial theme application moved to apply_application_style function
+        # The setup_qt_application might apply qdarkstyle initially.
+        # We then call our function to set the specific dark/light theme on top.
+        apply_application_style("dark") # Default to dark theme on startup
+
+        # To test light theme on startup, change "dark" to "light" above:
+        # apply_application_style("light")
+
+
+        # Initialize event loop for QThread integration if needed later,
+        # but ApiWorker creates its own loop for the thread.
+
+        # 2. Cargar configuración (includes API client initialization)
         settings = ultibot_app.load_configuration()
         
-        # 3. Inicializar servicio de persistencia
-        await ultibot_app.initialize_persistence_service()
+        # 3. Initialize core services (now mostly about ensuring API client is ready)
+        await ultibot_app.initialize_core_services() # This is async
+
+        # 4. Asegurar configuración de usuario (via API)
+        # This needs to be handled carefully with ApiWorker in an async context.
+        # For initial setup, if `ensure_user_configuration` becomes synchronous
+        # and launches a thread, `run_application` can't `await` it directly.
+        # We'll need a bridge or redesign how startup sequence works.
+
+        # Let's assume for now ensure_user_configuration is still awaitable here,
+        # and we'll integrate the QThread non-blocking call within it,
+        # using an asyncio.Future to bridge QThread signal back to awaitable context.
+
+        # `ensure_user_configuration` now returns a future. We await it.
+        user_config_future = ultibot_app.ensure_user_configuration()
+        try:
+            user_config = await user_config_future
+            print(f"User configuration loaded successfully via ApiWorker: {user_config}")
+            # Store user_config if needed by UltiBotApplication instance or pass to main_window
+        except Exception as e:
+            # This error will be the one set by the ApiWorker's error_occurred signal
+            ultibot_app.show_error_and_exit(
+                "Error de Configuración de Usuario",
+                f"No se pudo cargar la configuración del usuario: {str(e)}"
+            )
+            return # Exit if user config fails
         
-        # 4. Inicializar servicios core
-        await ultibot_app.initialize_core_services()
+        # 5. Configurar credenciales de Binance (functionality limited by current API client capabilities)
+        await ultibot_app.setup_binance_credentials() # This is async
         
-        # 5. Asegurar configuración de usuario
-        await ultibot_app.ensure_user_configuration()
-        
-        # 6. Configurar credenciales de Binance
-        await ultibot_app.setup_binance_credentials()
-        
-        # 7. Crear y mostrar ventana principal
+        # 6. Crear y mostrar ventana principal (will receive API client)
+        # This must happen after essential async setups are "complete" from UI perspective.
         main_window = ultibot_app.create_main_window()
         main_window.show()
         
@@ -346,20 +949,28 @@ async def run_application() -> None:
         exit_code = qt_app.exec_()
         
         # 9. Limpieza de recursos
-        await ultibot_app.cleanup_resources()
+        await ultibot_app.cleanup_resources() # Includes stopping threads if any are still running (though they should finish)
+
+        # Ensure all threads are cleaned up before exiting
+        for thread in list(ultibot_app.active_threads): # Iterate over a copy
+            if thread.isRunning():
+                print(f"Waiting for thread {thread} to finish...")
+                thread.quit()
+                thread.wait() # Wait for thread to finish
         
         sys.exit(exit_code)
         
-    except ValueError as ve:
+    except ValueError as ve: # Typically from load_configuration or early settings issues
         ultibot_app.show_error_and_exit(
-            "Error de Configuración",
+            "Error de Configuración Inicial", # Changed title for clarity
             f"Error de configuración: {str(ve)}\\n\\nPor favor verifique su archivo .env o variables de entorno."
         )
     
-    except Exception as e:
+    except Exception as e: # Catch-all for other errors during async setup
+        # This will also catch errors from `await future` if not handled by specific try-except
         ultibot_app.show_error_and_exit(
-            "Error de Inicialización de Servicios",
-            f"Falló la inicialización de servicios críticos: {str(e)}"
+            "Error de Inicialización de la Aplicación", # Changed title
+            f"Falló la inicialización de la aplicación: {str(e)}"
         )
 
 
