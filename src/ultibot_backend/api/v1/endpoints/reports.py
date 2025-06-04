@@ -12,7 +12,9 @@ from pydantic import BaseModel
 
 from src.shared.data_types import Trade, PerformanceMetrics
 from src.ultibot_backend.services.trading_report_service import TradingReportService
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+# SupabasePersistenceService ya no se importa directamente aquí si TradingReportService se obtiene de deps
+# from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from src.ultibot_backend import dependencies as deps # Importar deps
 
 # Configurar logging
 logger = logging.getLogger(__name__)
@@ -20,23 +22,8 @@ logger = logging.getLogger(__name__)
 # Crear el router
 router = APIRouter()
 
-# Instancia del servicio de persistencia (se inicializará con dependency injection)
-persistence_service: Optional[SupabasePersistenceService] = None
-
-def get_persistence_service() -> SupabasePersistenceService:
-    """Dependency para obtener el servicio de persistencia."""
-    # En una aplicación real, esto se inyectaría desde el contenedor de dependencias
-    # Para v1.0, usamos la instancia global del main.py
-    from src.ultibot_backend.main import persistence_service as global_persistence_service
-    if global_persistence_service is None:
-        raise HTTPException(status_code=500, detail="Persistence service not initialized")
-    return global_persistence_service
-
-def get_trading_report_service(
-    persistence_service: SupabasePersistenceService = Depends(get_persistence_service)
-) -> TradingReportService:
-    """Dependency para obtener el servicio de reportes de trading."""
-    return TradingReportService(persistence_service)
+# Las funciones de dependencia locales get_persistence_service y get_trading_report_service ya no son necesarias
+# si usamos deps.get_trading_report_service directamente.
 
 # Modelos para los parámetros de consulta
 class TradeFilters(BaseModel):
@@ -60,7 +47,7 @@ async def get_paper_trading_history(
     end_date: Optional[datetime] = Query(None, description="Fecha de fin para filtrar"),
     limit: int = Query(100, ge=1, le=500, description="Número máximo de trades a devolver"),
     offset: int = Query(0, ge=0, description="Número de trades a saltar (para paginación)"),
-    report_service: TradingReportService = Depends(get_trading_report_service)
+    report_service: TradingReportService = Depends(deps.get_trading_report_service)
 ) -> TradeHistoryResponse:
     """
     Obtiene el historial de operaciones de Paper Trading cerradas.
@@ -69,14 +56,14 @@ async def get_paper_trading_history(
     """
     try:
         # Usar user_id fijo para v1.0
-        from src.ultibot_backend.main import FIXED_USER_ID
+        from src.ultibot_backend.app_config import settings
         
-        logger.info(f"Obteniendo historial de paper trading para usuario {FIXED_USER_ID}")
+        logger.info(f"Obteniendo historial de paper trading para usuario {settings.FIXED_USER_ID}")
         logger.info(f"Filtros: symbol={symbol}, start_date={start_date}, end_date={end_date}, limit={limit}, offset={offset}")
         
         # Obtener los trades usando el servicio
         trades = await report_service.get_closed_trades(
-            user_id=FIXED_USER_ID,
+            user_id=settings.FIXED_USER_ID,
             mode='paper',
             symbol=symbol,
             start_date=start_date,
@@ -90,7 +77,7 @@ async def get_paper_trading_history(
         if len(trades) == limit:
             # Comprobar si hay más trades
             check_trades = await report_service.get_closed_trades(
-                user_id=FIXED_USER_ID,
+                user_id=settings.FIXED_USER_ID,
                 mode='paper',
                 symbol=symbol,
                 start_date=start_date,
@@ -126,7 +113,7 @@ async def get_paper_trading_performance(
     symbol: Optional[str] = Query(None, description="Filtrar por par de trading (ej. BTCUSDT)"),
     start_date: Optional[datetime] = Query(None, description="Fecha de inicio para filtrar"),
     end_date: Optional[datetime] = Query(None, description="Fecha de fin para filtrar"),
-    report_service: TradingReportService = Depends(get_trading_report_service)
+    report_service: TradingReportService = Depends(deps.get_trading_report_service)
 ) -> PerformanceMetrics:
     """
     Obtiene las métricas de rendimiento consolidadas para Paper Trading.
@@ -135,14 +122,14 @@ async def get_paper_trading_performance(
     """
     try:
         # Usar user_id fijo para v1.0
-        from src.ultibot_backend.main import FIXED_USER_ID
+        from src.ultibot_backend.app_config import settings # Ya debería estar importado, pero por si acaso
         
-        logger.info(f"Calculando métricas de rendimiento de paper trading para usuario {FIXED_USER_ID}")
+        logger.info(f"Calculando métricas de rendimiento de paper trading para usuario {settings.FIXED_USER_ID}")
         logger.info(f"Filtros: symbol={symbol}, start_date={start_date}, end_date={end_date}")
         
         # Calcular las métricas usando el servicio
         metrics = await report_service.calculate_performance_metrics(
-            user_id=FIXED_USER_ID,
+            user_id=settings.FIXED_USER_ID,
             mode='paper',
             symbol=symbol,
             start_date=start_date,
@@ -167,7 +154,7 @@ async def get_real_trading_history(
     end_date: Optional[datetime] = Query(None, description="Fecha de fin para filtrar"),
     limit: int = Query(100, ge=1, le=500, description="Número máximo de trades a devolver"),
     offset: int = Query(0, ge=0, description="Número de trades a saltar (para paginación)"),
-    report_service: TradingReportService = Depends(get_trading_report_service)
+    report_service: TradingReportService = Depends(deps.get_trading_report_service)
 ) -> TradeHistoryResponse:
     """
     Obtiene el historial de operaciones de Trading Real cerradas.
@@ -176,13 +163,13 @@ async def get_real_trading_history(
     """
     try:
         # Usar user_id fijo para v1.0
-        from src.ultibot_backend.main import FIXED_USER_ID
+        from src.ultibot_backend.app_config import settings # Ya debería estar importado
         
-        logger.info(f"Obteniendo historial de trading real para usuario {FIXED_USER_ID}")
+        logger.info(f"Obteniendo historial de trading real para usuario {settings.FIXED_USER_ID}")
         
         # Obtener los trades usando el servicio
         trades = await report_service.get_closed_trades(
-            user_id=FIXED_USER_ID,
+            user_id=settings.FIXED_USER_ID,
             mode='real',
             symbol=symbol,
             start_date=start_date,
@@ -195,7 +182,7 @@ async def get_real_trading_history(
         has_more = False
         if len(trades) == limit:
             check_trades = await report_service.get_closed_trades(
-                user_id=FIXED_USER_ID,
+                user_id=settings.FIXED_USER_ID,
                 mode='real',
                 symbol=symbol,
                 start_date=start_date,
@@ -229,20 +216,20 @@ async def get_real_trading_performance(
     symbol: Optional[str] = Query(None, description="Filtrar por par de trading (ej. BTCUSDT)"),
     start_date: Optional[datetime] = Query(None, description="Fecha de inicio para filtrar"),
     end_date: Optional[datetime] = Query(None, description="Fecha de fin para filtrar"),
-    report_service: TradingReportService = Depends(get_trading_report_service)
+    report_service: TradingReportService = Depends(deps.get_trading_report_service)
 ) -> PerformanceMetrics:
     """
     Obtiene las métricas de rendimiento consolidadas para Trading Real.
     """
     try:
         # Usar user_id fijo para v1.0
-        from src.ultibot_backend.main import FIXED_USER_ID
+        from src.ultibot_backend.app_config import settings # Ya debería estar importado
         
-        logger.info(f"Calculando métricas de rendimiento de trading real para usuario {FIXED_USER_ID}")
+        logger.info(f"Calculando métricas de rendimiento de trading real para usuario {settings.FIXED_USER_ID}")
         
         # Calcular las métricas usando el servicio
         metrics = await report_service.calculate_performance_metrics(
-            user_id=FIXED_USER_ID,
+            user_id=settings.FIXED_USER_ID,
             mode='real',
             symbol=symbol,
             start_date=start_date,

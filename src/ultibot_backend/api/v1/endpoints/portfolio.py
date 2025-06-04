@@ -4,8 +4,11 @@ from uuid import UUID
 
 from src.shared.data_types import PortfolioSnapshot, PortfolioSummary
 from src.ultibot_backend.services.portfolio_service import PortfolioService
-from src.ultibot_backend.services.market_data_service import MarketDataService
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+# MarketDataService y SupabasePersistenceService no se usan directamente aquí como Depends,
+# pero son dependencias de PortfolioService, que se resolverá a través de deps.
+# from src.ultibot_backend.services.market_data_service import MarketDataService
+# from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from src.ultibot_backend import dependencies as deps
 
 router = APIRouter()
 
@@ -15,7 +18,7 @@ TradingMode = Literal["paper", "real", "both"]
 @router.get("/snapshot/{user_id}", response_model=PortfolioSnapshot, status_code=status.HTTP_200_OK)
 async def get_portfolio_snapshot(
     user_id: UUID,
-    portfolio_service: Annotated[PortfolioService, Depends(PortfolioService)],
+    portfolio_service: Annotated[PortfolioService, Depends(deps.get_portfolio_service)],
     trading_mode: Annotated[TradingMode, Query(description="Trading mode filter: 'paper', 'real', or 'both'")] = "both"
 ):
     """
@@ -78,7 +81,7 @@ async def get_portfolio_snapshot(
 @router.get("/summary/{user_id}", response_model=PortfolioSummary, status_code=status.HTTP_200_OK)
 async def get_portfolio_summary(
     user_id: UUID,
-    portfolio_service: Annotated[PortfolioService, Depends(PortfolioService)],
+    portfolio_service: Annotated[PortfolioService, Depends(deps.get_portfolio_service)],
     trading_mode: Annotated[TradingMode, Query(description="Trading mode: 'paper' or 'real'")] = "paper"
 ):
     """
@@ -119,7 +122,7 @@ async def get_portfolio_summary(
 @router.get("/balance/{user_id}", status_code=status.HTTP_200_OK)
 async def get_available_balance(
     user_id: UUID,
-    portfolio_service: Annotated[PortfolioService, Depends(PortfolioService)],
+    portfolio_service: Annotated[PortfolioService, Depends(deps.get_portfolio_service)],
     trading_mode: Annotated[TradingMode, Query(description="Trading mode: 'paper' or 'real'")] = "paper"
 ):
     """

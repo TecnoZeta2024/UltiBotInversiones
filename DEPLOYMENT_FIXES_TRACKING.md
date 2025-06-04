@@ -6,11 +6,11 @@
 **Objective:** Corregir todos los problemas de despliegue en main.py del backend y frontend
 
 ## Status Overview
-- **Task Status:** ✅ ALL DEPLOYMENT FIXES COMPLETED
+- **Task Status:** 🟡 IN PROGRESS (Resolviendo problemas de inicio y runtime)
 - **Backend main.py:** ✅ COMPLETED (Refactored & Tested)
-- **Frontend main.py:** ✅ COMPLETED (Refactored & Tested)
+- **Frontend main.py:** 🟡 IN PROGRESS (Problema de timeout de inicio resuelto, pendiente validación completa)
 - **Deployment Scripts:** ✅ COMPLETED (Corregidos y mejorados)
-- **Overall Progress:** 100% ✅ COMPLETED
+- **Overall Progress:** 90% 🔄 (Pendiente validación runtime completa del frontend)
 
 ---
 
@@ -46,7 +46,7 @@
 
 ## 📋 TASK 2: Frontend main.py Deployment Fixes
 **File:** `src/ultibot_ui/main.py`  
-**Status:** ✅ COMPLETED  
+**Status:** 🟡 IN PROGRESS (Problema de timeout de inicio resuelto, pendiente validación completa)
 **Priority:** HIGH
 
 ### ✅ COMPLETED FIXES:
@@ -56,6 +56,13 @@
 4. **Manejo robusto de errores** - Mensajes claros y tipos específicos
 5. **Documentación completa** - Docstrings detallados añadidos
 6. **Cleanup optimizado** - Limpieza de recursos mejorada
+7. **Problema de Timeout de Inicio Resuelto (2025-06-04):**
+    - Se confirmó que el timeout para `ensure_user_configuration` es de 30s.
+    - Se corrigió el logging del frontend para escribir en `logs/frontend.log`.
+    - Se verificó que la aplicación se inicia correctamente con el backend disponible, sin errores de timeout.
+    - Causa probable del problema anterior: `__pycache__` desactualizada y falta de logs claros.
+8. **Configuración de Logging (2025-06-04):**
+    - Añadida configuración explícita de `logging.basicConfig` para asegurar que los logs del frontend se escriban en `logs/frontend.log` y se sobrescriban en cada ejecución para facilitar la depuración.
 
 ### Subtasks:
 
@@ -157,6 +164,15 @@
 
 ## 📊 Progress Log
 
+### 2025-06-04 - Frontend Startup Debugging
+- ✅ **Problema de Timeout de Inicio del Frontend Resuelto:**
+    - Verificado que `src/ultibot_ui/main.py` tiene configurado `timeout=30` para `ensure_user_configuration`.
+    - Corregido el sistema de logging del frontend añadiendo `logging.basicConfig` para escribir en `logs/frontend.log` (con `filemode='w'`).
+    - Eliminadas carpetas `__pycache__` para asegurar ejecución de código actualizado.
+    - Confirmado que el frontend se inicia correctamente (conectándose al backend) sin el `asyncio.exceptions.CancelledError` por timeout.
+- ✅ **Logging del Frontend Verificado:**
+    - `logs/frontend.log` ahora se actualiza correctamente con cada ejecución.
+
 ### 2025-06-02 - Session Start
 - ✅ Análisis inicial completado
 - ✅ Identificación de problemas principales
@@ -232,4 +248,4 @@
 - Todos los cambios documentados ✅
 
 ---
-*Last Updated: 2025-06-02 - ALL DEPLOYMENT FIXES COMPLETED - SCRIPTS CORREGIDOS*
+*Last Updated: 2025-06-04 - Frontend startup timeout issue resolved, logging fixed.*

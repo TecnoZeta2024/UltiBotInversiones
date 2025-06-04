@@ -11,6 +11,7 @@ from datetime import datetime
 from uuid import UUID, uuid4 # Importar UUID y uuid4
 
 from src.shared.data_types import Notification, NotificationPriority, NotificationAction # Importar los tipos de datos
+from src.ultibot_ui.services.api_client import APIError # Importar APIError
 
 class NotificationWidget(QWidget):
     """
@@ -19,11 +20,12 @@ class NotificationWidget(QWidget):
     notification_dismissed = pyqtSignal(str) # Emite el ID de la notificación descartada
     all_notifications_read = pyqtSignal() # Emite cuando todas las notificaciones se marcan como leídas
 
-    def __init__(self, notification_service: Any, user_id: UUID, parent: Optional[QWidget] = None): # Añadir notification_service y user_id
+    def __init__(self, api_client: Any, user_id: UUID, parent: Optional[QWidget] = None): # Cambiado notification_service a api_client
         super().__init__(parent)
-        self.notification_service = notification_service
+        self.api_client = api_client # Guardar api_client
         self.user_id = user_id
         self.notifications: List[Notification] = [] # Almacena las notificaciones activas
+        self._is_fetching_notifications = False # Bandera para evitar ejecuciones concurrentes
         self.init_ui()
         self._setup_styles()
         self._setup_realtime_updates() # Configurar actualizaciones en tiempo real
@@ -41,14 +43,11 @@ class NotificationWidget(QWidget):
         """
         Obtiene las notificaciones pendientes del servicio y las añade al widget.
         """
-        # Ejecutar la llamada asíncrona en un hilo separado o usar un executor
-        # Para simplificar, usaremos un enfoque que no bloquee la UI directamente.
-        # En una aplicación real, esto podría usar QThreadPool o un enfoque más robusto.
-        
-        # Aquí se asume que notification_service.get_notification_history es un método asíncrono.
-        # Para llamarlo desde un contexto síncrono de Qt, necesitamos un bucle de eventos asyncio.
-        # Dado que la aplicación principal ya usa asyncio.run, podemos usar asyncio.create_task
-        # para programar la corrutina.
+        if self._is_fetching_notifications:
+            # print("NotificationWidget: Ya se están obteniendo notificaciones, omitiendo esta ejecución.")
+            return
+
+        self._is_fetching_notifications = True
         
         async def fetch_and_add():
             try:
@@ -58,12 +57,76 @@ class NotificationWidget(QWidget):
                 # Para este ejemplo, obtendremos las últimas 20 notificaciones.
                 # El filtrado por 'status' debe hacerse en el lado del cliente si el servicio no lo soporta,
                 # o el servicio debe ser actualizado para soportarlo. Por ahora, eliminamos el argumento.
-                new_notifications = await self.notification_service.get_notification_history(
+                # CORREGIDO: Usar self.api_client en lugar de self.notification_service
+                # Asumiendo que api_client tiene un método similar o que get_notifications es el correcto.
+                # Si el método se llama diferente en api_client, esto necesitará ajuste.
+                # Por ahora, intentaremos con un nombre de método común.
+                # CORREGIDO: Llamar a get_notification_history y pasar user_id como UUID
+                new_notifications_response = await self.api_client.get_notification_history(
                     user_id=self.user_id, limit=20
                 )
-                for notif in new_notifications:
-                    self.add_notification(notif)
-            except Exception as e:
+                # get_notification_history devuelve un Dict: {"notifications": [...], "total_count": ..., "has_more": ...}
+                # o directamente una lista según la implementación final en api_client.py para ese método.
+                # El código actual de api_client.get_notification_history devuelve un Dict.
+                new_notifications = new_notifications_response.get("notifications", []) if isinstance(new_notifications_response, dict) else []
+
+                for notif_data in new_notifications: # Asumir que new_notifications es una lista de dicts
+                    # Convertir dict a objeto Notification si es necesario
+                    # Esto depende de lo que devuelva api_client.get_notifications
+                    # Si ya devuelve objetos Notification, no se necesita conversión.
+                    # Si devuelve dicts, necesitamos instanciar Notification.
+                    # Por ahora, asumimos que devuelve objetos Notification o dicts compatibles.
+                    # Para ser más robusto, se debería verificar el tipo de notif_data.
+                    if isinstance(notif_data, dict):
+                        # Intentar crear un objeto Notification desde el dict
+                        # Esto requiere que el dict tenga los campos correctos y que Notification pueda ser instanciado así.
+                        # Es posible que falten campos o que los tipos no coincidan.
+                        # Ejemplo básico (puede necesitar más manejo de errores/campos opcionales):
+                        try:
+                            # Asegurarse de que los campos obligatorios como 'id', 'title', 'message', 'createdAt' existan
+                            # y que 'createdAt' sea un objeto datetime o una cadena ISO formateada.
+                            # Si 'id' no viene del backend, podríamos generarlo aquí, pero es mejor que venga del backend.
+                            # Si 'priority' es una cadena, convertirla a NotificationPriority enum.
+                            
+                            # Ejemplo de conversión (ajustar según la estructura real de notif_data):
+                            priority_str = notif_data.get("priority")
+                            priority_enum = NotificationPriority[priority_str.upper()] if priority_str and isinstance(priority_str, str) and priority_str.upper() in NotificationPriority.__members__ else NotificationPriority.MEDIUM # CORREGIDO: Usar MEDIUM
+                                
+                            created_at_val = notif_data.get("createdAt", datetime.utcnow().isoformat())
+                            if isinstance(created_at_val, str):
+                                created_at_dt = datetime.fromisoformat(created_at_val.replace("Z", "+00:00"))
+                            elif isinstance(created_at_val, datetime):
+                                created_at_dt = created_at_val
+                            else:
+                                created_at_dt = datetime.utcnow()
+
+                            notif_id_str = notif_data.get("id")
+                            notif_id = UUID(notif_id_str) if notif_id_str else uuid4()
+
+
+                            notif = Notification(
+                                id=notif_id,
+                                userId=self.user_id, # Ya es UUID
+                                eventType=notif_data.get("eventType", "UNKNOWN"),
+                                channel=notif_data.get("channel", "ui"),
+                                title=notif_data.get("title", "Sin Título"),
+                                message=notif_data.get("message", "Sin Mensaje"),
+                                priority=priority_enum,
+                                status=notif_data.get("status", "unread"),
+                                createdAt=created_at_dt,
+                                # actions = [NotificationAction(**action) for action in notif_data.get("actions", [])] # Si hay acciones
+                            )
+                            self.add_notification(notif)
+                        except Exception as conversion_ex:
+                            print(f"Error al convertir datos de notificación: {conversion_ex}, datos: {notif_data}")
+                    elif isinstance(notif_data, Notification):
+                         self.add_notification(notif_data)
+                    else:
+                        print(f"Tipo de notificación desconocido recibido: {type(notif_data)}")
+
+            except APIError as e: # Capturar APIError específicamente si api_client lo lanza
+                print(f"Error API al obtener notificaciones en tiempo real: {e.message}")
+            except Exception as e: # Un solo bloque except general para otros errores
                 print(f"Error al obtener notificaciones en tiempo real: {e}")
 
         # Programar la corrutina para que se ejecute en el bucle de eventos existente
@@ -80,6 +143,8 @@ class NotificationWidget(QWidget):
         except RuntimeError:
             # Esto puede ocurrir si el bucle de eventos ya se cerró o no se ha iniciado.
             print("Error: No se pudo obtener el bucle de eventos de asyncio para las notificaciones.")
+        finally:
+            self._is_fetching_notifications = False # Restablecer la bandera
 
 
     def init_ui(self):
@@ -334,6 +399,9 @@ class NotificationWidget(QWidget):
         if hasattr(self, 'update_timer') and self.update_timer.isActive():
             print("NotificationWidget: Stopping update timer.")
             self.update_timer.stop()
+        # Aquí se podría considerar cancelar tareas asyncio pendientes si se guardaran referencias a ellas.
+        # Por ahora, la bandera _is_fetching_notifications ayudará a prevenir nuevas tareas
+        # si el widget se está limpiando y el temporizador se detiene.
         print("NotificationWidget: cleanup finished.")
 
 

@@ -4,8 +4,11 @@ FROM python:3.11.9-slim-bullseye
 # Establece el directorio de trabajo en /app
 WORKDIR /app
 
-# Instala Poetry y configura para no crear entornos virtuales dentro del contenedor
-RUN pip install poetry && \
+# Instala curl y otras utilidades básicas, luego Poetry
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl ca-certificates && \
+    rm -rf /var/lib/apt/lists/* && \
+    pip install poetry && \
     poetry config virtualenvs.create false
 
 # Crea el directorio de logs
@@ -24,6 +27,9 @@ RUN poetry install --no-root --no-interaction \
 COPY src/ultibot_backend /app/src/ultibot_backend
 COPY src/shared /app/src/shared
 COPY src/__init__.py /app/src/__init__.py
+
+# Copia el certificado de Supabase
+COPY supabase /app/supabase
 
 # Expone el puerto que usará FastAPI
 EXPOSE 8000

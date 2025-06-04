@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import logging.handlers # Añadido para RotatingFileHandler
 import sys
 from contextlib import asynccontextmanager
 from typing import Optional
@@ -45,16 +46,42 @@ from .services.performance_service import PerformanceService
 from .services.portfolio_service import PortfolioService
 from .services.strategy_service import StrategyService
 from .services.trading_engine_service import TradingEngine
+from .services.trading_report_service import TradingReportService # Nueva importación
 from .services.unified_order_execution_service import UnifiedOrderExecutionService
 from ..shared.data_types import ServiceName, UserConfiguration
 from . import dependencies as deps # Importar el nuevo módulo de dependencias
 
-# Configuración de logging
-logging.basicConfig(
-    level=logging.INFO, 
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+# Configuración de logging con RotatingFileHandler
+import os # Necesario para os.path.join y os.makedirs
+log_dir = "logs"
+if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
+log_file_path = os.path.join(log_dir, "backend.log")
+
+# Estimar maxBytes para ~500 líneas (500 líneas * 200 bytes/línea = 100KB)
+# backupCount=0 significa que cuando el log alcance maxBytes, se rota y el viejo se descarta.
+backend_handler = logging.handlers.RotatingFileHandler(
+    log_file_path,
+    maxBytes=100000,  # Aproximadamente 100KB
+    backupCount=0,    # No mantener archivos de backup, solo el actual (se rota/sobrescribe)
+    encoding='utf-8'
 )
+backend_handler.setLevel(logging.INFO) # Mantener el nivel INFO como estaba en basicConfig
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+backend_handler.setFormatter(formatter)
+
+# Configurar el logger raíz
+root_logger_backend = logging.getLogger()
+if root_logger_backend.hasHandlers():
+    for h_existente in root_logger_backend.handlers[:]:
+        root_logger_backend.removeHandler(h_existente)
+        
+root_logger_backend.addHandler(backend_handler)
+root_logger_backend.setLevel(logging.INFO) # Nivel INFO para el logger raíz del backend
+
 logger = logging.getLogger(__name__)
+logger.info("Logging configurado con RotatingFileHandler para escribir en logs/backend.log (max ~100KB).")
 
 # FIXED_USER_ID se accede a través de settings
 from .app_config import settings
@@ -73,6 +100,7 @@ unified_order_execution_service: Optional[UnifiedOrderExecutionService] = None
 trading_engine_service: Optional[TradingEngine] = None
 strategy_service: Optional[StrategyService] = None
 performance_service: Optional[PerformanceService] = None
+trading_report_service: Optional[TradingReportService] = None # Nueva variable global
 ai_orchestrator: Optional[AIOrchestrator] = None
 mobula_adapter: Optional[MobulaAdapter] = None
 llm_provider: Optional[ChatGoogleGenerativeAI] = None
@@ -91,7 +119,7 @@ async def initialize_services() -> None:
     global credential_service, notification_service, binance_adapter, market_data_service
     global persistence_service, portfolio_service, config_service, order_execution_service
     global paper_order_execution_service, unified_order_execution_service, trading_engine_service
-    global strategy_service, performance_service, ai_orchestrator, mobula_adapter
+    global strategy_service, performance_service, trading_report_service, ai_orchestrator, mobula_adapter # trading_report_service añadido
     global llm_provider, user_configuration
     
     logger.info("Iniciando UltiBot Backend...")
@@ -110,11 +138,15 @@ async def initialize_services() -> None:
         await persistence_service.connect()
         deps.set_persistence_service(persistence_service)
         
-        credential_service = CredentialService() # Clave de encriptación manejada internamente
-        deps.set_credential_service(credential_service)
-        
+        # BinanceAdapter debe estar inicializado antes de CredentialService si se va a pasar
         binance_adapter = BinanceAdapter()
-        deps.set_binance_adapter(binance_adapter)
+        deps.set_binance_adapter(binance_adapter) # Asegurar que se establece en deps si otros lo usan desde ahí
+        
+        credential_service = CredentialService(
+            persistence_service=persistence_service,
+            binance_adapter=binance_adapter
+        )
+        deps.set_credential_service(credential_service)
         
         # 2. Inicializar servicios dependientes
         logger.info("Inicializando servicios dependientes...")
@@ -199,8 +231,17 @@ async def initialize_services() -> None:
         # credential_service es inicializado incondicionalmente antes.
         # Se asume que AIOrchestrator requiere credential_service y su constructor
         # lanzará una excepción si falla la inicialización.
-        ai_orchestrator = AIOrchestrator(credential_service=credential_service)
+        ai_orchestrator = AIOrchestrator() # Eliminado credential_service
         logger.info("AIOrchestrator inicializado.")
+
+        # 8.b Inicializar TradingReportService (después de persistence_service)
+        if persistence_service:
+            trading_report_service = TradingReportService(persistence_service=persistence_service)
+            deps.set_trading_report_service(trading_report_service)
+            logger.info("TradingReportService inicializado.")
+        else:
+            logger.error("No se pudo inicializar TradingReportService porque persistence_service no está disponible.")
+            trading_report_service = None
         
         # 9. Inicializar Trading Engine
         # Se asume que TradingEngine requiere una instancia válida de AIOrchestrator.
@@ -209,6 +250,7 @@ async def initialize_services() -> None:
             configuration_service=configuration_service,
             ai_orchestrator=ai_orchestrator
         )
+        deps.trading_engine_instance = trading_engine_service
         
         logger.info("Todos los servicios principales inicializados.")
         
@@ -387,8 +429,13 @@ from .api.v1.endpoints import (
     performance,
     portfolio,
     reports,
+    strategies, # <--- Añadir el router de strategies
     telegram_status,
     trades,
+    gemini,  # <--- Añadir el nuevo endpoint
+    trading, # <--- Añadir trading router
+    market_data, # <--- Añadir market_data router
+    capital_management, # <--- Añadir capital_management router
 )
 
 app.include_router(telegram_status.router, prefix="/api/v1", tags=["telegram"])
@@ -400,3 +447,8 @@ app.include_router(portfolio.router, prefix="/api/v1/portfolio", tags=["portfoli
 app.include_router(trades.router, prefix="/api/v1/trades", tags=["trades"])
 app.include_router(performance.router, prefix="/api/v1/performance", tags=["performance"])
 app.include_router(opportunities.router, prefix="/api/v1", tags=["opportunities"])
+app.include_router(gemini.router, prefix="/api/v1", tags=["gemini"])
+app.include_router(strategies.router, prefix="/api/v1", tags=["strategies"])
+app.include_router(trading.router, prefix="/api/v1", tags=["trading"])
+app.include_router(market_data.router, prefix="/api/v1", tags=["market"])
+app.include_router(capital_management, prefix="/api/v1/trading", tags=["capital-management"])

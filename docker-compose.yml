@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   backend:
     build:
@@ -52,25 +50,6 @@ services:
     networks:
       - ultibot-network
 
-  mcp-server:
-    build:
-      context: ./mcp_service
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"  # MCP server port
-    environment:
-      - PORT=3000
-      - NODE_ENV=production
-      - PYTHONPATH=/app
-      - PYTHONUNBUFFERED=1
-    volumes:
-      - ./mcp_service:/app
-    depends_on:
-      - backend
-    restart: unless-stopped
-    networks:
-      - ultibot-network
-
 networks:
   ultibot-network:
     driver: bridge
@@ -78,4 +57,3 @@ networks:
 volumes:
   logs:
     driver: local
-

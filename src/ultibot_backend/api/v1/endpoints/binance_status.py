@@ -2,6 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 from uuid import UUID
 
+# Importar el módulo de dependencias
+from src.ultibot_backend import dependencies as deps
+
 from src.shared.data_types import BinanceConnectionStatus, AssetBalance, ServiceName # Importar ServiceName
 from src.ultibot_backend.services.market_data_service import MarketDataService
 from src.ultibot_backend.services.credential_service import CredentialService
@@ -9,17 +12,19 @@ from src.ultibot_backend.core.exceptions import CredentialError, UltiBotError, B
 
 router = APIRouter()
 
-# Dependencias para inyección de servicios
-async def get_market_data_service() -> MarketDataService:
-    from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
-    credential_service = CredentialService()
-    binance_adapter = BinanceAdapter()
-    return MarketDataService(credential_service, binance_adapter)
+# Ya no se necesita la función local get_market_data_service
+# async def get_market_data_service() -> MarketDataService:
+#     from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
+#     # Esto crearía instancias nuevas y no configuradas, lo cual es incorrecto.
+#     # credential_service = CredentialService() # Incorrecto
+#     # binance_adapter = BinanceAdapter() # Incorrecto
+#     # return MarketDataService(credential_service, binance_adapter) # Incorrecto
+#     # En su lugar, usaremos deps.get_market_data_service()
 
 @router.get("/binance/status", response_model=BinanceConnectionStatus, summary="Obtener el estado de conexión con Binance")
 async def get_binance_status(
     user_id: UUID,
-    market_data_service: MarketDataService = Depends(get_market_data_service)
+    market_data_service: MarketDataService = Depends(deps.get_market_data_service)
 ) -> BinanceConnectionStatus:
     """
     Retorna el estado actual de la conexión con la API de Binance para un usuario específico,
@@ -52,7 +57,7 @@ async def get_binance_status(
 @router.get("/binance/balances", response_model=List[AssetBalance], summary="Obtener los balances de Spot de Binance")
 async def get_binance_balances(
     user_id: UUID,
-    market_data_service: MarketDataService = Depends(get_market_data_service)
+    market_data_service: MarketDataService = Depends(deps.get_market_data_service)
 ) -> List[AssetBalance]:
     """
     Retorna la lista de balances de activos en la cuenta de Spot de Binance para un usuario específico.
@@ -85,7 +90,7 @@ async def get_binance_balances(
 async def verify_binance_credentials_manual(
     user_id: UUID,
     credential_label: str = "default",
-    credential_service: CredentialService = Depends(CredentialService)
+    credential_service: CredentialService = Depends(deps.get_credential_service)
 ):
     """
     Permite al usuario disparar manualmente la verificación de sus credenciales de Binance.

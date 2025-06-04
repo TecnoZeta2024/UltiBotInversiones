@@ -7,9 +7,13 @@ import asyncio
 from typing import List, Dict, Any, Optional
 from uuid import UUID
 
-from src.ultibot_backend.services.market_data_service import MarketDataService # Importar MarketDataService
+# from src.ultibot_backend.services.market_data_service import MarketDataService # Reemplazado por api_client
+from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError # Importar APIClient
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+import logging # Añadir logging
+
+logger = logging.getLogger(__name__) # Configurar logger
 
 class ChartWidget(QWidget):
     """
@@ -19,10 +23,10 @@ class ChartWidget(QWidget):
     symbol_selected = pyqtSignal(str)
     interval_selected = pyqtSignal(str)
     
-    def __init__(self, user_id: UUID, market_data_service: MarketDataService, parent: Optional[QWidget] = None): # Añadir market_data_service
+    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, parent: Optional[QWidget] = None): # Cambiado market_data_service a api_client
         super().__init__(parent)
         self.user_id = user_id
-        self.market_data_service = market_data_service # Guardar la referencia al servicio
+        self.api_client = api_client # Guardar la referencia al api_client
         self.current_symbol: Optional[str] = None
         self.current_interval: Optional[str] = "1h" # Intervalo por defecto
         self.candlestick_data: List[Dict[str, Any]] = []
@@ -67,7 +71,12 @@ class ChartWidget(QWidget):
 
         # Cargar el primer gráfico al iniciar
         self.current_symbol = self.symbol_combo.currentText()
+        # La carga de datos ahora se difiere dentro de load_chart_data
         self.load_chart_data()
+
+    def _schedule_task(self, coro):
+        """Helper method to schedule an asyncio task without returning the task object to QTimer."""
+        asyncio.create_task(coro)
 
     def _on_symbol_changed(self, index: int):
         self.current_symbol = self.symbol_combo.currentText()
@@ -95,33 +104,35 @@ class ChartWidget(QWidget):
         if self.current_symbol and self.current_interval:
             self.chart_area.setText(f"Cargando datos para {self.current_symbol} ({self.current_interval})...")
             print(f"Solicitando datos para {self.current_symbol} - {self.current_interval}")
-            # Llamada real al backend
-            asyncio.create_task(self._fetch_real_data())
+            # Llamada real al backend diferida
+            QTimer.singleShot(0, lambda: self._schedule_task(self._fetch_real_data()))
         else:
             self.chart_area.setText("Seleccione un par y una temporalidad para ver el gráfico.")
 
     async def _fetch_real_data(self):
         """Obtiene datos reales de velas del backend."""
         try:
-            # Asegurarse de que current_symbol y current_interval no sean None antes de pasar
             if self.current_symbol is None or self.current_interval is None:
                 self.chart_area.setText("Error: Símbolo o temporalidad no seleccionados.")
                 return
-
-            candlestick_data = await self.market_data_service.get_candlestick_data(
+            # Ahora pasamos user_id explícitamente
+            candlestick_data = await self.api_client.get_candlestick_data(
                 user_id=self.user_id,
-                symbol=self.current_symbol, # Pylance ya no debería quejarse aquí
-                interval=self.current_interval, # Pylance ya no debería quejarse aquí
-                limit=200 # Cantidad de velas a mostrar
+                symbol=self.current_symbol,
+                interval=self.current_interval,
+                limit=200
             )
             self.set_candlestick_data(candlestick_data)
+        except APIError as e:
+            logger.error(f"APIError al obtener datos de velas para {self.current_symbol}-{self.current_interval}: {e.message}", exc_info=True)
+            self.set_candlestick_data([])
+            if isinstance(self.chart_area, QLabel):
+                self.chart_area.setText(f"Error API: {e.message}")
         except Exception as e:
-            print(f"Error al obtener datos de velas: {e}")
-            self.set_candlestick_data([]) # Limpiar el gráfico en caso de error
-            if isinstance(self.chart_area, QLabel): # Si todavía es el placeholder
-                self.chart_area.setText(f"Error al cargar datos: {e}")
-            else: # Si ya es un canvas, mostrar el error en la consola
-                print(f"Error al cargar datos en el canvas: {e}")
+            logger.error(f"Error inesperado al obtener datos de velas para {self.current_symbol}-{self.current_interval}: {e}", exc_info=True)
+            self.set_candlestick_data([]) 
+            if isinstance(self.chart_area, QLabel):
+                self.chart_area.setText(f"Error inesperado al cargar datos: {str(e)}")
 
 
     def update_chart_display(self):
@@ -229,21 +240,28 @@ if __name__ == '__main__':
     test_user_id = UUID("a1b2c3d4-e5f6-7890-1234-567890abcdef")
 
     # Ejemplo de inicialización de servicios mockeados para pruebas
-    class MockMarketDataService:
-        async def get_candlestick_data(self, user_id: UUID, symbol: str, interval: str, limit: int) -> List[Dict[str, Any]]:
-            print(f"MockMarketDataService: Obteniendo datos de velas para {symbol}-{interval}")
+    class MockAPIClient: # Cambiado de MockMarketDataService a MockAPIClient
+        async def get_candlestick_data(self, user_id: UUID, symbol: str, interval: str, limit: int, start_time: Optional[Any]=None, end_time: Optional[Any]=None) -> List[Dict[str, Any]]: # Ajustar signatura
+            logger.info(f"MockAPIClient: Obteniendo datos de velas para {symbol}-{interval}")
             # Datos de ejemplo para el mock
             sample_data = [
-                {"open_time": 1678886400000, "open": 20000.0, "high": 20100.0, "low": 19900.0, "close": 20050.0, "volume": 1000.0, "close_time": 1678889999999, "quote_asset_volume": 20000000.0, "number_of_trades": 100, "taker_buy_base_asset_volume": 500.0, "taker_buy_quote_asset_volume": 10000000.0},
-                {"open_time": 1678890000000, "open": 20050.0, "high": 20200.0, "low": 20000.0, "close": 20150.0, "volume": 1200.0, "close_time": 1678893599999, "quote_asset_volume": 24000000.0, "number_of_trades": 120, "taker_buy_base_asset_volume": 600.0, "taker_buy_quote_asset_volume": 12000000.0},
-                {"open_time": 1678893600000, "open": 20150.0, "high": 20300.0, "low": 20100.0, "close": 20250.0, "volume": 1100.0, "close_time": 1678897199999, "quote_asset_volume": 22000000.0, "number_of_trades": 110, "taker_buy_base_asset_volume": 550.0, "taker_buy_quote_asset_volume": 11000000.0},
-                {"open_time": 1678897200000, "open": 20250.0, "high": 20400.0, "low": 20200.0, "close": 20350.0, "volume": 1300.0, "close_time": 1678900799999, "quote_asset_volume": 26000000.0, "number_of_trades": 130, "taker_buy_base_asset_volume": 650.0, "taker_buy_quote_asset_volume": 13000000.0},
-                {"open_time": 1678900800000, "open": 20350.0, "high": 20500.0, "low": 20300.0, "close": 20450.0, "volume": 1400.0, "close_time": 1678904399999, "quote_asset_volume": 28000000.0, "number_of_trades": 140, "taker_buy_base_asset_volume": 700.0, "taker_buy_quote_asset_volume": 14000000.0},
+                {"open_time": 1678886400000, "open": "20000.0", "high": "20100.0", "low": "19900.0", "close": "20050.0", "volume": "1000.0"},
+                {"open_time": 1678890000000, "open": "20050.0", "high": "20200.0", "low": "20000.0", "close": "20150.0", "volume": "1200.0"},
+                {"open_time": 1678893600000, "open": "20150.0", "high": "20300.0", "low": "20100.0", "close": "20250.0", "volume": "1100.0"},
+                {"open_time": 1678897200000, "open": "20250.0", "high": "20400.0", "low": "20200.0", "close": "20350.0", "volume": "1300.0"},
+                {"open_time": 1678900800000, "open": "20350.0", "high": "20500.0", "low": "20300.0", "close": "20450.0", "volume": "1400.0"},
             ]
+            # Asegurarse de que los datos numéricos sean float o int, no strings, para mplfinance
+            for row in sample_data:
+                row["open"] = float(row["open"])
+                row["high"] = float(row["high"])
+                row["low"] = float(row["low"])
+                row["close"] = float(row["close"])
+                row["volume"] = float(row["volume"])
             return sample_data
 
-    mock_market_data_service = MockMarketDataService()
-    chart_widget = ChartWidget(user_id=test_user_id, market_data_service=mock_market_data_service) # type: ignore # Pasar el mock
+    mock_api_client = MockAPIClient() # Usar MockAPIClient
+    chart_widget = ChartWidget(user_id=test_user_id, api_client=mock_api_client) # type: ignore
     main_window.setCentralWidget(chart_widget)
     main_window.show()
 

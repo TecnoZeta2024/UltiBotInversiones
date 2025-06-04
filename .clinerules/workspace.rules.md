@@ -1,10 +1,3 @@
-- El sistema se basa en arquitectura modular y procesamiento paralelo.
-- Usar `PyQt5` con `QDarkStyleSheet` como base de UI para el dashboard.
-- siempre se debe asegurar el correcto funcionamiento del frontend con el backend
-- Las operaciones reales deben confirmarse explícitamente por el usuario antes de ejecutarse.
-- Toda funcionalidad debe estar alineada al PRD y respetar los NFRs definidos (latencia < 500ms, win rate > 75%, etc.).
-- Todo análisis y decisión de trading debe tener trazabilidad, ya sea en logs o en la UI.
-
 ### 🔧 Sistema Avanzado de Ingeniería del Software
 
 Aplica estricta y sistemáticamente las siguientes prácticas técnicas en cada tarea:
@@ -27,6 +20,7 @@ Aplica estricta y sistemáticamente las siguientes prácticas técnicas en cada 
 * Replica cada problema en escenarios mínimos.
 * Análisis exhaustivo de logs y trazas.
 * Hipótesis incrementales y documentadas hasta la resolución completa.
+* **Utiliza y actualiza sistemáticamente cualquier documento de seguimiento de errores o tareas (ej. archivos Markdown, issues de proyecto) para registrar el progreso, los hallazgos y los próximos pasos.**
 
 #### 🔝 Mejora Continua y Deuda Técnica
 

@@ -14,17 +14,19 @@ import asyncio
 import os
 import sys
 import logging
+import logging.handlers # Añadido para RotatingFileHandler
 from typing import Optional, Any, Callable, Coroutine, List
 from uuid import UUID
 
 from PyQt5.QtCore import QObject, QThread, pyqtSignal, pyqtSlot # Added for ApiWorker
 from PyQt5.QtWidgets import QApplication, QMessageBox
 from dotenv import load_dotenv
+import qasync  # Añadido para integración Qt+asyncio
 
 # Importaciones organizadas por grupos
 from src.shared.data_types import APICredential, ServiceName, UserConfiguration # ServiceName might be unused now
 from src.ultibot_backend.app_config import AppSettings
-# Backend service imports will be removed or replaced by API client usage
+# Backend service imports will be removed or replaced with API client usage
 # from ..ultibot_backend.adapters.binance_adapter import BinanceAdapter
 # from ..ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 # from ..ultibot_backend.services.config_service import ConfigService
@@ -639,12 +641,6 @@ class UltiBotApplication:
     def load_configuration(self) -> AppSettings:
         """
         Carga la configuración desde variables de entorno.
-        
-        Returns:
-            AppSettings: Configuración de la aplicación.
-            
-        Raises:
-            ValueError: Si faltan configuraciones críticas.
         """
         load_dotenv(override=True)
         credential_encryption_key = os.getenv("CREDENTIAL_ENCRYPTION_KEY")
@@ -652,12 +648,13 @@ class UltiBotApplication:
             raise ValueError(
                 "CREDENTIAL_ENCRYPTION_KEY no está configurada en .env file o variables de entorno."
             )
+        # Lee la URL base del backend desde la variable de entorno, con fallback
+        base_url = os.getenv("BACKEND_BASE_URL", "http://localhost:8000")
         settings = AppSettings(CREDENTIAL_ENCRYPTION_KEY=credential_encryption_key)
         self.settings = settings
         self.user_id = settings.FIXED_USER_ID
-        # Initialize API Client
-        # TODO: Fetch base_url from environment variable or settings
-        self.api_client = UltiBotAPIClient(base_url="http://localhost:8000")
+        # Inicializa el API Client usando la URL del .env
+        self.api_client = UltiBotAPIClient(base_url=base_url)
         return settings
 
     # Removed initialize_persistence_service method as persistence will be handled by the backend via API client.
@@ -676,18 +673,9 @@ class UltiBotApplication:
         if not self.api_client:
             raise RuntimeError("API Client not initialized")
         
-        # The direct initialization of backend services is removed.
-        # Example: self.binance_adapter = BinanceAdapter()
-        # Example: self.credential_service = CredentialService(...)
-        # ... and so on for other services.
-        
-        # We might add a health check to the API here if needed.
         try:
-            # This is a new check, assuming test_connection can be an async method or wrapped.
-            # For now, we'll assume it's okay or handle actual calls failing.
-            # if not await self.api_client.test_connection(): # Assuming test_connection is async
-            #     raise ConnectionError("Failed to connect to the UltiBot API backend.")
-            print("API Client is configured. Core services are now accessed via the API client.")
+            # Este bloque puede ser extendido con lógica de healthcheck si es necesario
+            print("API Client is configurado. Core services are now accesibles via the API client.")
         except APIError as e:
             raise RuntimeError(f"Failed to connect or initialize with API backend: {e}")
 
@@ -711,9 +699,11 @@ class UltiBotApplication:
         worker.moveToThread(thread)
 
         def _on_result(result):
-            loop.call_soon_threadsafe(future.set_result, result)
+            if not future.done():
+                loop.call_soon_threadsafe(future.set_result, result)
         def _on_error(error_msg):
-            loop.call_soon_threadsafe(future.set_exception, Exception(error_msg))
+            if not future.done():
+                loop.call_soon_threadsafe(future.set_exception, Exception(error_msg))
 
         worker.result_ready.connect(_on_result)
         worker.error_occurred.connect(_on_error)
@@ -775,8 +765,8 @@ class UltiBotApplication:
         # For the purpose of this refactor, we cannot call non-existent API client methods.
         # If the application relies on these credentials being present for other startup processes
         # that *are* being refactored to use the API client, this could be a problem.
-        # However, the task is to refactor to *use* the API client. If functionality is missing
-        # in the client for this specific step, we note it.
+        # Sin embargo, la tarea es refactorizar para *usar* el cliente API. Si falta funcionalidad
+        # en el cliente para este paso específico, lo anotamos.
 
     def create_main_window(self) -> MainWindow:
         """
@@ -881,16 +871,20 @@ async def run_application() -> None:
         # `ensure_user_configuration` now returns a future. We await it.
         user_config_future = ultibot_app.ensure_user_configuration()
         try:
-            user_config = await user_config_future
+            user_config = await asyncio.wait_for(user_config_future, timeout=30)
             print(f"User configuration loaded successfully via ApiWorker: {user_config}")
-            # Store user_config if needed by UltiBotApplication instance or pass to main_window
+        except asyncio.TimeoutError:
+            ultibot_app.show_error_and_exit(
+                "Timeout de configuración de usuario",
+                "No se recibió respuesta del backend o del hilo de configuración en 30 segundos.\n\nVerifica la conexión y los logs del backend/frontend."
+            )
+            return
         except Exception as e:
-            # This error will be the one set by the ApiWorker's error_occurred signal
             ultibot_app.show_error_and_exit(
                 "Error de Configuración de Usuario",
                 f"No se pudo cargar la configuración del usuario: {str(e)}"
             )
-            return # Exit if user config fails
+            return
         
         # 5. Configurar credenciales de Binance (functionality limited by current API client capabilities)
         await ultibot_app.setup_binance_credentials() # This is async
@@ -932,16 +926,128 @@ async def run_application() -> None:
 def main() -> None:
     """
     Punto de entrada principal de la aplicación.
-    
     Configura el event loop apropiado para Windows y ejecuta la aplicación.
     """
+    print("[DEBUG] Entrando a main() de ultibot_ui.main.py")
+
+    # Configuración de logging con RotatingFileHandler para limitar el tamaño del log
+    log_dir = "logs"
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    
+    log_file_path = os.path.join(log_dir, "frontend.log")
+    
+    # Estimar maxBytes para ~500 líneas (500 líneas * 200 bytes/línea = 100KB)
+    # backupCount=0 significa que cuando el log alcance maxBytes, se rota y el viejo se descarta.
+    handler = logging.handlers.RotatingFileHandler(
+        log_file_path,
+        maxBytes=100000,  # Aproximadamente 100KB
+        backupCount=0,    # No mantener archivos de backup, solo el actual (se rota/sobrescribe)
+        encoding='utf-8'
+    )
+    handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    handler.setFormatter(formatter)
+    
+    # Configurar el logger raíz para que capture todos los logs de nivel DEBUG o superior
+    # y los envíe a nuestro handler.
+    # Es importante hacer esto antes de que cualquier otra parte del código (o librerías)
+    # pueda llamar a logging.basicConfig() o añadir sus propios handlers por defecto.
+    
+    # Limpiar handlers existentes del logger raíz para evitar duplicados o configuraciones no deseadas.
+    # Esto es especialmente útil si alguna librería importada llama a basicConfig.
+    root_logger = logging.getLogger()
+    if root_logger.hasHandlers():
+        for h_existente in root_logger.handlers[:]:
+            root_logger.removeHandler(h_existente)
+            
+    root_logger.addHandler(handler)
+    root_logger.setLevel(logging.DEBUG)
+
+    logger.info("Logging configurado con RotatingFileHandler para escribir en logs/frontend.log (max ~100KB).")
+
+
     # Solución para Windows ProactorEventLoop con psycopg
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    
-    # Ejecutar la aplicación asíncrona
-    asyncio.run(run_application())
 
+    from qasync import QEventLoop
+    app = QApplication(sys.argv)
+    print("[DEBUG] QApplication creada")
+    loop = QEventLoop(app)
+    asyncio.set_event_loop(loop)
+
+    ultibot_app = UltiBotApplication()
+    ultibot_app.app = app
+
+    try:
+        # 1. Cargar configuración (incluye inicialización del API client)
+        print("[DEBUG] Cargando configuración...")
+        settings = ultibot_app.load_configuration()
+        print("[DEBUG] Configuración cargada")
+
+        # 2. Inicializar servicios core (API client)
+        print("[DEBUG] Inicializando core services...")
+        loop.run_until_complete(ultibot_app.initialize_core_services())
+        print("[DEBUG] Core services inicializados")
+
+        # 3. Asegurar configuración de usuario (async, pero no bloquea la UI)
+        try:
+            print("[DEBUG] Cargando configuración de usuario...")
+            user_config = loop.run_until_complete(
+                asyncio.wait_for(ultibot_app.ensure_user_configuration(), timeout=30)
+            )
+            print(f"[DEBUG] User configuration loaded: {user_config}")
+        except asyncio.TimeoutError:
+            print("[ERROR] Timeout de configuración de usuario")
+            ultibot_app.show_error_and_exit(
+                "Timeout de configuración de usuario",
+                "No se recibió respuesta del backend o del hilo de configuración en 30 segundos.\n\nVerifica la conexión y los logs del backend/frontend."
+            )
+            return
+        except Exception as e:
+            print(f"[ERROR] Error de configuración de usuario: {e}")
+            ultibot_app.show_error_and_exit(
+                "Error de Configuración de Usuario",
+                f"No se pudo cargar la configuración del usuario: {str(e)}"
+            )
+            return
+
+        # 4. Configurar credenciales de Binance (si aplica)
+        print("[DEBUG] Configurando credenciales de Binance...")
+        loop.run_until_complete(ultibot_app.setup_binance_credentials())
+        print("[DEBUG] Credenciales de Binance configuradas")
+
+        # 5. Crear y mostrar ventana principal
+        print("[DEBUG] Creando ventana principal...")
+        main_window = ultibot_app.create_main_window()
+        print("[DEBUG] Mostrando ventana principal...")
+        main_window.show()
+        print("[DEBUG] Ventana principal mostrada. Entrando al event loop...")
+
+        # 6. Aplicar tema (oscuro por defecto)
+        apply_application_style("dark")
+
+        # 7. Ejecutar el event loop integrado Qt+asyncio
+        try:
+            exit_code = loop.run_forever()
+            print(f"[DEBUG] Event loop finalizado con código: {exit_code}")
+        except Exception as e:
+            print(f"[ERROR] Event loop terminó con excepción: {e}")
+        sys.exit(exit_code if exit_code is not None else 0)
+
+    except ValueError as ve:
+        print(f"[ERROR] ValueError en main: {ve}")
+        ultibot_app.show_error_and_exit(
+            "Error de Configuración Inicial",
+            f"Error de configuración: {str(ve)}\n\nPor favor verifique su archivo .env o variables de entorno."
+        )
+    except Exception as e:
+        print(f"[ERROR] Excepción en main: {e}")
+        ultibot_app.show_error_and_exit(
+            "Error de Inicialización de la Aplicación",
+            f"Falló la inicialización de la aplicación: {str(e)}"
+        )
 
 if __name__ == "__main__":
     main()

@@ -19,16 +19,19 @@ from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
 
 logger = logging.getLogger(__name__)
 
+import uuid # Importar uuid para FIXED_USER_ID
+
 class DataLoadWorker(QThread):
     """Worker thread para cargar datos de la API sin bloquear la UI."""
     
-    data_loaded = pyqtSignal(dict)  # Señal emitida cuando los datos están listos
+    data_loaded = pyqtSignal(object)  # Cambiado a object para manejar List o Dict
     error_occurred = pyqtSignal(str)  # Señal emitida cuando hay un error
     
-    def __init__(self, api_client: UltiBotAPIClient, load_type: str, **kwargs):
+    def __init__(self, api_client: UltiBotAPIClient, load_type: str, user_id: Optional[uuid.UUID] = None, **kwargs): # Añadido user_id
         super().__init__()
         self.api_client = api_client
         self.load_type = load_type
+        self.user_id = user_id # Almacenar user_id
         self.kwargs = kwargs
         
     def run(self):
@@ -38,10 +41,14 @@ class DataLoadWorker(QThread):
             asyncio.set_event_loop(loop)
             
             if self.load_type == "trades":
+                if not self.user_id:
+                    raise ValueError("user_id es requerido para cargar trades.")
+                # Pasar user_id explícitamente, el resto de kwargs se mantienen
                 result = loop.run_until_complete(
-                    self.api_client.get_paper_trading_history(**self.kwargs)
+                    self.api_client.get_paper_trading_history(user_id=self.user_id, **self.kwargs)
                 )
             elif self.load_type == "metrics":
+                # get_paper_trading_performance no toma user_id en api_client.py actualmente
                 result = loop.run_until_complete(
                     self.api_client.get_paper_trading_performance(**self.kwargs)
                 )
@@ -308,7 +315,10 @@ class PaperTradingReportWidget(QWidget):
             start_date=start_date,
             end_date=end_date,
             limit=500,  # Cargar hasta 500 trades por ahora
-            offset=0
+            offset=0,
+            # TODO: Obtener el user_id de una fuente apropiada (configuración, sesión, etc.)
+            # Por ahora, usamos el FIXED_USER_ID conocido del backend.
+            user_id=uuid.UUID("00000000-0000-0000-0000-000000000001") 
         )
         self.trades_worker.data_loaded.connect(self.on_trades_loaded)
         self.trades_worker.error_occurred.connect(self.on_error)
@@ -327,11 +337,12 @@ class PaperTradingReportWidget(QWidget):
         finally:
             self.show_loading(False)
             
-    @pyqtSlot(dict)
-    def on_trades_loaded(self, data: Dict[str, Any]):
+    @pyqtSlot(object) # Cambiado a object
+    def on_trades_loaded(self, data: List[Dict[str, Any]]): # Cambiado a List[Dict[str, Any]]
         """Maneja la carga exitosa de trades."""
         try:
-            self.current_trades_data = data.get('trades', [])
+            # get_paper_trading_history ahora devuelve una lista directamente
+            self.current_trades_data = data 
             self.update_trades_table(self.current_trades_data)
             logger.info(f"Trades cargados exitosamente: {len(self.current_trades_data)} trades")
         except Exception as e:

@@ -1,360 +1,299 @@
-INFO:     Will watch for changes in these directories: ['c:\\Users\\zamor\\UltiBotInversiones']
-INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [21272] using WatchFiles
-2025-06-03 09:27:16,077 - src.ultibot_backend.api.v1.endpoints.opportunities - INFO - Router de oportunidades inicializado: <fastapi.routing.APIRouter object at 0x000001DED2F72210>
-INFO:     Started server process [3240]
-INFO:     Waiting for application startup.
-2025-06-03 09:27:16,112 - src.ultibot_backend.main - INFO - Iniciando UltiBot Backend...
-2025-06-03 09:27:16,112 - src.ultibot_backend.main - INFO - Inicializando servicios base...
-2025-06-03 09:27:16,644 - src.ultibot_backend.adapters.persistence_service - INFO - Conexi髇 a la base de datos Supabase (psycopg) establecida exitosamente usando DSN directo.
-2025-06-03 09:27:16,644 - src.ultibot_backend.services.credential_service - INFO - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
-2025-06-03 09:27:16,644 - src.ultibot_backend.services.credential_service - INFO - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
-2025-06-03 09:27:16,834 - src.ultibot_backend.main - INFO - Inicializando servicios dependientes...
-2025-06-03 09:27:16,835 - src.ultibot_backend.main - INFO - Inicializando servicios de trading...
-2025-06-03 09:27:16,835 - src.ultibot_backend.services.order_execution_service - INFO - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
-2025-06-03 09:27:16,835 - src.ultibot_backend.services.unified_order_execution_service - INFO - UnifiedOrderExecutionService initialized with both real and paper execution services
-2025-06-03 09:27:16,835 - src.ultibot_backend.main - INFO - Inicializando servicios avanzados...
-2025-06-03 09:27:16,835 - src.ultibot_backend.main - INFO - PerformanceService inicializado.
-2025-06-03 09:27:19,826 - src.ultibot_backend.main - ERROR - Error al inicializar LLM Provider: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
-2025-06-03 09:27:19,826 - src.ultibot_backend.main - ERROR - Error durante la inicializaci髇 de servicios: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
+2025-06-04 10:02:23,396 - src.ultibot_backend.api.v1.endpoints.opportunities - INFO - Router de oportunidades inicializado: <fastapi.routing.APIRouter object at 0x00000152F52CC490>
+2025-06-04 10:02:23,459 - src.ultibot_backend.main - INFO - Iniciando UltiBot Backend...
+2025-06-04 10:02:23,459 - src.ultibot_backend.main - INFO - Inicializando servicios base...
+2025-06-04 10:02:24,281 - src.ultibot_backend.adapters.persistence_service - INFO - Conexi锟絥 a la base de datos Supabase (psycopg) establecida exitosamente usando DSN directo.
+2025-06-04 10:02:24,528 - src.ultibot_backend.services.credential_service - INFO - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
+2025-06-04 10:02:24,528 - src.ultibot_backend.services.credential_service - INFO - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-04 10:02:24,528 - src.ultibot_backend.main - INFO - Inicializando servicios dependientes...
+2025-06-04 10:02:24,528 - src.ultibot_backend.main - INFO - Inicializando servicios de trading...
+2025-06-04 10:02:24,528 - src.ultibot_backend.services.order_execution_service - INFO - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-04 10:02:24,528 - src.ultibot_backend.services.unified_order_execution_service - INFO - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-04 10:02:24,528 - src.ultibot_backend.main - INFO - Inicializando servicios avanzados...
+2025-06-04 10:02:24,528 - src.ultibot_backend.main - INFO - PerformanceService inicializado.
+2025-06-04 10:02:27,806 - src.ultibot_backend.main - ERROR - Error al inicializar LLM Provider: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
+2025-06-04 10:02:27,806 - src.ultibot_backend.main - INFO - AIOrchestrator inicializado.
+2025-06-04 10:02:27,806 - src.ultibot_backend.main - INFO - TradingReportService inicializado.
+2025-06-04 10:02:27,806 - src.ultibot_backend.main - INFO - Todos los servicios principales inicializados.
+2025-06-04 10:02:28,055 - src.ultibot_backend.main - INFO - Configuraci锟絥 de usuario cargada para 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:02:28,180 - src.ultibot_backend.main - INFO - No se encontraron credenciales de Telegram para 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:02:28,180 - src.ultibot_backend.main - INFO - Aplicaci锟絥 iniciada correctamente.
+2025-06-04 10:02:29,590 - src.ultibot_backend.api.v1.endpoints.reports - INFO - Calculando m锟絫ricas de rendimiento de paper trading para usuario 00000000-0000-0000-0000-000000000001
+2025-06-04 10:02:29,590 - src.ultibot_backend.api.v1.endpoints.reports - INFO - Filtros: symbol=None, start_date=2025-05-05 00:00:00, end_date=2025-06-04 23:59:59.999999
+2025-06-04 10:02:29,716 - src.ultibot_backend.adapters.persistence_service - INFO - Obtenidos 0 trades cerrados con filtros: {'user_id': '00000000-0000-0000-0000-000000000001', 'mode': 'paper', 'positionStatus': 'closed'}
+2025-06-04 10:02:29,716 - src.ultibot_backend.services.trading_report_service - INFO - Obtenidos 0 trades cerrados para usuario 00000000-0000-0000-0000-000000000001 en modo paper
+2025-06-04 10:02:29,716 - src.ultibot_backend.api.v1.endpoints.reports - INFO - M锟絫ricas calculadas: 0 trades, Win Rate: 0.00%, P&L Total: 0.00
+2025-06-04 10:02:30,515 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:02:31,066 - src.ultibot_backend.services.performance_service - INFO - Fetching performance data for user 00000000-0000-0000-0000-000000000001, mode_filter: None
+2025-06-04 10:02:31,072 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=200 "HTTP/1.1 200 OK"
+2025-06-04 10:02:31,073 - src.ultibot_backend.services.market_data_service - INFO - Datos de velas para BTCUSDT-1h obtenidos y procesados para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:02:31,180 - src.ultibot_backend.services.performance_service - INFO - No closed trades found for user 00000000-0000-0000-0000-000000000001 with mode_filter: None
+2025-06-04 10:02:32,566 - src.ultibot_backend.api.v1.endpoints.strategies - INFO - Listing strategies for user 00000000-0000-0000-0000-000000000001
+2025-06-04 10:02:33,251 - src.ultibot_backend.adapters.persistence_service - INFO - Conexi锟絥 a la base de datos Supabase (psycopg) establecida exitosamente usando DSN directo.
+2025-06-04 10:02:33,488 - src.ultibot_backend.services.strategy_service - INFO - Retrieved 0 strategies for user 00000000-0000-0000-0000-000000000001
+2025-06-04 10:02:33,488 - src.ultibot_backend.api.v1.endpoints.strategies - INFO - Retrieved 0 strategies
+2025-06-04 10:17:11,095 - src.ultibot_backend.main - INFO - Logging configurado con RotatingFileHandler para escribir en logs/backend.log (max ~100KB).
+2025-06-04 10:17:11,105 - src.ultibot_backend.api.v1.endpoints.opportunities - INFO - Router de oportunidades inicializado: <fastapi.routing.APIRouter object at 0x000001C8D5899040>
+2025-06-04 10:17:11,162 - src.ultibot_backend.main - INFO - Iniciando UltiBot Backend...
+2025-06-04 10:17:11,162 - src.ultibot_backend.main - INFO - Inicializando servicios base...
+2025-06-04 10:17:12,029 - src.ultibot_backend.adapters.persistence_service - INFO - Conexi贸n a la base de datos Supabase (psycopg) establecida exitosamente usando DSN directo.
+2025-06-04 10:17:12,237 - src.ultibot_backend.services.credential_service - INFO - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
+2025-06-04 10:17:12,237 - src.ultibot_backend.services.credential_service - INFO - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-04 10:17:12,237 - src.ultibot_backend.main - INFO - Inicializando servicios dependientes...
+2025-06-04 10:17:12,237 - src.ultibot_backend.main - INFO - Inicializando servicios de trading...
+2025-06-04 10:17:12,237 - src.ultibot_backend.services.order_execution_service - INFO - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-04 10:17:12,237 - src.ultibot_backend.services.unified_order_execution_service - INFO - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-04 10:17:12,237 - src.ultibot_backend.main - INFO - Inicializando servicios avanzados...
+2025-06-04 10:17:12,237 - src.ultibot_backend.main - INFO - PerformanceService inicializado.
+2025-06-04 10:17:15,588 - src.ultibot_backend.main - ERROR - Error al inicializar LLM Provider: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
+2025-06-04 10:17:15,588 - src.ultibot_backend.main - INFO - AIOrchestrator inicializado.
+2025-06-04 10:17:15,588 - src.ultibot_backend.main - INFO - TradingReportService inicializado.
+2025-06-04 10:17:15,588 - src.ultibot_backend.main - INFO - Todos los servicios principales inicializados.
+2025-06-04 10:17:15,818 - src.ultibot_backend.main - INFO - Configuraci贸n de usuario cargada para 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:17:15,931 - src.ultibot_backend.main - INFO - No se encontraron credenciales de Telegram para 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:17:15,931 - src.ultibot_backend.main - INFO - Aplicaci贸n iniciada correctamente.
+2025-06-04 10:17:17,452 - src.ultibot_backend.api.v1.endpoints.reports - INFO - Calculando m茅tricas de rendimiento de paper trading para usuario 00000000-0000-0000-0000-000000000001
+2025-06-04 10:17:17,453 - src.ultibot_backend.api.v1.endpoints.reports - INFO - Filtros: symbol=None, start_date=2025-05-05 00:00:00, end_date=2025-06-04 23:59:59.999999
+2025-06-04 10:17:17,569 - src.ultibot_backend.adapters.persistence_service - INFO - Obtenidos 0 trades cerrados con filtros: {'user_id': '00000000-0000-0000-0000-000000000001', 'mode': 'paper', 'positionStatus': 'closed'}
+2025-06-04 10:17:17,570 - src.ultibot_backend.services.trading_report_service - INFO - Obtenidos 0 trades cerrados para usuario 00000000-0000-0000-0000-000000000001 en modo paper
+2025-06-04 10:17:17,570 - src.ultibot_backend.api.v1.endpoints.reports - INFO - M茅tricas calculadas: 0 trades, Win Rate: 0.00%, P&L Total: 0.00
+2025-06-04 10:17:18,382 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:17:18,896 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=200 "HTTP/1.1 200 OK"
+2025-06-04 10:17:18,897 - src.ultibot_backend.services.market_data_service - INFO - Datos de velas para BTCUSDT-1h obtenidos y procesados para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:17:18,908 - src.ultibot_backend.services.performance_service - INFO - Fetching performance data for user 00000000-0000-0000-0000-000000000001, mode_filter: None
+2025-06-04 10:17:19,022 - src.ultibot_backend.services.performance_service - INFO - No closed trades found for user 00000000-0000-0000-0000-000000000001 with mode_filter: None
+2025-06-04 10:17:20,396 - src.ultibot_backend.api.v1.endpoints.strategies - INFO - Listing strategies for user 00000000-0000-0000-0000-000000000001
+2025-06-04 10:17:21,232 - src.ultibot_backend.adapters.persistence_service - INFO - Conexi贸n a la base de datos Supabase (psycopg) establecida exitosamente usando DSN directo.
+2025-06-04 10:17:21,462 - src.ultibot_backend.services.strategy_service - INFO - Retrieved 0 strategies for user 00000000-0000-0000-0000-000000000001
+2025-06-04 10:17:21,462 - src.ultibot_backend.api.v1.endpoints.strategies - INFO - Retrieved 0 strategies
+2025-06-04 10:17:27,368 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:17:32,276 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:17:37,494 - src.ultibot_backend.services.performance_service - INFO - Fetching performance data for user 00000000-0000-0000-0000-000000000001, mode_filter: OperatingMode.REAL
+2025-06-04 10:17:37,609 - src.ultibot_backend.services.performance_service - INFO - No closed trades found for user 00000000-0000-0000-0000-000000000001 with mode_filter: OperatingMode.REAL
+2025-06-04 10:17:37,630 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/account?timestamp=1749046657217&signature=4ff14706112a31fed2ce3b6f26abcac0fb26220f014bdc04e0530eb410b05553 "HTTP/1.1 401 Unauthorized"
+2025-06-04 10:17:37,631 - src.ultibot_backend.services.market_data_service - ERROR - Error al obtener balances de Binance para el usuario 00000000-0000-0000-0000-000000000001: Error de estado HTTP de Binance API: 401 - {"code":-2015,"msg":"Invalid API-key, IP, or permissions for action."}
+2025-06-04 10:17:37,631 - src.ultibot_backend.services.portfolio_service - ERROR - Error al obtener el resumen del portafolio real para el usuario 00000000-0000-0000-0000-000000000001: No se pudieron obtener los balances de Binance: Error de estado HTTP de Binance API: 401 - {"code":-2015,"msg":"Invalid API-key, IP, or permissions for action."}
+2025-06-04 10:17:37,724 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:17:37,726 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/account?timestamp=1749046657332&signature=fed12c7fa3b062e8fb92f940ceb82f909e61fdec8c64c512b1488b58de7bba43 "HTTP/1.1 401 Unauthorized"
+2025-06-04 10:17:37,726 - src.ultibot_backend.services.market_data_service - ERROR - Error al obtener balances de Binance para el usuario 00000000-0000-0000-0000-000000000001: Error de estado HTTP de Binance API: 401 - {"code":-2015,"msg":"Invalid API-key, IP, or permissions for action."}
+2025-06-04 10:17:37,726 - src.ultibot_backend.services.portfolio_service - ERROR - Error al obtener el resumen del portafolio real para el usuario 00000000-0000-0000-0000-000000000001: No se pudieron obtener los balances de Binance: Error de estado HTTP de Binance API: 401 - {"code":-2015,"msg":"Invalid API-key, IP, or permissions for action."}
+2025-06-04 10:17:42,165 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:17:52,829 - src.ultibot_backend.main - INFO - Iniciando limpieza de servicios...
+2025-06-04 10:17:52,829 - src.ultibot_backend.main - INFO - NotificationService cerrado correctamente.
+2025-06-04 10:17:52,829 - src.ultibot_backend.main - INFO - BinanceAdapter cerrado correctamente.
+2025-06-04 10:17:52,830 - src.ultibot_backend.adapters.persistence_service - INFO - Conexi贸n a la base de datos Supabase (psycopg) cerrada.
+2025-06-04 10:17:52,830 - src.ultibot_backend.main - INFO - PersistenceService cerrado correctamente.
+2025-06-04 10:17:52,830 - src.ultibot_backend.main - INFO - Limpieza de servicios completada.
+2025-06-04 10:17:52,830 - src.ultibot_backend.main - INFO - Aplicaci贸n cerrada correctamente.
+2025-06-04 10:36:28,924 - src.ultibot_backend.main - INFO - Logging configurado con RotatingFileHandler para escribir en logs/backend.log (max ~100KB).
+2025-06-04 10:36:28,933 - src.ultibot_backend.api.v1.endpoints.opportunities - INFO - Router de oportunidades inicializado: <fastapi.routing.APIRouter object at 0x00000139B6F407C0>
+2025-06-04 10:36:28,994 - src.ultibot_backend.main - INFO - Iniciando UltiBot Backend...
+2025-06-04 10:36:28,994 - src.ultibot_backend.main - INFO - Inicializando servicios base...
+2025-06-04 10:36:30,289 - src.ultibot_backend.adapters.persistence_service - INFO - Conexi贸n a la base de datos Supabase (psycopg) establecida exitosamente usando DSN directo.
+2025-06-04 10:36:30,666 - src.ultibot_backend.services.credential_service - INFO - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
+2025-06-04 10:36:30,666 - src.ultibot_backend.services.credential_service - INFO - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-04 10:36:30,666 - src.ultibot_backend.main - INFO - Inicializando servicios dependientes...
+2025-06-04 10:36:30,666 - src.ultibot_backend.main - INFO - Inicializando servicios de trading...
+2025-06-04 10:36:30,666 - src.ultibot_backend.services.order_execution_service - INFO - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-04 10:36:30,666 - src.ultibot_backend.services.unified_order_execution_service - INFO - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-04 10:36:30,666 - src.ultibot_backend.main - INFO - Inicializando servicios avanzados...
+2025-06-04 10:36:30,666 - src.ultibot_backend.main - INFO - PerformanceService inicializado.
+2025-06-04 10:36:33,953 - src.ultibot_backend.main - ERROR - Error al inicializar LLM Provider: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
+2025-06-04 10:36:33,954 - src.ultibot_backend.main - INFO - AIOrchestrator inicializado.
+2025-06-04 10:36:33,954 - src.ultibot_backend.main - INFO - TradingReportService inicializado.
+2025-06-04 10:36:33,954 - src.ultibot_backend.main - INFO - Todos los servicios principales inicializados.
+2025-06-04 10:36:34,240 - src.ultibot_backend.main - INFO - Configuraci贸n de usuario cargada para 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:36:34,376 - src.ultibot_backend.main - INFO - No se encontraron credenciales de Telegram para 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:36:34,376 - src.ultibot_backend.main - INFO - Aplicaci贸n iniciada correctamente.
+2025-06-04 10:36:36,318 - src.ultibot_backend.api.v1.endpoints.reports - INFO - Calculando m茅tricas de rendimiento de paper trading para usuario 00000000-0000-0000-0000-000000000001
+2025-06-04 10:36:36,318 - src.ultibot_backend.api.v1.endpoints.reports - INFO - Filtros: symbol=None, start_date=2025-05-05 00:00:00, end_date=2025-06-04 23:59:59.999999
+2025-06-04 10:36:36,454 - src.ultibot_backend.adapters.persistence_service - INFO - Obtenidos 0 trades cerrados con filtros: {'user_id': '00000000-0000-0000-0000-000000000001', 'mode': 'paper', 'positionStatus': 'closed'}
+2025-06-04 10:36:36,454 - src.ultibot_backend.services.trading_report_service - INFO - Obtenidos 0 trades cerrados para usuario 00000000-0000-0000-0000-000000000001 en modo paper
+2025-06-04 10:36:36,454 - src.ultibot_backend.api.v1.endpoints.reports - INFO - M茅tricas calculadas: 0 trades, Win Rate: 0.00%, P&L Total: 0.00
+2025-06-04 10:36:37,254 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:36:37,706 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=200 "HTTP/1.1 200 OK"
+2025-06-04 10:36:37,709 - src.ultibot_backend.services.market_data_service - INFO - Datos de velas para BTCUSDT-1h obtenidos y procesados para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:36:37,815 - src.ultibot_backend.services.performance_service - INFO - Fetching performance data for user 00000000-0000-0000-0000-000000000001, mode_filter: None
+2025-06-04 10:36:37,930 - src.ultibot_backend.services.performance_service - INFO - No closed trades found for user 00000000-0000-0000-0000-000000000001 with mode_filter: None
+2025-06-04 10:36:39,209 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=BTC%2FUSDT%2CETH%2FUSDT "HTTP/1.1 400 Bad Request"
+2025-06-04 10:36:39,211 - src.ultibot_backend.services.market_data_service - ERROR - Error al obtener datos REST de BTC/USDT,ETH/USDT para el usuario 00000000-0000-0000-0000-000000000001: Error de estado HTTP de Binance API: 400 - {"code":-1100,"msg":"Illegal characters found in parameter 'symbol'; legal range is '^[A-Z0-9-_.]{1,20}$'."}
+2025-06-04 10:36:39,710 - src.ultibot_backend.api.v1.endpoints.strategies - INFO - Listing strategies for user 00000000-0000-0000-0000-000000000001
+2025-06-04 10:36:40,419 - src.ultibot_backend.adapters.persistence_service - INFO - Conexi贸n a la base de datos Supabase (psycopg) establecida exitosamente usando DSN directo.
+2025-06-04 10:36:40,671 - src.ultibot_backend.services.strategy_service - INFO - Retrieved 0 strategies for user 00000000-0000-0000-0000-000000000001
+2025-06-04 10:36:40,672 - src.ultibot_backend.api.v1.endpoints.strategies - INFO - Retrieved 0 strategies
+2025-06-04 10:36:46,170 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:36:47,110 - src.ultibot_backend.services.performance_service - INFO - Fetching performance data for user 00000000-0000-0000-0000-000000000001, mode_filter: OperatingMode.REAL
+2025-06-04 10:36:47,455 - src.ultibot_backend.services.performance_service - INFO - No closed trades found for user 00000000-0000-0000-0000-000000000001 with mode_filter: OperatingMode.REAL
+2025-06-04 10:36:47,656 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/account?timestamp=1749047807218&signature=c28f40c1cc6650b0edcde6d98a7b83c7dcf15c42299566d63f5d0ba49b9fd5b1 "HTTP/1.1 401 Unauthorized"
+2025-06-04 10:36:47,657 - src.ultibot_backend.services.market_data_service - ERROR - Error al obtener balances de Binance para el usuario 00000000-0000-0000-0000-000000000001: Error de estado HTTP de Binance API: 401 - {"code":-2015,"msg":"Invalid API-key, IP, or permissions for action."}
+2025-06-04 10:36:47,657 - src.ultibot_backend.services.portfolio_service - ERROR - Error al obtener el resumen del portafolio real para el usuario 00000000-0000-0000-0000-000000000001: No se pudieron obtener los balances de Binance: Error de estado HTTP de Binance API: 401 - {"code":-2015,"msg":"Invalid API-key, IP, or permissions for action."}
+2025-06-04 10:36:47,753 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/account?timestamp=1749047807340&signature=7a47185353cfe52825f54017ede37fa3498154d6d569587c6724a62e929a9ceb "HTTP/1.1 401 Unauthorized"
+2025-06-04 10:36:47,754 - src.ultibot_backend.services.market_data_service - ERROR - Error al obtener balances de Binance para el usuario 00000000-0000-0000-0000-000000000001: Error de estado HTTP de Binance API: 401 - {"code":-2015,"msg":"Invalid API-key, IP, or permissions for action."}
+2025-06-04 10:36:47,755 - src.ultibot_backend.services.portfolio_service - ERROR - Error al obtener el resumen del portafolio real para el usuario 00000000-0000-0000-0000-000000000001: No se pudieron obtener los balances de Binance: Error de estado HTTP de Binance API: 401 - {"code":-2015,"msg":"Invalid API-key, IP, or permissions for action."}
+2025-06-04 10:36:51,157 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:36:51,343 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/account?timestamp=1749047811023&signature=0cfa39bcbd2f56aab481675260148eeafc4fa8e2ea1d21e96bdad245b76e0f2c "HTTP/1.1 401 Unauthorized"
+2025-06-04 10:36:51,344 - src.ultibot_backend.services.market_data_service - ERROR - Error al obtener balances de Binance para el usuario 00000000-0000-0000-0000-000000000001: Error de estado HTTP de Binance API: 401 - {"code":-2015,"msg":"Invalid API-key, IP, or permissions for action."}
+2025-06-04 10:36:51,345 - src.ultibot_backend.services.portfolio_service - ERROR - Error al obtener el resumen del portafolio real para el usuario 00000000-0000-0000-0000-000000000001: No se pudieron obtener los balances de Binance: Error de estado HTTP de Binance API: 401 - {"code":-2015,"msg":"Invalid API-key, IP, or permissions for action."}
+2025-06-04 10:36:56,146 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:37:06,430 - src.ultibot_backend.main - INFO - Iniciando limpieza de servicios...
+2025-06-04 10:37:06,431 - src.ultibot_backend.main - INFO - NotificationService cerrado correctamente.
+2025-06-04 10:37:06,432 - src.ultibot_backend.main - INFO - BinanceAdapter cerrado correctamente.
+2025-06-04 10:37:06,433 - src.ultibot_backend.adapters.persistence_service - INFO - Conexi贸n a la base de datos Supabase (psycopg) cerrada.
+2025-06-04 10:37:06,433 - src.ultibot_backend.main - INFO - PersistenceService cerrado correctamente.
+2025-06-04 10:37:06,434 - src.ultibot_backend.main - INFO - Limpieza de servicios completada.
+2025-06-04 10:37:06,435 - src.ultibot_backend.main - INFO - Aplicaci贸n cerrada correctamente.
+2025-06-04 10:40:42,540 - src.ultibot_backend.main - INFO - Logging configurado con RotatingFileHandler para escribir en logs/backend.log (max ~100KB).
+2025-06-04 10:40:42,549 - src.ultibot_backend.api.v1.endpoints.opportunities - INFO - Router de oportunidades inicializado: <fastapi.routing.APIRouter object at 0x000001E8119FD040>
+2025-06-04 10:40:42,600 - src.ultibot_backend.main - INFO - Iniciando UltiBot Backend...
+2025-06-04 10:40:42,600 - src.ultibot_backend.main - INFO - Inicializando servicios base...
+2025-06-04 10:40:43,482 - src.ultibot_backend.adapters.persistence_service - INFO - Conexi贸n a la base de datos Supabase (psycopg) establecida exitosamente usando DSN directo.
+2025-06-04 10:40:43,720 - src.ultibot_backend.services.credential_service - INFO - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
+2025-06-04 10:40:43,721 - src.ultibot_backend.services.credential_service - INFO - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-04 10:40:43,722 - src.ultibot_backend.main - INFO - Inicializando servicios dependientes...
+2025-06-04 10:40:43,723 - src.ultibot_backend.main - INFO - Inicializando servicios de trading...
+2025-06-04 10:40:43,723 - src.ultibot_backend.services.order_execution_service - INFO - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-04 10:40:43,724 - src.ultibot_backend.services.unified_order_execution_service - INFO - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-04 10:40:43,725 - src.ultibot_backend.main - INFO - Inicializando servicios avanzados...
+2025-06-04 10:40:43,726 - src.ultibot_backend.main - INFO - PerformanceService inicializado.
+2025-06-04 10:40:47,214 - src.ultibot_backend.main - ERROR - Error al inicializar LLM Provider: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
+2025-06-04 10:40:47,215 - src.ultibot_backend.main - INFO - AIOrchestrator inicializado.
+2025-06-04 10:40:47,215 - src.ultibot_backend.main - INFO - TradingReportService inicializado.
+2025-06-04 10:40:47,216 - src.ultibot_backend.main - INFO - Todos los servicios principales inicializados.
+2025-06-04 10:40:47,467 - src.ultibot_backend.main - INFO - Configuraci贸n de usuario cargada para 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:40:47,581 - src.ultibot_backend.main - INFO - No se encontraron credenciales de Telegram para 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:40:47,582 - src.ultibot_backend.main - INFO - Aplicaci贸n iniciada correctamente.
+2025-06-04 10:40:49,275 - src.ultibot_backend.api.v1.endpoints.reports - INFO - Calculando m茅tricas de rendimiento de paper trading para usuario 00000000-0000-0000-0000-000000000001
+2025-06-04 10:40:49,275 - src.ultibot_backend.api.v1.endpoints.reports - INFO - Filtros: symbol=None, start_date=2025-05-05 00:00:00, end_date=2025-06-04 23:59:59.999999
+2025-06-04 10:40:49,393 - src.ultibot_backend.adapters.persistence_service - INFO - Obtenidos 0 trades cerrados con filtros: {'user_id': '00000000-0000-0000-0000-000000000001', 'mode': 'paper', 'positionStatus': 'closed'}
+2025-06-04 10:40:49,393 - src.ultibot_backend.services.trading_report_service - INFO - Obtenidos 0 trades cerrados para usuario 00000000-0000-0000-0000-000000000001 en modo paper
+2025-06-04 10:40:49,394 - src.ultibot_backend.api.v1.endpoints.reports - INFO - M茅tricas calculadas: 0 trades, Win Rate: 0.00%, P&L Total: 0.00
+2025-06-04 10:40:50,157 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:40:50,638 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=200 "HTTP/1.1 200 OK"
+2025-06-04 10:40:50,640 - src.ultibot_backend.services.market_data_service - INFO - Datos de velas para BTCUSDT-1h obtenidos y procesados para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:40:50,714 - src.ultibot_backend.services.performance_service - INFO - Fetching performance data for user 00000000-0000-0000-0000-000000000001, mode_filter: None
+2025-06-04 10:40:50,845 - src.ultibot_backend.services.performance_service - INFO - No closed trades found for user 00000000-0000-0000-0000-000000000001 with mode_filter: None
+2025-06-04 10:40:52,104 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT%2CETHUSDT "HTTP/1.1 400 Bad Request"
+2025-06-04 10:40:52,106 - src.ultibot_backend.services.market_data_service - ERROR - Error al obtener datos REST de BTC/USDT,ETH/USDT para el usuario 00000000-0000-0000-0000-000000000001: Error de estado HTTP de Binance API: 400 - {"code":-1100,"msg":"Illegal characters found in parameter 'symbol'; legal range is '^[A-Z0-9-_.]{1,20}$'."}
+2025-06-04 10:40:52,572 - src.ultibot_backend.api.v1.endpoints.strategies - INFO - Listing strategies for user 00000000-0000-0000-0000-000000000001
+2025-06-04 10:40:53,352 - src.ultibot_backend.adapters.persistence_service - INFO - Conexi贸n a la base de datos Supabase (psycopg) establecida exitosamente usando DSN directo.
+2025-06-04 10:40:53,623 - src.ultibot_backend.services.strategy_service - INFO - Retrieved 0 strategies for user 00000000-0000-0000-0000-000000000001
+2025-06-04 10:40:53,624 - src.ultibot_backend.api.v1.endpoints.strategies - INFO - Retrieved 0 strategies
+2025-06-04 10:40:59,084 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:41:03,954 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:41:05,072 - src.ultibot_backend.services.performance_service - INFO - Fetching performance data for user 00000000-0000-0000-0000-000000000001, mode_filter: OperatingMode.REAL
+2025-06-04 10:41:05,193 - src.ultibot_backend.services.performance_service - INFO - No closed trades found for user 00000000-0000-0000-0000-000000000001 with mode_filter: OperatingMode.REAL
+2025-06-04 10:41:05,760 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/account?timestamp=1749048065317&signature=7b741b12dbde5864e50a8ab826a622555ff02998783ac13e57a3a0dd461439e3 "HTTP/1.1 401 Unauthorized"
+2025-06-04 10:41:05,761 - src.ultibot_backend.services.market_data_service - ERROR - Error al obtener balances de Binance para el usuario 00000000-0000-0000-0000-000000000001: Error de estado HTTP de Binance API: 401 - {"code":-2015,"msg":"Invalid API-key, IP, or permissions for action."}
+2025-06-04 10:41:05,762 - src.ultibot_backend.services.portfolio_service - ERROR - Error al obtener el resumen del portafolio real para el usuario 00000000-0000-0000-0000-000000000001: No se pudieron obtener los balances de Binance: Error de estado HTTP de Binance API: 401 - {"code":-2015,"msg":"Invalid API-key, IP, or permissions for action."}
+2025-06-04 10:41:05,892 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/account?timestamp=1749048065470&signature=c537490f5ab2773fa36efd55e6833a7cec3ddf3fe96fea8af888e4e640490d7e "HTTP/1.1 401 Unauthorized"
+2025-06-04 10:41:05,893 - src.ultibot_backend.services.market_data_service - ERROR - Error al obtener balances de Binance para el usuario 00000000-0000-0000-0000-000000000001: Error de estado HTTP de Binance API: 401 - {"code":-2015,"msg":"Invalid API-key, IP, or permissions for action."}
+2025-06-04 10:41:05,894 - src.ultibot_backend.services.portfolio_service - ERROR - Error al obtener el resumen del portafolio real para el usuario 00000000-0000-0000-0000-000000000001: No se pudieron obtener los balances de Binance: Error de estado HTTP de Binance API: 401 - {"code":-2015,"msg":"Invalid API-key, IP, or permissions for action."}
+2025-06-04 10:41:09,077 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:41:13,636 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/account?timestamp=1749048073174&signature=3b8fd6adc8f499294bf0cd4ae3d7d865d61fc65846555c9c5c129ff538359955 "HTTP/1.1 401 Unauthorized"
+2025-06-04 10:41:13,637 - src.ultibot_backend.services.market_data_service - ERROR - Error al obtener balances de Binance para el usuario 00000000-0000-0000-0000-000000000001: Error de estado HTTP de Binance API: 401 - {"code":-2015,"msg":"Invalid API-key, IP, or permissions for action."}
+2025-06-04 10:41:13,637 - src.ultibot_backend.services.portfolio_service - ERROR - Error al obtener el resumen del portafolio real para el usuario 00000000-0000-0000-0000-000000000001: No se pudieron obtener los balances de Binance: Error de estado HTTP de Binance API: 401 - {"code":-2015,"msg":"Invalid API-key, IP, or permissions for action."}
+2025-06-04 10:41:13,828 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:41:19,375 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/account?timestamp=1749048078952&signature=537fbedfe91dd791b40c6dd22526588cdc3edaf16450b8f58cd32ed62e09d74b "HTTP/1.1 401 Unauthorized"
+2025-06-04 10:41:19,376 - src.ultibot_backend.services.market_data_service - ERROR - Error al obtener balances de Binance para el usuario 00000000-0000-0000-0000-000000000001: Error de estado HTTP de Binance API: 401 - {"code":-2015,"msg":"Invalid API-key, IP, or permissions for action."}
+2025-06-04 10:41:19,376 - src.ultibot_backend.services.portfolio_service - ERROR - Error al obtener el resumen del portafolio real para el usuario 00000000-0000-0000-0000-000000000001: No se pudieron obtener los balances de Binance: Error de estado HTTP de Binance API: 401 - {"code":-2015,"msg":"Invalid API-key, IP, or permissions for action."}
+2025-06-04 10:41:19,577 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:41:20,216 - src.ultibot_backend.services.performance_service - INFO - Fetching performance data for user 00000000-0000-0000-0000-000000000001, mode_filter: OperatingMode.PAPER
+2025-06-04 10:41:20,332 - src.ultibot_backend.services.performance_service - INFO - No closed trades found for user 00000000-0000-0000-0000-000000000001 with mode_filter: OperatingMode.PAPER
+2025-06-04 10:41:20,990 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:41:22,091 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT%2CETHUSDT "HTTP/1.1 400 Bad Request"
+2025-06-04 10:41:22,092 - src.ultibot_backend.services.market_data_service - ERROR - Error al obtener datos REST de BTC/USDT,ETH/USDT para el usuario 00000000-0000-0000-0000-000000000001: Error de estado HTTP de Binance API: 400 - {"code":-1100,"msg":"Illegal characters found in parameter 'symbol'; legal range is '^[A-Z0-9-_.]{1,20}$'."}
+2025-06-04 10:41:23,836 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:41:29,017 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:41:33,942 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:41:39,014 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:41:43,841 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:41:45,994 - src.ultibot_backend.adapters.persistence_service - ERROR - Error al guardar/actualizar configuraci贸n de usuario para 00000000-0000-0000-0000-000000000001 (psycopg): cannot adapt type 'dict' using placeholder '%s' (format: AUTO)
 Traceback (most recent call last):
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 202, in initialize_services
-    ai_orchestrator = AIOrchestrator(credential_service=credential_service)
-TypeError: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-2025-06-03 09:27:19,827 - src.ultibot_backend.main - ERROR - Error durante el startup: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_backend\adapters\persistence_service.py", line 279, in upsert_user_configuration
+    await cur.execute(
+    ...<6 lines>...
+    )
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\psycopg\cursor_async.py", line 97, in execute
+    raise ex.with_traceback(None)
+psycopg.ProgrammingError: cannot adapt type 'dict' using placeholder '%s' (format: AUTO)
+2025-06-04 10:41:46,532 - src.ultibot_backend.services.config_service - ERROR - Error al guardar la configuraci贸n para el usuario 00000000-0000-0000-0000-000000000001: cannot adapt type 'dict' using placeholder '%s' (format: AUTO)
 Traceback (most recent call last):
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 322, in lifespan
-    await initialize_services()
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 202, in initialize_services
-    ai_orchestrator = AIOrchestrator(credential_service=credential_service)
-TypeError: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-2025-06-03 09:27:19,828 - src.ultibot_backend.main - INFO - Iniciando limpieza de servicios...
-2025-06-03 09:27:19,828 - src.ultibot_backend.main - INFO - NotificationService cerrado correctamente.
-2025-06-03 09:27:19,832 - src.ultibot_backend.main - INFO - BinanceAdapter cerrado correctamente.
-2025-06-03 09:27:19,832 - src.ultibot_backend.adapters.persistence_service - INFO - Conexi髇 a la base de datos Supabase (psycopg) cerrada.
-2025-06-03 09:27:19,832 - src.ultibot_backend.main - INFO - PersistenceService cerrado correctamente.
-2025-06-03 09:27:19,832 - src.ultibot_backend.main - INFO - Limpieza de servicios completada.
-2025-06-03 09:27:19,832 - src.ultibot_backend.main - INFO - Aplicaci髇 cerrada correctamente.
-ERROR:    Traceback (most recent call last):
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\starlette\routing.py", line 732, in lifespan
-    async with self.lifespan_context(app) as maybe_state:
-               ~~~~~~~~~~~~~~~~~~~~~^^^^^
-  File "C:\Users\zamor\AppData\Local\Programs\Python\Python313\Lib\contextlib.py", line 214, in __aenter__
-    return await anext(self.gen)
-           ^^^^^^^^^^^^^^^^^^^^^
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 322, in lifespan
-    await initialize_services()
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 202, in initialize_services
-    ai_orchestrator = AIOrchestrator(credential_service=credential_service)
-TypeError: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-
-ERROR:    Application startup failed. Exiting.
-DEBUG: Router de oportunidades inicializado: <fastapi.routing.APIRouter object at 0x000001DED2F72210>
-BinanceAdapter: Cliente HTTP cerrado y adaptador marcado como cerrado.
-WARNING:  WatchFiles detected changes in 'src\ultibot_ui\main.py'. Reloading...
-2025-06-03 09:27:50,244 - src.ultibot_backend.api.v1.endpoints.opportunities - INFO - Router de oportunidades inicializado: <fastapi.routing.APIRouter object at 0x0000023E7C536210>
-INFO:     Started server process [33908]
-INFO:     Waiting for application startup.
-2025-06-03 09:27:50,280 - src.ultibot_backend.main - INFO - Iniciando UltiBot Backend...
-2025-06-03 09:27:50,280 - src.ultibot_backend.main - INFO - Inicializando servicios base...
-2025-06-03 09:27:50,744 - src.ultibot_backend.adapters.persistence_service - INFO - Conexi髇 a la base de datos Supabase (psycopg) establecida exitosamente usando DSN directo.
-2025-06-03 09:27:50,744 - src.ultibot_backend.services.credential_service - INFO - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
-2025-06-03 09:27:50,744 - src.ultibot_backend.services.credential_service - INFO - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
-2025-06-03 09:27:51,045 - src.ultibot_backend.main - INFO - Inicializando servicios dependientes...
-2025-06-03 09:27:51,045 - src.ultibot_backend.main - INFO - Inicializando servicios de trading...
-2025-06-03 09:27:51,045 - src.ultibot_backend.services.order_execution_service - INFO - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
-2025-06-03 09:27:51,045 - src.ultibot_backend.services.unified_order_execution_service - INFO - UnifiedOrderExecutionService initialized with both real and paper execution services
-2025-06-03 09:27:51,045 - src.ultibot_backend.main - INFO - Inicializando servicios avanzados...
-2025-06-03 09:27:51,045 - src.ultibot_backend.main - INFO - PerformanceService inicializado.
-2025-06-03 09:27:54,467 - src.ultibot_backend.main - ERROR - Error al inicializar LLM Provider: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
-2025-06-03 09:27:54,467 - src.ultibot_backend.main - ERROR - Error durante la inicializaci髇 de servicios: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_backend\services\config_service.py", line 142, in save_user_configuration
+    await self.persistence_service.upsert_user_configuration(config.user_id, config_dict) # persistence espera UUID
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_backend\adapters\persistence_service.py", line 279, in upsert_user_configuration
+    await cur.execute(
+    ...<6 lines>...
+    )
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\psycopg\cursor_async.py", line 97, in execute
+    raise ex.with_traceback(None)
+psycopg.ProgrammingError: cannot adapt type 'dict' using placeholder '%s' (format: AUTO)
+2025-06-04 10:41:49,252 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:41:50,833 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:43:48,921 - src.ultibot_backend.main - INFO - Logging configurado con RotatingFileHandler para escribir en logs/backend.log (max ~100KB).
+2025-06-04 10:43:48,931 - src.ultibot_backend.api.v1.endpoints.opportunities - INFO - Router de oportunidades inicializado: <fastapi.routing.APIRouter object at 0x00000189BBAE9040>
+2025-06-04 10:43:48,984 - src.ultibot_backend.main - INFO - Iniciando UltiBot Backend...
+2025-06-04 10:43:48,985 - src.ultibot_backend.main - INFO - Inicializando servicios base...
+2025-06-04 10:43:49,759 - src.ultibot_backend.adapters.persistence_service - INFO - Conexi贸n a la base de datos Supabase (psycopg) establecida exitosamente usando DSN directo.
+2025-06-04 10:43:49,955 - src.ultibot_backend.services.credential_service - INFO - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
+2025-06-04 10:43:49,956 - src.ultibot_backend.services.credential_service - INFO - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-04 10:43:49,957 - src.ultibot_backend.main - INFO - Inicializando servicios dependientes...
+2025-06-04 10:43:49,957 - src.ultibot_backend.main - INFO - Inicializando servicios de trading...
+2025-06-04 10:43:49,957 - src.ultibot_backend.services.order_execution_service - INFO - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-04 10:43:49,958 - src.ultibot_backend.services.unified_order_execution_service - INFO - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-04 10:43:49,958 - src.ultibot_backend.main - INFO - Inicializando servicios avanzados...
+2025-06-04 10:43:49,958 - src.ultibot_backend.main - INFO - PerformanceService inicializado.
+2025-06-04 10:43:53,369 - src.ultibot_backend.main - ERROR - Error al inicializar LLM Provider: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
+2025-06-04 10:43:53,371 - src.ultibot_backend.main - INFO - AIOrchestrator inicializado.
+2025-06-04 10:43:53,371 - src.ultibot_backend.main - INFO - TradingReportService inicializado.
+2025-06-04 10:43:53,372 - src.ultibot_backend.main - INFO - Todos los servicios principales inicializados.
+2025-06-04 10:43:53,612 - src.ultibot_backend.main - INFO - Configuraci贸n de usuario cargada para 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:43:53,735 - src.ultibot_backend.main - INFO - No se encontraron credenciales de Telegram para 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:43:53,736 - src.ultibot_backend.main - INFO - Aplicaci贸n iniciada correctamente.
+2025-06-04 10:43:55,391 - src.ultibot_backend.api.v1.endpoints.reports - INFO - Calculando m茅tricas de rendimiento de paper trading para usuario 00000000-0000-0000-0000-000000000001
+2025-06-04 10:43:55,391 - src.ultibot_backend.api.v1.endpoints.reports - INFO - Filtros: symbol=None, start_date=2025-05-05 00:00:00, end_date=2025-06-04 23:59:59.999999
+2025-06-04 10:43:55,510 - src.ultibot_backend.adapters.persistence_service - INFO - Obtenidos 0 trades cerrados con filtros: {'user_id': '00000000-0000-0000-0000-000000000001', 'mode': 'paper', 'positionStatus': 'closed'}
+2025-06-04 10:43:55,510 - src.ultibot_backend.services.trading_report_service - INFO - Obtenidos 0 trades cerrados para usuario 00000000-0000-0000-0000-000000000001 en modo paper
+2025-06-04 10:43:55,511 - src.ultibot_backend.api.v1.endpoints.reports - INFO - M茅tricas calculadas: 0 trades, Win Rate: 0.00%, P&L Total: 0.00
+2025-06-04 10:43:56,293 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:43:56,756 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=200 "HTTP/1.1 200 OK"
+2025-06-04 10:43:56,757 - src.ultibot_backend.services.market_data_service - INFO - Datos de velas para BTCUSDT-1h obtenidos y procesados para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:43:56,851 - src.ultibot_backend.services.performance_service - INFO - Fetching performance data for user 00000000-0000-0000-0000-000000000001, mode_filter: None
+2025-06-04 10:43:56,971 - src.ultibot_backend.services.performance_service - INFO - No closed trades found for user 00000000-0000-0000-0000-000000000001 with mode_filter: None
+2025-06-04 10:43:58,240 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT%2CETHUSDT "HTTP/1.1 400 Bad Request"
+2025-06-04 10:43:58,241 - src.ultibot_backend.services.market_data_service - ERROR - Error al obtener datos REST de BTC/USDT,ETH/USDT para el usuario 00000000-0000-0000-0000-000000000001: Error de estado HTTP de Binance API: 400 - {"code":-1100,"msg":"Illegal characters found in parameter 'symbol'; legal range is '^[A-Z0-9-_.]{1,20}$'."}
+2025-06-04 10:43:58,706 - src.ultibot_backend.api.v1.endpoints.strategies - INFO - Listing strategies for user 00000000-0000-0000-0000-000000000001
+2025-06-04 10:43:59,454 - src.ultibot_backend.adapters.persistence_service - INFO - Conexi贸n a la base de datos Supabase (psycopg) establecida exitosamente usando DSN directo.
+2025-06-04 10:43:59,707 - src.ultibot_backend.services.strategy_service - INFO - Retrieved 0 strategies for user 00000000-0000-0000-0000-000000000001
+2025-06-04 10:43:59,708 - src.ultibot_backend.api.v1.endpoints.strategies - INFO - Retrieved 0 strategies
+2025-06-04 10:44:05,382 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:44:07,920 - src.ultibot_backend.adapters.persistence_service - ERROR - Error al guardar/actualizar configuraci贸n de usuario para 00000000-0000-0000-0000-000000000001 (psycopg): cannot adapt type 'dict' using placeholder '%s' (format: AUTO)
 Traceback (most recent call last):
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 202, in initialize_services
-    ai_orchestrator = AIOrchestrator(credential_service=credential_service)
-TypeError: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-2025-06-03 09:27:54,468 - src.ultibot_backend.main - ERROR - Error durante el startup: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_backend\adapters\persistence_service.py", line 279, in upsert_user_configuration
+    await cur.execute(
+    ...<6 lines>...
+    )
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\psycopg\cursor_async.py", line 97, in execute
+    raise ex.with_traceback(None)
+psycopg.ProgrammingError: cannot adapt type 'dict' using placeholder '%s' (format: AUTO)
+2025-06-04 10:44:08,040 - src.ultibot_backend.services.config_service - ERROR - Error al guardar la configuraci贸n para el usuario 00000000-0000-0000-0000-000000000001: cannot adapt type 'dict' using placeholder '%s' (format: AUTO)
 Traceback (most recent call last):
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 322, in lifespan
-    await initialize_services()
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 202, in initialize_services
-    ai_orchestrator = AIOrchestrator(credential_service=credential_service)
-TypeError: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-2025-06-03 09:27:54,468 - src.ultibot_backend.main - INFO - Iniciando limpieza de servicios...
-2025-06-03 09:27:54,468 - src.ultibot_backend.main - INFO - NotificationService cerrado correctamente.
-2025-06-03 09:27:54,472 - src.ultibot_backend.main - INFO - BinanceAdapter cerrado correctamente.
-2025-06-03 09:27:54,473 - src.ultibot_backend.adapters.persistence_service - INFO - Conexi髇 a la base de datos Supabase (psycopg) cerrada.
-2025-06-03 09:27:54,473 - src.ultibot_backend.main - INFO - PersistenceService cerrado correctamente.
-2025-06-03 09:27:54,473 - src.ultibot_backend.main - INFO - Limpieza de servicios completada.
-2025-06-03 09:27:54,473 - src.ultibot_backend.main - INFO - Aplicaci髇 cerrada correctamente.
-ERROR:    Traceback (most recent call last):
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\starlette\routing.py", line 732, in lifespan
-    async with self.lifespan_context(app) as maybe_state:
-               ~~~~~~~~~~~~~~~~~~~~~^^^^^
-  File "C:\Users\zamor\AppData\Local\Programs\Python\Python313\Lib\contextlib.py", line 214, in __aenter__
-    return await anext(self.gen)
-           ^^^^^^^^^^^^^^^^^^^^^
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 322, in lifespan
-    await initialize_services()
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 202, in initialize_services
-    ai_orchestrator = AIOrchestrator(credential_service=credential_service)
-TypeError: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-
-ERROR:    Application startup failed. Exiting.
-DEBUG: Router de oportunidades inicializado: <fastapi.routing.APIRouter object at 0x0000023E7C536210>
-BinanceAdapter: Cliente HTTP cerrado y adaptador marcado como cerrado.
-WARNING:  WatchFiles detected changes in 'src\ultibot_ui\views\opportunities_view.py'. Reloading...
-2025-06-03 09:33:39,958 - src.ultibot_backend.api.v1.endpoints.opportunities - INFO - Router de oportunidades inicializado: <fastapi.routing.APIRouter object at 0x0000023AA9AB6210>
-INFO:     Started server process [29156]
-INFO:     Waiting for application startup.
-2025-06-03 09:33:39,994 - src.ultibot_backend.main - INFO - Iniciando UltiBot Backend...
-2025-06-03 09:33:39,994 - src.ultibot_backend.main - INFO - Inicializando servicios base...
-2025-06-03 09:33:40,549 - src.ultibot_backend.adapters.persistence_service - INFO - Conexi髇 a la base de datos Supabase (psycopg) establecida exitosamente usando DSN directo.
-2025-06-03 09:33:40,549 - src.ultibot_backend.services.credential_service - INFO - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
-2025-06-03 09:33:40,549 - src.ultibot_backend.services.credential_service - INFO - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
-2025-06-03 09:33:40,861 - src.ultibot_backend.main - INFO - Inicializando servicios dependientes...
-2025-06-03 09:33:40,861 - src.ultibot_backend.main - INFO - Inicializando servicios de trading...
-2025-06-03 09:33:40,861 - src.ultibot_backend.services.order_execution_service - INFO - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
-2025-06-03 09:33:40,861 - src.ultibot_backend.services.unified_order_execution_service - INFO - UnifiedOrderExecutionService initialized with both real and paper execution services
-2025-06-03 09:33:40,861 - src.ultibot_backend.main - INFO - Inicializando servicios avanzados...
-2025-06-03 09:33:40,861 - src.ultibot_backend.main - INFO - PerformanceService inicializado.
-2025-06-03 09:33:44,110 - src.ultibot_backend.main - ERROR - Error al inicializar LLM Provider: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
-2025-06-03 09:33:44,110 - src.ultibot_backend.main - ERROR - Error durante la inicializaci髇 de servicios: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-Traceback (most recent call last):
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 202, in initialize_services
-    ai_orchestrator = AIOrchestrator(credential_service=credential_service)
-TypeError: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-2025-06-03 09:33:44,112 - src.ultibot_backend.main - ERROR - Error durante el startup: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-Traceback (most recent call last):
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 322, in lifespan
-    await initialize_services()
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 202, in initialize_services
-    ai_orchestrator = AIOrchestrator(credential_service=credential_service)
-TypeError: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-2025-06-03 09:33:44,112 - src.ultibot_backend.main - INFO - Iniciando limpieza de servicios...
-2025-06-03 09:33:44,112 - src.ultibot_backend.main - INFO - NotificationService cerrado correctamente.
-2025-06-03 09:33:44,116 - src.ultibot_backend.main - INFO - BinanceAdapter cerrado correctamente.
-2025-06-03 09:33:44,116 - src.ultibot_backend.adapters.persistence_service - INFO - Conexi髇 a la base de datos Supabase (psycopg) cerrada.
-2025-06-03 09:33:44,116 - src.ultibot_backend.main - INFO - PersistenceService cerrado correctamente.
-2025-06-03 09:33:44,116 - src.ultibot_backend.main - INFO - Limpieza de servicios completada.
-2025-06-03 09:33:44,116 - src.ultibot_backend.main - INFO - Aplicaci髇 cerrada correctamente.
-ERROR:    Traceback (most recent call last):
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\starlette\routing.py", line 732, in lifespan
-    async with self.lifespan_context(app) as maybe_state:
-               ~~~~~~~~~~~~~~~~~~~~~^^^^^
-  File "C:\Users\zamor\AppData\Local\Programs\Python\Python313\Lib\contextlib.py", line 214, in __aenter__
-    return await anext(self.gen)
-           ^^^^^^^^^^^^^^^^^^^^^
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 322, in lifespan
-    await initialize_services()
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 202, in initialize_services
-    ai_orchestrator = AIOrchestrator(credential_service=credential_service)
-TypeError: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-
-ERROR:    Application startup failed. Exiting.
-DEBUG: Router de oportunidades inicializado: <fastapi.routing.APIRouter object at 0x0000023AA9AB6210>
-BinanceAdapter: Cliente HTTP cerrado y adaptador marcado como cerrado.
-WARNING:  WatchFiles detected changes in 'src\ultibot_ui\views\opportunities_view.py'. Reloading...
-2025-06-03 09:36:11,921 - src.ultibot_backend.api.v1.endpoints.opportunities - INFO - Router de oportunidades inicializado: <fastapi.routing.APIRouter object at 0x000001C4B4256210>
-INFO:     Started server process [24296]
-INFO:     Waiting for application startup.
-2025-06-03 09:36:11,956 - src.ultibot_backend.main - INFO - Iniciando UltiBot Backend...
-2025-06-03 09:36:11,956 - src.ultibot_backend.main - INFO - Inicializando servicios base...
-2025-06-03 09:36:12,527 - src.ultibot_backend.adapters.persistence_service - INFO - Conexi髇 a la base de datos Supabase (psycopg) establecida exitosamente usando DSN directo.
-2025-06-03 09:36:12,527 - src.ultibot_backend.services.credential_service - INFO - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
-2025-06-03 09:36:12,527 - src.ultibot_backend.services.credential_service - INFO - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
-2025-06-03 09:36:12,835 - src.ultibot_backend.main - INFO - Inicializando servicios dependientes...
-2025-06-03 09:36:12,835 - src.ultibot_backend.main - INFO - Inicializando servicios de trading...
-2025-06-03 09:36:12,835 - src.ultibot_backend.services.order_execution_service - INFO - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
-2025-06-03 09:36:12,835 - src.ultibot_backend.services.unified_order_execution_service - INFO - UnifiedOrderExecutionService initialized with both real and paper execution services
-2025-06-03 09:36:12,835 - src.ultibot_backend.main - INFO - Inicializando servicios avanzados...
-2025-06-03 09:36:12,835 - src.ultibot_backend.main - INFO - PerformanceService inicializado.
-2025-06-03 09:36:16,056 - src.ultibot_backend.main - ERROR - Error al inicializar LLM Provider: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
-2025-06-03 09:36:16,056 - src.ultibot_backend.main - ERROR - Error durante la inicializaci髇 de servicios: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-Traceback (most recent call last):
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 202, in initialize_services
-    ai_orchestrator = AIOrchestrator(credential_service=credential_service)
-TypeError: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-2025-06-03 09:36:16,057 - src.ultibot_backend.main - ERROR - Error durante el startup: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-Traceback (most recent call last):
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 322, in lifespan
-    await initialize_services()
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 202, in initialize_services
-    ai_orchestrator = AIOrchestrator(credential_service=credential_service)
-TypeError: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-2025-06-03 09:36:16,058 - src.ultibot_backend.main - INFO - Iniciando limpieza de servicios...
-2025-06-03 09:36:16,058 - src.ultibot_backend.main - INFO - NotificationService cerrado correctamente.
-2025-06-03 09:36:16,062 - src.ultibot_backend.main - INFO - BinanceAdapter cerrado correctamente.
-2025-06-03 09:36:16,062 - src.ultibot_backend.adapters.persistence_service - INFO - Conexi髇 a la base de datos Supabase (psycopg) cerrada.
-2025-06-03 09:36:16,062 - src.ultibot_backend.main - INFO - PersistenceService cerrado correctamente.
-2025-06-03 09:36:16,062 - src.ultibot_backend.main - INFO - Limpieza de servicios completada.
-2025-06-03 09:36:16,062 - src.ultibot_backend.main - INFO - Aplicaci髇 cerrada correctamente.
-ERROR:    Traceback (most recent call last):
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\starlette\routing.py", line 732, in lifespan
-    async with self.lifespan_context(app) as maybe_state:
-               ~~~~~~~~~~~~~~~~~~~~~^^^^^
-  File "C:\Users\zamor\AppData\Local\Programs\Python\Python313\Lib\contextlib.py", line 214, in __aenter__
-    return await anext(self.gen)
-           ^^^^^^^^^^^^^^^^^^^^^
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 322, in lifespan
-    await initialize_services()
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 202, in initialize_services
-    ai_orchestrator = AIOrchestrator(credential_service=credential_service)
-TypeError: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-
-ERROR:    Application startup failed. Exiting.
-DEBUG: Router de oportunidades inicializado: <fastapi.routing.APIRouter object at 0x000001C4B4256210>
-BinanceAdapter: Cliente HTTP cerrado y adaptador marcado como cerrado.
-WARNING:  WatchFiles detected changes in 'src\ultibot_ui\views\opportunities_view.py'. Reloading...
-2025-06-03 09:36:26,460 - src.ultibot_backend.api.v1.endpoints.opportunities - INFO - Router de oportunidades inicializado: <fastapi.routing.APIRouter object at 0x000001DDB6676210>
-INFO:     Started server process [26476]
-INFO:     Waiting for application startup.
-2025-06-03 09:36:26,497 - src.ultibot_backend.main - INFO - Iniciando UltiBot Backend...
-2025-06-03 09:36:26,497 - src.ultibot_backend.main - INFO - Inicializando servicios base...
-2025-06-03 09:36:26,976 - src.ultibot_backend.adapters.persistence_service - INFO - Conexi髇 a la base de datos Supabase (psycopg) establecida exitosamente usando DSN directo.
-2025-06-03 09:36:26,977 - src.ultibot_backend.services.credential_service - INFO - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
-2025-06-03 09:36:26,977 - src.ultibot_backend.services.credential_service - INFO - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
-2025-06-03 09:36:27,271 - src.ultibot_backend.main - INFO - Inicializando servicios dependientes...
-2025-06-03 09:36:27,271 - src.ultibot_backend.main - INFO - Inicializando servicios de trading...
-2025-06-03 09:36:27,271 - src.ultibot_backend.services.order_execution_service - INFO - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
-2025-06-03 09:36:27,271 - src.ultibot_backend.services.unified_order_execution_service - INFO - UnifiedOrderExecutionService initialized with both real and paper execution services
-2025-06-03 09:36:27,271 - src.ultibot_backend.main - INFO - Inicializando servicios avanzados...
-2025-06-03 09:36:27,271 - src.ultibot_backend.main - INFO - PerformanceService inicializado.
-2025-06-03 09:36:30,679 - src.ultibot_backend.main - ERROR - Error al inicializar LLM Provider: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
-2025-06-03 09:36:30,680 - src.ultibot_backend.main - ERROR - Error durante la inicializaci髇 de servicios: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-Traceback (most recent call last):
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 202, in initialize_services
-    ai_orchestrator = AIOrchestrator(credential_service=credential_service)
-TypeError: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-2025-06-03 09:36:30,681 - src.ultibot_backend.main - ERROR - Error durante el startup: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-Traceback (most recent call last):
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 322, in lifespan
-    await initialize_services()
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 202, in initialize_services
-    ai_orchestrator = AIOrchestrator(credential_service=credential_service)
-TypeError: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-2025-06-03 09:36:30,681 - src.ultibot_backend.main - INFO - Iniciando limpieza de servicios...
-2025-06-03 09:36:30,681 - src.ultibot_backend.main - INFO - NotificationService cerrado correctamente.
-2025-06-03 09:36:30,685 - src.ultibot_backend.main - INFO - BinanceAdapter cerrado correctamente.
-2025-06-03 09:36:30,686 - src.ultibot_backend.adapters.persistence_service - INFO - Conexi髇 a la base de datos Supabase (psycopg) cerrada.
-2025-06-03 09:36:30,686 - src.ultibot_backend.main - INFO - PersistenceService cerrado correctamente.
-2025-06-03 09:36:30,686 - src.ultibot_backend.main - INFO - Limpieza de servicios completada.
-2025-06-03 09:36:30,686 - src.ultibot_backend.main - INFO - Aplicaci髇 cerrada correctamente.
-ERROR:    Traceback (most recent call last):
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\starlette\routing.py", line 732, in lifespan
-    async with self.lifespan_context(app) as maybe_state:
-               ~~~~~~~~~~~~~~~~~~~~~^^^^^
-  File "C:\Users\zamor\AppData\Local\Programs\Python\Python313\Lib\contextlib.py", line 214, in __aenter__
-    return await anext(self.gen)
-           ^^^^^^^^^^^^^^^^^^^^^
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 322, in lifespan
-    await initialize_services()
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 202, in initialize_services
-    ai_orchestrator = AIOrchestrator(credential_service=credential_service)
-TypeError: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-
-ERROR:    Application startup failed. Exiting.
-DEBUG: Router de oportunidades inicializado: <fastapi.routing.APIRouter object at 0x000001DDB6676210>
-BinanceAdapter: Cliente HTTP cerrado y adaptador marcado como cerrado.
-WARNING:  WatchFiles detected changes in 'src\ultibot_ui\views\opportunities_view.py'. Reloading...
-2025-06-03 09:36:37,759 - src.ultibot_backend.api.v1.endpoints.opportunities - INFO - Router de oportunidades inicializado: <fastapi.routing.APIRouter object at 0x000001E7DD546210>
-INFO:     Started server process [21896]
-INFO:     Waiting for application startup.
-2025-06-03 09:36:37,793 - src.ultibot_backend.main - INFO - Iniciando UltiBot Backend...
-2025-06-03 09:36:37,793 - src.ultibot_backend.main - INFO - Inicializando servicios base...
-2025-06-03 09:36:38,303 - src.ultibot_backend.adapters.persistence_service - INFO - Conexi髇 a la base de datos Supabase (psycopg) establecida exitosamente usando DSN directo.
-2025-06-03 09:36:38,303 - src.ultibot_backend.services.credential_service - INFO - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
-2025-06-03 09:36:38,303 - src.ultibot_backend.services.credential_service - INFO - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
-2025-06-03 09:36:38,615 - src.ultibot_backend.main - INFO - Inicializando servicios dependientes...
-2025-06-03 09:36:38,615 - src.ultibot_backend.main - INFO - Inicializando servicios de trading...
-2025-06-03 09:36:38,615 - src.ultibot_backend.services.order_execution_service - INFO - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
-2025-06-03 09:36:38,615 - src.ultibot_backend.services.unified_order_execution_service - INFO - UnifiedOrderExecutionService initialized with both real and paper execution services
-2025-06-03 09:36:38,616 - src.ultibot_backend.main - INFO - Inicializando servicios avanzados...
-2025-06-03 09:36:38,616 - src.ultibot_backend.main - INFO - PerformanceService inicializado.
-2025-06-03 09:36:42,037 - src.ultibot_backend.main - ERROR - Error al inicializar LLM Provider: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
-2025-06-03 09:36:42,037 - src.ultibot_backend.main - ERROR - Error durante la inicializaci髇 de servicios: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-Traceback (most recent call last):
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 202, in initialize_services
-    ai_orchestrator = AIOrchestrator(credential_service=credential_service)
-TypeError: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-2025-06-03 09:36:42,038 - src.ultibot_backend.main - ERROR - Error durante el startup: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-Traceback (most recent call last):
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 322, in lifespan
-    await initialize_services()
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 202, in initialize_services
-    ai_orchestrator = AIOrchestrator(credential_service=credential_service)
-TypeError: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-2025-06-03 09:36:42,038 - src.ultibot_backend.main - INFO - Iniciando limpieza de servicios...
-2025-06-03 09:36:42,038 - src.ultibot_backend.main - INFO - NotificationService cerrado correctamente.
-2025-06-03 09:36:42,042 - src.ultibot_backend.main - INFO - BinanceAdapter cerrado correctamente.
-2025-06-03 09:36:42,042 - src.ultibot_backend.adapters.persistence_service - INFO - Conexi髇 a la base de datos Supabase (psycopg) cerrada.
-2025-06-03 09:36:42,042 - src.ultibot_backend.main - INFO - PersistenceService cerrado correctamente.
-2025-06-03 09:36:42,042 - src.ultibot_backend.main - INFO - Limpieza de servicios completada.
-2025-06-03 09:36:42,042 - src.ultibot_backend.main - INFO - Aplicaci髇 cerrada correctamente.
-ERROR:    Traceback (most recent call last):
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\starlette\routing.py", line 732, in lifespan
-    async with self.lifespan_context(app) as maybe_state:
-               ~~~~~~~~~~~~~~~~~~~~~^^^^^
-  File "C:\Users\zamor\AppData\Local\Programs\Python\Python313\Lib\contextlib.py", line 214, in __aenter__
-    return await anext(self.gen)
-           ^^^^^^^^^^^^^^^^^^^^^
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 322, in lifespan
-    await initialize_services()
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 202, in initialize_services
-    ai_orchestrator = AIOrchestrator(credential_service=credential_service)
-TypeError: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-
-ERROR:    Application startup failed. Exiting.
-DEBUG: Router de oportunidades inicializado: <fastapi.routing.APIRouter object at 0x000001E7DD546210>
-BinanceAdapter: Cliente HTTP cerrado y adaptador marcado como cerrado.
-WARNING:  WatchFiles detected changes in 'src\ultibot_ui\views\opportunities_view.py'. Reloading...
-2025-06-03 09:36:57,383 - src.ultibot_backend.api.v1.endpoints.opportunities - INFO - Router de oportunidades inicializado: <fastapi.routing.APIRouter object at 0x000002A999F12210>
-INFO:     Started server process [26856]
-INFO:     Waiting for application startup.
-2025-06-03 09:36:57,418 - src.ultibot_backend.main - INFO - Iniciando UltiBot Backend...
-2025-06-03 09:36:57,418 - src.ultibot_backend.main - INFO - Inicializando servicios base...
-2025-06-03 09:36:57,903 - src.ultibot_backend.adapters.persistence_service - INFO - Conexi髇 a la base de datos Supabase (psycopg) establecida exitosamente usando DSN directo.
-2025-06-03 09:36:57,903 - src.ultibot_backend.services.credential_service - INFO - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
-2025-06-03 09:36:57,903 - src.ultibot_backend.services.credential_service - INFO - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
-2025-06-03 09:36:58,201 - src.ultibot_backend.main - INFO - Inicializando servicios dependientes...
-2025-06-03 09:36:58,201 - src.ultibot_backend.main - INFO - Inicializando servicios de trading...
-2025-06-03 09:36:58,201 - src.ultibot_backend.services.order_execution_service - INFO - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
-2025-06-03 09:36:58,201 - src.ultibot_backend.services.unified_order_execution_service - INFO - UnifiedOrderExecutionService initialized with both real and paper execution services
-2025-06-03 09:36:58,201 - src.ultibot_backend.main - INFO - Inicializando servicios avanzados...
-2025-06-03 09:36:58,201 - src.ultibot_backend.main - INFO - PerformanceService inicializado.
-2025-06-03 09:37:01,509 - src.ultibot_backend.main - ERROR - Error al inicializar LLM Provider: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
-2025-06-03 09:37:01,509 - src.ultibot_backend.main - ERROR - Error durante la inicializaci髇 de servicios: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-Traceback (most recent call last):
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 202, in initialize_services
-    ai_orchestrator = AIOrchestrator(credential_service=credential_service)
-TypeError: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-2025-06-03 09:37:01,510 - src.ultibot_backend.main - ERROR - Error durante el startup: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-Traceback (most recent call last):
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 322, in lifespan
-    await initialize_services()
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 202, in initialize_services
-    ai_orchestrator = AIOrchestrator(credential_service=credential_service)
-TypeError: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-2025-06-03 09:37:01,511 - src.ultibot_backend.main - INFO - Iniciando limpieza de servicios...
-2025-06-03 09:37:01,511 - src.ultibot_backend.main - INFO - NotificationService cerrado correctamente.
-2025-06-03 09:37:01,516 - src.ultibot_backend.main - INFO - BinanceAdapter cerrado correctamente.
-2025-06-03 09:37:01,516 - src.ultibot_backend.adapters.persistence_service - INFO - Conexi髇 a la base de datos Supabase (psycopg) cerrada.
-2025-06-03 09:37:01,516 - src.ultibot_backend.main - INFO - PersistenceService cerrado correctamente.
-2025-06-03 09:37:01,516 - src.ultibot_backend.main - INFO - Limpieza de servicios completada.
-2025-06-03 09:37:01,516 - src.ultibot_backend.main - INFO - Aplicaci髇 cerrada correctamente.
-ERROR:    Traceback (most recent call last):
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\starlette\routing.py", line 732, in lifespan
-    async with self.lifespan_context(app) as maybe_state:
-               ~~~~~~~~~~~~~~~~~~~~~^^^^^
-  File "C:\Users\zamor\AppData\Local\Programs\Python\Python313\Lib\contextlib.py", line 214, in __aenter__
-    return await anext(self.gen)
-           ^^^^^^^^^^^^^^^^^^^^^
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 322, in lifespan
-    await initialize_services()
-  File "c:\Users\zamor\UltiBotInversiones\src\ultibot_backend\main.py", line 202, in initialize_services
-    ai_orchestrator = AIOrchestrator(credential_service=credential_service)
-TypeError: AIOrchestrator.__init__() got an unexpected keyword argument 'credential_service'
-
-ERROR:    Application startup failed. Exiting.
-DEBUG: Router de oportunidades inicializado: <fastapi.routing.APIRouter object at 0x000002A999F12210>
-BinanceAdapter: Cliente HTTP cerrado y adaptador marcado como cerrado.
-^C^C
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_backend\services\config_service.py", line 142, in save_user_configuration
+    await self.persistence_service.upsert_user_configuration(config.user_id, config_dict) # persistence espera UUID
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_backend\adapters\persistence_service.py", line 279, in upsert_user_configuration
+    await cur.execute(
+    ...<6 lines>...
+    )
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\psycopg\cursor_async.py", line 97, in execute
+    raise ex.with_traceback(None)
+psycopg.ProgrammingError: cannot adapt type 'dict' using placeholder '%s' (format: AUTO)
+2025-06-04 10:44:10,338 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 10:44:12,530 - src.ultibot_backend.services.performance_service - INFO - Fetching performance data for user 00000000-0000-0000-0000-000000000001, mode_filter: OperatingMode.REAL
+2025-06-04 10:44:12,892 - src.ultibot_backend.services.performance_service - INFO - No closed trades found for user 00000000-0000-0000-0000-000000000001 with mode_filter: OperatingMode.REAL
+2025-06-04 10:44:13,049 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/account?timestamp=1749048252630&signature=57b072c9ade4970284ba89604481fdd596f7d058000dfe4425f86a8c594696cf "HTTP/1.1 401 Unauthorized"
+2025-06-04 10:44:13,049 - src.ultibot_backend.services.market_data_service - ERROR - Error al obtener balances de Binance para el usuario 00000000-0000-0000-0000-000000000001: Error de estado HTTP de Binance API: 401 - {"code":-2015,"msg":"Invalid API-key, IP, or permissions for action."}
+2025-06-04 10:44:13,050 - src.ultibot_backend.services.portfolio_service - ERROR - Error al obtener el resumen del portafolio real para el usuario 00000000-0000-0000-0000-000000000001: No se pudieron obtener los balances de Binance: Error de estado HTTP de Binance API: 401 - {"code":-2015,"msg":"Invalid API-key, IP, or permissions for action."}
+2025-06-04 10:44:13,165 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/account?timestamp=1749048252760&signature=2ce2edb90b593e1e96907ee9d73f8e4a9f3f2e406365114ee5c03b6cc1cf58a9 "HTTP/1.1 401 Unauthorized"
+2025-06-04 10:44:13,167 - src.ultibot_backend.services.market_data_service - ERROR - Error al obtener balances de Binance para el usuario 00000000-0000-0000-0000-000000000001: Error de estado HTTP de Binance API: 401 - {"code":-2015,"msg":"Invalid API-key, IP, or permissions for action."}
+2025-06-04 10:44:13,167 - src.ultibot_backend.services.portfolio_service - ERROR - Error al obtener el resumen del portafolio real para el usuario 00000000-0000-0000-0000-000000000001: No se pudieron obtener los balances de Binance: Error de estado HTTP de Binance API: 401 - {"code":-2015,"msg":"Invalid API-key, IP, or permissions for action."}
+2025-06-04 10:44:15,334 - src.ultibot_backend.services.notification_service - INFO - Historial de notificaciones recuperado para el usuario 00000000-0000-0000-0000-000000000001.

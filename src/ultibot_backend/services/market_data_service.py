@@ -136,22 +136,25 @@ class MarketDataService:
             logger.warning("MarketDataService está cerrado. No se pueden obtener datos de mercado REST.")
             return {s: {"error": "Servicio cerrado"} for s in symbols}
         market_data = {}
-        for symbol in symbols:
+        for original_symbol in symbols: # Renombrado para claridad
             try:
+                # Convertir el formato del símbolo de "BASE/QUOTE" a "BASEQUOTE"
+                binance_formatted_symbol = original_symbol.replace("/", "")
+                
                 # Los endpoints de ticker 24hr no requieren API Key ni Secret
-                ticker_data = await self.binance_adapter.get_ticker_24hr(symbol)
-                market_data[symbol] = {
+                ticker_data = await self.binance_adapter.get_ticker_24hr(binance_formatted_symbol)
+                market_data[original_symbol] = { # Usar el símbolo original como clave
                     "lastPrice": float(ticker_data.get("lastPrice", 0)),
                     "priceChangePercent": float(ticker_data.get("priceChangePercent", 0)),
                     "quoteVolume": float(ticker_data.get("quoteVolume", 0))
                 }
-                logger.info(f"Datos REST de {symbol} obtenidos para el usuario {user_id}.")
+                logger.info(f"Datos REST de {original_symbol} (consultado como {binance_formatted_symbol}) obtenidos para el usuario {user_id}.")
             except BinanceAPIError as e:
-                logger.error(f"Error al obtener datos REST de {symbol} para el usuario {user_id}: {e}")
-                market_data[symbol] = {"error": str(e)}
+                logger.error(f"Error al obtener datos REST de {original_symbol} para el usuario {user_id}: {e}")
+                market_data[original_symbol] = {"error": str(e)}
             except Exception as e:
-                logger.critical(f"Error inesperado al obtener datos REST de {symbol} para el usuario {user_id}: {e}", exc_info=True)
-                market_data[symbol] = {"error": "Error inesperado"}
+                logger.critical(f"Error inesperado al obtener datos REST de {original_symbol} para el usuario {user_id}: {e}", exc_info=True)
+                market_data[original_symbol] = {"error": "Error inesperado"}
         return market_data
 
     async def get_latest_price(self, symbol: str) -> float:

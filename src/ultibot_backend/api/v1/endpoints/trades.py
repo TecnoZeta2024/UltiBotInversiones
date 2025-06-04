@@ -4,17 +4,18 @@ from uuid import UUID
 from datetime import datetime, date
 
 from src.shared.data_types import Trade, PerformanceMetrics
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService # Mantener para type hinting
+from src.ultibot_backend import dependencies as deps # Importar deps
 
 router = APIRouter()
 
 # Trading mode type alias for consistent validation
 TradingMode = Literal["paper", "real", "both"]
 
-@router.get("/trades/{user_id}", response_model=List[Trade], status_code=status.HTTP_200_OK)
+@router.get("/{user_id}", response_model=List[Trade], status_code=status.HTTP_200_OK)
 async def get_user_trades(
     user_id: UUID,
-    persistence_service: Annotated[SupabasePersistenceService, Depends(SupabasePersistenceService)],
+    persistence_service: Annotated[SupabasePersistenceService, Depends(deps.get_persistence_service)],
     trading_mode: Annotated[TradingMode, Query(description="Trading mode filter: 'paper', 'real', or 'both'")] = "both",
     status_filter: Annotated[Optional[str], Query(description="Position status filter: 'open', 'closed', etc.")] = None,
     symbol_filter: Annotated[Optional[str], Query(description="Symbol filter (e.g., 'BTCUSDT')")] = None,
@@ -86,10 +87,10 @@ async def get_user_trades(
             detail=f"Failed to retrieve trades: {str(e)}"
         )
 
-@router.get("/trades/{user_id}/open", response_model=List[Trade], status_code=status.HTTP_200_OK)
+@router.get("/{user_id}/open", response_model=List[Trade], status_code=status.HTTP_200_OK)
 async def get_open_trades(
     user_id: UUID,
-    persistence_service: Annotated[SupabasePersistenceService, Depends(SupabasePersistenceService)],
+    persistence_service: Annotated[SupabasePersistenceService, Depends(deps.get_persistence_service)],
     trading_mode: Annotated[TradingMode, Query(description="Trading mode filter: 'paper', 'real', or 'both'")] = "both"
 ):
     """
@@ -117,10 +118,10 @@ async def get_open_trades(
             detail=f"Failed to retrieve open trades: {str(e)}"
         )
 
-@router.get("/trades/{user_id}/performance", response_model=PerformanceMetrics, status_code=status.HTTP_200_OK)
+@router.get("/{user_id}/performance", response_model=PerformanceMetrics, status_code=status.HTTP_200_OK)
 async def get_trading_performance(
     user_id: UUID,
-    persistence_service: Annotated[SupabasePersistenceService, Depends(SupabasePersistenceService)],
+    persistence_service: Annotated[SupabasePersistenceService, Depends(deps.get_persistence_service)],
     trading_mode: Annotated[TradingMode, Query(description="Trading mode: 'paper' or 'real'")] = "paper",
     date_from: Annotated[Optional[date], Query(description="Start date for metrics calculation (YYYY-MM-DD)")] = None,
     date_to: Annotated[Optional[date], Query(description="End date for metrics calculation (YYYY-MM-DD)")] = None
@@ -173,10 +174,10 @@ async def get_trading_performance(
             detail=f"Failed to calculate performance metrics: {str(e)}"
         )
 
-@router.get("/trades/{user_id}/count", status_code=status.HTTP_200_OK)
+@router.get("/{user_id}/count", status_code=status.HTTP_200_OK)
 async def get_trades_count(
     user_id: UUID,
-    persistence_service: Annotated[SupabasePersistenceService, Depends(SupabasePersistenceService)],
+    persistence_service: Annotated[SupabasePersistenceService, Depends(deps.get_persistence_service)],
     trading_mode: Annotated[TradingMode, Query(description="Trading mode filter: 'paper', 'real', or 'both'")] = "both",
     status_filter: Annotated[Optional[str], Query(description="Position status filter: 'open', 'closed', etc.")] = None,
     date_from: Annotated[Optional[date], Query(description="Start date filter (YYYY-MM-DD)")] = None,
