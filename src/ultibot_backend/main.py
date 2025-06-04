@@ -19,11 +19,15 @@ from contextlib import asynccontextmanager
 from typing import Optional
 from uuid import UUID
 
-from fastapi import FastAPI
-
-# Solución para Windows ProactorEventLoop con psycopg
+# Solución para Windows ProactorEventLoop con psycopg - DEBE SER LO PRIMERO
 if sys.platform == "win32":
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    try:
+        import win32api # Intenta importar win32api para verificar si el entorno es compatible
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    except ImportError:
+        logging.warning("win32api no encontrado. No se pudo establecer WindowsSelectorEventLoopPolicy. Esto puede causar problemas en Windows.")
+
+from fastapi import FastAPI
 
 # Importaciones organizadas: stdlib, third-party, local
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -221,8 +225,19 @@ async def initialize_services() -> None:
         
         # 7. Inicializar LLM Provider
         try:
-            llm_provider = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.7)
-            logger.info("LLM Provider (ChatGoogleGenerativeAI) inicializado.")
+            # Usar la clave de API de Gemini si está disponible en las settings
+            if settings.GEMINI_API_KEY:
+                llm_provider = ChatGoogleGenerativeAI(
+                    model="gemini-pro", 
+                    temperature=0.7, 
+                    google_api_key=settings.GEMINI_API_KEY
+                )
+                logger.info("LLM Provider (ChatGoogleGenerativeAI) inicializado con GEMINI_API_KEY.")
+            else:
+                # Si no hay GEMINI_API_KEY, intentar con credenciales por defecto (ADC)
+                llm_provider = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.7)
+                logger.info("LLM Provider (ChatGoogleGenerativeAI) inicializado sin GEMINI_API_KEY explícita (usando ADC).")
+            
         except Exception as e:
             logger.error(f"Error al inicializar LLM Provider: {e}")
             llm_provider = None

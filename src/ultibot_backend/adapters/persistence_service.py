@@ -237,6 +237,8 @@ class SupabasePersistenceService:
     async def upsert_user_configuration(self, user_id: UUID, config_data: Dict[str, Any]):
         await self._ensure_connection()
         assert self.connection is not None, "Connection must be established by _ensure_connection"
+        from psycopg import sql
+        import json
         
         config_to_save = config_data.copy()
         config_to_save.pop('id', None)
@@ -246,7 +248,7 @@ class SupabasePersistenceService:
         db_columns_map = {
             "telegramChatId": "telegram_chat_id", "notificationPreferences": "notification_preferences",
             "enableTelegramNotifications": "enable_telegram_notifications", "defaultPaperTradingCapital": "default_paper_trading_capital",
-            "paperTradingActive": "paper_trading_active", # Nuevo campo
+            "paperTradingActive": "paper_trading_active",
             "watchlists": "watchlists", "favoritePairs": "favorite_pairs", "riskProfile": "risk_profile",
             "riskProfileSettings": "risk_profile_settings", "realTradingSettings": "real_trading_settings",
             "aiStrategyConfigurations": "ai_strategy_configurations", "aiAnalysisConfidenceThresholds": "ai_analysis_confidence_thresholds",
@@ -254,36 +256,63 @@ class SupabasePersistenceService:
             "dashboardLayoutProfiles": "dashboard_layout_profiles", "activeDashboardLayoutProfileId": "active_dashboard_layout_profile_id",
             "dashboardLayoutConfig": "dashboard_layout_config", "cloudSyncPreferences": "cloud_sync_preferences",
         }
-        
-        insert_values_dict = {db_columns_map.get(k, k): v for k, v in config_to_save.items()}
+
+        def serialize_if_needed(value):
+            if value is None:
+                return None
+            if isinstance(value, (dict, list)):
+                return json.dumps(value)
+            return value
+
+        insert_values_dict = {db_columns_map.get(k, k): serialize_if_needed(v) for k, v in config_to_save.items()}
         insert_values_dict['user_id'] = user_id
 
-        columns = [Identifier(col) for col in insert_values_dict.keys()]
-        
+        # --- SERIALIZACIÓN ESTRICTA DE CAMPOS JSON ---
+        # Lista de columnas que deben ir como JSON en la BD
+        json_columns = [
+            "notification_preferences", "watchlists", "favorite_pairs", "risk_profile_settings",
+            "real_trading_settings", "ai_strategy_configurations", "ai_analysis_confidence_thresholds",
+            "mcp_server_preferences", "dashboard_layout_profiles", "dashboard_layout_config", "cloud_sync_preferences"
+        ]
+
+        for col in json_columns:
+            if col in insert_values_dict and insert_values_dict[col] is not None and not isinstance(insert_values_dict[col], str):
+                insert_values_dict[col] = json.dumps(insert_values_dict[col])
+
+        # DEBUG: Log the types and values being sent
+        import logging
+        logger = logging.getLogger("src.ultibot_backend.adapters.persistence_service")
+        for k, v in insert_values_dict.items():
+            logger.debug(f"upsert_user_configuration: {k} type={type(v)} value={v}")
+
+        columns = [sql.Identifier(col) for col in insert_values_dict.keys()]
+        placeholders = [sql.Placeholder() for _ in insert_values_dict]
         update_set_parts = [
-            SQL("{} = EXCLUDED.{}").format(Identifier(col), Identifier(col))
+            sql.SQL("{} = EXCLUDED.{}" ).format(sql.Identifier(col), sql.Identifier(col))
             for col in insert_values_dict if col != 'user_id'
         ]
-        update_set_str = SQL(", ").join(update_set_parts)
+        update_set_str = sql.SQL(", ").join(update_set_parts)
 
-        query: str = """
-        INSERT INTO user_configurations ({})
-        VALUES ({})
-        ON CONFLICT (user_id) DO UPDATE SET
-            {},
-            updated_at = timezone('utc'::text, now())
-        RETURNING *;
-        """
+        query = sql.SQL("""
+            INSERT INTO user_configurations ({columns})
+            VALUES ({placeholders})
+            ON CONFLICT (user_id) DO UPDATE SET
+                {update_set},
+                updated_at = timezone('utc'::text, now())
+            RETURNING *;
+        """).format(
+            columns=sql.SQL(', ').join(columns),
+            placeholders=sql.SQL(', ').join(placeholders),
+            update_set=update_set_str
+        )
         try:
+            # Ensure all values are primitive or JSON-serialized
+            values = tuple(insert_values_dict.values())
+            for idx, val in enumerate(values):
+                if isinstance(val, (dict, list)):
+                    raise TypeError(f"Non-serialized value at position {idx}: {val}")
             async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(
-                    SQL(query).format(
-                        SQL(", ").join(columns),
-                        SQL(", ").join(SQL("%s") for _ in insert_values_dict),
-                        update_set_str
-                    ),
-                    tuple(insert_values_dict.values())
-                )
+                await cur.execute(query, values)
                 await self.connection.commit()
             logger.info(f"Configuración de usuario para {user_id} guardada/actualizada exitosamente (psycopg).")
         except Exception as e:
@@ -505,7 +534,8 @@ class SupabasePersistenceService:
         
         try:
             async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(SQL(query), params)
+                # CORRECCIÓN FINAL: pasar el string SQL directamente a execute (sin SQL()), solo para uso interno/test
+                await cur.execute(query, params)
                 await self.connection.commit()
         except Exception as e:
             logger.error(f"Error ejecutando SQL crudo (psycopg): {query} con params {params} - {e}")
@@ -588,8 +618,6 @@ class SupabasePersistenceService:
         """Actualiza el estado y la razón del estado de una oportunidad."""
         await self._ensure_connection()
         assert self.connection is not None, "Connection must be established by _ensure_connection"
-        # Opportunity y OpportunityStatus ya están importados a nivel de módulo para type hints
-
         query_str: str = """
         UPDATE opportunities
         SET status = %s, status_reason = %s, updated_at = timezone('utc'::text, now())
@@ -946,9 +974,13 @@ class SupabasePersistenceService:
         
         final_query = Composed(query_parts)
 
+        logger.debug(f"Executing query: {final_query.as_string(self.connection)}")
+        logger.debug(f"Query parameters: {filters}, start_date={start_date}, end_date={end_date}, limit={limit}, offset={offset}")
+
         try:
             async with self.connection.cursor(row_factory=dict_row) as cur:
                 await cur.execute(final_query)
+                logger.debug("Query executed successfully.")
                 records = await cur.fetchall()
                 
                 # Convertir a lista de diccionarios con el formato esperado por TradingReportService
@@ -964,16 +996,15 @@ class SupabasePersistenceService:
                     if 'opportunity_id' in record_copy and record_copy['opportunity_id']:
                         record_copy['opportunity_id'] = UUID(record_copy['opportunity_id'])
                     
-                    # Mapear nombres de columnas de BD (snake_case) a nombres de campos de Pydantic
-                    field_mappings = {
+                    # Mapear nombres de columnas de BD (snake_case) a nombres de campos de Pydantic (camelCase/PascalCase)
+                    # Esto es crucial para que Pydantic pueda instanciar el modelo correctamente
+                    pydantic_fields_map = {
                         "position_status": "positionStatus",
                         "opportunity_id": "opportunityId", 
                         "ai_analysis_confidence": "aiAnalysisConfidence",
                         "pnl_usd": "pnl_usd",
                         "pnl_percentage": "pnl_percentage",
                         "closing_reason": "closingReason",
-                        "entry_order": "entryOrder",
-                        "exit_orders": "exitOrders",
                         "take_profit_price": "takeProfitPrice",
                         "trailing_stop_activation_price": "trailingStopActivationPrice",
                         "trailing_stop_callback_rate": "trailingStopCallbackRate",
@@ -981,19 +1012,14 @@ class SupabasePersistenceService:
                         "risk_reward_adjustments": "riskRewardAdjustments",
                     }
                     
-                    for db_field, pydantic_field in field_mappings.items():
-                        if db_field in record_copy:
-                            record_copy[pydantic_field] = record_copy.pop(db_field)
-                    
-                    # Convertir timestamps ISO a datetime si son strings
-                    datetime_fields = ['created_at', 'opened_at', 'updated_at', 'closed_at']
-                    for field in datetime_fields:
-                        if field in record_copy and isinstance(record_copy[field], str):
-                            try:
-                                record_copy[field] = datetime.fromisoformat(record[field])
-                            except (ValueError, TypeError):
-                                logger.warning(f"No se pudo convertir campo datetime {field}: {record_copy[field]}")
-                                record_copy[field] = None
+                    for db_col, pydantic_field in pydantic_fields_map.items():
+                        if db_col in record_copy:
+                            record_copy[pydantic_field] = record_copy.pop(db_col)
+
+                    # Convertir timestamps de string ISO a datetime
+                    for key in ['created_at', 'opened_at', 'updated_at', 'closed_at']:
+                        if key in record_copy and isinstance(record_copy[key], str):
+                            record_copy[key] = datetime.fromisoformat(record_copy[key])
                     
                     processed_records.append(record_copy)
                 

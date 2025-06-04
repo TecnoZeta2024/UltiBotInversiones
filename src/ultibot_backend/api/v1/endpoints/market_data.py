@@ -10,12 +10,15 @@ router = APIRouter()
 @router.get("/market/tickers", response_model=List[Dict[str, Any]])
 async def get_market_tickers(
     user_id: UUID = Query(..., description="User identifier for context (required for rate limits, etc.)"),
-    symbols: List[str] = Query(..., description="List of trading symbols, e.g. ['BTCUSDT','ETHUSDT']"),
+    symbols_str: str = Query(..., alias="symbols", description="Comma-separated list of trading symbols, e.g. 'BTC/USDT,ETH/USDT'"),
     market_data_service: MarketDataService = Depends(deps.get_market_data_service)
 ):
     """
     Get ticker data (last price, 24h change, volume) for a list of symbols.
     """
+    # Dividir la cadena de símbolos en una lista
+    symbols = [s.strip() for s in symbols_str.split(',') if s.strip()]
+    
     try:
         data = await market_data_service.get_market_data_rest(user_id, symbols)
         # Return as a list for frontend compatibility

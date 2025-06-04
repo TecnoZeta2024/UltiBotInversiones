@@ -29,4 +29,7 @@ class AppSettings(BaseSettings):
     # Fixed Credential ID for Binance (can be overridden by .env)
     FIXED_BINANCE_CREDENTIAL_ID: UUID = UUID("00000000-0000-0000-0000-000000000002")
 
+    # Google Gemini API Key (optional)
+    GEMINI_API_KEY: Optional[str] = None
+
 settings = AppSettings()

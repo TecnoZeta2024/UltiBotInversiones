@@ -34,8 +34,8 @@ from src.ultibot_backend.app_config import AppSettings
 # from ..ultibot_backend.services.market_data_service import MarketDataService
 # from ..ultibot_backend.services.notification_service import NotificationService
 # from ..ultibot_backend.services.portfolio_service import PortfolioService
-from .services.api_client import UltiBotAPIClient, APIError # Added
-from .windows.main_window import MainWindow
+from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError # Added
+from src.ultibot_ui.windows.main_window import MainWindow
 
 # Importar qdarkstyle de forma segura
 try:
@@ -571,31 +571,37 @@ class ApiWorker(QObject): # ApiWorker definition moved slightly to accommodate t
     def __init__(self, awaitable_coroutine: Coroutine):
         super().__init__()
         self.awaitable_coroutine = awaitable_coroutine
+        self.main_loop = asyncio.get_event_loop() # Obtener el bucle principal
 
     @pyqtSlot()
     def run(self):
         """
-        Executes the awaitable coroutine.
+        Programa la coroutine en el bucle de eventos principal.
         """
-        try:
-            # Need an event loop in this thread to run asyncio code
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            result = loop.run_until_complete(self.awaitable_coroutine)
-            loop.close()
-            self.result_ready.emit(result)
-        except APIError as e:
-            # Construct a meaningful error message from APIError
-            error_msg = f"API Error ({e.status_code}): {e.message}"
-            if e.response_json and 'detail' in e.response_json:
-                if isinstance(e.response_json['detail'], list): # FastAPI validation errors
-                    details = ", ".join([err.get('msg', 'validation error') for err in e.response_json['detail']])
-                    error_msg += f" - Details: {details}"
-                else:
-                    error_msg += f" - Detail: {e.response_json['detail']}"
-            self.error_occurred.emit(error_msg)
-        except Exception as e:
-            self.error_occurred.emit(f"Unexpected error in API worker: {str(e)}")
+        def _task_done(task):
+            try:
+                result = task.result()
+                self.result_ready.emit(result)
+            except APIError as e:
+                error_msg = f"API Error ({e.status_code}): {e.message}"
+                if e.response_json and 'detail' in e.response_json:
+                    if isinstance(e.response_json['detail'], list):
+                        details = ", ".join([err.get('msg', 'validation error') for err in e.response_json['detail']])
+                        error_msg += f" - Details: {details}"
+                    else:
+                        error_msg += f" - Detail: {e.response_json['detail']}" # Corregido a f-string
+                self.error_occurred.emit(error_msg)
+            except Exception as e:
+                self.error_occurred.emit(f"Unexpected error in API worker: {str(e)}")
+            finally:
+                # Asegurarse de que el hilo se cierre después de emitir la señal
+                if self.thread(): # Verificar si el hilo existe
+                    self.thread().quit() # Terminar el QThread
+
+        # Programar la coroutine en el bucle principal de forma segura entre hilos
+        self.main_loop.call_soon_threadsafe(
+            lambda: self.main_loop.create_task(self.awaitable_coroutine).add_done_callback(_task_done)
+        )
 
 
 class UltiBotApplication:
@@ -900,13 +906,6 @@ async def run_application() -> None:
         # 9. Limpieza de recursos
         await ultibot_app.cleanup_resources() # Includes stopping threads if any are still running (though they should finish)
 
-        # Ensure all threads are cleaned up before exiting
-        for thread in list(ultibot_app.active_threads): # Iterate over a copy
-            if thread.isRunning():
-                print(f"Waiting for thread {thread} to finish...")
-                thread.quit()
-                thread.wait() # Wait for thread to finish
-        
         sys.exit(exit_code)
         
     except ValueError as ve: # Typically from load_configuration or early settings issues
@@ -937,8 +936,6 @@ def main() -> None:
     
     log_file_path = os.path.join(log_dir, "frontend.log")
     
-    # Estimar maxBytes para ~500 líneas (500 líneas * 200 bytes/línea = 100KB)
-    # backupCount=0 significa que cuando el log alcance maxBytes, se rota y el viejo se descarta.
     handler = logging.handlers.RotatingFileHandler(
         log_file_path,
         maxBytes=100000,  # Aproximadamente 100KB
@@ -949,13 +946,6 @@ def main() -> None:
     formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     handler.setFormatter(formatter)
     
-    # Configurar el logger raíz para que capture todos los logs de nivel DEBUG o superior
-    # y los envíe a nuestro handler.
-    # Es importante hacer esto antes de que cualquier otra parte del código (o librerías)
-    # pueda llamar a logging.basicConfig() o añadir sus propios handlers por defecto.
-    
-    # Limpiar handlers existentes del logger raíz para evitar duplicados o configuraciones no deseadas.
-    # Esto es especialmente útil si alguna librería importada llama a basicConfig.
     root_logger = logging.getLogger()
     if root_logger.hasHandlers():
         for h_existente in root_logger.handlers[:]:
@@ -966,88 +956,12 @@ def main() -> None:
 
     logger.info("Logging configurado con RotatingFileHandler para escribir en logs/frontend.log (max ~100KB).")
 
-
     # Solución para Windows ProactorEventLoop con psycopg
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-    from qasync import QEventLoop
-    app = QApplication(sys.argv)
-    print("[DEBUG] QApplication creada")
-    loop = QEventLoop(app)
-    asyncio.set_event_loop(loop)
-
-    ultibot_app = UltiBotApplication()
-    ultibot_app.app = app
-
-    try:
-        # 1. Cargar configuración (incluye inicialización del API client)
-        print("[DEBUG] Cargando configuración...")
-        settings = ultibot_app.load_configuration()
-        print("[DEBUG] Configuración cargada")
-
-        # 2. Inicializar servicios core (API client)
-        print("[DEBUG] Inicializando core services...")
-        loop.run_until_complete(ultibot_app.initialize_core_services())
-        print("[DEBUG] Core services inicializados")
-
-        # 3. Asegurar configuración de usuario (async, pero no bloquea la UI)
-        try:
-            print("[DEBUG] Cargando configuración de usuario...")
-            user_config = loop.run_until_complete(
-                asyncio.wait_for(ultibot_app.ensure_user_configuration(), timeout=30)
-            )
-            print(f"[DEBUG] User configuration loaded: {user_config}")
-        except asyncio.TimeoutError:
-            print("[ERROR] Timeout de configuración de usuario")
-            ultibot_app.show_error_and_exit(
-                "Timeout de configuración de usuario",
-                "No se recibió respuesta del backend o del hilo de configuración en 30 segundos.\n\nVerifica la conexión y los logs del backend/frontend."
-            )
-            return
-        except Exception as e:
-            print(f"[ERROR] Error de configuración de usuario: {e}")
-            ultibot_app.show_error_and_exit(
-                "Error de Configuración de Usuario",
-                f"No se pudo cargar la configuración del usuario: {str(e)}"
-            )
-            return
-
-        # 4. Configurar credenciales de Binance (si aplica)
-        print("[DEBUG] Configurando credenciales de Binance...")
-        loop.run_until_complete(ultibot_app.setup_binance_credentials())
-        print("[DEBUG] Credenciales de Binance configuradas")
-
-        # 5. Crear y mostrar ventana principal
-        print("[DEBUG] Creando ventana principal...")
-        main_window = ultibot_app.create_main_window()
-        print("[DEBUG] Mostrando ventana principal...")
-        main_window.show()
-        print("[DEBUG] Ventana principal mostrada. Entrando al event loop...")
-
-        # 6. Aplicar tema (oscuro por defecto)
-        apply_application_style("dark")
-
-        # 7. Ejecutar el event loop integrado Qt+asyncio
-        try:
-            exit_code = loop.run_forever()
-            print(f"[DEBUG] Event loop finalizado con código: {exit_code}")
-        except Exception as e:
-            print(f"[ERROR] Event loop terminó con excepción: {e}")
-        sys.exit(exit_code if exit_code is not None else 0)
-
-    except ValueError as ve:
-        print(f"[ERROR] ValueError en main: {ve}")
-        ultibot_app.show_error_and_exit(
-            "Error de Configuración Inicial",
-            f"Error de configuración: {str(ve)}\n\nPor favor verifique su archivo .env o variables de entorno."
-        )
-    except Exception as e:
-        print(f"[ERROR] Excepción en main: {e}")
-        ultibot_app.show_error_and_exit(
-            "Error de Inicialización de la Aplicación",
-            f"Falló la inicialización de la aplicación: {str(e)}"
-        )
+    # Ejecutar la aplicación asíncrona
+    asyncio.run(run_application())
 
 if __name__ == "__main__":
     main()

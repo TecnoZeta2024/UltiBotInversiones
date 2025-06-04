@@ -502,10 +502,13 @@ class PortfolioWidget(QWidget):
             # Actualizar snapshot del portafolio
             # The API returns a dict, PortfolioSnapshot is a Pydantic model.
             # _update_portfolio_ui needs to handle a dict or we need to parse here.
-            # Assuming _update_portfolio_ui can handle the dict directly for now.
+            # Assuming _update_portfolio_ui can handle the dict directly for ahora.
             portfolio_snapshot_data = result_data.get("portfolio_snapshot")
             self.current_snapshot_dict = portfolio_snapshot_data if portfolio_snapshot_data is not None else {}
-            self._update_portfolio_ui(self.current_snapshot_dict, current_mode)
+            if self.current_snapshot_dict is not None:
+                self._update_portfolio_ui(self.current_snapshot_dict, current_mode)
+            else:
+                self._update_portfolio_ui({}, current_mode) # Pass empty dict if snapshot is None
 
             # Actualizar operaciones abiertas
             open_trades_data = result_data.get("open_trades", []) 
@@ -515,7 +518,10 @@ class PortfolioWidget(QWidget):
             # Actualizar estado de gestión de capital
             capital_status_data = result_data.get("capital_status")
             self.current_capital_status = capital_status_data if capital_status_data is not None else {}
-            self._update_capital_management_ui(self.current_capital_status)
+            if self.current_capital_status is not None:
+                self._update_capital_management_ui(self.current_capital_status)
+            else:
+                self._update_capital_management_ui({}) # Pass empty dict if status is None
 
 
             self.last_updated_label.setText(f"Última actualización: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -749,23 +755,35 @@ class PortfolioWidget(QWidget):
         else:
             self.capital_alerts_frame.setVisible(False)
 
-    def _populate_assets_table(self, table: QTableWidget, assets: List[PortfolioAsset]):
+    def _populate_assets_table(self, table: QTableWidget, assets: List[Dict[str, Any]]):
         """
         Llena una tabla con la información de activos.
+        Maneja tanto objetos PortfolioAsset como diccionarios.
         """
         table.setRowCount(len(assets))
         for row, asset in enumerate(assets):
-            table.setItem(row, 0, QTableWidgetItem(asset.symbol))
-            table.setItem(row, 1, QTableWidgetItem(f"{asset.quantity:,.8f}"))
-            table.setItem(row, 2, QTableWidgetItem(f"{asset.entry_price:,.2f}" if asset.entry_price is not None else "N/A"))
-            table.setItem(row, 3, QTableWidgetItem(f"{asset.current_price:,.2f}" if asset.current_price is not None else "N/A"))
-            table.setItem(row, 4, QTableWidgetItem(f"{asset.current_value_usd:,.2f}" if asset.current_value_usd is not None else "N/A"))
+            # Comprobar si estamos trabajando con un objeto o un diccionario
+            is_dict = isinstance(asset, dict)
             
-            pnl_item = QTableWidgetItem(f"{asset.unrealized_pnl_percentage:,.2f}%" if asset.unrealized_pnl_percentage is not None else "N/A")
-            if asset.unrealized_pnl_percentage is not None:
-                if asset.unrealized_pnl_percentage > 0:
+            # Obtener los valores según el tipo de dato
+            symbol = asset["symbol"] if is_dict else asset.symbol
+            quantity = asset["quantity"] if is_dict else asset.quantity
+            entry_price = asset["entry_price"] if is_dict else asset.entry_price
+            current_price = asset["current_price"] if is_dict else asset.current_price
+            current_value_usd = asset["current_value_usd"] if is_dict else asset.current_value_usd
+            unrealized_pnl_percentage = asset["unrealized_pnl_percentage"] if is_dict else asset.unrealized_pnl_percentage
+            
+            table.setItem(row, 0, QTableWidgetItem(symbol))
+            table.setItem(row, 1, QTableWidgetItem(f"{quantity:,.8f}"))
+            table.setItem(row, 2, QTableWidgetItem(f"{entry_price:,.2f}" if entry_price is not None else "N/A"))
+            table.setItem(row, 3, QTableWidgetItem(f"{current_price:,.2f}" if current_price is not None else "N/A"))
+            table.setItem(row, 4, QTableWidgetItem(f"{current_value_usd:,.2f}" if current_value_usd is not None else "N/A"))
+            
+            pnl_item = QTableWidgetItem(f"{unrealized_pnl_percentage:,.2f}%" if unrealized_pnl_percentage is not None else "N/A")
+            if unrealized_pnl_percentage is not None:
+                if unrealized_pnl_percentage > 0:
                     pnl_item.setForeground(QColor("lightgreen"))
-                elif asset.unrealized_pnl_percentage < 0:
+                elif unrealized_pnl_percentage < 0:
                     pnl_item.setForeground(QColor("red"))
             table.setItem(row, 5, pnl_item)
 
