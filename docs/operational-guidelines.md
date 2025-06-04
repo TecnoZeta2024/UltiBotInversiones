@@ -1,4 +1,39 @@
-## Coding Standards
+## Operational Guidelines
+
+### Error Handling Strategy
+
+-   **General Approach:**
+    
+    -   Utilizaremos excepciones de Python como el mecanismo principal para el manejo de errores en el backend.
+    -   FastAPI tiene un buen manejo de excepciones incorporado que convierte excepciones HTTP estándar y personalizadas en respuestas HTTP apropiadas.
+    -   Definiremos excepciones personalizadas (`CustomException`) que hereden de `Exception` para errores específicos del dominio de la aplicación, lo que permitirá un manejo más granular.
+-   **Logging:**
+    
+    -   **Library/Method:** Utilizaremos la biblioteca `logging` estándar de Python, configurada para ofrecer la flexibilidad necesaria. Se podría considerar `Loguru` por su simplicidad de configuración si la estándar resulta verbosa para nuestros propósitos iniciales. Para la v1.0, `logging` es suficiente.
+    -   **Format:** Los logs se escribirán en formato de **texto plano** para la consola durante el desarrollo local, con un formato claro que incluya: `%(asctime)s - %(name)s - %(levelname)s - %(message)s`. Para un posible futuro archivo de log, se podría considerar JSON, pero para la v1.0 local, texto es más directo.
+    -   **Levels:**
+        -   `DEBUG`: Información detallada, típicamente de interés solo al diagnosticar problemas.
+        -   `INFO`: Confirmación de que las cosas funcionan como se esperaba.
+        -   `WARNING`: Una indicación de que algo inesperado sucedió, o una advertencia de posibles problemas futuros (ej. uso de API deprecada).
+        -   `ERROR`: Debido a un problema más serio, el software no ha podido realizar alguna función.
+        -   `CRITICAL`: Un error serio, que indica que el programa mismo puede ser incapaz de continuar ejecutándose.
+    -   **Context:** Además del timestamp, nombre del logger y nivel, se incluirá el nombre del módulo/función donde se origina el log siempre que sea posible. Para errores en el manejo de solicitudes API, se podría incluir un ID de solicitud si se implementa.
+-   **Specific Handling Patterns:**
+    
+    -   **External API Calls (usando `httpx`):**
+        -   Se capturarán las excepciones de `httpx` (ej. `httpx.RequestError`, `httpx.HTTPStatusError`).
+        -   **Timeouts:** Se configurarán timeouts explícitos (conexión y lectura) en las instancias del cliente `httpx` para evitar bloqueos indefinidos.
+        -   **Retries:** Para la v1.0, implementaremos reintentos simples para errores transitorios (ej. problemas de red, errores 5xx) con un número limitado de intentos (ej. 2-3 reintentos) y un backoff fijo o lineal simple. Bibliotecas como `tenacity` podrían considerarse si la lógica de reintentos se vuelve compleja, pero para iniciar, una implementación manual básica será suficiente.
+        -   Los errores persistentes de APIs externas se registrarán como `ERROR` y se propagarán como una excepción personalizada apropiada (ej. `BinanceAPIError`, `MCPServiceError`).
+    -   **Internal Errors / Business Logic Exceptions:**
+        -   Se utilizarán excepciones personalizadas (ej. `InsufficientFundsError`, `InvalidStrategyParametersError`) para señalar problemas en la lógica de negocio.
+        -   Estas excepciones serán capturadas por los manejadores de errores de FastAPI o por la lógica de la aplicación para devolver respuestas adecuadas al cliente (UI) y registrar el error con nivel `ERROR` o `WARNING` según la severidad.
+    -   **Transaction Management (con Supabase/PostgreSQL):**
+        -   Para operaciones que requieran múltiples escrituras en la base de datos y necesiten atomicidad (ej. registrar un trade y actualizar el portafolio), se utilizarán transacciones de base de datos.
+        -   El cliente `supabase-py` o la biblioteca subyacente (`psycopg` o similar si se interactúa más directamente) deberá permitir la gestión de `BEGIN`, `COMMIT`, `ROLLBACK`.
+        -   En caso de error dentro de una transacción, se realizará un `ROLLBACK` para asegurar la consistencia de los datos, y se registrará el error.
+
+### Coding Standards
 
 En esta sección, estableceremos las reglas y convenciones que todo el código (generado por IA o escrito manualmente) deberá seguir. Esto es vital para mantener la legibilidad, consistencia, calidad y mantenibilidad del proyecto "UltiBotInversiones". El cumplimiento de estos estándares es obligatorio.
 
@@ -26,16 +61,6 @@ En esta sección, estableceremos las reglas y convenciones que todo el código (
         -   Se configurarán `pre-commit hooks` utilizando la herramienta `pre-commit`.
         -   Los hooks incluirán, como mínimo, `ruff check --fix` y `ruff format`.
         -   Esto asegura que todo el código subido al repositorio cumpla con los estándares automáticamente, crucial cuando la IA genera código.
-    -   **Instalación y Uso:**
-        -   Para instalar los hooks de pre-commit en tu repositorio local, ejecuta:
-            ```bash
-            poetry run pre-commit install
-            ```
-        -   Esto configurará Git para ejecutar automáticamente los hooks definidos en `.pre-commit-config.yaml` antes de cada commit.
-        -   Para ejecutar los hooks manualmente en todos los archivos (útil para verificar el código existente), ejecuta:
-            ```bash
-            poetry run pre-commit run --all-files
-            ```
 3.  **Naming Conventions:**
     
     -   Variables y Funciones: `snake_case` (ej. `mi_variable`, `calcular_valor_neto()`).
@@ -136,7 +161,7 @@ En esta sección, estableceremos las reglas y convenciones que todo el código (
         -   _Tareas en Segundo Plano:_ Para tareas cortas que no necesitan bloquear la respuesta, usar `BackgroundTasks`. Para tareas más largas o complejas, considerar una solución más robusta como Celery (aunque para v1.0, `BackgroundTasks` es un buen inicio según tu `Architecture.md`).
         -   _Path Operation Functions:_ Mantener las funciones de los endpoints (decoradas con `@router.get`, etc.) lo más delgadas posible, delegando la lógica de negocio a servicios o "casos de uso" separados.
 
-## Overall Testing Strategy
+### Overall Testing Strategy
 
 Considerando nuestro enfoque en una v1.0 ágil y estable para una aplicación local, propongo la siguiente estrategia:
 
@@ -178,54 +203,8 @@ Considerando nuestro enfoque en una v1.0 ágil y estable para una aplicación lo
     
     -   Para pruebas unitarias y de integración, los datos de prueba se definirán directamente en los archivos de prueba o mediante fixtures de `pytest`.
     -   Se evitará depender de estados de base de datos preexistentes; cada prueba debe configurar y, si es necesario, limpiar sus propios datos.
--   **Ejecución de Pruebas:**
-    -   Para ejecutar todas las pruebas unitarias y de integración, utiliza el comando Poetry definido en `pyproject.toml`:
-        ```bash
-        poetry run test
-        ```
-    -   Para ejecutar pruebas específicas (ej. solo las pruebas unitarias de un módulo), puedes pasar argumentos adicionales a `pytest`:
-        ```bash
-        poetry run test tests/unit/shared/test_data_types.py
-        ```
-    -   Para generar un informe de cobertura de código (requiere `pytest-cov`):
-        ```bash
-        poetry run test --cov=src
-        ```
 
-## Error Handling Strategy
-
--   **General Approach:**
-    
-    -   Utilizaremos excepciones de Python como el mecanismo principal para el manejo de errores en el backend.
-    -   FastAPI tiene un buen manejo de excepciones incorporado que convierte excepciones HTTP estándar y personalizadas en respuestas HTTP apropiadas.
-    -   Definiremos excepciones personalizadas (`CustomException`) que hereden de `Exception` para errores específicos del dominio de la aplicación, lo que permitirá un manejo más granular.
--   **Logging:**
-    
-    -   **Library/Method:** Utilizaremos la biblioteca `logging` estándar de Python, configurada para ofrecer la flexibilidad necesaria. Se podría considerar `Loguru` por su simplicidad de configuración si la estándar resulta verbosa para nuestros propósitos iniciales. Para la v1.0, `logging` es suficiente.
-    -   **Format:** Los logs se escribirán en formato de **texto plano** para la consola durante el desarrollo local, con un formato claro que incluya: `%(asctime)s - %(name)s - %(levelname)s - %(message)s`. Para un posible futuro archivo de log, se podría considerar JSON, pero para la v1.0 local, texto es más directo.
-    -   **Levels:**
-        -   `DEBUG`: Información detallada, típicamente de interés solo al diagnosticar problemas.
-        -   `INFO`: Confirmación de que las cosas funcionan como se esperaba.
-        -   `WARNING`: Una indicación de que algo inesperado sucedió, o una advertencia de posibles problemas futuros (ej. uso de API deprecada).
-        -   `ERROR`: Debido a un problema más serio, el software no ha podido realizar alguna función.
-        -   `CRITICAL`: Un error serio, que indica que el programa mismo puede ser incapaz de continuar ejecutándose.
-    -   **Context:** Además del timestamp, nombre del logger y nivel, se incluirá el nombre del módulo/función donde se origina el log siempre que sea posible. Para errores en el manejo de solicitudes API, se podría incluir un ID de solicitud si se implementa.
--   **Specific Handling Patterns:**
-    
-    -   **External API Calls (usando `httpx`):**
-        -   Se capturarán las excepciones de `httpx` (ej. `httpx.RequestError`, `httpx.HTTPStatusError`).
-        -   **Timeouts:** Se configurarán timeouts explícitos (conexión y lectura) en las instancias del cliente `httpx` para evitar bloqueos indefinidos.
-        -   **Retries:** Para la v1.0, implementaremos reintentos simples para errores transitorios (ej. problemas de red, errores 5xx) con un número limitado de intentos (ej. 2-3 reintentos) y un backoff fijo o lineal simple. Bibliotecas como `tenacity` podrían considerarse si la lógica de reintentos se vuelve compleja, pero para iniciar, una implementación manual básica será suficiente.
-        -   Los errores persistentes de APIs externas se registrarán como `ERROR` y se propagarán como una excepción personalizada apropiada (ej. `BinanceAPIError`, `MCPServiceError`).
-    -   **Internal Errors / Business Logic Exceptions:**
-        -   Se utilizarán excepciones personalizadas (ej. `InsufficientFundsError`, `InvalidStrategyParametersError`) para señalar problemas en la lógica de negocio.
-        -   Estas excepciones serán capturadas por los manejadores de errores de FastAPI o por la lógica de la aplicación para devolver respuestas adecuadas al cliente (UI) y registrar el error con nivel `ERROR` o `WARNING` según la severidad.
-    -   **Transaction Management (con Supabase/PostgreSQL):**
-        -   Para operaciones que requieran múltiples escrituras en la base de datos y necesiten atomicidad (ej. registrar un trade y actualizar el portafolio), se utilizarán transacciones de base de datos.
-        -   El cliente `supabase-py` o la biblioteca subyacente (`psycopg` o similar si se interactúa más directamente) deberá permitir la gestión de `BEGIN`, `COMMIT`, `ROLLBACK`.
-        -   En caso de error dentro de una transacción, se realizará un `ROLLBACK` para asegurar la consistencia de los datos, y se registrará el error.
-
-## Security Best Practices
+### Security Best Practices
 
 -   **Input Sanitization/Validation:**
     
@@ -266,54 +245,3 @@ Considerando nuestro enfoque en una v1.0 ágil y estable para una aplicación lo
 -   **File System Access:**
     
     -   Si la aplicación necesita leer/escribir en el sistema de archivos local (ej. para logs, configuraciones locales adicionales, exportaciones), debe hacerlo en directorios designados y con los permisos adecuados, evitando accesos a rutas sensibles del sistema.
-
-## Panel de Gestión de Estrategias (UI)
-
-El panel de gestión de estrategias proporciona una interfaz gráfica para administrar todas las configuraciones de estrategias de trading dentro de UltiBotInversiones.
-
-### Funcionalidades Principales:
-
-1.  **Visualización de Estrategias:**
-    *   Una tabla muestra todas las estrategias configuradas, incluyendo su nombre, descripción, modo (Paper/Real) y estado de activación.
-    *   Se pueden ordenar las estrategias haciendo clic en las cabeceras de las columnas.
-
-2.  **Crear Nueva Estrategia:**
-    *   Haz clic en el botón "Crear Nueva Estrategia".
-    *   Se abrirá un diálogo (`StrategyConfigDialog`) donde podrás definir:
-        *   Nombre de la estrategia.
-        *   Descripción.
-        *   Script de la estrategia (nombre del archivo o identificador).
-        *   Parámetros específicos de la estrategia (en formato JSON).
-        *   Modo de operación inicial (Paper/Real).
-    *   Al guardar, la nueva estrategia aparecerá en la lista.
-
-3.  **Editar Estrategia Existente:**
-    *   Selecciona una estrategia de la tabla.
-    *   Haz clic en el botón "Editar Estrategia Seleccionada".
-    *   El diálogo `StrategyConfigDialog` se abrirá con los datos de la estrategia seleccionada, permitiendo su modificación.
-    *   Guarda los cambios para actualizar la estrategia.
-
-4.  **Duplicar Estrategia (Clonar):**
-    *   Selecciona una estrategia de la tabla que desees usar como plantilla.
-    *   Haz clic en el botón "Duplicar Estrategia Seleccionada".
-    *   El diálogo `StrategyConfigDialog` se abrirá con los datos de la estrategia seleccionada, pero en modo de creación (se generará un nuevo ID al guardar).
-    *   Esto es útil para crear variaciones de estrategias existentes rápidamente.
-
-5.  **Eliminar Estrategia:**
-    *   Selecciona una estrategia de la tabla.
-    *   Haz clic en el botón "Eliminar Estrategia Seleccionada".
-    *   Se mostrará un diálogo de confirmación (`QMessageBox`) antes de proceder con la eliminación.
-    *   Si se confirma, la estrategia será eliminada del sistema.
-
-6.  **Activar/Desactivar Estrategia:**
-    *   Cada estrategia en la tabla tiene un interruptor (toggle) en la columna "Activada".
-    *   Para cambiar el estado de activación:
-        *   Haz clic en el interruptor correspondiente a la estrategia.
-        *   Si la estrategia está configurada en modo "Real", se mostrará un diálogo de confirmación adicional antes de activar/desactivar, como medida de seguridad.
-        *   El cambio se refleja visualmente de forma optimista en la UI y luego se confirma con el backend. En caso de error en la comunicación con el backend, el estado visual del interruptor se revertirá.
-    *   Una estrategia debe estar "Activada" para que el motor de trading (`TradingEngine`) la considere para ejecución.
-
-### Consideraciones Adicionales:
-
-*   **Feedback Visual:** Todas las operaciones (crear, editar, duplicar, eliminar, activar/desactivar) proporcionan feedback visual inmediato (mensajes de éxito o error) a través de diálogos `QMessageBox`.
-*   **Modo Paper vs. Real:** Asegúrate de seleccionar el modo correcto para cada estrategia. Las operaciones en modo "Real" interactuarán con fondos reales si la configuración del exchange lo permite.

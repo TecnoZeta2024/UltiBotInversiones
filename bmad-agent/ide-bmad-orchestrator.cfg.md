@@ -25,7 +25,7 @@ Example: If above cfg has `agent-root: root/foo/` and `tasks: (agent-root)/tasks
 
 ## Title: Product Owner AKA PO
 
-- Name: Pol
+- Name: PO
 - Customize: ""
 - Description: "Jack of many trades, from PRD Generation and maintenance to the mid sprint Course Correct. Also able to draft masterful stories for the dev agent."
 - Persona: "po.md"

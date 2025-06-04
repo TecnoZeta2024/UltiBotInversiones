@@ -9,7 +9,7 @@ A continuación, se listan los patrones arquitectónicos y de diseño fundamenta
     * _Rationale/Referencia:_ La estructura del repositorio será un Monorepo, según la decisión del PRD para la v1.0. Esto simplificará la gestión de dependencias, la configuración del entorno de desarrollo y los procesos de CI/CD iniciales, además de facilitar la coherencia y refactorización en las primeras etapas.
 
 * **Agente-Herramientas (Agent-Tool) con LangChain (Python):**
-    * _Rationale/Referencia:_ Para la interacción con la IA (Gemini), se utilizará el patrón Agente-Herramientas facilitado por LangChain (Python). El agente (impulsado por Gemini) podrá decidir dinámicamente qué "herramienta" (wrappers para APIs de Binance, Servidores MCP, Mobula API, etc.) utilizar para recopilar información o ejecutar acciones, permitiendo un análisis y toma de decisiones más flexibles y potentes.
+    * _Rationale/Referencia:_ Para la interacción con la IA (Gemini), se utilizará el patrón Agente-Herramientas facilitado por LangChain (Python). El agente (impulsado por Gemini) podrá decidir dinámicamente qué "herramienta" (wrappers para APIs de Binance, Mobula API, etc.) utilizar para recopilar información o ejecutar acciones, permitiendo un análisis y toma de decisiones más flexibles y potentes.
 
 * **Procesamiento Asíncrono:**
     * _Rationale/Referencia:_ Se empleará extensivamente el procesamiento asíncrono (`async/await` en Python con bibliotecas como `httpx`, `websockets`, y las `BackgroundTasks` de FastAPI) para cumplir con el requisito de baja latencia (<500ms) y para manejar operaciones de I/O intensivas (llamadas a APIs externas, streams de datos) y tareas de larga duración (análisis de IA) sin bloquear el flujo principal de la aplicación.
@@ -22,7 +22,6 @@ A continuación, se listan los patrones arquitectónicos y de diseño fundamenta
 
 * **Command Query Responsibility Segregation (CQRS) - (Consideración para Evolución Futura):**
     * _Rationale/Referencia:_ El PRD también valora CQRS como principio. Aunque probablemente no se implementará completamente en la v1.0 del monolito, el diseño de los módulos de datos y servicios podría considerar una separación conceptual de los modelos y rutas para comandos (escrituras) y consultas (lecturas) si esto simplifica la lógica o prepara el camino para futuras optimizaciones de rendimiento y escalabilidad.
-
 
 ## Diagrama de Componentes Principales (Mermaid C4 Model - Nivel 2):
 
@@ -47,7 +46,6 @@ graph TD
         BinanceAPI[("API de Binance")]
         TelegramAPI[("API de Telegram")]
         GeminiModelAPI[("API del Modelo Gemini")]
-        MCPServers[("Servidores MCP")]
         MobulaAPI[("API de Mobula")]
     end
 
@@ -71,7 +69,6 @@ graph TD
     AI_Orchestrator -.-> MarketDataMgr %% Como herramienta/fuente de datos
     AI_Orchestrator -.-> CredentialManager %% Para obtener claves de sus herramientas
     AI_Orchestrator -->|Consulta Motor IA| GeminiModelAPI
-    AI_Orchestrator -->|Utiliza Herramienta| MCPServers
     AI_Orchestrator -->|Utiliza Herramienta| MobulaAPI
     AI_Orchestrator -->|Puede usar Herramienta| BinanceAPI %% Para datos adicionales
 

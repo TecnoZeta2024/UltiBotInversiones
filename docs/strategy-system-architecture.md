@@ -17,7 +17,6 @@ Each strategy type has its own parameter model with validation:
 - **DayTradingParameters**: Technical indicator configurations (RSI, MACD periods, timeframes)
 - **ArbitrageSimpleParameters**: Cross-exchange arbitrage settings (price thresholds, exchange credentials)
 - **CustomAIDrivenParameters**: AI-specific configurations (prompts, context windows, decision parameters)
-- **MCPSignalFollowerParameters**: MCP server integration settings
 - **GridTradingParameters**: Grid trading configurations (price boundaries, grid levels, profit per grid)
 - **DCAInvestingParameters**: Dollar cost averaging settings (investment amounts, intervals, triggers)
 

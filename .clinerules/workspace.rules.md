@@ -15,12 +15,20 @@ Aplica estricta y sistemáticamente las siguientes prácticas técnicas en cada 
 * **KISS & YAGNI**: Soluciones mínimas y efectivas, implementación solo ante necesidades concretas comprobadas.
 * **Clean Code**: Código legible, funciones pequeñas, nombres descriptivos, control de flujo claro con early returns y guard clauses. Comentarios explican decisiones estratégicas (el "por qué", no el "qué").
 
+#### ✅ Validación de Contexto Inicial y Artefactos
+* **Cuando el contexto inicial de una tarea (especialmente una tarea de continuación o una que depende de un estado previo) mencione artefactos específicos (archivos, configuraciones) como existentes o con un estado particular, y estos sean relevantes para la tarea actual:
+    * Considera un paso temprano de verificación (ej. `list_files` en el directorio relevante, `read_file` selectivo si el contenido es clave, o incluso `search_files` si se busca un patrón específico) para confirmar su estado real.
+    * Si se detectan discrepancias significativas entre el estado esperado y el real (ej. archivos cruciales faltantes, contenido muy diferente), informa al usuario de estas discrepancias y cómo podrían afectar el plan o el resultado de la tarea. Ajusta el plan según sea necesario.
+    * Si existe un `docs/project_tasks/issues_log.md`, considera registrar estas discrepancias.
+
 #### 🐞 Depuración Metódica
 
 * Replica cada problema en escenarios mínimos.
 * Análisis exhaustivo de logs y trazas.
 * Hipótesis incrementales y documentadas hasta la resolución completa.
 * **Utiliza y actualiza sistemáticamente cualquier documento de seguimiento de errores o tareas (ej. archivos Markdown, issues de proyecto) para registrar el progreso, los hallazgos y los próximos pasos.**
+* **Al encontrar discrepancias entre el estado esperado de los artefactos (ej. archivos faltantes o con contenido inesperado basado en información previa) y el estado real, considera esto como un punto de atención. Si existe un archivo de log de tareas designado (ej. `docs/project_tasks/issues_log.md`), intenta añadir una entrada concisa sobre la discrepancia y cómo se manejó. Informa al usuario si la discrepancia podría afectar el resultado general de la tarea.**
+* **Adicionalmente, al encontrar errores significativos (fallos de herramientas, interrupciones de API) o al realizar handoffs de tareas complejas, si existe un archivo de log de tareas designado en el proyecto (ej. `docs/project_tasks/issues_log.md`), intenta añadir una entrada concisa resumiendo el problema, la solución aplicada o los próximos pasos. Esto complementa el contexto transferido mediante `new_task`.**
 
 #### 🔝 Mejora Continua y Deuda Técnica
 
