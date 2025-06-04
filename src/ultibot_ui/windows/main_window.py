@@ -19,7 +19,9 @@ from PyQt5.QtWidgets import (
     QStackedWidget,
     QStatusBar,
     QWidget,
-    QAction # Added for menu actions
+    QAction, # Added for menu actions
+    QTextEdit, # Añadido para panel de logs
+    QVBoxLayout # Añadido para el layout vertical
 )
 
 from src.shared.data_types import UserConfiguration # May not be needed directly in MainWindow anymore for config
@@ -78,19 +80,36 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("UltiBotInversiones")
         self.setGeometry(100, 100, 1200, 800)
 
+        # Elementos de UI añadidos
+        self.debug_log_widget = QTextEdit()
+        self.debug_log_widget.setReadOnly(True)
+        self.debug_log_widget.setMaximumHeight(120)
+        self.debug_log_widget.setStyleSheet("background-color: #222; color: #0f0; font-family: Consolas, monospace; font-size: 12px;")
+        self.debug_log_widget.append("[INFO] UI inicializada. Esperando eventos...")
+
+        # Banner visual de bienvenida
+        self.banner_label = QLabel("🟢 UltiBotInversiones UI cargada correctamente")
+        self.banner_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #00FF8C; padding: 8px; background: #1E1E1E; border-radius: 6px;")
+
         self._create_menu_bar() # Added menu bar setup
         self._create_status_bar()
-        self._setup_central_widget()
 
-        self._create_status_bar() # mode_switcher_combo is created here
-        self._setup_central_widget() # dashboard_view is created here, needs trading_mode_service
+        # Layout vertical para banner y logs
+        self._main_vbox = QVBoxLayout()
+        self._main_vbox.setContentsMargins(0, 0, 0, 0)
+        self._main_vbox.setSpacing(0)
+        self._main_vbox.addWidget(self.banner_label)
+        self._main_vbox.addWidget(self.debug_log_widget)
 
-        # Connect signals for mode_switcher_combo and trading_mode_service (from subtask 5)
-        self.mode_switcher_combo.currentIndexChanged.connect(self._handle_mode_switch_selection)
-        self.trading_mode_service.mode_changed.connect(self._update_mode_switcher_ui)
-        
-        # Set initial state of the combo box (from subtask 5)
-        self._update_mode_switcher_ui(self.trading_mode_service.get_current_mode())
+        # Widget central real
+        self._central_content_widget = QWidget()
+        self._main_vbox.addWidget(self._central_content_widget, 1)
+        central_widget = QWidget()
+        central_widget.setLayout(self._main_vbox)
+        self.setCentralWidget(central_widget)
+
+        # El resto de la UI se monta en _central_content_widget
+        self._setup_central_widget(parent_widget=self._central_content_widget)
 
         # Conectar la señal de cambio de configuración de SettingsView
         self.settings_view.config_changed.connect(
@@ -105,6 +124,9 @@ class MainWindow(QMainWindow):
         self._init_timer = QTimer()
         self._init_timer.singleShot(100, self._schedule_initial_load)
 
+        self._log_debug("MainWindow inicializada y visible.")
+        self.statusBar.showMessage("Ventana principal desplegada correctamente.")
+
     def _schedule_initial_load(self):
         """Programa la carga inicial del estado de Paper Trading y Real Trading.
 
@@ -112,7 +134,7 @@ class MainWindow(QMainWindow):
         """
         # Remove direct asyncio.create_task usage. Will use ApiWorker.
         logging.info("Programando carga inicial de estados de trading con ApiWorker.")
-        self._load_initial_paper_trading_status_worker()
+        self._load_initial_paper_trading_status() # CORREGIDO: Quitar _worker
         self._load_initial_real_trading_status_worker()
 
     def _check_initialization_complete(self):
@@ -191,7 +213,7 @@ class MainWindow(QMainWindow):
         # self.update(); # Force a repaint of the window and its children if needed.
 
 
-    async def _load_initial_paper_trading_status(self):
+    def _load_initial_paper_trading_status(self): # CORREGIDO: No necesita ser async def
         """Carga el estado inicial del modo Paper Trading y actualiza la UI.
 
         Esta función ahora inicia un ApiWorker para obtener la configuración del usuario.
@@ -236,6 +258,7 @@ class MainWindow(QMainWindow):
         self.paper_trading_status_label.setStyleSheet("font-weight: bold; color: red;")
         self.statusBar.showMessage(f"Error al cargar modo Paper: {error_message}")
         logging.error(f"Error al cargar el estado inicial del Paper Trading: {error_message}")
+        self._log_debug(f"[ERROR] Paper Trading: {error_message}")
         self._paper_trading_status_loaded = True # Mark as loaded even on error to not block init indefinitely
         self._check_initialization_complete()
 
@@ -281,6 +304,7 @@ class MainWindow(QMainWindow):
         self.real_trading_status_label.setStyleSheet("font-weight: bold; color: red;")
         self.statusBar.showMessage(f"Error al cargar modo Real: {error_message}")
         logging.error(f"Error al cargar el estado inicial del Real Trading: {error_message}")
+        self._log_debug(f"[ERROR] Real Trading: {error_message}")
         self._real_trading_status_loaded = True # Mark as loaded even on error
         self._check_initialization_complete()
 
@@ -328,14 +352,18 @@ class MainWindow(QMainWindow):
             self.real_trading_status_label.setStyleSheet("font-weight: bold; color: gray;")
         self.statusBar.showMessage("Estado de Operativa Real actualizado.")
 
+    def _log_debug(self, msg: str):
+        """Agrega un mensaje al panel de logs visual y al logger."""
+        self.debug_log_widget.append(msg)
+        logger.info(msg)
 
-    def _setup_central_widget(self):
+    def _setup_central_widget(self, parent_widget=None):
         """Configura el widget central con la navegación lateral y las vistas."""
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        main_layout = QHBoxLayout(central_widget)
-        main_layout.setContentsMargins(0, 0, 0, 0) # No margins for a clean look
-        main_layout.setSpacing(0) # No spacing between sidebar and content
+        if parent_widget is None:
+            parent_widget = QWidget()
+        main_layout = QHBoxLayout(parent_widget)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
 
         # Sidebar Navigation
         self.sidebar = SidebarNavigationWidget()
@@ -356,6 +384,7 @@ class MainWindow(QMainWindow):
             # notification_service, persistence_service
         )
         self.stacked_widget.addWidget(self.dashboard_view)  # Índice 0
+        self.dashboard_view.initialization_complete.connect(self._on_dashboard_initialized) # Conectar señal
 
         # Replace placeholder with OpportunitiesView
         self.opportunities_view = OpportunitiesView(self.user_id, self.api_client)
@@ -399,6 +428,8 @@ class MainWindow(QMainWindow):
             dashboard_button.setChecked(True)
         self.stacked_widget.setCurrentIndex(self.view_map["dashboard"])
 
+        self._log_debug("Central widget y vistas configuradas.")
+
     def _switch_view(self, view_name):
         """Cambia a la vista especificada.
 
@@ -410,44 +441,19 @@ class MainWindow(QMainWindow):
         if index is not None:
             self.stacked_widget.setCurrentIndex(index)
 
-    # Handler methods for TradingModeService and QComboBox (from subtask 5)
-    def _handle_mode_switch_selection(self, index: int):
+    def _on_dashboard_initialized(self):
         """
-        Handles the selection change in the trading mode QComboBox.
-        Updates the TradingModeService with the new mode.
+        Se llama cuando DashboardView ha completado su inicialización asíncrona.
+        Ahora podemos cargar las estrategias.
         """
-        selected_mode_enum = self.mode_switcher_combo.itemData(index)
-        logger.debug(f"MainWindow._handle_mode_switch_selection: QComboBox index {index}, selected mode {selected_mode_enum}")
-        if isinstance(selected_mode_enum, TradingMode):
-            self.trading_mode_service.set_mode(selected_mode_enum)
+        logger.info("MainWindow: DashboardView inicializado. Cargando estrategias...")
+        if hasattr(self.strategy_management_view, 'load_strategies') and callable(self.strategy_management_view.load_strategies):
+            self.strategy_management_view.load_strategies()
         else:
-            logging.warning(f"Invalid data type from mode_switcher_combo: {type(selected_mode_enum)}")
-
-    def _update_mode_switcher_ui(self, new_mode: TradingMode):
-        """
-        Updates the QComboBox selection when the TradingModeService reports a mode change.
-        """
-        logger.debug(f"MainWindow._update_mode_switcher_ui: Updating QComboBox for mode {new_mode}")
-        for i in range(self.mode_switcher_combo.count()):
-            if self.mode_switcher_combo.itemData(i) == new_mode:
-                self.mode_switcher_combo.blockSignals(True)
-                self.mode_switcher_combo.setCurrentIndex(i)
-                self.mode_switcher_combo.blockSignals(False)
-                logging.debug(f"Mode switcher UI set to index {i} for mode {new_mode}") # Added specific log for when index is set
-                return
-        logging.warning(f"Mode {new_mode} not found in mode_switcher_combo.")
+            logger.warning("MainWindow: strategy_management_view no tiene el método load_strategies o no es llamable.")
 
     def closeEvent(self, event):
-        """Maneja el evento de cierre de la ventana principal.
-
-        Asegura que los recursos de los widgets hijos se limpien apropiadamente
-        antes de cerrar la aplicación.
-
-        Args:
-            event: Evento de cierre de Qt
-
-        """
-        print("MainWindow: closeEvent triggered.")
+        self._log_debug("[INFO] MainWindow: closeEvent triggered.")
         # Llamar a métodos de limpieza en las vistas/widgets que lo necesiten
         if hasattr(self.dashboard_view, "cleanup") and callable(
             self.dashboard_view.cleanup

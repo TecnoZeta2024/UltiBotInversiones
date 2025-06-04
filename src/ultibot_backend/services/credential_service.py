@@ -21,8 +21,8 @@ load_dotenv()
 
 class CredentialService:
     def __init__(self, 
-                 persistence_service: SupabasePersistenceService = Depends(SupabasePersistenceService),
-                 binance_adapter: BinanceAdapter = Depends(BinanceAdapter)
+                 persistence_service: SupabasePersistenceService,
+                 binance_adapter: BinanceAdapter
                  # encryption_key se manejará internamente desde ENV
                  ):
         """

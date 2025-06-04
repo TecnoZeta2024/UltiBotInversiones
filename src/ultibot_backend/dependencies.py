@@ -12,6 +12,8 @@ from .services.portfolio_service import PortfolioService
 from .services.strategy_service import StrategyService
 from .services.performance_service import PerformanceService
 from .services.unified_order_execution_service import UnifiedOrderExecutionService
+from .services.trading_report_service import TradingReportService # Nueva importación
+from .services.trading_engine_service import TradingEngine # Nueva importación
 
 # Se asume que estas variables globales son establecidas en main.py durante el lifespan.
 # Considerar un patrón de registro/recuperación de servicios más robusto si esto se vuelve complejo.
@@ -30,6 +32,8 @@ config_service_instance: Optional[ConfigService] = None
 unified_order_execution_service_instance: Optional[UnifiedOrderExecutionService] = None
 strategy_service_instance: Optional[StrategyService] = None
 performance_service_instance: Optional[PerformanceService] = None
+trading_report_service_instance: Optional[TradingReportService] = None # Nueva instancia global
+trading_engine_instance: Optional[TradingEngine] = None # Nueva instancia global
 
 # --- Funciones de dependencia para inyección en FastAPI ---
 def get_persistence_service() -> SupabasePersistenceService:
@@ -103,6 +107,27 @@ def get_performance_service() -> PerformanceService:
         raise RuntimeError("PerformanceService no inicializado en dependencies.py.")
     return performance_service_instance
 
+
+def get_trading_report_service() -> TradingReportService:
+    """Obtiene la instancia global del servicio de informes de trading."""
+    if trading_report_service_instance is None:
+        raise RuntimeError("TradingReportService no inicializado en dependencies.py.")
+    return trading_report_service_instance
+
+
+def get_trading_engine_service() -> TradingEngine:
+    """Obtiene la instancia global del servicio del motor de trading."""
+    global trading_engine_instance
+    if trading_engine_instance is None:
+        # Aquí deberías inicializar TradingEngine con los servicios requeridos
+        # Por ejemplo:
+        # from .services.strategy_service import StrategyService
+        # from .services.config_service import ConfigService
+        # from .services.ai_orchestrator_service import AIOrchestrator
+        # trading_engine_instance = TradingEngine(StrategyService(), ConfigService(), AIOrchestrator())
+        raise RuntimeError("TradingEngine no inicializado en dependencies.py. Debe ser registrado en main.py o inicializado aquí.")
+    return trading_engine_instance
+
 # Funciones para que main.py actualice las instancias
 def set_persistence_service(instance: SupabasePersistenceService):
     global persistence_service_instance
@@ -143,3 +168,11 @@ def set_strategy_service(instance: StrategyService):
 def set_performance_service(instance: PerformanceService):
     global performance_service_instance
     performance_service_instance = instance
+
+def set_trading_report_service(instance: TradingReportService):
+    global trading_report_service_instance
+    trading_report_service_instance = instance
+
+def set_trading_engine_service(instance: TradingEngine):
+    global trading_engine_instance
+    trading_engine_instance = instance

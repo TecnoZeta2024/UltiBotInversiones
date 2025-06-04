@@ -15,7 +15,7 @@ from typing import Optional, List, Dict, Any, TYPE_CHECKING
 from uuid import UUID
 from src.shared.data_types import APICredential, ServiceName, Notification, Opportunity, OpportunityStatus, Trade, TradeOrderDetails # Importar Trade y TradeOrderDetails
 from datetime import datetime, timezone
-from psycopg.sql import SQL, Identifier, Literal, Composed # Importar SQL y otros componentes necesarios
+from psycopg.sql import SQL, Identifier, Literal, Composed, Composable # Importar SQL y otros componentes necesarios
 
 logger = logging.getLogger(__name__)
 
@@ -1036,26 +1036,41 @@ class SupabasePersistenceService:
         await self._ensure_connection()
         assert self.connection is not None, "Connection must be established by _ensure_connection"
 
-        query_parts = [SQL("SELECT * FROM trades WHERE user_id = %s")]
-        params: List[Any] = [user_id]
-
-        if mode:
-            query_parts.append(SQL("AND mode = %s"))
-            params.append(mode)
+        # Nueva construcción de la consulta para mayor claridad y robustez
+        query_base = SQL("SELECT * FROM trades WHERE user_id = %s")
+        params_list: List[Any] = [user_id]
         
-        query_parts.append(SQL("ORDER BY created_at DESC;"))
-        final_query = Composed(query_parts)
+        query_conditions_parts: List[Composable] = [] # Para las condiciones después del WHERE
+        if mode:
+            query_conditions_parts.append(SQL("mode = %s"))
+            params_list.append(mode)
+        
+        # Aquí se podrían añadir más condiciones si fueran necesarias en el futuro
+        # if another_condition:
+        #     query_conditions_parts.append(SQL("another_column = %s"))
+        #     params_list.append(another_value)
+
+        final_query_list: List[Composable] = [query_base] # Empezar con la base y tipar explícitamente
+
+        if query_conditions_parts:
+            # Si hay condiciones, unirlas con AND y añadirlas a la consulta principal
+            final_query_list.append(SQL(" AND ")) # Espacio y AND
+            final_query_list.append(SQL(" AND ").join(query_conditions_parts)) # Unir condiciones con AND
+            
+        final_query_list.append(SQL(" ORDER BY created_at DESC;")) # Añadir el ORDER BY (con espacio inicial)
+        
+        final_query = SQL("").join(final_query_list) # Unir todas las partes sin separador adicional
+        params = tuple(params_list)
         
         try:
             async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(final_query, tuple(params))
+                await cur.execute(final_query, params) # Usar los nuevos params
                 records = await cur.fetchall()
                 
                 trades = []
                 for record_dict in records:
-                    record_copy = record_dict.copy() # Usar el dict directamente
+                    record_copy = record_dict.copy()
                     
-                    # Convertir UUIDs de string a UUID objects
                     for key_uuid in ['id', 'user_id', 'strategy_id', 'opportunity_id']:
                         if key_uuid in record_copy and record_copy[key_uuid] is not None:
                             try:
@@ -1064,8 +1079,6 @@ class SupabasePersistenceService:
                                 logger.warning(f"Invalid UUID format for {key_uuid}: {record_copy[key_uuid]} in trade {record_copy.get('id')}")
                                 record_copy[key_uuid] = None
 
-
-                    # Convertir entry_order y exit_orders de dict a TradeOrderDetails
                     if 'entry_order' in record_copy and record_copy['entry_order'] and isinstance(record_copy['entry_order'], dict):
                         entry_order_data = record_copy.pop('entry_order')
                         entry_order_data['orderCategory'] = entry_order_data.pop('order_category', None)
@@ -1089,7 +1102,6 @@ class SupabasePersistenceService:
                     else:
                         record_copy['exitOrders'] = []
 
-                    # Convertir timestamps de string ISO a datetime
                     datetime_fields = ['created_at', 'opened_at', 'updated_at', 'closed_at']
                     for field in datetime_fields:
                         if field in record_copy and isinstance(record_copy[field], str):
@@ -1099,19 +1111,14 @@ class SupabasePersistenceService:
                                 logger.warning(f"No se pudo convertir campo datetime {field}: {record_copy[field]} for trade {record_copy.get('id')}")
                                 record_copy[field] = None
                     
-                    # Mapear nombres de columnas de BD (snake_case) a nombres de campos de Pydantic
                     field_mappings = {
-                        "position_status": "positionStatus",
-                        "opportunity_id": "opportunityId", 
-                        "strategy_id": "strategyId",
-                        "ai_analysis_confidence": "aiAnalysisConfidence",
-                        "pnl_usd": "pnlUsd", # Corregido a camelCase
-                        "pnl_percentage": "pnlPercentage",
-                        "closing_reason": "closingReason",
-                        "take_profit_price": "takeProfitPrice",
+                        "position_status": "positionStatus", "opportunity_id": "opportunityId", 
+                        "strategy_id": "strategyId", "ai_analysis_confidence": "aiAnalysisConfidence",
+                        "pnl_usd": "pnlUsd", "pnl_percentage": "pnlPercentage",
+                        "closing_reason": "closingReason", "take_profit_price": "takeProfitPrice",
                         "trailing_stop_activation_price": "trailingStopActivationPrice",
                         "trailing_stop_callback_rate": "trailingStopCallbackRate",
-                        "current_stop_price_tsl": "currentStopPriceTsl", # Corregido a camelCase
+                        "current_stop_price_tsl": "currentStopPriceTsl", 
                         "risk_reward_adjustments": "riskRewardAdjustments",
                         "initial_risk_quote_amount": "initialRiskQuoteAmount",
                         "initial_reward_to_risk_ratio": "initialRewardToRiskRatio",
@@ -1119,8 +1126,7 @@ class SupabasePersistenceService:
                         "current_reward_to_risk_ratio": "currentRewardToRiskRatio",
                         "market_context_snapshots": "marketContextSnapshots",
                         "external_event_or_analysis_link": "externalEventOrAnalysisLink",
-                        "backtest_details": "backtestDetails",
-                        "ai_influence_details": "aiInfluenceDetails",
+                        "backtest_details": "backtestDetails", "ai_influence_details": "aiInfluenceDetails",
                         "strategy_execution_instance_id": "strategyExecutionInstanceId"
                     }
                     
@@ -1129,11 +1135,6 @@ class SupabasePersistenceService:
                         pydantic_key = field_mappings.get(db_key, db_key)
                         final_record_data[pydantic_key] = value
                     
-                    # Asegurar que los campos requeridos por Trade estén presentes o tengan un default
-                    # Esto es importante si la tabla de BD tiene columnas nullable que Pydantic espera.
-                    # Trade.__fields__ puede dar los campos requeridos.
-                    # Por simplicidad, asumimos que los datos de la BD son suficientes.
-
                     trades.append(Trade(**final_record_data))
                 return trades
         except Exception as e:

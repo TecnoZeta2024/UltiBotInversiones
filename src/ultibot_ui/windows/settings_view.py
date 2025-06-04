@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QLineEdit, QPushButton, QGroupBox, QDoubleSpinBox, QMessageBox
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer # Importar QTimer
 import logging
 from typing import Optional, Dict, Any
 from uuid import UUID
@@ -25,7 +25,12 @@ class SettingsView(QWidget):
         self.real_trading_status: Dict[str, Any] = {"isActive": False, "executedCount": 0, "limit": 5}
 
         self._setup_ui()
-        asyncio.create_task(self._load_initial_data())
+        # Diferir la carga inicial de datos
+        QTimer.singleShot(0, lambda: self._schedule_task_helper(self._load_initial_data()))
+
+    def _schedule_task_helper(self, coro):
+        """Helper para programar una tarea asyncio."""
+        asyncio.create_task(coro)
 
     def _setup_ui(self):
         main_layout = QVBoxLayout(self)

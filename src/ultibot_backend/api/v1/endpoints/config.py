@@ -169,3 +169,22 @@ async def get_real_trading_mode_status_endpoint(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error inesperado al obtener el estado del modo real: {e}"
         )
+
+@router.get("/user/configuration", response_model=UserConfiguration)
+async def get_user_configuration(config_service: ConfigService = Depends(get_config_service_dependency)):
+    """
+    Endpoint compatible con frontend: retorna la configuración de usuario (mock/demo si es necesario).
+    """
+    try:
+        config = await config_service.get_user_configuration(str(settings.FIXED_USER_ID))
+        return config
+    except ConfigurationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al cargar la configuración: {e}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error inesperado al cargar la configuración: {e}"
+        )

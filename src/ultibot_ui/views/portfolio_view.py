@@ -12,6 +12,7 @@ from PyQt5.QtChart import QChart, QChartView, QPieSeries, QPieSlice # Import QtC
 
 from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
 from src.ultibot_ui.services.trading_mode_state import get_trading_mode_manager, TradingModeStateManager
+# ApiWorker se importará localmente para evitar ciclo
 
 
 logger = logging.getLogger(__name__)
@@ -57,7 +58,7 @@ class PortfolioView(QWidget):
         main_layout.addWidget(self.status_label)
 
         # --- Main Content Splitter ---
-        content_splitter = QSplitter(Qt.Horizontal)
+        content_splitter = QSplitter(Qt.Orientation.Horizontal) # CORREGIDO: Qt.Orientation.Horizontal
         main_layout.addWidget(content_splitter, 1) # Give it stretch factor
 
         # Left Side: Summary and Pie Chart
@@ -85,7 +86,7 @@ class PortfolioView(QWidget):
         self.pie_chart_view.setRenderHint(QPainter.Antialiasing)
         chart_layout.addWidget(self.pie_chart_view)
         left_panel_layout.addWidget(self.chart_group, 1)
-        self._apply_shadow_effect(self.chart_group) # Apply shadow to chart group
+        # self._apply_shadow_effect(self.chart_group) # Apply shadow to chart group - TEMPORARILY COMMENTED OUT
 
         content_splitter.addWidget(left_panel_widget)
 
@@ -98,13 +99,17 @@ class PortfolioView(QWidget):
         self.assets_table.setHorizontalHeaderLabels([
             "Symbol", "Quantity", "Avg. Entry Price", "Current Price", "Current Value (USD)", "Unrealized PnL (%)"
         ])
-        self.assets_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.assets_table.verticalHeader().setVisible(False)
+        h_header = self.assets_table.horizontalHeader()
+        if h_header:
+            h_header.setSectionResizeMode(QHeaderView.Stretch)
+        v_header = self.assets_table.verticalHeader()
+        if v_header:
+            v_header.setVisible(False)
         self.assets_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.assets_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.assets_table.setAlternatingRowColors(True)
         assets_layout.addWidget(self.assets_table)
-        content_splitter.addWidget(assets_group)
+        content_splitter.addWidget(self.assets_group) # CORREGIDO: self.assets_group
 
         content_splitter.setSizes([self.width() // 3, 2 * self.width() // 3]) # Initial sizing
 
@@ -127,7 +132,7 @@ class PortfolioView(QWidget):
 
         # Use user_id from self.user_id and mode from trading_mode_manager
         coroutine = self.api_client.get_portfolio_snapshot(user_id=self.user_id, trading_mode=self.trading_mode_manager.current_mode)
-        # Importar ApiWorker aquí para evitar import circular
+        # Importar ApiWorker aquí para evitar import circular a nivel de módulo
         from src.ultibot_ui.main import ApiWorker
         worker = ApiWorker(coroutine)
         thread = QThread()
@@ -198,16 +203,16 @@ class PortfolioView(QWidget):
             pnl_pct = asset.get('unrealized_pnl_percentage', 0.0)
             pnl_item = QTableWidgetItem(f"{pnl_pct:,.2f}%")
             if pnl_pct > 0:
-                pnl_item.setForeground(Qt.green)
+                pnl_item.setForeground(QColor(Qt.GlobalColor.green)) # CORREGIDO: QColor(Qt.GlobalColor.green)
             elif pnl_pct < 0:
-                pnl_item.setForeground(Qt.red)
+                pnl_item.setForeground(QColor(Qt.GlobalColor.red))   # CORREGIDO: QColor(Qt.GlobalColor.red)
             self.assets_table.setItem(row, 5, pnl_item)
 
         if not assets_data:
              if self.assets_table.rowCount() == 0: # Check if it's truly empty
                 self.assets_table.setRowCount(1)
                 placeholder_item = QTableWidgetItem("No assets to display for this mode.")
-                placeholder_item.setTextAlignment(Qt.AlignCenter)
+                placeholder_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter) # CORREGIDO: Qt.AlignmentFlag.AlignCenter
                 self.assets_table.setItem(0, 0, placeholder_item)
                 self.assets_table.setSpan(0, 0, 1, self.assets_table.columnCount())
 
@@ -258,16 +263,17 @@ class PortfolioView(QWidget):
         chart = QChart()
         chart.addSeries(series)
         chart.setTitle("Asset Distribution by Value (USD)")
-        chart.setAnimationOptions(QChart.SeriesAnimations)
-        chart.legend().setVisible(True)
-        chart.legend().setAlignment(Qt.AlignBottom)
+        chart.setAnimationOptions(QChart.AnimationOption.SeriesAnimations) # CORREGIDO: QChart.AnimationOption.SeriesAnimations
+        legend = chart.legend()
+        if legend: # CORREGIDO: Check for None
+            legend.setVisible(True)
+            legend.setAlignment(Qt.AlignmentFlag.AlignBottom) # CORREGIDO: Qt.AlignmentFlag.AlignBottom
+            # Style legend
+            legend_font = QFont("Arial", 10)
+            legend.setFont(legend_font)
+            # legend.setLabelColor(QColor("#E0E0E0")) # Assuming dark theme text
         chart.setBackgroundVisible(False) # Use QSS background for QChartView
         chart.setTitleFont(QFont("Arial", 14, QFont.Bold)) # Match view title style somewhat
-
-        # Style legend
-        legend_font = QFont("Arial", 10)
-        chart.legend().setFont(legend_font)
-        # chart.legend().setLabelColor(QColor("#E0E0E0")) # Assuming dark theme text
 
         self.pie_chart_view.setChart(chart)
 
@@ -290,6 +296,7 @@ class PortfolioView(QWidget):
 if __name__ == '__main__':
     from PyQt5.QtWidgets import QApplication
     import sys
+    from src.ultibot_ui.main import ApiWorker # CORREGIDO: Import ApiWorker for test block
 
     # Mock ApiWorker and UltiBotAPIClient for standalone testing
     class MockApiWorker(QObject): # Use QObject for signals if not importing full ApiWorker

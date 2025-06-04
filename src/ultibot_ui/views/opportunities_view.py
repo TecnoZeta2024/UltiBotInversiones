@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import (
     QHeaderView, QPushButton, QMessageBox, QAbstractItemView, QFrame,
     QGraphicsDropShadowEffect
 )
-from PyQt5.QtCore import Qt, QThread, QTimer  # Added QTimer, Qt
+from PyQt5.QtCore import Qt, QThread, QTimer, QDateTime  # Added QTimer, Qt
 from PyQt5.QtGui import QColor
 from PyQt5.QtCore import QObject, pyqtSignal  # Import for mocks/signals
 
@@ -60,6 +60,10 @@ class OpportunitiesView(QWidget):
         self.refresh_button.setObjectName("refreshButton")
         self.refresh_button.clicked.connect(self._fetch_opportunities)
         controls_layout.addWidget(self.refresh_button)
+
+        self.last_updated_label = QLabel("Last updated: --")
+        controls_layout.addWidget(self.last_updated_label)
+
         main_layout.addWidget(controls_frame)
         # self._apply_shadow_effect(controls_frame) # Optional: if controls should be a card
 
@@ -91,6 +95,12 @@ class OpportunitiesView(QWidget):
         main_layout.addWidget(table_container_frame, 1)
         self._apply_shadow_effect(table_container_frame) # Apply shadow to the table's container
 
+        # Timer for auto-refresh (every 30s)
+        self._auto_refresh_timer = QTimer(self)
+        self._auto_refresh_timer.setInterval(30_000)  # 30 seconds
+        self._auto_refresh_timer.timeout.connect(self._fetch_opportunities)
+        self._auto_refresh_timer.start()
+
     def _load_initial_data(self):
         QTimer.singleShot(0, self._fetch_opportunities)
 
@@ -113,12 +123,12 @@ class OpportunitiesView(QWidget):
         widget.setGraphicsEffect(shadow)
 
     def _fetch_opportunities(self):
-        logger.info("OpportunitiesView: Fetching real trading candidates.")
+        logger.info("OpportunitiesView: Fetching Gemini IA opportunities.")
         self.status_label.setText("Loading opportunities...")
         self.refresh_button.setEnabled(False)
         self.opportunities_table.setRowCount(0) # Clear table while loading
 
-        coroutine = self.api_client.get_real_trading_candidates()
+        coroutine = self.api_client.get_gemini_opportunities()
         self._start_api_worker(coroutine)
 
     def _start_api_worker(self, *args, **kwargs):
@@ -168,6 +178,7 @@ class OpportunitiesView(QWidget):
                 self.opportunities_table.setItem(0, 0, placeholder_item)
                 self.opportunities_table.setSpan(0, 0, 1, self.opportunities_table.columnCount())
 
+        self.last_updated_label.setText(f"Last updated: {QDateTime.currentDateTime().toString('yyyy-MM-dd HH:mm:ss')}")
 
     def _handle_opportunities_error(self, error_message: str):
         logger.error(f"OpportunitiesView: Error fetching opportunities: {error_message}")
@@ -225,7 +236,7 @@ if __name__ == '__main__':
     class MockUltiBotAPIClient:
         def __init__(self, base_url=""): pass
         async def get_real_trading_candidates(self): # Make it async for consistency with real one
-            # This method will be replaced by the mock functions for testing
+            # This method will be replaced with the mock functions for testing
             return []
 
     def _mock_get_real_trading_candidates_success():

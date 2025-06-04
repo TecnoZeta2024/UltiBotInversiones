@@ -2,26 +2,31 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 from uuid import UUID
 
+# Importar el módulo de dependencias
+from src.ultibot_backend import dependencies as deps
+
 from src.shared.data_types import Notification
 from src.ultibot_backend.services.notification_service import NotificationService
 from src.ultibot_backend.core.exceptions import NotificationError
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService # Importar para inyección de dependencia
-from src.ultibot_backend.services.credential_service import CredentialService # Importar para inyección de dependencia
+# SupabasePersistenceService y CredentialService ya no son necesarios aquí directamente
+# ya que NotificationService se obtendrá de deps
 
 router = APIRouter()
 
-# Dependencia para obtener una instancia de NotificationService
-async def get_notification_service(
-    credential_service: CredentialService = Depends(CredentialService),
-    persistence_service: SupabasePersistenceService = Depends(SupabasePersistenceService)
-) -> NotificationService:
-    return NotificationService(credential_service, persistence_service)
+# Ya no se necesita la función local get_notification_service
+# async def get_notification_service(
+#     credential_service: CredentialService = Depends(CredentialService),
+#     persistence_service: SupabasePersistenceService = Depends(SupabasePersistenceService)
+# ) -> NotificationService:
+#     # Esta función crearía una instancia de NotificationService que podría no estar
+#     # completamente configurada o ser diferente de la instancia global.
+#     return NotificationService(credential_service, persistence_service)
 
 @router.get("/history", response_model=List[Notification])
 async def get_notification_history(
     user_id: UUID,
     limit: int = 50,
-    notification_service: NotificationService = Depends(get_notification_service)
+    notification_service: NotificationService = Depends(deps.get_notification_service)
 ):
     """
     Recupera el historial de notificaciones para un usuario.
@@ -44,7 +49,7 @@ async def get_notification_history(
 async def mark_notification_as_read(
     notification_id: UUID,
     user_id: UUID,
-    notification_service: NotificationService = Depends(get_notification_service)
+    notification_service: NotificationService = Depends(deps.get_notification_service)
 ):
     """
     Marca una notificación específica como leída.

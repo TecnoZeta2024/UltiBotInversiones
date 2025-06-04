@@ -118,11 +118,22 @@ class ToggleDelegate(QStyledItemDelegate):
         super().__init__(parent)
 
     def paint(self, painter: QPainter, option, index: QModelIndex):
-        check_state = index.model().data(index, Qt.ItemDataRole.CheckStateRole)
+        model = index.model()
+        if not model:
+            super().paint(painter, option, index)
+            return
+
+        check_state = model.data(index, Qt.ItemDataRole.CheckStateRole)
         check_box_option = QStyleOptionButton()
         check_box_option.rect = option.rect
         widget = option.widget
-        style = widget.style() if widget else QApplication.style()
+        
+        # Usar QApplication.style() como fallback si widget o widget.style() es None
+        style = widget.style() if widget and hasattr(widget, 'style') and widget.style() is not None else QApplication.style()
+        if not style: # Si incluso QApplication.style() fuera None (muy improbable)
+            super().paint(painter, option, index)
+            return
+
         indicator_rect = style.subElementRect(QStyle.SubElement.SE_CheckBoxIndicator, check_box_option, widget)
         cell_center_x = option.rect.left() + option.rect.width() / 2
         cell_center_y = option.rect.top() + option.rect.height() / 2
@@ -133,6 +144,7 @@ class ToggleDelegate(QStyledItemDelegate):
             check_box_option.state |= QStyle.StateFlag.State_On
         else:
             check_box_option.state |= QStyle.StateFlag.State_Off
+        
         style.drawControl(QStyle.ControlElement.CE_CheckBox, check_box_option, painter)
 
     def editorEvent(self, event, model, option, index: QModelIndex) -> bool:
@@ -170,7 +182,7 @@ class StrategyManagementView(QWidget):
             
         self._init_ui()
         self._connect_signals()
-        self._schedule_load_strategies()
+        # self._schedule_load_strategies() # Se llamará externamente
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
@@ -233,7 +245,12 @@ class StrategyManagementView(QWidget):
         self.setLayout(layout)
 
     def _get_selected_strategy(self) -> Any | None: # TradingStrategyConfig
-        selected_indexes = self.strategies_table.selectionModel().selectedRows()
+        selection_model = self.strategies_table.selectionModel()
+        if not selection_model:
+            QMessageBox.warning(self, "Error", "El modelo de selección de la tabla no está disponible.")
+            return None
+
+        selected_indexes = selection_model.selectedRows()
         if not selected_indexes:
             QMessageBox.information(self, "Información", "Por favor, seleccione una estrategia de la lista.")
             return None
@@ -541,7 +558,16 @@ class StrategyManagementView(QWidget):
         try:
             strategies_data_raw = await self.api_client.get_strategies()
             strategies_list = []
+            if not isinstance(strategies_data_raw, list): # Verificar si la respuesta general es una lista
+                print(f"Advertencia: La respuesta de get_strategies no es una lista: {strategies_data_raw}")
+                self.strategy_load_failed.emit(f"Respuesta inesperada del servidor: {type(strategies_data_raw)}")
+                return
+
             for item_data in strategies_data_raw:
+                if not isinstance(item_data, dict):
+                    print(f"Advertencia: Se encontró un elemento no diccionario en la respuesta de estrategias: {item_data}")
+                    continue # Saltar este elemento y continuar con el siguiente
+
                 last_modified_raw = item_data.get('lastModified')
                 last_modified_dt = None
                 if isinstance(last_modified_raw, str):
@@ -596,6 +622,13 @@ class StrategyManagementView(QWidget):
         except Exception as e:
             print(f"Error inesperado al cargar estrategias: {e}")
             self.strategy_load_failed.emit(f"Error inesperado: {e}")
+
+    def load_strategies(self):
+        """
+        Inicia la carga de estrategias. Este método puede ser llamado externamente
+        para controlar cuándo se realiza la carga inicial.
+        """
+        self._schedule_load_strategies()
 
     def _filter_strategies(self):
         """
