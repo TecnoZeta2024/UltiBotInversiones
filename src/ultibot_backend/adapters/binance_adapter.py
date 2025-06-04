@@ -150,11 +150,25 @@ class BinanceAdapter:
                 print(f"Advertencia: No se pudo parsear el balance para el activo {balance.get('asset')}: {e}")
         return asset_balances
 
+    @staticmethod
+    def normalize_symbol(symbol: str) -> str:
+        """
+        Normaliza el símbolo al formato requerido por Binance (ej: BTCUSDT).
+        Elimina '/' y ',' y convierte a mayúsculas.
+        """
+        if not symbol:
+            raise ValueError("El símbolo no puede ser vacío.")
+        normalized = symbol.replace("/", "").replace(",", "").upper()
+        if not normalized.isalnum():
+            raise ValueError(f"Símbolo inválido para Binance: {symbol}")
+        return normalized
+
     async def get_ticker_24hr(self, symbol: str) -> Dict[str, Any]:
         """
         Obtiene los datos de ticker de 24 horas para un símbolo específico.
         Endpoint: GET /api/v3/ticker/24hr
         """
+        symbol = self.normalize_symbol(symbol)
         endpoint = "/api/v3/ticker/24hr"
         params = {"symbol": symbol}
         try:
@@ -190,6 +204,7 @@ class BinanceAdapter:
             end_time (int, optional): Timestamp en milisegundos para el fin del rango.
             limit (int): Número de velas a retornar (máximo 1000).
         """
+        symbol = self.normalize_symbol(symbol)
         endpoint = "/api/v3/klines"
         params = {
             "symbol": symbol,
@@ -244,6 +259,7 @@ class BinanceAdapter:
         Suscribe a un stream de ticker de 24 horas para un símbolo específico.
         Stream: <symbol>@ticker
         """
+        symbol = self.normalize_symbol(symbol)
         stream_url = f"wss://stream.binance.com:9443/ws/{symbol.lower()}@ticker"
         print(f"Intentando conectar a WebSocket para {symbol} en {stream_url}")
         asyncio.create_task(self._connect_websocket(stream_url, callback))
@@ -266,6 +282,7 @@ class BinanceAdapter:
             stopLimitPrice (float): Precio límite para la orden STOP_LOSS_LIMIT.
             stopLimitTimeInForce (str): Time in Force para la orden STOP_LOSS_LIMIT (ej. 'GTC').
         """
+        symbol = self.normalize_symbol(symbol)
         endpoint = "/api/v3/order/oco"
         params = {
             "symbol": symbol,
@@ -322,6 +339,8 @@ class BinanceAdapter:
         Parámetros:
             symbol (str, optional): Símbolo específico para obtener información. Si es None, obtiene información de todos los símbolos.
         """
+        if symbol:
+            symbol = self.normalize_symbol(symbol)
         endpoint = "/api/v3/exchangeInfo"
         params = {"symbol": symbol} if symbol else {}
         try:

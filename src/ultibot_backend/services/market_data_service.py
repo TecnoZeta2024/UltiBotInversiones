@@ -24,6 +24,8 @@ class MarketDataService:
         self.binance_adapter = binance_adapter
         self._active_websocket_tasks: Dict[str, asyncio.Task] = {} # Para mantener un registro de las tareas WebSocket
         self._closed = False # Flag para indicar si el servicio ha sido cerrado
+        self._invalid_symbols_cache: Set[str] = set() # Caché de símbolos inválidos en Binance
+        self._cache_expiration = {} # Timestamp para expirar el caché de símbolos inválidos
 
     async def get_binance_connection_status(self, user_id: UUID) -> BinanceConnectionStatus:
         """
@@ -113,15 +115,16 @@ class MarketDataService:
 
         # Aunque get_credential ya lanza CredentialError si la desencriptación falla,
         # añadimos una comprobación explícita aquí para mayor robustez y claridad.
-        if decrypted_api_key is None or decrypted_api_secret is None:
+        # Validación explícita de credenciales antes de usarlas
+        if not decrypted_api_key or not decrypted_api_secret:
+            logger.error(f"Credenciales de Binance inválidas o ausentes para el usuario {user_id}. API_KEY: {decrypted_api_key}, API_SECRET: {decrypted_api_secret}")
             raise CredentialError("Las credenciales de Binance (API Key o Secret) no están disponibles o no son válidas.")
-
         try:
             balances = await self.binance_adapter.get_spot_balances(decrypted_api_key, decrypted_api_secret)
             logger.info(f"Balances de Binance obtenidos para el usuario {user_id}.")
             return balances
         except BinanceAPIError as e:
-            logger.error(f"Error al obtener balances de Binance para el usuario {user_id}: {e}")
+            logger.error(f"Error de la API de Binance al obtener balances para el usuario {user_id}: {e}")
             raise UltiBotError(f"No se pudieron obtener los balances de Binance: {e}")
         except Exception as e:
             logger.critical(f"Error inesperado al obtener balances de Binance para el usuario {user_id}: {e}", exc_info=True)
@@ -135,11 +138,26 @@ class MarketDataService:
         if self._closed:
             logger.warning("MarketDataService está cerrado. No se pueden obtener datos de mercado REST.")
             return {s: {"error": "Servicio cerrado"} for s in symbols}
+            
+        # Limpiar caché expirado (si lleva más de 24 horas)
+        current_time = datetime.now().timestamp()
+        expired_symbols = [symbol for symbol, expiry_time in self._cache_expiration.items() if current_time > expiry_time]
+        for symbol in expired_symbols:
+            if symbol in self._invalid_symbols_cache:
+                self._invalid_symbols_cache.remove(symbol)
+                del self._cache_expiration[symbol]
+                
         market_data = {}
-        for original_symbol in symbols: # Renombrado para claridad
+        for original_symbol in symbols:
             try:
-                # Convertir el formato del símbolo de "BASE/QUOTE" a "BASEQUOTE"
-                binance_formatted_symbol = original_symbol.replace("/", "")
+                # Verificar si el símbolo está en el caché de inválidos
+                if original_symbol in self._invalid_symbols_cache:
+                    logger.debug(f"Símbolo inválido (en caché): {original_symbol}. Saltando solicitud a Binance API.")
+                    market_data[original_symbol] = {"error": "Símbolo inválido (caché)"}
+                    continue
+                
+                # Normalizar el símbolo usando el método del adaptador
+                binance_formatted_symbol = self.binance_adapter.normalize_symbol(original_symbol)
                 
                 # Los endpoints de ticker 24hr no requieren API Key ni Secret
                 ticker_data = await self.binance_adapter.get_ticker_24hr(binance_formatted_symbol)
@@ -149,9 +167,23 @@ class MarketDataService:
                     "quoteVolume": float(ticker_data.get("quoteVolume", 0))
                 }
                 logger.info(f"Datos REST de {original_symbol} (consultado como {binance_formatted_symbol}) obtenidos para el usuario {user_id}.")
+            except ValueError as ve:
+                logger.error(f"Símbolo inválido recibido: {original_symbol} - {ve}")
+                market_data[original_symbol] = {"error": f"Símbolo inválido: {ve}"}
+                # Añadir a caché de símbolos inválidos                self._invalid_symbols_cache.add(original_symbol)
+                self._cache_expiration[original_symbol] = current_time + 86400  # 24 horas
             except BinanceAPIError as e:
-                logger.error(f"Error al obtener datos REST de {original_symbol} para el usuario {user_id}: {e}")
-                market_data[original_symbol] = {"error": str(e)}
+                error_msg = str(e)
+                # Comprobar si es un error de "Invalid symbol" (código -1121)
+                if "Invalid symbol" in error_msg:
+                    logger.warning(f"Símbolo inválido detectado: {original_symbol}. Agregando a caché.")
+                    self._invalid_symbols_cache.add(original_symbol)
+                    # Establecer expiración del caché (24 horas)
+                    current_time = datetime.now().timestamp()
+                    self._cache_expiration[original_symbol] = current_time + 86400  # 24 horas
+                else:
+                    logger.error(f"Error al obtener datos REST de {original_symbol} para el usuario {user_id}: {e}")
+                market_data[original_symbol] = {"error": error_msg}
             except Exception as e:
                 logger.critical(f"Error inesperado al obtener datos REST de {original_symbol} para el usuario {user_id}: {e}", exc_info=True)
                 market_data[original_symbol] = {"error": "Error inesperado"}

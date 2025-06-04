@@ -4,6 +4,7 @@ Módulo para el diálogo de configuración de estrategias de trading.
 """
 import logging
 from typing import Optional, List # Importar Optional y List
+import re # Añadido para limpiar la entrada de apalancamiento
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, 
                              QTextEdit, QComboBox, QPushButton, QFormLayout, 
                              QDialogButtonBox, QMessageBox, QStackedWidget, QWidget, QGroupBox, QCheckBox) # Añadido QCheckBox
@@ -294,10 +295,20 @@ class StrategyConfigDialog(QDialog):
         current_type_enum = self.base_strategy_type_combo.currentData()
 
         if current_type_enum == BaseStrategyType.SCALPING:
+            leverage_text = self.scalping_leverage_edit.text().strip()
+            cleaned_leverage_text = re.sub(r'\D', '', leverage_text) # Eliminar no dígitos
+            leverage_value = None
+            if cleaned_leverage_text:
+                try:
+                    leverage_value = int(cleaned_leverage_text)
+                except ValueError:
+                    logger.warning(f"Valor de apalancamiento inválido '{leverage_text}', se usará None.")
+                    # Podríamos mostrar un error en la UI aquí si quisiéramos
+            
             parameters_data = {
                 "stop_loss_percent": float(self.scalping_sl_edit.text() or 0) if self.scalping_sl_edit.text() else None,
                 "take_profit_percent": float(self.scalping_tp_edit.text() or 0) if self.scalping_tp_edit.text() else None,
-                "leverage": int(self.scalping_leverage_edit.text() or 0) if self.scalping_leverage_edit.text() else None
+                "leverage": leverage_value
             }
             parameters_data = {k: v for k, v in parameters_data.items() if v is not None} # Limpiar Nones
         elif current_type_enum == BaseStrategyType.DAY_TRADING:
@@ -479,11 +490,33 @@ if __name__ == '__main__':
     import sys
     from PyQt5.QtWidgets import QApplication # Importar QApplication
     from datetime import datetime # Importar datetime
+    from ..services.api_client import UltiBotAPIClient # Importar la clase real
+
+    # Mock simple para UltiBotAPIClient
+    class MockApiClient(UltiBotAPIClient): # Heredar de la clase real
+        def __init__(self):
+            # No llamar a super().__init__ si no se necesita la inicialización real
+            pass 
+        async def create_strategy(self, config_data):
+            print(f"Mock API: create_strategy called with {config_data}")
+            return {"configName": config_data.get("configName", "Mock Strategy")}
+        async def update_strategy(self, strategy_id, config_data):
+            print(f"Mock API: update_strategy called for {strategy_id} with {config_data}")
+            return {"configName": config_data.get("configName", "Mock Strategy")}
+        # Añadir otros métodos mock si son necesarios para las pruebas
+        # Asegurarse de que todos los métodos abstractos o requeridos por UltiBotAPIClient estén implementados
+        # o que el mock sea lo suficientemente completo para el contexto de la prueba.
+        # Para este caso, solo se usan create_strategy y update_strategy.
+        # Si UltiBotAPIClient tiene un __init__ que requiere argumentos, el mock también debería aceptarlos.
+        # Si UltiBotAPIClient tiene métodos abstractos, MockApiClient debe implementarlos.
+        # Por simplicidad, asumiré que los métodos usados son suficientes para el mock.
 
     app = QApplication(sys.argv)
     
+    mock_api_client = MockApiClient() # Instancia del mock
+
     # Para probar el modo creación
-    # dialog_create = StrategyConfigDialog(api_client=None) # Pasar un mock de ApiClient si es necesario
+    # dialog_create = StrategyConfigDialog(api_client=mock_api_client) # Pasar el mock
     # if dialog_create.exec_():
     #     print("Creación aceptada:", dialog_create.get_data())
     # else:
@@ -508,7 +541,7 @@ if __name__ == '__main__':
     #     type('MockProfile', (), {'id': 'profile-uuid-other', 'name': 'Perfil IA Conservador'})()
     # ]
 
-    dialog_edit = StrategyConfigDialog(api_client=None, strategy_config=mock_config_to_edit) #, ai_profiles=mock_ai_profiles)
+    dialog_edit = StrategyConfigDialog(api_client=mock_api_client, strategy_config=mock_config_to_edit) # Pasar el mock
     if dialog_edit.exec_():
         print("Edición aceptada:", dialog_edit.get_data())
     else:
