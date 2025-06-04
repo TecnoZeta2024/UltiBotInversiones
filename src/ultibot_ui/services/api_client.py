@@ -51,6 +51,7 @@ class UltiBotAPIClient:
         Raises:
             APIError: Si la petición falla
         """
+        logger.debug(f"APIClient: _make_request_invoked for {method} {endpoint}") # <--- NUEVO LOG DE DEBUG
         url = f"{self.base_url}{endpoint}"
         
         try:
@@ -707,5 +708,6 @@ class UltiBotAPIClient:
         """
         Obtiene oportunidades detectadas por la IA Gemini (mock/demo).
         """
+        logger.debug("APIClient: get_gemini_opportunities_invoked") # <--- NUEVO LOG DE DEBUG
         logger.info("Obteniendo oportunidades IA Gemini (demo/mock).")
         return await self._make_request("GET", "/api/v1/gemini/opportunities")

@@ -1,6 +1,11 @@
 @echo off
 REM Script para lanzar el backend y el frontend de UltiBotInversiones en Windows
 
+REM 0. Limpiar __pycache__ para asegurar que se usa el código más reciente
+echo Limpiando directorios __pycache__...
+powershell -Command "Get-ChildItem -Path src -Recurse -Directory -Filter '__pycache__' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
+echo Limpieza de __pycache__ completada.
+
 REM 1. Lanzar el backend (ajusta el path/comando según tu backend)
 start "UltiBot Backend" poetry run python run_backend.py
 

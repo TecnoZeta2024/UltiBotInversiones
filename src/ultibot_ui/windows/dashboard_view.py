@@ -37,155 +37,136 @@ class DashboardView(QWidget):
         self.user_id = user_id
         self.api_client = api_client # Guardar la referencia al cliente API
         
-        # Los servicios individuales ya no se almacenan como atributos directos
-        # self.market_data_service = market_data_service
-        # self.config_service = config_service
-        # self.notification_service = notification_service
-        # self.persistence_service = persistence_service
-        
-        # Get trading mode manager for state synchronization
         self.trading_mode_manager = get_trading_mode_manager()
-        
-        # PortfolioService ya no se inicializa aquí. PortfolioWidget usará api_client.
-        # self.portfolio_service = PortfolioService(self.market_data_service, self.persistence_service)
         
         self._setup_ui()
         
-        # La inicialización del portafolio ahora debe ser manejada por PortfolioWidget usando api_client
-        # o directamente aquí si es necesario para alguna lógica de DashboardView.
-        # Por ahora, se asume que PortfolioWidget se encarga.
-        # asyncio.create_task(self.portfolio_service.initialize_portfolio(self.user_id))
-        
-        # Iniciar el monitoreo de oportunidades de trading real pendientes
         self._opportunity_monitor_timer = QTimer(self)
         self._opportunity_monitor_timer.setInterval(10000) # Chequear cada 10 segundos
         self._opportunity_monitor_timer.timeout.connect(self._on_opportunity_monitor_timeout)
         self._opportunity_monitor_timer.start()
         print("Monitor de oportunidades de trading real iniciado.")
 
-        # Iniciar la carga secuencial de componentes asíncronos
         QTimer.singleShot(0, lambda: self._schedule_task(self._initialize_async_components()))
 
     async def _initialize_async_components(self):
         """Carga secuencialmente los componentes asíncronos iniciales."""
-        logger.info("Iniciando carga secuencial de componentes asíncronos...")
         try:
-            await self._load_and_subscribe_notifications()
-            logger.info("Notificaciones cargadas y suscripción iniciada.")
+            logger.info("DashboardView: _initialize_async_components INVOCADO (v3)") # Incremento versión para nuevo log
+            logger.info("Iniciando carga secuencial de componentes asíncronos...")
+            all_components_loaded_successfully = True
+        except Exception as e_initial:
+            logger.error(f"DashboardView: Error MUY TEMPRANO en _initialize_async_components: {e_initial}", exc_info=True)
+            self.initialization_complete.emit() # Emitir para no bloquear indefinidamente
+            return # Salir si hay un error muy temprano
+        try:
+            # 1. Cargar notificaciones
+            logger.info("DashboardView: Iniciando _load_and_subscribe_notifications...")
+            try:
+                await self._load_and_subscribe_notifications()
+                logger.info("DashboardView: _load_and_subscribe_notifications COMPLETADO.")
+            except Exception as e_notify:
+                logger.error(f"DashboardView: Error en _load_and_subscribe_notifications: {e_notify}", exc_info=True)
+                all_components_loaded_successfully = False
+
+            # 2. Cargar datos de desempeño de estrategias
+            logger.info("DashboardView: Iniciando _load_strategy_performance_data...")
+            try:
+                await self._load_strategy_performance_data()
+                logger.info("DashboardView: _load_strategy_performance_data COMPLETADO.")
+            except Exception as e_perf:
+                logger.error(f"DashboardView: Error en _load_strategy_performance_data: {e_perf}", exc_info=True)
+                all_components_loaded_successfully = False
             
-            await self._load_strategy_performance_data()
-            logger.info("Datos de desempeño de estrategias cargados.")
-            
+            # 3. Cargar configuración inicial de MarketDataWidget
             if hasattr(self.market_data_widget, 'load_initial_configuration') and callable(self.market_data_widget.load_initial_configuration):
-                await self.market_data_widget.load_initial_configuration()
-                logger.info("Configuración inicial de MarketDataWidget cargada.")
-            
-            logger.info("Carga secuencial de componentes asíncronos completada.")
+                logger.info("DashboardView: Iniciando market_data_widget.load_initial_configuration...")
+                try:
+                    await self.market_data_widget.load_initial_configuration()
+                    logger.info("DashboardView: market_data_widget.load_initial_configuration COMPLETADO.")
+                except Exception as e_market:
+                    logger.error(f"DashboardView: Error en market_data_widget.load_initial_configuration: {e_market}", exc_info=True)
+                    all_components_loaded_successfully = False
+            else:
+                logger.info("DashboardView: market_data_widget.load_initial_configuration no disponible o no es llamable.")
+
+            if all_components_loaded_successfully:
+                logger.info("DashboardView: Carga secuencial de TODOS los componentes asíncronos completada exitosamente.")
+            else:
+                logger.warning("DashboardView: Carga secuencial de componentes asíncronos completada, PERO con errores en uno o más componentes.")
+
         except Exception as e:
-            logger.error(f"Error durante la inicialización asíncrona secuencial: {e}", exc_info=True)
+            logger.error(f"DashboardView: Error INESPERADO durante la inicialización asíncrona secuencial: {e}", exc_info=True)
+            all_components_loaded_successfully = False
         finally:
+            logger.info(f"DashboardView: Emitiendo initialization_complete. Estado de carga exitosa: {all_components_loaded_successfully}")
             self.initialization_complete.emit()
 
     def _schedule_task(self, coro):
-        """Helper method to schedule an asyncio task without returning the task object to QTimer."""
-        asyncio.create_task(coro)
+        logger.info("DashboardView: _schedule_task INVOCADO")
+        try:
+            # Obtener el bucle de eventos de qasync que se está ejecutando
+            loop = asyncio.get_event_loop()
+            if loop and loop.is_running():
+                logger.info(f"DashboardView: _schedule_task - Bucle de eventos obtenido y en ejecución: {loop}")
+                loop.create_task(coro)
+                logger.info("DashboardView: _schedule_task - Tarea creada en el bucle.")
+            else:
+                logger.error("DashboardView: _schedule_task - No se pudo obtener un bucle de eventos en ejecución. La tarea no se programará.")
+        except Exception as e:
+            logger.error(f"DashboardView: _schedule_task - Error al programar la tarea: {e}", exc_info=True)
+
 
     def _setup_ui(self):
         main_layout = QVBoxLayout(self)
         self.setLayout(main_layout)
 
-        # --- Header Area: Trading Mode Selector ---
         header_frame = QFrame()
         header_frame.setFrameStyle(QFrame.StyledPanel)
         header_frame.setMaximumHeight(60)
-        header_frame.setStyleSheet("""
-            QFrame {
-                background-color: #2C2C2C;
-                border-bottom: 1px solid #444;
-                margin: 0px;
-            }
-        """)
-        
+        header_frame.setStyleSheet("QFrame { background-color: #2C2C2C; border-bottom: 1px solid #444; margin: 0px; }")
         header_layout = QHBoxLayout(header_frame)
         header_layout.setContentsMargins(10, 5, 10, 5)
-        
-        # Dashboard title
         dashboard_title = QLabel("Dashboard - UltiBotInversiones")
         dashboard_title.setStyleSheet("color: #EEE; font-size: 16px; font-weight: bold;")
         header_layout.addWidget(dashboard_title)
-        
-        # Spacer
         header_layout.addStretch()
-        
-        # Trading mode selector
         self.trading_mode_selector = TradingModeSelector(style="toggle")
         self.trading_mode_selector.mode_changed.connect(self._on_trading_mode_changed)
         header_layout.addWidget(self.trading_mode_selector)
-        
-        # Trading mode status bar
         self.mode_status_bar = TradingModeStatusBar()
         header_layout.addWidget(self.mode_status_bar)
-        
         main_layout.addWidget(header_frame)
 
-        # --- Top Area: Market Data Widget ---
-        # This widget shows overall market tickers, favorite pairs, etc.
-        # MarketDataWidget necesitará ser refactorizado para usar api_client
-        self.market_data_widget = MarketDataWidget(self.user_id, self.api_client) # Pasar api_client
+        self.market_data_widget = MarketDataWidget(self.user_id, self.api_client)
         main_layout.addWidget(self.market_data_widget)
         
-        # La carga de market_data_widget.load_initial_configuration() se mueve a _initialize_async_components
-
-        # Zona Central (con QSplitter horizontal)
         center_splitter = QSplitter(Qt.Orientation.Horizontal)
         center_splitter.setContentsMargins(0, 0, 0, 0)
         center_splitter.setChildrenCollapsible(False)
-
-        # Panel Izquierdo: Estado del Portafolio (PortfolioWidget)
-        # PortfolioWidget ahora usará api_client directamente, ya no se pasa portfolio_service
         self.portfolio_widget = PortfolioWidget(self.user_id, self.api_client)
         center_splitter.addWidget(self.portfolio_widget)
-        
-        # Iniciar las actualizaciones del portfolio_widget
-        self.portfolio_widget.start_updates() # Asumimos que PortfolioWidget se adapta
-
-        # Panel Derecho (Gráficos Financieros - ChartWidget)
-        # ChartWidget necesitará ser refactorizado para usar api_client
-        self.chart_widget = ChartWidget(self.user_id, self.api_client) # Pasar api_client
+        self.portfolio_widget.start_updates()
+        self.chart_widget = ChartWidget(self.user_id, self.api_client)
         center_splitter.addWidget(self.chart_widget)
-
-        # Conectar señales del ChartWidget para solicitar datos al backend
         self.chart_widget.symbol_selected.connect(self._handle_chart_symbol_selection)
         self.chart_widget.interval_selected.connect(self._handle_chart_interval_selection)
-
         main_layout.addWidget(center_splitter)
 
-        # Zona Inferior (con QSplitter vertical y QTabWidget)
-        bottom_splitter = QSplitter(Qt.Orientation.Vertical) # Usar Qt.Orientation
+        bottom_splitter = QSplitter(Qt.Orientation.Vertical)
         bottom_splitter.setContentsMargins(0, 0, 0, 0)
         bottom_splitter.setChildrenCollapsible(False)
-
-        # Crear QTabWidget para la zona inferior
         bottom_tab_widget = QTabWidget()
-        bottom_tab_widget.setMaximumHeight(300)  # Limitar altura para no dominar la pantalla
-        
-        # Pestaña de Notificaciones
-        # NotificationWidget necesitará ser refactorizado para usar api_client
-        self.notification_widget = NotificationWidget(api_client=self.api_client, user_id=self.user_id) # Corregido orden de argumentos
+        bottom_tab_widget.setMaximumHeight(300)
+        self.notification_widget = NotificationWidget(api_client=self.api_client, user_id=self.user_id)
         bottom_tab_widget.addTab(self.notification_widget, "📢 Notificaciones")
-        
-        # Pestaña de Órdenes de Trading
         self.order_form_widget = OrderFormWidget(self.user_id, self.api_client)
         self.order_form_widget.order_executed.connect(self._handle_order_executed)
         self.order_form_widget.order_failed.connect(self._handle_order_failed)
         bottom_tab_widget.addTab(self.order_form_widget, "📈 Crear Orden")
-
-        # Pestaña de Desempeño por Estrategia
         strategy_performance_tab_content = QWidget()
         strategy_performance_layout = QVBoxLayout(strategy_performance_tab_content)
         strategy_performance_layout.setContentsMargins(5, 5, 5, 5)
-
-        # Controles de filtro para el desempeño de estrategias
         filter_layout = QHBoxLayout()
         filter_layout.addWidget(QLabel("Filtrar por Modo:"))
         self.performance_mode_filter_combo = QComboBox()
@@ -194,58 +175,30 @@ class DashboardView(QWidget):
         filter_layout.addWidget(self.performance_mode_filter_combo)
         filter_layout.addStretch()
         strategy_performance_layout.addLayout(filter_layout)
-
         self.strategy_performance_widget = StrategyPerformanceTableView()
         strategy_performance_layout.addWidget(self.strategy_performance_widget)
-        
         bottom_tab_widget.addTab(strategy_performance_tab_content, "📊 Desempeño Estrategias")
-
         bottom_splitter.addWidget(bottom_tab_widget)
-
-        # Añadir el splitter inferior al layout principal
         main_layout.addWidget(bottom_splitter)
-
-        # Establecer tamaños iniciales para los splitters (opcional, para una mejor visualización inicial)
-        # Estos valores pueden necesitar ajuste o ser dinámicos
         center_splitter.setSizes([self.width() // 3, 2 * self.width() // 3])
-        # bottom_splitter.setSizes([self.height() // 4]) # No se puede usar self.height() aquí directamente
 
     def _on_trading_mode_changed(self, new_mode: str):
-        """
-        Handle trading mode changes from the selector.
-        
-        Args:
-            new_mode: The new trading mode ('paper' or 'real')
-        """
         logger.info(f"Dashboard: Trading mode changed to {new_mode}")
-        
-        # The portfolio widget should automatically update through its connection
-        # to the trading mode state manager, but we can force a refresh if needed
         if hasattr(self.portfolio_widget, 'refresh_data'):
             self.portfolio_widget.refresh_data()
-        
-        # Recargar datos de desempeño de estrategias cuando cambia el modo global
-        # También actualiza el filtro de desempeño si es relevante
         selected_filter_mode = self.performance_mode_filter_combo.currentText()
         if new_mode == 'paper' and selected_filter_mode != "Paper Trading":
             self.performance_mode_filter_combo.setCurrentText("Paper Trading")
         elif new_mode == 'real' and selected_filter_mode != "Operativa Real":
             self.performance_mode_filter_combo.setCurrentText("Operativa Real")
-        else: # Si el modo global cambia a algo que no es paper/real o el filtro ya está en "Todos" o coincide
+        else:
             asyncio.create_task(self._load_strategy_performance_data())
 
-
     def _on_performance_filter_changed(self, index: int):
-        """
-        Maneja el cambio en el ComboBox de filtro de modo de desempeño.
-        """
         asyncio.create_task(self._load_strategy_performance_data())
 
     async def _load_strategy_performance_data(self):
-        """
-        Carga los datos de desempeño de las estrategias desde el backend y los muestra,
-        utilizando el filtro de modo seleccionado en la UI.
-        """
+        logger.info("DashboardView._load_strategy_performance_data: INICIO")
         try:
             selected_filter_text = self.performance_mode_filter_combo.currentText()
             mode_param_for_api: Optional[str] = None
@@ -253,47 +206,47 @@ class DashboardView(QWidget):
                 mode_param_for_api = "paper"
             elif selected_filter_text == "Operativa Real":
                 mode_param_for_api = "real"
-            # Si es "Todos", mode_param_for_api permanece None, lo que implica "todos los modos" para el backend.
-
-            logger.info(f"Cargando datos de desempeño de estrategias para el modo de filtro: {selected_filter_text} (API param: {mode_param_for_api})")
             
+            logger.info(f"DashboardView._load_strategy_performance_data: Filtro seleccionado: '{selected_filter_text}', Parámetro API: '{mode_param_for_api}'")
+            
+            logger.info("DashboardView._load_strategy_performance_data: Llamando a api_client.get_strategy_performance...")
             performance_data = await self.api_client.get_strategy_performance(
-                user_id=self.user_id, # Asegurar que user_id se pasa
+                user_id=self.user_id,
                 mode=mode_param_for_api
             )
+            logger.info("DashboardView._load_strategy_performance_data: Llamada a api_client.get_strategy_performance completada.")
+
             if performance_data is not None:
                 self.strategy_performance_widget.set_data(performance_data)
-                logger.info(f"Datos de desempeño de estrategias cargados y mostrados: {len(performance_data)} registros.")
+                logger.info(f"DashboardView._load_strategy_performance_data: Datos de desempeño ({len(performance_data)} registros) establecidos en el widget.")
             else:
-                self.strategy_performance_widget.set_data([]) # Limpiar tabla si no hay datos
-                logger.info("No se recibieron datos de desempeño de estrategias o fueron None.")
+                self.strategy_performance_widget.set_data([])
+                logger.info("DashboardView._load_strategy_performance_data: No se recibieron datos de desempeño (None), tabla limpiada.")
+        except APIError as api_e:
+            logger.error(f"DashboardView._load_strategy_performance_data: APIError al cargar datos de desempeño: {api_e.status_code} - {api_e.message}", exc_info=True)
+            self.strategy_performance_widget.set_data([])
         except Exception as e:
-            logger.error(f"Error al cargar datos de desempeño de estrategias: {e}", exc_info=True)
-            self.strategy_performance_widget.set_data([]) # Limpiar tabla en caso de error
-            # Considerar mostrar un mensaje de error en la UI, tal vez en la misma tabla o una notificación.
+            logger.error(f"DashboardView._load_strategy_performance_data: Error inesperado al cargar datos de desempeño: {e}", exc_info=True)
+            self.strategy_performance_widget.set_data([])
+        finally:
+            logger.info("DashboardView._load_strategy_performance_data: FIN")
 
     def _handle_chart_symbol_selection(self, symbol: str):
-        """Slot síncrono para la señal symbol_selected del ChartWidget."""
         print(f"Dashboard: Símbolo de gráfico seleccionado: {symbol}")
         asyncio.create_task(self._fetch_and_update_chart_data())
 
     def _handle_chart_interval_selection(self, interval: str):
-        """Slot síncrono para la señal interval_selected del ChartWidget."""
         print(f"Dashboard: Temporalidad de gráfico seleccionada: {interval}")
         asyncio.create_task(self._fetch_and_update_chart_data())
 
     async def _fetch_and_update_chart_data(self):
-        """
-        Obtiene los datos de velas del backend y los pasa al ChartWidget.
-        """
         if self.chart_widget.current_symbol and self.chart_widget.current_interval:
             try:
-                # Usar api_client para obtener datos de velas
                 candlestick_data = await self.api_client.get_candlestick_data(
                     symbol=self.chart_widget.current_symbol,
                     interval=self.chart_widget.current_interval,
-                    limit=200 # Cantidad de velas a mostrar
-                ) # Asumiendo que user_id es manejado por el backend o no es necesario para este endpoint específico
+                    limit=200
+                )
                 self.chart_widget.set_candlestick_data(candlestick_data)
             except APIError as e:
                 print(f"APIError al obtener datos de velas para el gráfico: {e.status_code} - {e.message}")
@@ -301,27 +254,35 @@ class DashboardView(QWidget):
                 self.chart_widget.chart_area.setText(f"Error API: {e.message}")
             except Exception as e:
                 print(f"Error al obtener datos de velas para el gráfico: {e}")
-                self.chart_widget.set_candlestick_data([]) # Limpiar el gráfico en caso de error
+                self.chart_widget.set_candlestick_data([])
                 self.chart_widget.chart_area.setText(f"Error al cargar datos: {e}")
 
     async def _load_and_subscribe_notifications(self):
-        """
-        Carga el historial de notificaciones y configura la suscripción en tiempo real.
-        """
+        # Comentario de prueba para Pylance - Línea 228
+        logger.info("DashboardView._load_and_subscribe_notifications: INICIO (v2)")
         try:
-            # Cargar historial de notificaciones usando api_client
-            history_notifications_data = await self.api_client.get_notification_history(user_id=self.user_id) # Pasar UUID directamente
+            logger.info("DashboardView._load_and_subscribe_notifications: Llamando a api_client.get_notification_history (v2)...")
+            history_notifications_data = await self.api_client.get_notification_history(user_id=self.user_id)
+            logger.info("DashboardView._load_and_subscribe_notifications: Llamada a api_client.get_notification_history completada.")
+
             if history_notifications_data:
+                logger.info(f"DashboardView._load_and_subscribe_notifications: Recibidas {len(history_notifications_data)} notificaciones del historial.")
                 notifications = []
                 for data_item in history_notifications_data:
                     if not isinstance(data_item, dict):
-                        logger.warning(f"Item de notificación no es un diccionario: {data_item}")
+                        logger.warning(f"Item de notificación (historial) no es un diccionario: {data_item}")
                         continue
                     try:
-                        # Mapeo explícito para asegurar que todos los campos requeridos estén presentes
-                        # y manejar posibles ausencias o nombres incorrectos desde la API.
+                        user_id_value = None
+                        user_id_from_data = data_item.get("userId")
+                        if user_id_from_data:
+                            try:
+                                user_id_value = UUID(user_id_from_data)
+                            except ValueError:
+                                logger.warning(f"Item de notificación (historial) tiene 'userId' inválido para UUID: {user_id_from_data}. Se usará None.")
+                        
                         notification_args = {
-                            "userId": data_item.get("userId"),
+                            "userId": user_id_value,
                             "eventType": data_item.get("eventType", "DEFAULT_EVENT"),
                             "channel": data_item.get("channel", "ui"),
                             "title": data_item.get("title", "Notificación sin título"),
@@ -343,43 +304,73 @@ class DashboardView(QWidget):
                             "statusHistory": data_item.get("statusHistory"),
                             "generatedBy": data_item.get("generatedBy")
                         }
-                        notification_id = data_item.get("id")
-                        if notification_id is not None:
-                            notification_args["id"] = notification_id
                         
+                        notification_id_str = data_item.get("id")
+                        if notification_id_str:
+                            try:
+                                notification_args["id"] = UUID(notification_id_str)
+                            except ValueError:
+                                logger.warning(f"Item de notificación (historial) tiene 'id' inválido para UUID: {notification_id_str}. Se usará el default_factory.")
+                        
+                        summarized_ids_raw = data_item.get("summarizedNotificationIds")
+                        if isinstance(summarized_ids_raw, list):
+                            valid_summarized_ids = []
+                            for s_id_raw in summarized_ids_raw:
+                                try:
+                                    valid_summarized_ids.append(UUID(str(s_id_raw)))
+                                except ValueError:
+                                    logger.warning(f"ID resumido inválido '{s_id_raw}' en summarizedNotificationIds (historial), será omitido.")
+                            notification_args["summarizedNotificationIds"] = valid_summarized_ids
+                        elif summarized_ids_raw is not None:
+                            logger.warning(f"summarizedNotificationIds (historial) no es una lista: {summarized_ids_raw}. Se establecerá a None.")
+                            notification_args["summarizedNotificationIds"] = None
+
+                        for date_field_key in ["createdAt", "snoozedUntil", "readAt", "sentAt"]:
+                            if date_field_key in notification_args and isinstance(notification_args[date_field_key], str):
+                                try:
+                                    dt_str = notification_args[date_field_key]
+                                    if dt_str.endswith('Z'):
+                                        dt_str = dt_str[:-1] + '+00:00'
+                                    notification_args[date_field_key] = datetime.fromisoformat(dt_str)
+                                except (ValueError, TypeError):
+                                    logger.warning(f"No se pudo convertir '{notification_args[date_field_key]}' a datetime para el campo '{date_field_key}' (historial). Se usará None o el valor por defecto.")
+                                    notification_args[date_field_key] = None
+                        
+                        logger.debug(f"DashboardView (historial): Argumentos finales para Notification: {notification_args}")
                         notification_obj = Notification(**notification_args)
                         notifications.append(notification_obj)
                     except TypeError as te:
-                        logger.error(f"Error al crear Notification con datos {data_item}: {te}")
-                        continue # Saltar esta notificación si hay error de tipo
+                        logger.error(f"Error de tipo al crear Notification (historial) con datos {data_item} y args procesados {notification_args}: {te}", exc_info=True)
+                        continue
+                    except Exception as ex_inner:
+                        logger.error(f"Error inesperado al procesar item de notificación (historial) {data_item}: {ex_inner}", exc_info=True)
+                        continue
+                
                 for notification in notifications:
                     self.notification_widget.add_notification(notification)
             
-            # TODO: Implementar suscripción a WebSockets para notificaciones en tiempo real
-            # Por ahora, un polling simple como fallback
-            self._notification_polling_timer = QTimer(self)
-            self._notification_polling_timer.setInterval(30000) # Polling cada 30 segundos
-            self._notification_polling_timer.timeout.connect(self._on_notification_polling_timeout)
-            self._notification_polling_timer.start()
-            print("Polling de notificaciones iniciado.")
+            if not hasattr(self, '_notification_polling_timer') or not self._notification_polling_timer.isActive():
+                self._notification_polling_timer = QTimer(self)
+                self._notification_polling_timer.setInterval(30000)
+                self._notification_polling_timer.timeout.connect(self._on_notification_polling_timeout)
+                self._notification_polling_timer.start()
+                logger.info("DashboardView._load_and_subscribe_notifications: Polling de notificaciones iniciado/verificado.")
+            else:
+                logger.info("DashboardView._load_and_subscribe_notifications: Polling de notificaciones ya estaba activo.")
 
+        except APIError as api_e:
+            logger.error(f"DashboardView._load_and_subscribe_notifications: APIError al cargar historial: {api_e.status_code} - {api_e.message}", exc_info=True)
         except Exception as e:
-            print(f"Error al cargar o suscribir notificaciones: {e}")
-            # Podríamos añadir una notificación de error al propio widget de notificaciones
-            # o a un sistema de logs de UI.
+            logger.error(f"DashboardView._load_and_subscribe_notifications: Error inesperado: {e}", exc_info=True)
+        finally:
+            logger.info("DashboardView._load_and_subscribe_notifications: FIN")
 
     def _on_notification_polling_timeout(self):
-        """Slot síncrono para el QTimer que inicia la tarea asíncrona de polling de notificaciones."""
         asyncio.create_task(self._fetch_new_notifications())
 
     async def _fetch_new_notifications(self):
-        """Obtiene nuevas notificaciones del backend y las añade al widget."""
         try:
-            # En una implementación real, esto podría ser un endpoint para "nuevas notificaciones desde X timestamp"
-            # Por simplicidad, aquí solo cargamos el historial de nuevo, lo cual no es eficiente para "nuevas"
-            # pero sirve para el propósito de demostración de polling.
-            # La lógica de add_notification ya maneja duplicados.
-            new_notifications_data = await self.api_client.get_notification_history(user_id=self.user_id) # Pasar UUID directamente
+            new_notifications_data = await self.api_client.get_notification_history(user_id=self.user_id)
             if new_notifications_data:
                 notifications = []
                 for data_item in new_notifications_data:
@@ -387,9 +378,16 @@ class DashboardView(QWidget):
                         logger.warning(f"Item de notificación (polling) no es un diccionario: {data_item}")
                         continue
                     try:
-                        # Mapeo explícito para asegurar que todos los campos requeridos estén presentes
+                        user_id_value_polling = None
+                        user_id_from_data_polling = data_item.get("userId")
+                        if user_id_from_data_polling:
+                            try:
+                                user_id_value_polling = UUID(user_id_from_data_polling)
+                            except ValueError:
+                                logger.warning(f"Item de notificación (polling) tiene 'userId' inválido para UUID: {user_id_from_data_polling}. Se usará None.")
+
                         notification_args = {
-                            "userId": data_item.get("userId"),
+                            "userId": user_id_value_polling,
                             "eventType": data_item.get("eventType", "DEFAULT_EVENT"),
                             "channel": data_item.get("channel", "ui"),
                             "title": data_item.get("title", "Notificación sin título"),
@@ -411,20 +409,51 @@ class DashboardView(QWidget):
                             "statusHistory": data_item.get("statusHistory"),
                             "generatedBy": data_item.get("generatedBy")
                         }
-                        notification_id = data_item.get("id")
-                        if notification_id is not None:
-                            notification_args["id"] = notification_id
 
+                        notification_id_str_polling = data_item.get("id")
+                        if notification_id_str_polling:
+                            try:
+                                notification_args["id"] = UUID(notification_id_str_polling)
+                            except ValueError:
+                                logger.warning(f"Item de notificación (polling) tiene 'id' inválido para UUID: {notification_id_str_polling}. Se usará el default_factory.")
+
+                        summarized_ids_raw_polling = data_item.get("summarizedNotificationIds")
+                        if isinstance(summarized_ids_raw_polling, list):
+                            valid_summarized_ids_polling = []
+                            for s_id_raw_polling in summarized_ids_raw_polling:
+                                try:
+                                    valid_summarized_ids_polling.append(UUID(str(s_id_raw_polling)))
+                                except ValueError:
+                                    logger.warning(f"ID resumido inválido '{s_id_raw_polling}' en summarizedNotificationIds (polling), será omitido.")
+                            notification_args["summarizedNotificationIds"] = valid_summarized_ids_polling
+                        elif summarized_ids_raw_polling is not None:
+                            logger.warning(f"summarizedNotificationIds (polling) no es una lista: {summarized_ids_raw_polling}. Se establecerá a None.")
+                            notification_args["summarizedNotificationIds"] = None
+                        
+                        for date_field_key_polling in ["createdAt", "snoozedUntil", "readAt", "sentAt"]:
+                            if date_field_key_polling in notification_args and isinstance(notification_args[date_field_key_polling], str):
+                                try:
+                                    dt_str_polling = notification_args[date_field_key_polling]
+                                    if dt_str_polling.endswith('Z'):
+                                        dt_str_polling = dt_str_polling[:-1] + '+00:00'
+                                    notification_args[date_field_key_polling] = datetime.fromisoformat(dt_str_polling)
+                                except (ValueError, TypeError):
+                                    logger.warning(f"No se pudo convertir '{notification_args[date_field_key_polling]}' a datetime para el campo '{date_field_key_polling}' (polling). Se usará None o el valor por defecto.")
+                                    notification_args[date_field_key_polling] = None
+
+                        logger.debug(f"DashboardView (polling): Argumentos finales para Notification: {notification_args}")
                         notification_obj = Notification(**notification_args)
                         notifications.append(notification_obj)
                     except TypeError as te:
-                        logger.error(f"Error al crear Notification en polling con datos {data_item}: {te}")
+                        logger.error(f"Error de tipo al crear Notification (polling) con datos {data_item} y args procesados {notification_args}: {te}", exc_info=True)
                         continue
+                    except Exception as ex_inner:
+                        logger.error(f"Error inesperado al procesar item de notificación (polling) {data_item}: {ex_inner}", exc_info=True)
+                        continue
+
                 for notification in notifications:
                     self.notification_widget.add_notification(notification)
             
-                # Si se obtuvieron notificaciones, es una buena oportunidad para actualizar el desempeño
-                # Asumimos que alguna de estas notificaciones podría ser de un trade cerrado.
                 logger.info("Nuevas notificaciones recibidas, actualizando desempeño de estrategias.")
                 await self._load_strategy_performance_data()
                 
@@ -432,63 +461,39 @@ class DashboardView(QWidget):
             print(f"APIError al hacer polling de nuevas notificaciones: {e.status_code} - {e.message}")
         except Exception as e:
             print(f"Error al hacer polling de nuevas notificaciones: {e}")
-            # Manejar el error, quizás mostrando una notificación de error en la UI
 
     def _on_opportunity_monitor_timeout(self):
-        """Slot síncrono para el QTimer que inicia la tarea asíncrona de monitoreo de oportunidades."""
         asyncio.create_task(self._check_pending_real_opportunities())
 
     async def _check_pending_real_opportunities(self):
-        """
-        Verifica si hay oportunidades de trading real pendientes de confirmación
-        y abre el diálogo correspondiente.
-        """
         try:
             opportunities_data = await self.api_client.get_real_trading_candidates()
             if opportunities_data:
-                # Asumimos que el backend devuelve una lista de diccionarios, convertimos a objetos Opportunity
                 opportunities = [Opportunity(**opp_data) for opp_data in opportunities_data]
-                
                 if opportunities:
-                    # Tomar la primera oportunidad pendiente y mostrar el diálogo
                     opportunity_to_confirm = opportunities[0]
                     logger.info(f"Oportunidad pendiente de confirmación encontrada: {opportunity_to_confirm.id}")
-                    
                     dialog = RealTradeConfirmationDialog(opportunity_to_confirm, self.api_client, self)
                     dialog.trade_confirmed.connect(self._handle_trade_confirmed)
                     dialog.trade_cancelled.connect(self._handle_trade_cancelled)
-                    dialog.exec_() # Mostrar el diálogo de forma modal
-                    
-                    # Después de cerrar el diálogo, re-chequear oportunidades o actualizar UI
-                    await self._refresh_opportunities_ui() # Método para actualizar la UI de oportunidades
-                    await self._update_real_trades_count_ui() # Método para actualizar el contador
+                    dialog.exec_()
+                    await self._refresh_opportunities_ui()
+                    await self._update_real_trades_count_ui()
             else:
                 logger.debug("No hay oportunidades de trading real pendientes de confirmación.")
-
         except Exception as e:
             logger.error(f"Error al verificar oportunidades de trading real pendientes: {e}", exc_info=True)
-            # Podríamos mostrar una notificación de error en la UI
 
     async def _refresh_opportunities_ui(self):
-        """
-        Método placeholder para actualizar la UI de oportunidades.
-        En una implementación real, esto recargaría el widget de oportunidades.
-        """
         logger.info("Actualizando UI de oportunidades (placeholder).")
-        # TODO: Implementar la lógica real para recargar el widget de oportunidades
-        # Por ahora, solo loguea.
 
     async def _update_real_trades_count_ui(self):
-        """
-        Método para actualizar el contador de operaciones reales en la UI.
-        """
         try:
             config_status = await self.api_client.get_real_trading_mode_status()
             if config_status and 'real_trades_executed_count' in config_status:
                 count = config_status['real_trades_executed_count']
                 max_trades = config_status['max_real_trades']
                 logger.info(f"Contador de trades reales actualizado: {count}/{max_trades}")
-                # TODO: Actualizar un QLabel o similar en la UI con este valor
             else:
                 logger.warning("No se pudo obtener el contador de trades reales del backend.")
         except Exception as e:
@@ -496,103 +501,53 @@ class DashboardView(QWidget):
 
     def _handle_trade_confirmed(self, opportunity_id: str):
         logger.info(f"Trade real confirmado para oportunidad {opportunity_id}. Actualizando UI.")
-        # Aquí se podría disparar una actualización más específica de la UI
         asyncio.create_task(self._refresh_opportunities_ui())
         asyncio.create_task(self._update_real_trades_count_ui())
-        # Un trade confirmado podría llevar a un trade cerrado pronto, actualizar desempeño.
         asyncio.create_task(self._load_strategy_performance_data())
 
     def _handle_trade_cancelled(self, opportunity_id: str):
         logger.info(f"Trade real cancelado para oportunidad {opportunity_id}. No se requiere acción adicional en UI.")
-        # Opcional: Actualizar el estado de la oportunidad en la UI a "rechazada por usuario" si se implementa en backend.
-        asyncio.create_task(self._refresh_opportunities_ui()) # Refrescar por si el estado cambió en backend
+        asyncio.create_task(self._refresh_opportunities_ui())
 
     def _handle_order_executed(self, order_details: dict[str, Any]):
-        """
-        Maneja una orden ejecutada exitosamente desde el OrderFormWidget.
-        
-        Args:
-            order_details: Detalles de la orden ejecutada
-        """
         logger.info(f"Orden ejecutada exitosamente: {order_details}")
-        
-        # Forzar actualización del portfolio widget
         if hasattr(self.portfolio_widget, 'refresh_data'):
             self.portfolio_widget.refresh_data()
-        
-        # Actualizar desempeño de estrategias después de ejecutar una orden
-        # (aunque la orden solo abre el trade, es un punto de cambio)
         asyncio.create_task(self._load_strategy_performance_data())
-        
-        # Mostrar notificación de éxito en el sistema de notificaciones
         symbol = order_details.get('symbol', 'N/A')
         side = order_details.get('side', 'N/A')
         quantity = order_details.get('quantity', 0)
         mode = order_details.get('trading_mode', 'unknown')
-        
         success_message = f"✅ Orden {side} ejecutada: {quantity:.8f} {symbol} en modo {mode.title()}"
-        
-        # Crear una notificación "local" para mostrar el éxito
-        # (esto podría integrarse con el sistema de notificaciones real)
         logger.info(success_message)
 
     def _handle_order_failed(self, error_message: str):
-        """
-        Maneja errores en la ejecución de órdenes desde el OrderFormWidget.
-        
-        Args:
-            error_message: Mensaje de error
-        """
         logger.error(f"Error en ejecución de orden: {error_message}")
-        
-        # Podrías mostrar una notificación de error en la UI
-        # o registrarlo en el sistema de notificaciones
 
     def cleanup(self):
-        """
-        Limpia los recursos utilizados por DashboardView y sus widgets hijos.
-        Principalmente, detiene temporizadores y tareas en segundo plano.
-        """
         print("DashboardView: cleanup called.")
-
-        # Limpiar MarketDataWidget
         if hasattr(self.market_data_widget, 'cleanup') and callable(self.market_data_widget.cleanup):
             print("DashboardView: Calling cleanup on market_data_widget.")
             self.market_data_widget.cleanup()
-        
-        # Limpiar PortfolioWidget
         if hasattr(self.portfolio_widget, 'stop_updates') and callable(self.portfolio_widget.stop_updates):
             print("DashboardView: Calling stop_updates on portfolio_widget.")
-            self.portfolio_widget.stop_updates() # Asumiendo que stop_updates es el método de limpieza
-
-        # Detener el temporizador de polling de notificaciones
+            self.portfolio_widget.stop_updates()
         if hasattr(self, '_notification_polling_timer') and self._notification_polling_timer.isActive():
             print("DashboardView: Stopping notification polling timer.")
             self._notification_polling_timer.stop()
-
-        # Detener el temporizador de monitoreo de oportunidades
         if hasattr(self, '_opportunity_monitor_timer') and self._opportunity_monitor_timer.isActive():
             print("DashboardView: Stopping opportunity monitor timer.")
             self._opportunity_monitor_timer.stop()
-
-        # Limpiar NotificationWidget (si es necesario, por ejemplo, para cancelar suscripciones WebSocket)
         if hasattr(self.notification_widget, 'cleanup') and callable(self.notification_widget.cleanup):
             print("DashboardView: Calling cleanup on notification_widget.")
             self.notification_widget.cleanup()
-            
-        # Limpiar ChartWidget (si es necesario)
         if hasattr(self.chart_widget, 'cleanup') and callable(self.chart_widget.cleanup):
             print("DashboardView: Calling cleanup on chart_widget.")
             self.chart_widget.cleanup()
-        
-        # Limpiar OrderFormWidget (si es necesario)
         if hasattr(self.order_form_widget, 'cleanup') and callable(self.order_form_widget.cleanup):
             print("DashboardView: Calling cleanup on order_form_widget.")
             self.order_form_widget.cleanup()
-
-        # Limpiar StrategyPerformanceTableView (si es necesario)
         if hasattr(self, 'strategy_performance_widget') and hasattr(self.strategy_performance_widget, 'cleanup') and callable(self.strategy_performance_widget.cleanup):
             print("DashboardView: Calling cleanup on strategy_performance_widget.")
             self.strategy_performance_widget.cleanup()
-        
         print("DashboardView: cleanup finished.")

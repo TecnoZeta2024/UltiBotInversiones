@@ -1,0 +1,1145 @@
+2025-06-04 15:30:07,843 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: capital_status obtenido: True
+2025-06-04 15:30:07,843 - src.ultibot_ui.widgets.portfolio_widget - INFO - Worker de actualización finalizado.
+2025-06-04 15:32:24,709 - __main__ - INFO - Logging configurado con RotatingFileHandler para escribir en logs/frontend.log (max ~100KB).
+2025-06-04 15:32:24,710 - asyncio - DEBUG - Using selector: SelectSelector
+2025-06-04 15:32:24,723 - qdarkstyle - DEBUG - Reading QSS file in: :qdarkstyle\dark\darkstyle.qss
+2025-06-04 15:32:24,724 - qdarkstyle - INFO - QSS file successfully loaded.
+2025-06-04 15:32:24,724 - qdarkstyle - DEBUG - Checking patches for being applied.
+2025-06-04 15:32:24,744 - qdarkstyle - INFO - Found version patches to be applied.
+2025-06-04 15:32:24,744 - qdarkstyle - INFO - Found application patches to be applied.
+2025-06-04 15:32:24,744 - qdarkstyle - DEBUG - Reading QSS file in: :qdarkstyle\dark\darkstyle.qss
+2025-06-04 15:32:24,745 - qdarkstyle - INFO - QSS file successfully loaded.
+2025-06-04 15:32:24,745 - qdarkstyle - DEBUG - Checking patches for being applied.
+2025-06-04 15:32:24,745 - qdarkstyle - INFO - Found version patches to be applied.
+2025-06-04 15:32:24,745 - qdarkstyle - INFO - Found application patches to be applied.
+2025-06-04 15:32:24,745 - __main__ - INFO - Applied dark theme to all top-level widgets.
+2025-06-04 15:32:24,747 - __main__ - INFO - Starting to fetch user configuration for 00000000-0000-0000-0000-000000000001 via API worker...
+2025-06-04 15:32:24,748 - src.ultibot_ui.services.api_client - INFO - Obteniendo configuración de usuario.
+2025-06-04 15:32:24,748 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/config
+2025-06-04 15:32:24,748 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:32:24,749 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:32:24,925 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:32:25,202 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76E45E80>
+2025-06-04 15:32:25,203 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:32:25,203 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:32:25,203 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:32:25,203 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:32:25,203 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:32:25,208 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:32:24 GMT'), (b'server', b'uvicorn'), (b'content-length', b'1001'), (b'content-type', b'application/json')])
+2025-06-04 15:32:25,208 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/config "HTTP/1.1 200 OK"
+2025-06-04 15:32:25,208 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:32:25,208 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:32:25,209 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:32:25,209 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:32:25,209 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:32:25,209 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:32:25,521 - src.ultibot_ui.services.trading_mode_state - INFO - TradingModeStateManager initialized with mode: paper
+2025-06-04 15:32:25,521 - src.ultibot_ui.services.trading_mode_state - INFO - Created global trading mode state manager
+2025-06-04 15:32:25,523 - src.ultibot_ui.widgets.trading_mode_selector - INFO - TradingModeSelector initialized with style: toggle
+2025-06-04 15:32:25,553 - src.ultibot_ui.widgets.portfolio_widget - INFO - Timer de actualización del portafolio iniciado.
+2025-06-04 15:32:25,568 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
+2025-06-04 15:32:25,569 - asyncio - DEBUG - Using selector: SelectSelector
+2025-06-04 15:32:25,573 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: Iniciando actualización para user 00000000-0000-0000-0000-000000000001, modo paper
+2025-06-04 15:32:25,574 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot de portafolio para usuario 00000000-0000-0000-0000-000000000001, modo: paper
+2025-06-04 15:32:25,574 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:32:25,574 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:32:25,574 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:32:25,589 - src.ultibot_ui.widgets.order_form_widget - INFO - OrderFormWidget initialized
+2025-06-04 15:32:25,658 - asyncio - DEBUG - Using selector: SelectSelector
+2025-06-04 15:32:25,659 - asyncio - DEBUG - Using selector: SelectSelector
+2025-06-04 15:32:25,659 - src.ultibot_ui.services.api_client - INFO - Obteniendo historial de paper trading para user 00000000-0000-0000-0000-000000000001 con filtros: {'trading_mode': 'paper', 'limit': 500, 'offset': 0, 'date_from': '2025-05-05', 'date_to': '2025-06-04'}
+2025-06-04 15:32:25,659 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trades/00000000-0000-0000-0000-000000000001
+2025-06-04 15:32:25,660 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:32:25,660 - src.ultibot_ui.services.api_client - INFO - Obteniendo métricas de rendimiento de paper trading con filtros: {'start_date': '2025-05-05T00:00:00', 'end_date': '2025-06-04T23:59:59.999999'}
+2025-06-04 15:32:25,660 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/portfolio/paper/performance_summary
+2025-06-04 15:32:25,660 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:32:25,661 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:32:25,661 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:32:25,670 - src.ultibot_ui.windows.history_view - INFO - HistoryView inicializada para usuario 00000000-0000-0000-0000-000000000001
+2025-06-04 15:32:25,680 - src.ultibot_ui.windows.main_window - INFO - Central widget y vistas configuradas.
+2025-06-04 15:32:25,681 - src.ultibot_ui.windows.main_window - INFO - MainWindow inicializada y visible.
+2025-06-04 15:32:25,821 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:32:25,822 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: _schedule_task INVOCADO
+2025-06-04 15:32:25,822 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: _schedule_task - Bucle de eventos obtenido y en ejecución: <_WindowsSelectorEventLoop running=True closed=False debug=False>
+2025-06-04 15:32:25,822 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: _schedule_task - Tarea creada en el bucle.
+2025-06-04 15:32:25,824 - src.ultibot_ui.views.portfolio_view - INFO - PortfolioView: Fetching portfolio snapshot.
+2025-06-04 15:32:25,827 - root - INFO - Programando carga inicial de estados de trading con ApiWorker.
+2025-06-04 15:32:25,827 - root - INFO - Iniciando ApiWorker para _load_initial_paper_trading_status.
+2025-06-04 15:32:25,828 - root - INFO - Iniciando ApiWorker para _load_initial_real_trading_status.
+2025-06-04 15:32:25,955 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:32:25,958 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:32:26,086 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76EF4190>
+2025-06-04 15:32:26,086 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:32:26,086 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:32:26,086 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:32:26,087 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:32:26,087 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:32:26,089 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:32:25 GMT'), (b'server', b'uvicorn'), (b'content-length', b'355'), (b'content-type', b'application/json')])
+2025-06-04 15:32:26,089 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001?trading_mode=paper "HTTP/1.1 200 OK"
+2025-06-04 15:32:26,089 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:32:26,089 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:32:26,089 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:32:26,089 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:32:26,090 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:32:26,090 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:32:26,090 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: portfolio_snapshot obtenido: True
+2025-06-04 15:32:26,090 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades abiertos para usuario 00000000-0000-0000-0000-000000000001, modo: paper
+2025-06-04 15:32:26,090 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:32:26,090 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:32:26,091 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:32:26,220 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76D90910>
+2025-06-04 15:32:26,221 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:32:26,221 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76F00510>
+2025-06-04 15:32:26,221 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:32:26,221 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:32:26,221 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:32:26,221 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:32:26,221 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:32:26,222 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:32:26,222 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:32:26,222 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:32:26,222 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:32:26,224 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:32:25 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
+2025-06-04 15:32:26,225 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades/00000000-0000-0000-0000-000000000001?trading_mode=paper&limit=500&offset=0&date_from=2025-05-05&date_to=2025-06-04 "HTTP/1.1 200 OK"
+2025-06-04 15:32:26,225 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:32:26,225 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:32:26,225 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:32:26,225 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:32:26,225 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:32:26,225 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:32:26,225 - src.ultibot_ui.widgets.paper_trading_report_widget - INFO - Trades cargados exitosamente: 0 trades
+2025-06-04 15:32:26,274 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:32:26,355 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:32:25 GMT'), (b'server', b'uvicorn'), (b'content-length', b'309'), (b'content-type', b'application/json')])
+2025-06-04 15:32:26,355 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/paper/performance_summary?start_date=2025-05-05T00%3A00%3A00&end_date=2025-06-04T23%3A59%3A59.999999 "HTTP/1.1 200 OK"
+2025-06-04 15:32:26,355 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:32:26,355 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:32:26,356 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:32:26,356 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:32:26,356 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:32:26,356 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:32:26,357 - src.ultibot_ui.widgets.paper_trading_report_widget - INFO - Métricas de rendimiento cargadas exitosamente
+2025-06-04 15:32:26,535 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76E24FC0>
+2025-06-04 15:32:26,535 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:32:26,535 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:32:26,536 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:32:26,536 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:32:26,536 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:32:26,537 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:32:26 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
+2025-06-04 15:32:26,537 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades/00000000-0000-0000-0000-000000000001/open?trading_mode=paper "HTTP/1.1 200 OK"
+2025-06-04 15:32:26,537 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:32:26,537 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:32:26,537 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:32:26,537 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:32:26,537 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:32:26,537 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:32:26,537 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: open_trades obtenido: True
+2025-06-04 15:32:26,538 - src.ultibot_ui.services.api_client - INFO - Obteniendo estado de gestión de capital.
+2025-06-04 15:32:26,538 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trading/capital-management/status
+2025-06-04 15:32:26,538 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:32:26,539 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:32:26,715 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:32:26,971 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76F08830>
+2025-06-04 15:32:26,971 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:32:26,971 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:32:26,971 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:32:26,971 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:32:26,972 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:32:26,974 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:32:26 GMT'), (b'server', b'uvicorn'), (b'content-length', b'82'), (b'content-type', b'application/json')])
+2025-06-04 15:32:26,974 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trading/capital-management/status "HTTP/1.1 200 OK"
+2025-06-04 15:32:26,974 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:32:26,974 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:32:26,974 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:32:26,974 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:32:26,974 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:32:26,975 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:32:26,975 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: capital_status obtenido: True
+2025-06-04 15:32:26,978 - src.ultibot_ui.widgets.portfolio_widget - INFO - Worker de actualización finalizado.
+2025-06-04 15:32:30,635 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: Fetching Gemini IA opportunities.
+2025-06-04 15:32:30,635 - src.ultibot_ui.views.opportunities_view - DEBUG - OpportunitiesView: Attempting to get get_gemini_opportunities coroutine.
+2025-06-04 15:32:30,635 - src.ultibot_ui.views.opportunities_view - DEBUG - OpportunitiesView: Coroutine object created: <coroutine object UltiBotAPIClient.get_gemini_opportunities at 0x0000020C76DFFD30>
+2025-06-04 15:32:40,572 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
+2025-06-04 15:32:40,572 - asyncio - DEBUG - Using selector: SelectSelector
+2025-06-04 15:32:40,573 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: Iniciando actualización para user 00000000-0000-0000-0000-000000000001, modo paper
+2025-06-04 15:32:40,574 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot de portafolio para usuario 00000000-0000-0000-0000-000000000001, modo: paper
+2025-06-04 15:32:40,574 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:32:40,574 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:32:40,575 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:32:40,740 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:32:41,007 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76EF1F20>
+2025-06-04 15:32:41,007 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:32:41,007 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:32:41,007 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:32:41,008 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:32:41,008 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:32:41,010 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:32:40 GMT'), (b'server', b'uvicorn'), (b'content-length', b'355'), (b'content-type', b'application/json')])
+2025-06-04 15:32:41,011 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001?trading_mode=paper "HTTP/1.1 200 OK"
+2025-06-04 15:32:41,011 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:32:41,011 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:32:41,011 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:32:41,011 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:32:41,011 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:32:41,011 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:32:41,011 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: portfolio_snapshot obtenido: True
+2025-06-04 15:32:41,011 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades abiertos para usuario 00000000-0000-0000-0000-000000000001, modo: paper
+2025-06-04 15:32:41,011 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:32:41,011 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:32:41,012 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:32:41,181 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:32:41,446 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76EF3BD0>
+2025-06-04 15:32:41,446 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:32:41,446 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:32:41,447 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:32:41,447 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:32:41,447 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:32:41,449 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:32:40 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
+2025-06-04 15:32:41,449 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades/00000000-0000-0000-0000-000000000001/open?trading_mode=paper "HTTP/1.1 200 OK"
+2025-06-04 15:32:41,449 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:32:41,449 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:32:41,450 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:32:41,450 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:32:41,450 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:32:41,450 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:32:41,450 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: open_trades obtenido: True
+2025-06-04 15:32:41,450 - src.ultibot_ui.services.api_client - INFO - Obteniendo estado de gestión de capital.
+2025-06-04 15:32:41,450 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trading/capital-management/status
+2025-06-04 15:32:41,450 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:32:41,451 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:32:41,616 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:32:41,874 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C7AB19450>
+2025-06-04 15:32:41,874 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:32:41,874 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:32:41,874 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:32:41,874 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:32:41,875 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:32:41,877 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:32:41 GMT'), (b'server', b'uvicorn'), (b'content-length', b'82'), (b'content-type', b'application/json')])
+2025-06-04 15:32:41,877 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trading/capital-management/status "HTTP/1.1 200 OK"
+2025-06-04 15:32:41,877 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:32:41,877 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:32:41,878 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:32:41,878 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:32:41,878 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:32:41,878 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:32:41,878 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: capital_status obtenido: True
+2025-06-04 15:32:41,879 - src.ultibot_ui.widgets.portfolio_widget - INFO - Worker de actualización finalizado.
+2025-06-04 15:32:55,574 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
+2025-06-04 15:32:55,574 - asyncio - DEBUG - Using selector: SelectSelector
+2025-06-04 15:32:55,575 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: Iniciando actualización para user 00000000-0000-0000-0000-000000000001, modo paper
+2025-06-04 15:32:55,575 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot de portafolio para usuario 00000000-0000-0000-0000-000000000001, modo: paper
+2025-06-04 15:32:55,576 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:32:55,576 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:32:55,577 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:32:55,653 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: Fetching Gemini IA opportunities.
+2025-06-04 15:32:55,653 - src.ultibot_ui.views.opportunities_view - DEBUG - OpportunitiesView: Attempting to get get_gemini_opportunities coroutine.
+2025-06-04 15:32:55,653 - src.ultibot_ui.views.opportunities_view - DEBUG - OpportunitiesView: Coroutine object created: <coroutine object UltiBotAPIClient.get_gemini_opportunities at 0x0000020C76EBC5F0>
+2025-06-04 15:32:55,746 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:32:56,001 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C7AB1B050>
+2025-06-04 15:32:56,002 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:32:56,002 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:32:56,002 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:32:56,002 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:32:56,002 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:32:56,003 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:32:55 GMT'), (b'server', b'uvicorn'), (b'content-length', b'355'), (b'content-type', b'application/json')])
+2025-06-04 15:32:56,003 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001?trading_mode=paper "HTTP/1.1 200 OK"
+2025-06-04 15:32:56,003 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:32:56,003 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:32:56,004 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:32:56,004 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:32:56,004 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:32:56,004 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:32:56,004 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: portfolio_snapshot obtenido: True
+2025-06-04 15:32:56,004 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades abiertos para usuario 00000000-0000-0000-0000-000000000001, modo: paper
+2025-06-04 15:32:56,004 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:32:56,004 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:32:56,005 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:32:56,192 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:32:56,455 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C7AB34230>
+2025-06-04 15:32:56,456 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:32:56,456 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:32:56,456 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:32:56,456 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:32:56,456 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:32:56,458 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:32:56 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
+2025-06-04 15:32:56,458 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades/00000000-0000-0000-0000-000000000001/open?trading_mode=paper "HTTP/1.1 200 OK"
+2025-06-04 15:32:56,458 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:32:56,458 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:32:56,458 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:32:56,458 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:32:56,458 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:32:56,458 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:32:56,459 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: open_trades obtenido: True
+2025-06-04 15:32:56,459 - src.ultibot_ui.services.api_client - INFO - Obteniendo estado de gestión de capital.
+2025-06-04 15:32:56,459 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trading/capital-management/status
+2025-06-04 15:32:56,459 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:32:56,459 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:32:56,631 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:32:56,888 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C7AB36030>
+2025-06-04 15:32:56,889 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:32:56,890 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:32:56,890 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:32:56,890 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:32:56,890 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:32:56,891 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:32:56 GMT'), (b'server', b'uvicorn'), (b'content-length', b'82'), (b'content-type', b'application/json')])
+2025-06-04 15:32:56,891 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trading/capital-management/status "HTTP/1.1 200 OK"
+2025-06-04 15:32:56,891 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:32:56,891 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:32:56,891 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:32:56,892 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:32:56,892 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:32:56,892 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:32:56,892 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: capital_status obtenido: True
+2025-06-04 15:32:56,892 - src.ultibot_ui.widgets.portfolio_widget - INFO - Worker de actualización finalizado.
+2025-06-04 15:33:10,571 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
+2025-06-04 15:33:10,571 - asyncio - DEBUG - Using selector: SelectSelector
+2025-06-04 15:33:10,572 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: Iniciando actualización para user 00000000-0000-0000-0000-000000000001, modo paper
+2025-06-04 15:33:10,572 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot de portafolio para usuario 00000000-0000-0000-0000-000000000001, modo: paper
+2025-06-04 15:33:10,573 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:33:10,573 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:33:10,573 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:33:10,748 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:33:11,005 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C7AB27770>
+2025-06-04 15:33:11,006 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:11,006 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:33:11,006 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:33:11,006 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:33:11,007 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:11,009 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:33:10 GMT'), (b'server', b'uvicorn'), (b'content-length', b'355'), (b'content-type', b'application/json')])
+2025-06-04 15:33:11,009 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001?trading_mode=paper "HTTP/1.1 200 OK"
+2025-06-04 15:33:11,009 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:33:11,009 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:33:11,009 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:33:11,010 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:33:11,010 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:33:11,010 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:33:11,010 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: portfolio_snapshot obtenido: True
+2025-06-04 15:33:11,010 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades abiertos para usuario 00000000-0000-0000-0000-000000000001, modo: paper
+2025-06-04 15:33:11,010 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:33:11,010 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:33:11,010 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:33:11,183 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:33:11,451 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C7AB49470>
+2025-06-04 15:33:11,451 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:11,451 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:33:11,451 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:33:11,451 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:33:11,451 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:11,453 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:33:10 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
+2025-06-04 15:33:11,453 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades/00000000-0000-0000-0000-000000000001/open?trading_mode=paper "HTTP/1.1 200 OK"
+2025-06-04 15:33:11,453 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:33:11,453 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:33:11,453 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:33:11,453 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:33:11,453 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:33:11,454 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:33:11,454 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: open_trades obtenido: True
+2025-06-04 15:33:11,454 - src.ultibot_ui.services.api_client - INFO - Obteniendo estado de gestión de capital.
+2025-06-04 15:33:11,454 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trading/capital-management/status
+2025-06-04 15:33:11,454 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:33:11,455 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:33:11,624 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:33:11,880 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76EBD980>
+2025-06-04 15:33:11,881 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:11,881 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:33:11,882 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:33:11,882 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:33:11,882 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:11,883 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:33:11 GMT'), (b'server', b'uvicorn'), (b'content-length', b'82'), (b'content-type', b'application/json')])
+2025-06-04 15:33:11,884 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trading/capital-management/status "HTTP/1.1 200 OK"
+2025-06-04 15:33:11,884 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:33:11,884 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:33:11,884 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:33:11,884 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:33:11,885 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:33:11,885 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:33:11,885 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: capital_status obtenido: True
+2025-06-04 15:33:11,885 - src.ultibot_ui.widgets.portfolio_widget - INFO - Worker de actualización finalizado.
+2025-06-04 15:33:25,577 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
+2025-06-04 15:33:25,577 - asyncio - DEBUG - Using selector: SelectSelector
+2025-06-04 15:33:25,578 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: Iniciando actualización para user 00000000-0000-0000-0000-000000000001, modo paper
+2025-06-04 15:33:25,578 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot de portafolio para usuario 00000000-0000-0000-0000-000000000001, modo: paper
+2025-06-04 15:33:25,578 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:33:25,578 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:33:25,579 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:33:25,655 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: Fetching Gemini IA opportunities.
+2025-06-04 15:33:25,655 - src.ultibot_ui.views.opportunities_view - DEBUG - OpportunitiesView: Attempting to get get_gemini_opportunities coroutine.
+2025-06-04 15:33:25,655 - src.ultibot_ui.views.opportunities_view - DEBUG - OpportunitiesView: Coroutine object created: <coroutine object UltiBotAPIClient.get_gemini_opportunities at 0x0000020C76EBC5F0>
+2025-06-04 15:33:25,760 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:33:26,021 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76DCE690>
+2025-06-04 15:33:26,021 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:26,021 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:33:26,022 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:33:26,022 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:33:26,022 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:26,023 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:33:25 GMT'), (b'server', b'uvicorn'), (b'content-length', b'355'), (b'content-type', b'application/json')])
+2025-06-04 15:33:26,023 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001?trading_mode=paper "HTTP/1.1 200 OK"
+2025-06-04 15:33:26,023 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:33:26,024 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:33:26,024 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:33:26,024 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:33:26,024 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:33:26,024 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:33:26,024 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: portfolio_snapshot obtenido: True
+2025-06-04 15:33:26,024 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades abiertos para usuario 00000000-0000-0000-0000-000000000001, modo: paper
+2025-06-04 15:33:26,024 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:33:26,024 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:33:26,025 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:33:26,197 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:33:26,450 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76F00290>
+2025-06-04 15:33:26,450 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:26,450 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:33:26,450 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:33:26,450 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:33:26,450 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:26,451 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:33:25 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
+2025-06-04 15:33:26,452 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades/00000000-0000-0000-0000-000000000001/open?trading_mode=paper "HTTP/1.1 200 OK"
+2025-06-04 15:33:26,452 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:33:26,452 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:33:26,452 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:33:26,452 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:33:26,452 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:33:26,452 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:33:26,452 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: open_trades obtenido: True
+2025-06-04 15:33:26,452 - src.ultibot_ui.services.api_client - INFO - Obteniendo estado de gestión de capital.
+2025-06-04 15:33:26,452 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trading/capital-management/status
+2025-06-04 15:33:26,452 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:33:26,453 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:33:26,630 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:33:26,895 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76E42570>
+2025-06-04 15:33:26,895 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:26,896 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:33:26,896 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:33:26,896 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:33:26,896 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:26,898 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:33:25 GMT'), (b'server', b'uvicorn'), (b'content-length', b'82'), (b'content-type', b'application/json')])
+2025-06-04 15:33:26,898 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trading/capital-management/status "HTTP/1.1 200 OK"
+2025-06-04 15:33:26,898 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:33:26,898 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:33:26,898 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:33:26,898 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:33:26,898 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:33:26,899 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:33:26,899 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: capital_status obtenido: True
+2025-06-04 15:33:26,899 - src.ultibot_ui.widgets.portfolio_widget - INFO - Worker de actualización finalizado.
+2025-06-04 15:33:40,575 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
+2025-06-04 15:33:40,576 - asyncio - DEBUG - Using selector: SelectSelector
+2025-06-04 15:33:40,577 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: Iniciando actualización para user 00000000-0000-0000-0000-000000000001, modo paper
+2025-06-04 15:33:40,577 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot de portafolio para usuario 00000000-0000-0000-0000-000000000001, modo: paper
+2025-06-04 15:33:40,577 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:33:40,578 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:33:40,578 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:33:40,741 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:33:40,997 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C7AB38470>
+2025-06-04 15:33:40,998 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:40,998 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:33:40,998 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:33:40,998 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:33:40,998 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:40,999 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:33:40 GMT'), (b'server', b'uvicorn'), (b'content-length', b'355'), (b'content-type', b'application/json')])
+2025-06-04 15:33:41,000 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001?trading_mode=paper "HTTP/1.1 200 OK"
+2025-06-04 15:33:41,000 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:33:41,000 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:33:41,000 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:33:41,000 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:33:41,000 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:33:41,000 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:33:41,000 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: portfolio_snapshot obtenido: True
+2025-06-04 15:33:41,000 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades abiertos para usuario 00000000-0000-0000-0000-000000000001, modo: paper
+2025-06-04 15:33:41,000 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:33:41,000 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:33:41,001 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:33:41,168 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:33:41,436 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76EE2AD0>
+2025-06-04 15:33:41,436 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:41,437 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:33:41,437 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:33:41,437 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:33:41,437 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:41,439 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:33:41 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
+2025-06-04 15:33:41,439 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades/00000000-0000-0000-0000-000000000001/open?trading_mode=paper "HTTP/1.1 200 OK"
+2025-06-04 15:33:41,440 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:33:41,440 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:33:41,440 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:33:41,440 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:33:41,440 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:33:41,440 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:33:41,440 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: open_trades obtenido: True
+2025-06-04 15:33:41,440 - src.ultibot_ui.services.api_client - INFO - Obteniendo estado de gestión de capital.
+2025-06-04 15:33:41,440 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trading/capital-management/status
+2025-06-04 15:33:41,440 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:33:41,441 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:33:41,608 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:33:41,865 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C7AB28370>
+2025-06-04 15:33:41,865 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:41,866 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:33:41,866 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:33:41,866 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:33:41,866 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:41,868 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:33:41 GMT'), (b'server', b'uvicorn'), (b'content-length', b'82'), (b'content-type', b'application/json')])
+2025-06-04 15:33:41,869 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trading/capital-management/status "HTTP/1.1 200 OK"
+2025-06-04 15:33:41,869 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:33:41,869 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:33:41,869 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:33:41,869 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:33:41,869 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:33:41,869 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:33:41,869 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: capital_status obtenido: True
+2025-06-04 15:33:41,870 - src.ultibot_ui.widgets.portfolio_widget - INFO - Worker de actualización finalizado.
+2025-06-04 15:33:50,852 - src.ultibot_ui.services.trading_mode_state - INFO - Trading mode changed from paper to real
+2025-06-04 15:33:50,853 - src.ultibot_ui.windows.dashboard_view - INFO - Dashboard: Trading mode changed to real
+2025-06-04 15:33:50,853 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: real
+2025-06-04 15:33:50,853 - asyncio - DEBUG - Using selector: SelectSelector
+2025-06-04 15:33:50,853 - src.ultibot_ui.widgets.trading_mode_selector - DEBUG - External mode change detected: real
+2025-06-04 15:33:50,853 - src.ultibot_ui.widgets.portfolio_widget - INFO - PortfolioWidget: Modo de trading cambió a real
+2025-06-04 15:33:50,854 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: real
+2025-06-04 15:33:50,854 - src.ultibot_ui.widgets.order_form_widget - INFO - OrderFormWidget: Modo de trading cambió a real
+2025-06-04 15:33:50,854 - src.ultibot_ui.views.portfolio_view - INFO - PortfolioView: Trading mode changed to real. Refreshing data.
+2025-06-04 15:33:50,854 - src.ultibot_ui.views.portfolio_view - INFO - PortfolioView: Fetching portfolio snapshot.
+2025-06-04 15:33:50,854 - asyncio - DEBUG - Using selector: SelectSelector
+2025-06-04 15:33:50,854 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: Iniciando actualización para user 00000000-0000-0000-0000-000000000001, modo real
+2025-06-04 15:33:50,855 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot de portafolio para usuario 00000000-0000-0000-0000-000000000001, modo: real
+2025-06-04 15:33:50,855 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:33:50,855 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:33:50,855 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: Iniciando actualización para user 00000000-0000-0000-0000-000000000001, modo real
+2025-06-04 15:33:50,855 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:33:50,856 - src.ultibot_ui.widgets.trading_mode_selector - INFO - Toggle button clicked, new mode: real
+2025-06-04 15:33:50,856 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot de portafolio para usuario 00000000-0000-0000-0000-000000000001, modo: real
+2025-06-04 15:33:50,856 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:33:50,857 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:33:50,857 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:33:51,110 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:33:51,115 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:33:51,372 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76ED3B60>
+2025-06-04 15:33:51,372 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:51,373 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:33:51,373 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:33:51,373 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:33:51,373 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:51,373 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76EF83D0>
+2025-06-04 15:33:51,373 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:51,373 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:33:51,374 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:33:51,374 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:33:51,374 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:53,670 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:33:51 GMT'), (b'server', b'uvicorn'), (b'content-length', b'1257'), (b'content-type', b'application/json')])
+2025-06-04 15:33:53,671 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001?trading_mode=real "HTTP/1.1 200 OK"
+2025-06-04 15:33:53,671 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:33:53,671 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:33:53,671 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:33:53,671 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:33:53,671 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:33:53,672 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:33:53,672 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: portfolio_snapshot obtenido: True
+2025-06-04 15:33:53,672 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades abiertos para usuario 00000000-0000-0000-0000-000000000001, modo: real
+2025-06-04 15:33:53,672 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:33:53,672 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:33:53,673 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:33:53,683 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:33:51 GMT'), (b'server', b'uvicorn'), (b'content-length', b'1257'), (b'content-type', b'application/json')])
+2025-06-04 15:33:53,684 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001?trading_mode=real "HTTP/1.1 200 OK"
+2025-06-04 15:33:53,684 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:33:53,684 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:33:53,684 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:33:53,684 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:33:53,684 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:33:53,684 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:33:53,684 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: portfolio_snapshot obtenido: True
+2025-06-04 15:33:53,684 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades abiertos para usuario 00000000-0000-0000-0000-000000000001, modo: real
+2025-06-04 15:33:53,684 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:33:53,684 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:33:53,685 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:33:53,918 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:33:53,931 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:33:54,183 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C7AB1D0D0>
+2025-06-04 15:33:54,183 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76EE97F0>
+2025-06-04 15:33:54,184 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:54,184 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:54,184 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:33:54,184 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:33:54,185 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:33:54,185 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:33:54,185 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:54,184 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:33:54,185 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:33:54,185 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:54,186 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:33:53 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
+2025-06-04 15:33:54,186 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades/00000000-0000-0000-0000-000000000001/open?trading_mode=real "HTTP/1.1 200 OK"
+2025-06-04 15:33:54,186 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:33:54,187 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:33:54,187 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:33:53 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
+2025-06-04 15:33:54,187 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:33:54,187 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades/00000000-0000-0000-0000-000000000001/open?trading_mode=real "HTTP/1.1 200 OK"
+2025-06-04 15:33:54,187 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:33:54,187 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:33:54,187 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:33:54,187 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:33:54,187 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:33:54,188 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:33:54,188 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: open_trades obtenido: True
+2025-06-04 15:33:54,188 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:33:54,188 - src.ultibot_ui.services.api_client - INFO - Obteniendo estado de gestión de capital.
+2025-06-04 15:33:54,188 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:33:54,188 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trading/capital-management/status
+2025-06-04 15:33:54,188 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:33:54,188 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:33:54,189 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: open_trades obtenido: True
+2025-06-04 15:33:54,189 - src.ultibot_ui.services.api_client - INFO - Obteniendo estado de gestión de capital.
+2025-06-04 15:33:54,189 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trading/capital-management/status
+2025-06-04 15:33:54,189 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:33:54,189 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:33:54,189 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:33:54,443 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:33:54,445 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:33:54,705 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C7AB45550>
+2025-06-04 15:33:54,706 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:54,706 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:33:54,706 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:33:54,706 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:33:54,706 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:54,707 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C7AB3FE90>
+2025-06-04 15:33:54,707 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:54,707 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:33:54,707 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:33:54,707 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:33:54,707 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:54,708 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:33:54 GMT'), (b'server', b'uvicorn'), (b'content-length', b'82'), (b'content-type', b'application/json')])
+2025-06-04 15:33:54,709 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trading/capital-management/status "HTTP/1.1 200 OK"
+2025-06-04 15:33:54,709 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:33:54,709 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:33:54,709 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:33:54,709 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:33:54,709 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:33:54,709 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:33:54 GMT'), (b'server', b'uvicorn'), (b'content-length', b'82'), (b'content-type', b'application/json')])
+2025-06-04 15:33:54,709 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trading/capital-management/status "HTTP/1.1 200 OK"
+2025-06-04 15:33:54,709 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:33:54,709 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:33:54,709 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: capital_status obtenido: True
+2025-06-04 15:33:54,710 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:33:54,710 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:33:54,710 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:33:54,710 - src.ultibot_ui.widgets.portfolio_widget - INFO - Worker de actualización finalizado.
+2025-06-04 15:33:54,710 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:33:54,711 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:33:54,711 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: capital_status obtenido: True
+2025-06-04 15:33:54,711 - src.ultibot_ui.widgets.portfolio_widget - INFO - Worker de actualización finalizado.
+2025-06-04 15:33:55,578 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: real
+2025-06-04 15:33:55,579 - asyncio - DEBUG - Using selector: SelectSelector
+2025-06-04 15:33:55,580 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: Iniciando actualización para user 00000000-0000-0000-0000-000000000001, modo real
+2025-06-04 15:33:55,580 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot de portafolio para usuario 00000000-0000-0000-0000-000000000001, modo: real
+2025-06-04 15:33:55,580 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:33:55,580 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:33:55,581 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:33:55,657 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: Fetching Gemini IA opportunities.
+2025-06-04 15:33:55,657 - src.ultibot_ui.views.opportunities_view - DEBUG - OpportunitiesView: Attempting to get get_gemini_opportunities coroutine.
+2025-06-04 15:33:55,657 - src.ultibot_ui.views.opportunities_view - DEBUG - OpportunitiesView: Coroutine object created: <coroutine object UltiBotAPIClient.get_gemini_opportunities at 0x0000020C76EBC5F0>
+2025-06-04 15:33:55,749 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:33:56,024 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76D8CB30>
+2025-06-04 15:33:56,024 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:56,025 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:33:56,025 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:33:56,025 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:33:56,025 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:57,913 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:33:55 GMT'), (b'server', b'uvicorn'), (b'content-length', b'1249'), (b'content-type', b'application/json')])
+2025-06-04 15:33:57,913 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001?trading_mode=real "HTTP/1.1 200 OK"
+2025-06-04 15:33:57,914 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:33:57,914 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:33:57,914 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:33:57,914 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:33:57,914 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:33:57,914 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:33:57,914 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: portfolio_snapshot obtenido: True
+2025-06-04 15:33:57,914 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades abiertos para usuario 00000000-0000-0000-0000-000000000001, modo: real
+2025-06-04 15:33:57,914 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:33:57,915 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:33:57,915 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:33:58,084 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:33:58,340 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76EDF930>
+2025-06-04 15:33:58,341 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:58,341 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:33:58,341 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:33:58,341 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:33:58,341 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:58,343 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:33:58 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
+2025-06-04 15:33:58,344 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades/00000000-0000-0000-0000-000000000001/open?trading_mode=real "HTTP/1.1 200 OK"
+2025-06-04 15:33:58,344 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:33:58,344 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:33:58,344 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:33:58,344 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:33:58,345 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:33:58,345 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:33:58,345 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: open_trades obtenido: True
+2025-06-04 15:33:58,345 - src.ultibot_ui.services.api_client - INFO - Obteniendo estado de gestión de capital.
+2025-06-04 15:33:58,345 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trading/capital-management/status
+2025-06-04 15:33:58,345 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:33:58,346 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:33:58,516 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:33:58,770 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76E6F3E0>
+2025-06-04 15:33:58,770 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:58,771 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:33:58,771 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:33:58,771 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:33:58,771 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:33:58,773 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:33:58 GMT'), (b'server', b'uvicorn'), (b'content-length', b'82'), (b'content-type', b'application/json')])
+2025-06-04 15:33:58,773 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trading/capital-management/status "HTTP/1.1 200 OK"
+2025-06-04 15:33:58,773 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:33:58,773 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:33:58,773 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:33:58,773 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:33:58,773 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:33:58,774 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:33:58,774 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: capital_status obtenido: True
+2025-06-04 15:33:58,774 - src.ultibot_ui.widgets.portfolio_widget - INFO - Worker de actualización finalizado.
+2025-06-04 15:34:10,578 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: real
+2025-06-04 15:34:10,578 - asyncio - DEBUG - Using selector: SelectSelector
+2025-06-04 15:34:10,579 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: Iniciando actualización para user 00000000-0000-0000-0000-000000000001, modo real
+2025-06-04 15:34:10,579 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot de portafolio para usuario 00000000-0000-0000-0000-000000000001, modo: real
+2025-06-04 15:34:10,579 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:34:10,579 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:34:10,580 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:34:10,764 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:34:11,023 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76E9DE00>
+2025-06-04 15:34:11,023 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:34:11,023 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:34:11,023 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:34:11,023 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:34:11,023 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:34:12,644 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:34:10 GMT'), (b'server', b'uvicorn'), (b'content-length', b'1249'), (b'content-type', b'application/json')])
+2025-06-04 15:34:12,644 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001?trading_mode=real "HTTP/1.1 200 OK"
+2025-06-04 15:34:12,645 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:34:12,645 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:34:12,645 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:34:12,645 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:34:12,645 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:34:12,645 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:34:12,646 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: portfolio_snapshot obtenido: True
+2025-06-04 15:34:12,646 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades abiertos para usuario 00000000-0000-0000-0000-000000000001, modo: real
+2025-06-04 15:34:12,646 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:34:12,646 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:34:12,646 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:34:12,818 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:34:13,085 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C7AB41810>
+2025-06-04 15:34:13,085 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:34:13,086 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:34:13,086 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:34:13,086 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:34:13,086 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:34:13,088 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:34:12 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
+2025-06-04 15:34:13,088 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades/00000000-0000-0000-0000-000000000001/open?trading_mode=real "HTTP/1.1 200 OK"
+2025-06-04 15:34:13,088 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:34:13,088 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:34:13,088 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:34:13,089 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:34:13,089 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:34:13,089 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:34:13,089 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: open_trades obtenido: True
+2025-06-04 15:34:13,089 - src.ultibot_ui.services.api_client - INFO - Obteniendo estado de gestión de capital.
+2025-06-04 15:34:13,089 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trading/capital-management/status
+2025-06-04 15:34:13,089 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:34:13,089 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:34:13,258 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:34:13,518 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C7AB41950>
+2025-06-04 15:34:13,518 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:34:13,518 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:34:13,518 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:34:13,518 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:34:13,518 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:34:13,520 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:34:13 GMT'), (b'server', b'uvicorn'), (b'content-length', b'82'), (b'content-type', b'application/json')])
+2025-06-04 15:34:13,521 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trading/capital-management/status "HTTP/1.1 200 OK"
+2025-06-04 15:34:13,521 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:34:13,521 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:34:13,521 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:34:13,521 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:34:13,521 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:34:13,522 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:34:13,522 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: capital_status obtenido: True
+2025-06-04 15:34:13,522 - src.ultibot_ui.widgets.portfolio_widget - INFO - Worker de actualización finalizado.
+2025-06-04 15:34:25,586 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: real
+2025-06-04 15:34:25,586 - asyncio - DEBUG - Using selector: SelectSelector
+2025-06-04 15:34:25,587 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: Iniciando actualización para user 00000000-0000-0000-0000-000000000001, modo real
+2025-06-04 15:34:25,587 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot de portafolio para usuario 00000000-0000-0000-0000-000000000001, modo: real
+2025-06-04 15:34:25,587 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:34:25,587 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:34:25,588 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:34:25,645 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: Fetching Gemini IA opportunities.
+2025-06-04 15:34:25,646 - src.ultibot_ui.views.opportunities_view - DEBUG - OpportunitiesView: Attempting to get get_gemini_opportunities coroutine.
+2025-06-04 15:34:25,646 - src.ultibot_ui.views.opportunities_view - DEBUG - OpportunitiesView: Coroutine object created: <coroutine object UltiBotAPIClient.get_gemini_opportunities at 0x0000020C76EBDF20>
+2025-06-04 15:34:25,766 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:34:26,027 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C7AB41E50>
+2025-06-04 15:34:26,028 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:34:26,028 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:34:26,028 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:34:26,028 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:34:26,028 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:34:27,673 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:34:25 GMT'), (b'server', b'uvicorn'), (b'content-length', b'1254'), (b'content-type', b'application/json')])
+2025-06-04 15:34:27,673 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001?trading_mode=real "HTTP/1.1 200 OK"
+2025-06-04 15:34:27,673 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:34:27,674 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:34:27,674 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:34:27,674 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:34:27,674 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:34:27,674 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:34:27,674 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: portfolio_snapshot obtenido: True
+2025-06-04 15:34:27,674 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades abiertos para usuario 00000000-0000-0000-0000-000000000001, modo: real
+2025-06-04 15:34:27,674 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:34:27,674 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:34:27,675 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:34:27,860 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:34:28,117 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C7AB430C0>
+2025-06-04 15:34:28,118 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:34:28,118 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:34:28,118 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:34:28,118 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:34:28,118 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:34:28,120 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:34:27 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
+2025-06-04 15:34:28,120 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades/00000000-0000-0000-0000-000000000001/open?trading_mode=real "HTTP/1.1 200 OK"
+2025-06-04 15:34:28,120 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:34:28,120 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:34:28,121 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:34:28,121 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:34:28,121 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:34:28,121 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:34:28,121 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: open_trades obtenido: True
+2025-06-04 15:34:28,121 - src.ultibot_ui.services.api_client - INFO - Obteniendo estado de gestión de capital.
+2025-06-04 15:34:28,121 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trading/capital-management/status
+2025-06-04 15:34:28,121 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:34:28,122 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:34:28,294 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:34:28,551 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C7AB43570>
+2025-06-04 15:34:28,551 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:34:28,552 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:34:28,552 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:34:28,552 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:34:28,552 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:34:28,554 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:34:27 GMT'), (b'server', b'uvicorn'), (b'content-length', b'82'), (b'content-type', b'application/json')])
+2025-06-04 15:34:28,554 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trading/capital-management/status "HTTP/1.1 200 OK"
+2025-06-04 15:34:28,555 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:34:28,555 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:34:28,555 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:34:28,555 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:34:28,555 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:34:28,556 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:34:28,556 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: capital_status obtenido: True
+2025-06-04 15:34:28,557 - src.ultibot_ui.widgets.portfolio_widget - INFO - Worker de actualización finalizado.
+2025-06-04 15:34:40,595 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: real
+2025-06-04 15:34:40,595 - asyncio - DEBUG - Using selector: SelectSelector
+2025-06-04 15:34:40,596 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: Iniciando actualización para user 00000000-0000-0000-0000-000000000001, modo real
+2025-06-04 15:34:40,597 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot de portafolio para usuario 00000000-0000-0000-0000-000000000001, modo: real
+2025-06-04 15:34:40,597 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:34:40,597 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:34:40,598 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:34:40,768 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:34:41,023 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C7AB43E30>
+2025-06-04 15:34:41,024 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:34:41,025 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:34:41,026 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:34:41,027 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:34:41,027 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:34:42,495 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:34:40 GMT'), (b'server', b'uvicorn'), (b'content-length', b'1245'), (b'content-type', b'application/json')])
+2025-06-04 15:34:42,496 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001?trading_mode=real "HTTP/1.1 200 OK"
+2025-06-04 15:34:42,497 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:34:42,497 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:34:42,498 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:34:42,498 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:34:42,499 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:34:42,499 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:34:42,499 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: portfolio_snapshot obtenido: True
+2025-06-04 15:34:42,500 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades abiertos para usuario 00000000-0000-0000-0000-000000000001, modo: real
+2025-06-04 15:34:42,500 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:34:42,500 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:34:42,501 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:34:42,674 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:34:42,929 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76EFC780>
+2025-06-04 15:34:42,930 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:34:42,930 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:34:42,932 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:34:42,933 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:34:42,934 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:34:42,935 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:34:42 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
+2025-06-04 15:34:42,935 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades/00000000-0000-0000-0000-000000000001/open?trading_mode=real "HTTP/1.1 200 OK"
+2025-06-04 15:34:42,935 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:34:42,936 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:34:42,936 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:34:42,936 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:34:42,937 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:34:42,937 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:34:42,937 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: open_trades obtenido: True
+2025-06-04 15:34:42,938 - src.ultibot_ui.services.api_client - INFO - Obteniendo estado de gestión de capital.
+2025-06-04 15:34:42,938 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trading/capital-management/status
+2025-06-04 15:34:42,939 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:34:42,940 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:34:43,110 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:34:43,376 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76EFCC80>
+2025-06-04 15:34:43,378 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:34:43,379 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:34:43,379 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:34:43,380 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:34:43,380 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:34:43,381 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:34:43 GMT'), (b'server', b'uvicorn'), (b'content-length', b'82'), (b'content-type', b'application/json')])
+2025-06-04 15:34:43,382 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trading/capital-management/status "HTTP/1.1 200 OK"
+2025-06-04 15:34:43,383 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:34:43,383 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:34:43,384 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:34:43,384 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:34:43,385 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:34:43,386 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:34:43,386 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: capital_status obtenido: True
+2025-06-04 15:34:43,387 - src.ultibot_ui.widgets.portfolio_widget - INFO - Worker de actualización finalizado.
+2025-06-04 15:34:55,597 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: real
+2025-06-04 15:34:55,597 - asyncio - DEBUG - Using selector: SelectSelector
+2025-06-04 15:34:55,599 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: Iniciando actualización para user 00000000-0000-0000-0000-000000000001, modo real
+2025-06-04 15:34:55,599 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot de portafolio para usuario 00000000-0000-0000-0000-000000000001, modo: real
+2025-06-04 15:34:55,599 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:34:55,600 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:34:55,601 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:34:55,661 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: Fetching Gemini IA opportunities.
+2025-06-04 15:34:55,662 - src.ultibot_ui.views.opportunities_view - DEBUG - OpportunitiesView: Attempting to get get_gemini_opportunities coroutine.
+2025-06-04 15:34:55,663 - src.ultibot_ui.views.opportunities_view - DEBUG - OpportunitiesView: Coroutine object created: <coroutine object UltiBotAPIClient.get_gemini_opportunities at 0x0000020C76EBE740>
+2025-06-04 15:34:55,773 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:34:56,034 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C7AB43D90>
+2025-06-04 15:34:56,035 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:34:56,036 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:34:56,036 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:34:56,037 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:34:56,037 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:34:57,819 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:34:55 GMT'), (b'server', b'uvicorn'), (b'content-length', b'1254'), (b'content-type', b'application/json')])
+2025-06-04 15:34:57,820 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001?trading_mode=real "HTTP/1.1 200 OK"
+2025-06-04 15:34:57,821 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:34:57,821 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:34:57,822 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:34:57,822 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:34:57,823 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:34:57,823 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:34:57,824 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: portfolio_snapshot obtenido: True
+2025-06-04 15:34:57,824 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades abiertos para usuario 00000000-0000-0000-0000-000000000001, modo: real
+2025-06-04 15:34:57,825 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:34:57,825 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:34:57,826 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:34:57,997 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:34:58,265 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C7AB434D0>
+2025-06-04 15:34:58,266 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:34:58,268 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:34:58,268 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:34:58,269 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:34:58,269 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:34:58,270 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:34:57 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
+2025-06-04 15:34:58,271 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades/00000000-0000-0000-0000-000000000001/open?trading_mode=real "HTTP/1.1 200 OK"
+2025-06-04 15:34:58,271 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:34:58,272 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:34:58,272 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:34:58,273 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:34:58,273 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:34:58,274 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:34:58,274 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: open_trades obtenido: True
+2025-06-04 15:34:58,275 - src.ultibot_ui.services.api_client - INFO - Obteniendo estado de gestión de capital.
+2025-06-04 15:34:58,275 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trading/capital-management/status
+2025-06-04 15:34:58,276 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:34:58,276 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:34:58,450 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:34:58,710 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C7AB432A0>
+2025-06-04 15:34:58,710 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:34:58,711 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:34:58,712 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:34:58,712 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:34:58,713 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:34:58,714 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:34:58 GMT'), (b'server', b'uvicorn'), (b'content-length', b'82'), (b'content-type', b'application/json')])
+2025-06-04 15:34:58,714 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trading/capital-management/status "HTTP/1.1 200 OK"
+2025-06-04 15:34:58,714 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:34:58,715 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:34:58,715 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:34:58,715 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:34:58,716 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:34:58,716 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:34:58,717 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: capital_status obtenido: True
+2025-06-04 15:34:58,718 - src.ultibot_ui.widgets.portfolio_widget - INFO - Worker de actualización finalizado.
+2025-06-04 15:35:10,597 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: real
+2025-06-04 15:35:10,597 - asyncio - DEBUG - Using selector: SelectSelector
+2025-06-04 15:35:10,599 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: Iniciando actualización para user 00000000-0000-0000-0000-000000000001, modo real
+2025-06-04 15:35:10,600 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot de portafolio para usuario 00000000-0000-0000-0000-000000000001, modo: real
+2025-06-04 15:35:10,600 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:35:10,601 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:35:10,602 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:35:10,787 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:35:11,042 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C7AB423A0>
+2025-06-04 15:35:11,043 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:35:11,043 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:35:11,044 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:35:11,044 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:35:11,045 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:35:12,569 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:35:10 GMT'), (b'server', b'uvicorn'), (b'content-length', b'1251'), (b'content-type', b'application/json')])
+2025-06-04 15:35:12,570 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001?trading_mode=real "HTTP/1.1 200 OK"
+2025-06-04 15:35:12,571 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:35:12,572 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:35:12,572 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:35:12,573 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:35:12,573 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:35:12,574 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:35:12,574 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: portfolio_snapshot obtenido: True
+2025-06-04 15:35:12,574 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades abiertos para usuario 00000000-0000-0000-0000-000000000001, modo: real
+2025-06-04 15:35:12,575 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:35:12,575 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:35:12,576 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:35:12,745 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:35:12,999 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C7AB43110>
+2025-06-04 15:35:13,000 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:35:13,000 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:35:13,002 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:35:13,003 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:35:13,004 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:35:13,004 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:35:12 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
+2025-06-04 15:35:13,005 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades/00000000-0000-0000-0000-000000000001/open?trading_mode=real "HTTP/1.1 200 OK"
+2025-06-04 15:35:13,005 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:35:13,006 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:35:13,007 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:35:13,007 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:35:13,007 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:35:13,008 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:35:13,008 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: open_trades obtenido: True
+2025-06-04 15:35:13,008 - src.ultibot_ui.services.api_client - INFO - Obteniendo estado de gestión de capital.
+2025-06-04 15:35:13,009 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trading/capital-management/status
+2025-06-04 15:35:13,009 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:35:13,010 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:35:13,196 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:35:13,461 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C7AB43F20>
+2025-06-04 15:35:13,461 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:35:13,463 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:35:13,463 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:35:13,465 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:35:13,465 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:35:13,466 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:35:13 GMT'), (b'server', b'uvicorn'), (b'content-length', b'82'), (b'content-type', b'application/json')])
+2025-06-04 15:35:13,466 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trading/capital-management/status "HTTP/1.1 200 OK"
+2025-06-04 15:35:13,467 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:35:13,468 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:35:13,468 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:35:13,468 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:35:13,469 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:35:13,469 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:35:13,470 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: capital_status obtenido: True
+2025-06-04 15:35:13,471 - src.ultibot_ui.widgets.portfolio_widget - INFO - Worker de actualización finalizado.
+2025-06-04 15:35:25,598 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: real
+2025-06-04 15:35:25,599 - asyncio - DEBUG - Using selector: SelectSelector
+2025-06-04 15:35:25,614 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: Iniciando actualización para user 00000000-0000-0000-0000-000000000001, modo real
+2025-06-04 15:35:25,615 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot de portafolio para usuario 00000000-0000-0000-0000-000000000001, modo: real
+2025-06-04 15:35:25,615 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:35:25,616 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:35:25,617 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:35:25,662 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: Fetching Gemini IA opportunities.
+2025-06-04 15:35:25,663 - src.ultibot_ui.views.opportunities_view - DEBUG - OpportunitiesView: Attempting to get get_gemini_opportunities coroutine.
+2025-06-04 15:35:25,663 - src.ultibot_ui.views.opportunities_view - DEBUG - OpportunitiesView: Coroutine object created: <coroutine object UltiBotAPIClient.get_gemini_opportunities at 0x0000020C76EBDF20>
+2025-06-04 15:35:25,785 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:35:26,043 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76E9D590>
+2025-06-04 15:35:26,044 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:35:26,045 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:35:26,045 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:35:26,047 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:35:26,047 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:35:27,529 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:35:25 GMT'), (b'server', b'uvicorn'), (b'content-length', b'1261'), (b'content-type', b'application/json')])
+2025-06-04 15:35:27,530 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001?trading_mode=real "HTTP/1.1 200 OK"
+2025-06-04 15:35:27,531 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:35:27,531 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:35:27,532 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:35:27,532 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:35:27,532 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:35:27,533 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:35:27,533 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: portfolio_snapshot obtenido: True
+2025-06-04 15:35:27,533 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades abiertos para usuario 00000000-0000-0000-0000-000000000001, modo: real
+2025-06-04 15:35:27,534 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:35:27,534 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:35:27,535 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:35:27,703 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:35:27,974 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76EDF2A0>
+2025-06-04 15:35:27,975 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:35:27,976 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:35:27,976 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:35:27,976 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:35:27,977 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:35:27,978 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:35:27 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
+2025-06-04 15:35:27,978 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades/00000000-0000-0000-0000-000000000001/open?trading_mode=real "HTTP/1.1 200 OK"
+2025-06-04 15:35:27,979 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:35:27,979 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:35:27,979 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:35:27,980 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:35:27,980 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:35:27,981 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:35:27,981 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: open_trades obtenido: True
+2025-06-04 15:35:27,981 - src.ultibot_ui.services.api_client - INFO - Obteniendo estado de gestión de capital.
+2025-06-04 15:35:27,981 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trading/capital-management/status
+2025-06-04 15:35:27,982 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:35:27,982 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:35:28,153 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:35:28,426 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76EDF520>
+2025-06-04 15:35:28,427 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:35:28,427 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:35:28,428 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:35:28,429 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:35:28,429 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:35:28,429 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:35:27 GMT'), (b'server', b'uvicorn'), (b'content-length', b'82'), (b'content-type', b'application/json')])
+2025-06-04 15:35:28,430 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trading/capital-management/status "HTTP/1.1 200 OK"
+2025-06-04 15:35:28,430 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:35:28,431 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:35:28,431 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:35:28,431 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:35:28,432 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:35:28,432 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:35:28,432 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: capital_status obtenido: True
+2025-06-04 15:35:28,433 - src.ultibot_ui.widgets.portfolio_widget - INFO - Worker de actualización finalizado.
+2025-06-04 15:35:40,613 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: real
+2025-06-04 15:35:40,613 - asyncio - DEBUG - Using selector: SelectSelector
+2025-06-04 15:35:40,615 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: Iniciando actualización para user 00000000-0000-0000-0000-000000000001, modo real
+2025-06-04 15:35:40,616 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot de portafolio para usuario 00000000-0000-0000-0000-000000000001, modo: real
+2025-06-04 15:35:40,617 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:35:40,617 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:35:40,618 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:35:40,785 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:35:41,045 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76EFC820>
+2025-06-04 15:35:41,046 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:35:41,046 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:35:41,047 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:35:41,047 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:35:41,048 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:35:43,587 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:35:40 GMT'), (b'server', b'uvicorn'), (b'content-length', b'1248'), (b'content-type', b'application/json')])
+2025-06-04 15:35:43,587 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001?trading_mode=real "HTTP/1.1 200 OK"
+2025-06-04 15:35:43,588 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:35:43,589 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:35:43,590 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:35:43,590 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:35:43,591 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:35:43,591 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:35:43,592 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: portfolio_snapshot obtenido: True
+2025-06-04 15:35:43,592 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades abiertos para usuario 00000000-0000-0000-0000-000000000001, modo: real
+2025-06-04 15:35:43,592 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:35:43,593 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:35:43,594 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:35:43,760 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:35:44,014 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76EFC410>
+2025-06-04 15:35:44,015 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:35:44,015 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:35:44,016 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:35:44,017 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:35:44,018 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:35:44,018 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:35:43 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
+2025-06-04 15:35:44,019 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades/00000000-0000-0000-0000-000000000001/open?trading_mode=real "HTTP/1.1 200 OK"
+2025-06-04 15:35:44,020 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:35:44,021 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:35:44,021 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:35:44,021 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:35:44,022 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:35:44,022 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:35:44,023 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: open_trades obtenido: True
+2025-06-04 15:35:44,023 - src.ultibot_ui.services.api_client - INFO - Obteniendo estado de gestión de capital.
+2025-06-04 15:35:44,024 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request_invoked for GET /api/v1/trading/capital-management/status
+2025-06-04 15:35:44,024 - httpx - DEBUG - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-04 15:35:44,025 - httpx - DEBUG - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-04 15:35:44,194 - httpcore.connection - DEBUG - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-04 15:35:44,461 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000020C76EFDA90>
+2025-06-04 15:35:44,462 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-04 15:35:44,463 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-04 15:35:44,464 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-04 15:35:44,465 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-04 15:35:44,465 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-04 15:35:44,466 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Wed, 04 Jun 2025 19:35:43 GMT'), (b'server', b'uvicorn'), (b'content-length', b'82'), (b'content-type', b'application/json')])
+2025-06-04 15:35:44,466 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trading/capital-management/status "HTTP/1.1 200 OK"
+2025-06-04 15:35:44,466 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-04 15:35:44,467 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-04 15:35:44,467 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-04 15:35:44,467 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-04 15:35:44,468 - httpcore.connection - DEBUG - close.started
+2025-06-04 15:35:44,468 - httpcore.connection - DEBUG - close.complete
+2025-06-04 15:35:44,469 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - DataUpdateWorker: capital_status obtenido: True
+2025-06-04 15:35:44,469 - src.ultibot_ui.widgets.portfolio_widget - INFO - Worker de actualización finalizado.

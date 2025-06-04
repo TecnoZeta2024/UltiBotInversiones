@@ -27,7 +27,7 @@ if sys.platform == "win32":
     except ImportError:
         logging.warning("win32api no encontrado. No se pudo establecer WindowsSelectorEventLoopPolicy. Esto puede causar problemas en Windows.")
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 
 # Importaciones organizadas: stdlib, third-party, local
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -395,6 +395,19 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+
+# Middleware de logging de solicitudes básicas
+@app.middleware("http")
+async def log_requests_middleware(request: Request, call_next):
+    logger.info(f"Middleware: Solicitud entrante: {request.method} {request.url.path}")
+    try:
+        response = await call_next(request)
+        logger.info(f"Middleware: Solicitud procesada: {request.method} {request.url.path} - Status: {response.status_code}")
+        return response
+    except Exception as e:
+        logger.error(f"Middleware: Error procesando solicitud: {request.method} {request.url.path} - Error: {e}", exc_info=True)
+        # Re-lanzar la excepción para que FastAPI la maneje como lo haría normalmente
+        raise
 
 
 @app.get("/", tags=["health"])
