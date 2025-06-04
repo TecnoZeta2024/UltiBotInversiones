@@ -102,7 +102,8 @@ class OpportunitiesView(QWidget):
         self._auto_refresh_timer.start()
 
     def _load_initial_data(self):
-        QTimer.singleShot(0, self._fetch_opportunities)
+        # Añadir un retraso de 5 segundos para dar tiempo al backend a estabilizarse completamente
+        QTimer.singleShot(5000, self._fetch_opportunities)
 
     def _apply_shadow_effect(self, widget: QWidget, color_hex: str = "#000000", blur_radius: int = 10, x_offset: int = 0, y_offset: int = 1):
         """Applies QGraphicsDropShadowEffect to a widget.
@@ -128,7 +129,9 @@ class OpportunitiesView(QWidget):
         self.refresh_button.setEnabled(False)
         self.opportunities_table.setRowCount(0) # Clear table while loading
 
+        logger.debug("OpportunitiesView: Attempting to get get_gemini_opportunities coroutine.")
         coroutine = self.api_client.get_gemini_opportunities()
+        logger.debug(f"OpportunitiesView: Coroutine object created: {coroutine}")
         self._start_api_worker(coroutine)
 
     def _start_api_worker(self, *args, **kwargs):
@@ -230,8 +233,8 @@ if __name__ == '__main__':
             except Exception as e:
                 self.error_occurred.emit(f"Unexpected test error: {str(e)}")
 
-    OriginalApiWorker = ApiWorker # Save original
-    ApiWorker = MockApiWorker # Override with mock for test
+    # ApiWorker original se guarda y MockApiWorker se asigna a ApiWorker DENTRO del if __name__ == '__main__'
+    # para que no afecte el scope global del módulo cuando es importado.
 
     class MockUltiBotAPIClient:
         def __init__(self, base_url=""): pass
@@ -251,6 +254,10 @@ if __name__ == '__main__':
 
 
     app = QApplication(sys.argv)
+
+    from src.ultibot_ui.main import ApiWorker # Importar ApiWorker para el bloque de prueba
+    OriginalApiWorker = ApiWorker # Guardar el original ANTES de sobreescribir
+    ApiWorker = MockApiWorker # Sobreescribir con el mock para este bloque de prueba
 
     # Test success case
     mock_client_success = MockUltiBotAPIClient()

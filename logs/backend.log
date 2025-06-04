@@ -1,102 +1,238 @@
-2025-06-04 14:08:17,462 - src.ultibot_backend.main - INFO - Logging configurado con RotatingFileHandler para escribir en logs/backend.log (max ~100KB).
-2025-06-04 14:08:17,472 - src.ultibot_backend.api.v1.endpoints.opportunities - INFO - Router de oportunidades inicializado: <fastapi.routing.APIRouter object at 0x0000019353511040>
-2025-06-04 14:08:17,525 - src.ultibot_backend.main - INFO - Iniciando UltiBot Backend...
-2025-06-04 14:08:17,525 - src.ultibot_backend.main - INFO - Inicializando servicios base...
-2025-06-04 14:08:18,385 - src.ultibot_backend.adapters.persistence_service - INFO - Conexión a la base de datos Supabase (psycopg) establecida exitosamente usando DSN directo.
-2025-06-04 14:08:18,561 - src.ultibot_backend.services.credential_service - INFO - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
-2025-06-04 14:08:18,562 - src.ultibot_backend.services.credential_service - INFO - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
-2025-06-04 14:08:18,562 - src.ultibot_backend.main - INFO - Inicializando servicios dependientes...
-2025-06-04 14:08:18,562 - src.ultibot_backend.main - INFO - Inicializando servicios de trading...
-2025-06-04 14:08:18,562 - src.ultibot_backend.services.order_execution_service - INFO - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
-2025-06-04 14:08:18,562 - src.ultibot_backend.services.unified_order_execution_service - INFO - UnifiedOrderExecutionService initialized with both real and paper execution services
-2025-06-04 14:08:18,562 - src.ultibot_backend.main - INFO - Inicializando servicios avanzados...
-2025-06-04 14:08:18,562 - src.ultibot_backend.main - INFO - PerformanceService inicializado.
-2025-06-04 14:08:18,758 - src.ultibot_backend.main - INFO - LLM Provider (ChatGoogleGenerativeAI) inicializado con GEMINI_API_KEY.
-2025-06-04 14:08:18,758 - src.ultibot_backend.main - INFO - AIOrchestrator inicializado.
-2025-06-04 14:08:18,758 - src.ultibot_backend.main - INFO - TradingReportService inicializado.
-2025-06-04 14:08:18,758 - src.ultibot_backend.main - INFO - Todos los servicios principales inicializados.
-2025-06-04 14:08:18,987 - src.ultibot_backend.main - INFO - Configuración de usuario cargada para 00000000-0000-0000-0000-000000000001.
-2025-06-04 14:08:19,104 - src.ultibot_backend.main - INFO - No se encontraron credenciales de Telegram para 00000000-0000-0000-0000-000000000001.
-2025-06-04 14:08:19,104 - src.ultibot_backend.main - INFO - Aplicación iniciada correctamente.
-2025-06-04 14:08:35,100 - root - INFO - Solicitud GET a /gemini/opportunities recibida.
-2025-06-04 14:09:24,448 - src.ultibot_backend.main - INFO - Logging configurado con RotatingFileHandler para escribir en logs/backend.log (max ~100KB).
-2025-06-04 14:09:24,458 - src.ultibot_backend.api.v1.endpoints.opportunities - INFO - Router de oportunidades inicializado: <fastapi.routing.APIRouter object at 0x0000022913D99040>
-2025-06-04 14:09:24,509 - src.ultibot_backend.main - INFO - Iniciando UltiBot Backend...
-2025-06-04 14:09:24,509 - src.ultibot_backend.main - INFO - Inicializando servicios base...
-2025-06-04 14:09:25,395 - src.ultibot_backend.adapters.persistence_service - INFO - Conexión a la base de datos Supabase (psycopg) establecida exitosamente usando DSN directo.
-2025-06-04 14:09:25,564 - src.ultibot_backend.services.credential_service - INFO - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
-2025-06-04 14:09:25,564 - src.ultibot_backend.services.credential_service - INFO - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
-2025-06-04 14:09:25,564 - src.ultibot_backend.main - INFO - Inicializando servicios dependientes...
-2025-06-04 14:09:25,564 - src.ultibot_backend.main - INFO - Inicializando servicios de trading...
-2025-06-04 14:09:25,564 - src.ultibot_backend.services.order_execution_service - INFO - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
-2025-06-04 14:09:25,564 - src.ultibot_backend.services.unified_order_execution_service - INFO - UnifiedOrderExecutionService initialized with both real and paper execution services
-2025-06-04 14:09:25,564 - src.ultibot_backend.main - INFO - Inicializando servicios avanzados...
-2025-06-04 14:09:25,564 - src.ultibot_backend.main - INFO - PerformanceService inicializado.
-2025-06-04 14:09:25,750 - src.ultibot_backend.main - INFO - LLM Provider (ChatGoogleGenerativeAI) inicializado con GEMINI_API_KEY.
-2025-06-04 14:09:25,750 - src.ultibot_backend.main - INFO - AIOrchestrator inicializado.
-2025-06-04 14:09:25,750 - src.ultibot_backend.main - INFO - TradingReportService inicializado.
-2025-06-04 14:09:25,750 - src.ultibot_backend.main - INFO - Todos los servicios principales inicializados.
-2025-06-04 14:09:25,991 - src.ultibot_backend.main - INFO - Configuración de usuario cargada para 00000000-0000-0000-0000-000000000001.
-2025-06-04 14:09:26,121 - src.ultibot_backend.main - INFO - No se encontraron credenciales de Telegram para 00000000-0000-0000-0000-000000000001.
-2025-06-04 14:09:26,121 - src.ultibot_backend.main - INFO - Aplicación iniciada correctamente.
-2025-06-04 14:10:37,999 - src.ultibot_backend.main - INFO - Iniciando limpieza de servicios...
-2025-06-04 14:10:37,999 - src.ultibot_backend.main - INFO - NotificationService cerrado correctamente.
-2025-06-04 14:10:38,003 - src.ultibot_backend.main - INFO - BinanceAdapter cerrado correctamente.
-2025-06-04 14:10:38,004 - src.ultibot_backend.adapters.persistence_service - INFO - Conexión a la base de datos Supabase (psycopg) cerrada.
-2025-06-04 14:10:38,004 - src.ultibot_backend.main - INFO - PersistenceService cerrado correctamente.
-2025-06-04 14:10:38,004 - src.ultibot_backend.main - INFO - Limpieza de servicios completada.
-2025-06-04 14:10:38,004 - src.ultibot_backend.main - INFO - Aplicación cerrada correctamente.
-2025-06-04 14:10:41,873 - src.ultibot_backend.main - INFO - Logging configurado con RotatingFileHandler para escribir en logs/backend.log (max ~100KB).
-2025-06-04 14:10:41,882 - src.ultibot_backend.api.v1.endpoints.opportunities - INFO - Router de oportunidades inicializado: <fastapi.routing.APIRouter object at 0x000001B4194A1040>
-2025-06-04 14:10:41,938 - src.ultibot_backend.main - INFO - Iniciando UltiBot Backend...
-2025-06-04 14:10:41,938 - src.ultibot_backend.main - INFO - Inicializando servicios base...
-2025-06-04 14:10:43,085 - src.ultibot_backend.adapters.persistence_service - INFO - Conexión a la base de datos Supabase (psycopg) establecida exitosamente usando DSN directo.
-2025-06-04 14:10:43,261 - src.ultibot_backend.services.credential_service - INFO - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
-2025-06-04 14:10:43,261 - src.ultibot_backend.services.credential_service - INFO - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
-2025-06-04 14:10:43,261 - src.ultibot_backend.main - INFO - Inicializando servicios dependientes...
-2025-06-04 14:10:43,261 - src.ultibot_backend.main - INFO - Inicializando servicios de trading...
-2025-06-04 14:10:43,261 - src.ultibot_backend.services.order_execution_service - INFO - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
-2025-06-04 14:10:43,261 - src.ultibot_backend.services.unified_order_execution_service - INFO - UnifiedOrderExecutionService initialized with both real and paper execution services
-2025-06-04 14:10:43,261 - src.ultibot_backend.main - INFO - Inicializando servicios avanzados...
-2025-06-04 14:10:43,261 - src.ultibot_backend.main - INFO - PerformanceService inicializado.
-2025-06-04 14:10:43,445 - src.ultibot_backend.main - INFO - LLM Provider (ChatGoogleGenerativeAI) inicializado con GEMINI_API_KEY.
-2025-06-04 14:10:43,445 - src.ultibot_backend.main - INFO - AIOrchestrator inicializado.
-2025-06-04 14:10:43,445 - src.ultibot_backend.main - INFO - TradingReportService inicializado.
-2025-06-04 14:10:43,445 - src.ultibot_backend.main - INFO - Todos los servicios principales inicializados.
-2025-06-04 14:10:43,682 - src.ultibot_backend.main - INFO - Configuración de usuario cargada para 00000000-0000-0000-0000-000000000001.
-2025-06-04 14:10:43,800 - src.ultibot_backend.main - INFO - No se encontraron credenciales de Telegram para 00000000-0000-0000-0000-000000000001.
-2025-06-04 14:10:43,800 - src.ultibot_backend.main - INFO - Aplicación iniciada correctamente.
-2025-06-04 14:10:43,801 - src.ultibot_backend.main - INFO - Iniciando limpieza de servicios...
-2025-06-04 14:10:43,801 - src.ultibot_backend.main - INFO - NotificationService cerrado correctamente.
-2025-06-04 14:10:43,805 - src.ultibot_backend.main - INFO - BinanceAdapter cerrado correctamente.
-2025-06-04 14:10:43,805 - src.ultibot_backend.adapters.persistence_service - INFO - Conexión a la base de datos Supabase (psycopg) cerrada.
-2025-06-04 14:10:43,805 - src.ultibot_backend.main - INFO - PersistenceService cerrado correctamente.
-2025-06-04 14:10:43,805 - src.ultibot_backend.main - INFO - Limpieza de servicios completada.
-2025-06-04 14:10:43,805 - src.ultibot_backend.main - INFO - Aplicación cerrada correctamente.
-2025-06-04 14:10:47,528 - src.ultibot_backend.main - INFO - Logging configurado con RotatingFileHandler para escribir en logs/backend.log (max ~100KB).
-2025-06-04 14:10:47,537 - src.ultibot_backend.api.v1.endpoints.opportunities - INFO - Router de oportunidades inicializado: <fastapi.routing.APIRouter object at 0x0000025635511040>
-2025-06-04 14:10:47,589 - src.ultibot_backend.main - INFO - Iniciando UltiBot Backend...
-2025-06-04 14:10:47,589 - src.ultibot_backend.main - INFO - Inicializando servicios base...
-2025-06-04 14:10:48,318 - src.ultibot_backend.adapters.persistence_service - INFO - Conexión a la base de datos Supabase (psycopg) establecida exitosamente usando DSN directo.
-2025-06-04 14:10:48,495 - src.ultibot_backend.services.credential_service - INFO - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
-2025-06-04 14:10:48,496 - src.ultibot_backend.services.credential_service - INFO - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
-2025-06-04 14:10:48,496 - src.ultibot_backend.main - INFO - Inicializando servicios dependientes...
-2025-06-04 14:10:48,496 - src.ultibot_backend.main - INFO - Inicializando servicios de trading...
-2025-06-04 14:10:48,496 - src.ultibot_backend.services.order_execution_service - INFO - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
-2025-06-04 14:10:48,496 - src.ultibot_backend.services.unified_order_execution_service - INFO - UnifiedOrderExecutionService initialized with both real and paper execution services
-2025-06-04 14:10:48,496 - src.ultibot_backend.main - INFO - Inicializando servicios avanzados...
-2025-06-04 14:10:48,496 - src.ultibot_backend.main - INFO - PerformanceService inicializado.
-2025-06-04 14:10:48,688 - src.ultibot_backend.main - INFO - LLM Provider (ChatGoogleGenerativeAI) inicializado con GEMINI_API_KEY.
-2025-06-04 14:10:48,688 - src.ultibot_backend.main - INFO - AIOrchestrator inicializado.
-2025-06-04 14:10:48,688 - src.ultibot_backend.main - INFO - TradingReportService inicializado.
-2025-06-04 14:10:48,688 - src.ultibot_backend.main - INFO - Todos los servicios principales inicializados.
-2025-06-04 14:10:48,933 - src.ultibot_backend.main - INFO - Configuración de usuario cargada para 00000000-0000-0000-0000-000000000001.
-2025-06-04 14:10:49,046 - src.ultibot_backend.main - INFO - No se encontraron credenciales de Telegram para 00000000-0000-0000-0000-000000000001.
-2025-06-04 14:10:49,046 - src.ultibot_backend.main - INFO - Aplicación iniciada correctamente.
-2025-06-04 14:10:50,136 - src.ultibot_backend.main - INFO - Iniciando limpieza de servicios...
-2025-06-04 14:10:50,136 - src.ultibot_backend.main - INFO - NotificationService cerrado correctamente.
-2025-06-04 14:10:50,139 - src.ultibot_backend.main - INFO - BinanceAdapter cerrado correctamente.
-2025-06-04 14:10:50,139 - src.ultibot_backend.adapters.persistence_service - INFO - Conexión a la base de datos Supabase (psycopg) cerrada.
-2025-06-04 14:10:50,139 - src.ultibot_backend.main - INFO - PersistenceService cerrado correctamente.
-2025-06-04 14:10:50,140 - src.ultibot_backend.main - INFO - Limpieza de servicios completada.
-2025-06-04 14:10:50,140 - src.ultibot_backend.main - INFO - Aplicación cerrada correctamente.
+2025-06-04 15:30:07,842 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trading/capital-management/status - Status: 200
+2025-06-04 15:32:20,512 - src.ultibot_backend.main - INFO - Logging configurado con RotatingFileHandler para escribir en logs/backend.log (max ~100KB).
+2025-06-04 15:32:20,528 - src.ultibot_backend.api.v1.endpoints.opportunities - INFO - Router de oportunidades inicializado: <fastapi.routing.APIRouter object at 0x00000229767B4050>
+2025-06-04 15:32:20,587 - src.ultibot_backend.main - INFO - Iniciando UltiBot Backend...
+2025-06-04 15:32:20,588 - src.ultibot_backend.main - INFO - Inicializando servicios base...
+2025-06-04 15:32:21,371 - src.ultibot_backend.adapters.persistence_service - INFO - Conexión a la base de datos Supabase (psycopg) establecida exitosamente usando DSN directo.
+2025-06-04 15:32:21,543 - src.ultibot_backend.services.credential_service - INFO - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
+2025-06-04 15:32:21,543 - src.ultibot_backend.services.credential_service - INFO - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-04 15:32:21,543 - src.ultibot_backend.main - INFO - Inicializando servicios dependientes...
+2025-06-04 15:32:21,544 - src.ultibot_backend.main - INFO - Inicializando servicios de trading...
+2025-06-04 15:32:21,544 - src.ultibot_backend.services.order_execution_service - INFO - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-04 15:32:21,544 - src.ultibot_backend.services.unified_order_execution_service - INFO - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-04 15:32:21,544 - src.ultibot_backend.main - INFO - Inicializando servicios avanzados...
+2025-06-04 15:32:21,544 - src.ultibot_backend.main - INFO - PerformanceService inicializado.
+2025-06-04 15:32:21,733 - src.ultibot_backend.main - INFO - LLM Provider (ChatGoogleGenerativeAI) inicializado con GEMINI_API_KEY.
+2025-06-04 15:32:21,733 - src.ultibot_backend.main - INFO - AIOrchestrator inicializado.
+2025-06-04 15:32:21,734 - src.ultibot_backend.main - INFO - TradingReportService inicializado.
+2025-06-04 15:32:21,734 - src.ultibot_backend.main - INFO - Todos los servicios principales inicializados.
+2025-06-04 15:32:21,973 - src.ultibot_backend.main - INFO - Configuración de usuario cargada para 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:32:22,090 - src.ultibot_backend.main - INFO - No se encontraron credenciales de Telegram para 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:32:22,090 - src.ultibot_backend.main - INFO - Aplicación iniciada correctamente.
+2025-06-04 15:32:22,387 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /health
+2025-06-04 15:32:22,388 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-04 15:32:25,203 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/config
+2025-06-04 15:32:25,207 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/config - Status: 200
+2025-06-04 15:32:26,087 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:32:26,088 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001 - Status: 200
+2025-06-04 15:32:26,222 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trades/00000000-0000-0000-0000-000000000001
+2025-06-04 15:32:26,222 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/portfolio/paper/performance_summary
+2025-06-04 15:32:26,223 - src.ultibot_backend.api.v1.endpoints.reports - INFO - Calculando métricas de rendimiento de paper trading para usuario 00000000-0000-0000-0000-000000000001
+2025-06-04 15:32:26,223 - src.ultibot_backend.api.v1.endpoints.reports - INFO - Filtros: symbol=None, start_date=2025-05-05 00:00:00, end_date=2025-06-04 23:59:59.999999
+2025-06-04 15:32:26,224 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trades/00000000-0000-0000-0000-000000000001 - Status: 200
+2025-06-04 15:32:26,353 - src.ultibot_backend.adapters.persistence_service - INFO - Obtenidos 0 trades cerrados con filtros: {'user_id': '00000000-0000-0000-0000-000000000001', 'mode': 'paper', 'positionStatus': 'closed'}
+2025-06-04 15:32:26,353 - src.ultibot_backend.services.trading_report_service - INFO - Obtenidos 0 trades cerrados para usuario 00000000-0000-0000-0000-000000000001 en modo paper
+2025-06-04 15:32:26,353 - src.ultibot_backend.api.v1.endpoints.reports - INFO - Métricas calculadas: 0 trades, Win Rate: 0.00%, P&L Total: 0.00
+2025-06-04 15:32:26,353 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/portfolio/paper/performance_summary - Status: 200
+2025-06-04 15:32:26,535 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:32:26,536 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open - Status: 200
+2025-06-04 15:32:26,972 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trading/capital-management/status
+2025-06-04 15:32:26,973 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trading/capital-management/status - Status: 200
+2025-06-04 15:32:41,008 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:32:41,009 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001 - Status: 200
+2025-06-04 15:32:41,447 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:32:41,448 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open - Status: 200
+2025-06-04 15:32:41,875 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trading/capital-management/status
+2025-06-04 15:32:41,876 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trading/capital-management/status - Status: 200
+2025-06-04 15:32:56,002 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:32:56,003 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001 - Status: 200
+2025-06-04 15:32:56,456 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:32:56,457 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open - Status: 200
+2025-06-04 15:32:56,890 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trading/capital-management/status
+2025-06-04 15:32:56,891 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trading/capital-management/status - Status: 200
+2025-06-04 15:33:11,007 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:33:11,008 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001 - Status: 200
+2025-06-04 15:33:11,451 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:33:11,452 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open - Status: 200
+2025-06-04 15:33:11,882 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trading/capital-management/status
+2025-06-04 15:33:11,883 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trading/capital-management/status - Status: 200
+2025-06-04 15:33:26,022 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:33:26,023 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001 - Status: 200
+2025-06-04 15:33:26,450 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:33:26,451 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open - Status: 200
+2025-06-04 15:33:26,896 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trading/capital-management/status
+2025-06-04 15:33:26,897 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trading/capital-management/status - Status: 200
+2025-06-04 15:33:40,998 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:33:40,999 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001 - Status: 200
+2025-06-04 15:33:41,437 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:33:41,438 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open - Status: 200
+2025-06-04 15:33:41,866 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trading/capital-management/status
+2025-06-04 15:33:41,868 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trading/capital-management/status - Status: 200
+2025-06-04 15:33:51,373 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:33:51,374 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:33:52,138 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/account?timestamp=1749065631621&signature=2fcce8298253c4c0261a4a5dea3f56f2dc502f367c3ea5ca87d75e32c524ecf6 "HTTP/1.1 200 OK"
+2025-06-04 15:33:52,140 - src.ultibot_backend.services.market_data_service - INFO - Balances de Binance obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:33:52,148 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/account?timestamp=1749065631500&signature=fa7cf80cd7f7b87746da18b02de8612cb140efefd665353a0ad473ed6e7b79ae "HTTP/1.1 200 OK"
+2025-06-04 15:33:52,148 - src.ultibot_backend.services.market_data_service - INFO - Balances de Binance obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:33:52,439 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=BABYUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:33:52,440 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de BABYUSDT (consultado como BABYUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:33:52,460 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=BABYUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:33:52,461 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de BABYUSDT (consultado como BABYUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:33:52,745 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=BNBUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:33:52,745 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de BNBUSDT (consultado como BNBUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:33:52,764 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=BNBUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:33:52,764 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de BNBUSDT (consultado como BNBUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:33:53,050 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=LDUSDCUSDT "HTTP/1.1 400 Bad Request"
+2025-06-04 15:33:53,050 - src.ultibot_backend.services.market_data_service - WARNING - Símbolo inválido detectado: LDUSDCUSDT. Agregando a caché.
+2025-06-04 15:33:53,067 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=LDUSDCUSDT "HTTP/1.1 400 Bad Request"
+2025-06-04 15:33:53,068 - src.ultibot_backend.services.market_data_service - WARNING - Símbolo inválido detectado: LDUSDCUSDT. Agregando a caché.
+2025-06-04 15:33:53,357 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=LDUSDT "HTTP/1.1 400 Bad Request"
+2025-06-04 15:33:53,357 - src.ultibot_backend.services.market_data_service - WARNING - Símbolo inválido detectado: LDUSDT. Agregando a caché.
+2025-06-04 15:33:53,372 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=LDUSDT "HTTP/1.1 400 Bad Request"
+2025-06-04 15:33:53,373 - src.ultibot_backend.services.market_data_service - WARNING - Símbolo inválido detectado: LDUSDT. Agregando a caché.
+2025-06-04 15:33:53,668 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=USDCUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:33:53,669 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de USDCUSDT (consultado como USDCUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:33:53,669 - src.ultibot_backend.services.portfolio_service - WARNING - No se pudo obtener el precio para LDUSDT para el portafolio real.
+2025-06-04 15:33:53,669 - src.ultibot_backend.services.portfolio_service - WARNING - No se pudo obtener el precio para LDUSDCUSDT para el portafolio real.
+2025-06-04 15:33:53,669 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001 - Status: 200
+2025-06-04 15:33:53,682 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=USDCUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:33:53,683 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de USDCUSDT (consultado como USDCUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:33:53,683 - src.ultibot_backend.services.portfolio_service - WARNING - No se pudo obtener el precio para LDUSDT para el portafolio real.
+2025-06-04 15:33:53,683 - src.ultibot_backend.services.portfolio_service - WARNING - No se pudo obtener el precio para LDUSDCUSDT para el portafolio real.
+2025-06-04 15:33:53,683 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001 - Status: 200
+2025-06-04 15:33:54,184 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:33:54,185 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:33:54,186 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open - Status: 200
+2025-06-04 15:33:54,186 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open - Status: 200
+2025-06-04 15:33:54,706 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trading/capital-management/status
+2025-06-04 15:33:54,707 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trading/capital-management/status
+2025-06-04 15:33:54,708 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trading/capital-management/status - Status: 200
+2025-06-04 15:33:54,709 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trading/capital-management/status - Status: 200
+2025-06-04 15:33:56,025 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:33:56,461 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/account?timestamp=1749065636155&signature=c31e1304f660da8a4e1f8693969e22b4f263696e2a96060622781fce21fabd2e "HTTP/1.1 200 OK"
+2025-06-04 15:33:56,462 - src.ultibot_backend.services.market_data_service - INFO - Balances de Binance obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:33:57,283 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=BABYUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:33:57,283 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de BABYUSDT (consultado como BABYUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:33:57,601 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=BNBUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:33:57,602 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de BNBUSDT (consultado como BNBUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:33:57,911 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=USDCUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:33:57,912 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de USDCUSDT (consultado como USDCUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:33:57,912 - src.ultibot_backend.services.portfolio_service - WARNING - No se pudo obtener el precio para LDUSDT para el portafolio real.
+2025-06-04 15:33:57,912 - src.ultibot_backend.services.portfolio_service - WARNING - No se pudo obtener el precio para LDUSDCUSDT para el portafolio real.
+2025-06-04 15:33:57,912 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001 - Status: 200
+2025-06-04 15:33:58,341 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:33:58,343 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open - Status: 200
+2025-06-04 15:33:58,771 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trading/capital-management/status
+2025-06-04 15:33:58,772 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trading/capital-management/status - Status: 200
+2025-06-04 15:34:11,023 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:34:11,632 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/account?timestamp=1749065651148&signature=a5610b45a1f2107a3a47627db98b2464e15ab47357435e3291a3abe4e888b0c4 "HTTP/1.1 200 OK"
+2025-06-04 15:34:11,634 - src.ultibot_backend.services.market_data_service - INFO - Balances de Binance obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:34:11,975 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=BABYUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:34:11,976 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de BABYUSDT (consultado como BABYUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:34:12,332 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=BNBUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:34:12,332 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de BNBUSDT (consultado como BNBUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:34:12,641 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=USDCUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:34:12,642 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de USDCUSDT (consultado como USDCUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:34:12,642 - src.ultibot_backend.services.portfolio_service - WARNING - No se pudo obtener el precio para LDUSDT para el portafolio real.
+2025-06-04 15:34:12,643 - src.ultibot_backend.services.portfolio_service - WARNING - No se pudo obtener el precio para LDUSDCUSDT para el portafolio real.
+2025-06-04 15:34:12,643 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001 - Status: 200
+2025-06-04 15:34:13,086 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:34:13,087 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open - Status: 200
+2025-06-04 15:34:13,519 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trading/capital-management/status
+2025-06-04 15:34:13,520 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trading/capital-management/status - Status: 200
+2025-06-04 15:34:26,028 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:34:26,727 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/account?timestamp=1749065666286&signature=13a71f6b11362533fc14b50a0c27b88d9a4b3a15a363b8d1b69b40727d6bee72 "HTTP/1.1 200 OK"
+2025-06-04 15:34:26,728 - src.ultibot_backend.services.market_data_service - INFO - Balances de Binance obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:34:27,037 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=BABYUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:34:27,038 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de BABYUSDT (consultado como BABYUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:34:27,362 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=BNBUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:34:27,363 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de BNBUSDT (consultado como BNBUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:34:27,672 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=USDCUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:34:27,672 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de USDCUSDT (consultado como USDCUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:34:27,672 - src.ultibot_backend.services.portfolio_service - WARNING - No se pudo obtener el precio para LDUSDT para el portafolio real.
+2025-06-04 15:34:27,672 - src.ultibot_backend.services.portfolio_service - WARNING - No se pudo obtener el precio para LDUSDCUSDT para el portafolio real.
+2025-06-04 15:34:27,672 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001 - Status: 200
+2025-06-04 15:34:28,118 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:34:28,119 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open - Status: 200
+2025-06-04 15:34:28,552 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trading/capital-management/status
+2025-06-04 15:34:28,553 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trading/capital-management/status - Status: 200
+2025-06-04 15:34:41,025 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:34:41,551 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/account?timestamp=1749065681144&signature=f070b0f1764ace56acb2e158e172ce1bdee8f9ff6aeb64ade6454cf6abdf842a "HTTP/1.1 200 OK"
+2025-06-04 15:34:41,554 - src.ultibot_backend.services.market_data_service - INFO - Balances de Binance obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:34:41,863 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=BABYUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:34:41,863 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de BABYUSDT (consultado como BABYUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:34:42,180 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=BNBUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:34:42,180 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de BNBUSDT (consultado como BNBUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:34:42,494 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=USDCUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:34:42,494 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de USDCUSDT (consultado como USDCUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:34:42,494 - src.ultibot_backend.services.portfolio_service - WARNING - No se pudo obtener el precio para LDUSDT para el portafolio real.
+2025-06-04 15:34:42,494 - src.ultibot_backend.services.portfolio_service - WARNING - No se pudo obtener el precio para LDUSDCUSDT para el portafolio real.
+2025-06-04 15:34:42,494 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001 - Status: 200
+2025-06-04 15:34:42,931 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:34:42,931 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open - Status: 200
+2025-06-04 15:34:43,379 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trading/capital-management/status
+2025-06-04 15:34:43,380 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trading/capital-management/status - Status: 200
+2025-06-04 15:34:56,036 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:34:56,885 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/account?timestamp=1749065696160&signature=844ce87ecc6e872974bd6c60030221f58d3a9469575805f868af657f5f36b840 "HTTP/1.1 200 OK"
+2025-06-04 15:34:56,886 - src.ultibot_backend.services.market_data_service - INFO - Balances de Binance obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:34:57,196 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=BABYUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:34:57,196 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de BABYUSDT (consultado como BABYUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:34:57,503 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=BNBUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:34:57,504 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de BNBUSDT (consultado como BNBUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:34:57,817 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=USDCUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:34:57,817 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de USDCUSDT (consultado como USDCUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:34:57,818 - src.ultibot_backend.services.portfolio_service - WARNING - No se pudo obtener el precio para LDUSDT para el portafolio real.
+2025-06-04 15:34:57,818 - src.ultibot_backend.services.portfolio_service - WARNING - No se pudo obtener el precio para LDUSDCUSDT para el portafolio real.
+2025-06-04 15:34:57,818 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001 - Status: 200
+2025-06-04 15:34:58,268 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:34:58,269 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open - Status: 200
+2025-06-04 15:34:58,711 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trading/capital-management/status
+2025-06-04 15:34:58,712 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trading/capital-management/status - Status: 200
+2025-06-04 15:35:11,044 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:35:11,622 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/account?timestamp=1749065711159&signature=5a0cc68f154413729ef242865244add6e8ff9ef201a0f0be89e5c93d61e5ebbe "HTTP/1.1 200 OK"
+2025-06-04 15:35:11,623 - src.ultibot_backend.services.market_data_service - INFO - Balances de Binance obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:35:11,936 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=BABYUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:35:11,937 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de BABYUSDT (consultado como BABYUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:35:12,254 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=BNBUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:35:12,255 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de BNBUSDT (consultado como BNBUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:35:12,566 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=USDCUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:35:12,567 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de USDCUSDT (consultado como USDCUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:35:12,567 - src.ultibot_backend.services.portfolio_service - WARNING - No se pudo obtener el precio para LDUSDT para el portafolio real.
+2025-06-04 15:35:12,567 - src.ultibot_backend.services.portfolio_service - WARNING - No se pudo obtener el precio para LDUSDCUSDT para el portafolio real.
+2025-06-04 15:35:12,568 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001 - Status: 200
+2025-06-04 15:35:13,001 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:35:13,002 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open - Status: 200
+2025-06-04 15:35:13,463 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trading/capital-management/status
+2025-06-04 15:35:13,464 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trading/capital-management/status - Status: 200
+2025-06-04 15:35:26,045 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:35:26,604 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/account?timestamp=1749065726170&signature=cecf54a1e603b183a9de84b7c24f5d693d9cc207612e0af329b18bfc98a8586c "HTTP/1.1 200 OK"
+2025-06-04 15:35:26,605 - src.ultibot_backend.services.market_data_service - INFO - Balances de Binance obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:35:26,910 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=BABYUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:35:26,910 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de BABYUSDT (consultado como BABYUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:35:27,220 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=BNBUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:35:27,220 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de BNBUSDT (consultado como BNBUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:35:27,527 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=USDCUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:35:27,528 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de USDCUSDT (consultado como USDCUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:35:27,528 - src.ultibot_backend.services.portfolio_service - WARNING - No se pudo obtener el precio para LDUSDT para el portafolio real.
+2025-06-04 15:35:27,528 - src.ultibot_backend.services.portfolio_service - WARNING - No se pudo obtener el precio para LDUSDCUSDT para el portafolio real.
+2025-06-04 15:35:27,528 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001 - Status: 200
+2025-06-04 15:35:27,976 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:35:27,977 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open - Status: 200
+2025-06-04 15:35:28,428 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trading/capital-management/status
+2025-06-04 15:35:28,428 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trading/capital-management/status - Status: 200
+2025-06-04 15:35:41,046 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001
+2025-06-04 15:35:42,621 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/account?timestamp=1749065741175&signature=9bfa0b7d1f334b941a7d28a36afd053328c8cc30a7548aa968fe023833dd6604 "HTTP/1.1 200 OK"
+2025-06-04 15:35:42,622 - src.ultibot_backend.services.market_data_service - INFO - Balances de Binance obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:35:42,958 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=BABYUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:35:42,958 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de BABYUSDT (consultado como BABYUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:35:43,279 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=BNBUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:35:43,280 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de BNBUSDT (consultado como BNBUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:35:43,585 - httpx - INFO - HTTP Request: GET https://api.binance.com/api/v3/ticker/24hr?symbol=USDCUSDT "HTTP/1.1 200 OK"
+2025-06-04 15:35:43,586 - src.ultibot_backend.services.market_data_service - INFO - Datos REST de USDCUSDT (consultado como USDCUSDT) obtenidos para el usuario 00000000-0000-0000-0000-000000000001.
+2025-06-04 15:35:43,586 - src.ultibot_backend.services.portfolio_service - WARNING - No se pudo obtener el precio para LDUSDT para el portafolio real.
+2025-06-04 15:35:43,586 - src.ultibot_backend.services.portfolio_service - WARNING - No se pudo obtener el precio para LDUSDCUSDT para el portafolio real.
+2025-06-04 15:35:43,586 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot/00000000-0000-0000-0000-000000000001 - Status: 200
+2025-06-04 15:35:44,016 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open
+2025-06-04 15:35:44,016 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trades/00000000-0000-0000-0000-000000000001/open - Status: 200
+2025-06-04 15:35:44,463 - src.ultibot_backend.main - INFO - Middleware: Solicitud entrante: GET /api/v1/trading/capital-management/status
+2025-06-04 15:35:44,464 - src.ultibot_backend.main - INFO - Middleware: Solicitud procesada: GET /api/v1/trading/capital-management/status - Status: 200

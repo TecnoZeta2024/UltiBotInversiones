@@ -29,6 +29,7 @@ mplfinance = "^0.12.10b0"
 # UI Dependencies
 PyQt5 = "^5.15.10"
 qdarkstyle = "^3.2.3"
+pywin32 = {version = "*", platform = "win32"} # Para WindowsSelectorEventLoopPolicy
 
 [tool.poetry.group.dev.dependencies]
 ruff = "*"

@@ -578,9 +578,13 @@ class ApiWorker(QObject): # ApiWorker definition moved slightly to accommodate t
         """
         Programa la coroutine en el bucle de eventos principal.
         """
+        logger.debug(f"ApiWorker: run() called for coroutine: {self.awaitable_coroutine}")
+
         def _task_done(task):
+            logger.debug(f"ApiWorker: _task_done() called for task: {task}")
             try:
                 result = task.result()
+                logger.debug(f"ApiWorker: Task result: {result}")
                 self.result_ready.emit(result)
             except APIError as e:
                 error_msg = f"API Error ({e.status_code}): {e.message}"
@@ -589,19 +593,30 @@ class ApiWorker(QObject): # ApiWorker definition moved slightly to accommodate t
                         details = ", ".join([err.get('msg', 'validation error') for err in e.response_json['detail']])
                         error_msg += f" - Details: {details}"
                     else:
-                        error_msg += f" - Detail: {e.response_json['detail']}" # Corregido a f-string
+                        error_msg += f" - Detail: {e.response_json['detail']}"
+                logger.error(f"ApiWorker: Emitting error_occurred (APIError): {error_msg}")
                 self.error_occurred.emit(error_msg)
             except Exception as e:
+                logger.error(f"ApiWorker: Emitting error_occurred (Exception): {str(e)}", exc_info=True)
                 self.error_occurred.emit(f"Unexpected error in API worker: {str(e)}")
             finally:
-                # Asegurarse de que el hilo se cierre después de emitir la señal
-                if self.thread(): # Verificar si el hilo existe
-                    self.thread().quit() # Terminar el QThread
+                logger.debug("ApiWorker: _task_done finally block. Quitting thread.")
+                current_thread = self.thread()
+                if current_thread: 
+                    current_thread.quit()
 
-        # Programar la coroutine en el bucle principal de forma segura entre hilos
-        self.main_loop.call_soon_threadsafe(
-            lambda: self.main_loop.create_task(self.awaitable_coroutine).add_done_callback(_task_done)
-        )
+        try:
+            logger.debug(f"ApiWorker: Scheduling task on main_loop: {self.main_loop}")
+            self.main_loop.call_soon_threadsafe(
+                lambda: self.main_loop.create_task(self.awaitable_coroutine).add_done_callback(_task_done)
+            )
+            logger.debug("ApiWorker: Task scheduled successfully.")
+        except Exception as e:
+            logger.error(f"ApiWorker: Error scheduling task: {e}", exc_info=True)
+            self.error_occurred.emit(f"Error scheduling API task: {str(e)}")
+            current_thread = self.thread()
+            if current_thread:
+                current_thread.quit()
 
 
 class UltiBotApplication:

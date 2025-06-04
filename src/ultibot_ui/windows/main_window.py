@@ -446,6 +446,7 @@ class MainWindow(QMainWindow):
         Se llama cuando DashboardView ha completado su inicialización asíncrona.
         Ahora podemos cargar las estrategias.
         """
+        logger.info("MainWindow: _on_dashboard_initialized INVOCADO.") # LOG AÑADIDO
         logger.info("MainWindow: DashboardView inicializado. Cargando estrategias...")
         if hasattr(self.strategy_management_view, 'load_strategies') and callable(self.strategy_management_view.load_strategies):
             self.strategy_management_view.load_strategies()

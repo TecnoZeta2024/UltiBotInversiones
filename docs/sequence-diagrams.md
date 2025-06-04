@@ -4,7 +4,6 @@
     sequenceDiagram
         participant User as Usuario (via UI)
         participant UI as Interfaz de Usuario (PyQt5)
-        participant MCPs as Servidores MCP Externos
         participant TradingEngine as Motor de Trading
         participant ConfigManager as Gestor de Configuración
         participant DataPersistenceService as Servicio de Persistencia (Supabase)
@@ -15,8 +14,8 @@
         participant NotificationService as Servicio de Notificaciones
         participant TelegramAPI as API de Telegram
     
-        Note over MCPs, TradingEngine: Fase 1: Detección y Registro de Oportunidad
-        MCPs->>TradingEngine: Notifica nueva oportunidad (ej. vía webhook)
+        TradingEngine: Fase 1: Detección y Registro de Oportunidad
+        TradingEngine: Notifica nueva oportunidad (ej. vía webhook)
         TradingEngine->>DataPersistenceService: Crea registro de Oportunidad (O_ID, datos_iniciales, estado: nueva)
         DataPersistenceService-->>TradingEngine: Oportunidad Creada (O_ID)
         TradingEngine->>AI_Orchestrator: Solicita análisis (O_ID)
