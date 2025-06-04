@@ -1,4 +1,4 @@
-## Key Reference Documents
+# Key Reference Documents
 
 -   **`Project Brief.md`**
     -   Descripción: El documento inicial que captura la idea del proyecto, los objetivos y el problema a resolver.

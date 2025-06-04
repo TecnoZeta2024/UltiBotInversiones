@@ -45,7 +45,6 @@ A continuación, se presenta la estructura de directorios propuesta para el Mono
 │   │   │   ├── binance_adapter.py
 │   │   │   ├── telegram_adapter.py
 │   │   │   ├── mobula_adapter.py
-│   │   │   ├── mcp_tools/        # Herramientas LangChain que encapsulan clientes MCP
 │   │   │   └── persistence_service.py # Implementación del DataPersistenceService (Supabase)
 │   │   ├── main.py             # Punto de entrada de la aplicación FastAPI
 │   │   └── app_config.py       # Configuración específica del backend (ej. carga de variables de entorno)

@@ -12,7 +12,7 @@ export interface UserConfiguration {
   // --- Preferencias de Notificaciones ---
   telegramChatId?: string; // ID del chat de Telegram para notificaciones
   notificationPreferences?: Array<{
-    eventType: string; // Ej: "REAL_TRADE_EXECUTED", "PAPER_OPPORTUNITY_HIGH_CONFIDENCE", "MCP_SIGNAL_RECEIVED", "DAILY_SUMMARY"
+    eventType: string; // Ej: "REAL_TRADE_EXECUTED", "PAPER_OPPORTUNITY_HIGH_CONFIDENCE", "DAILY_SUMMARY"
     channel: 'telegram' | 'ui' | 'email'; // 'email' como futura expansión
     isEnabled: boolean;
     minConfidence?: number; // Para eventos de oportunidad/señal
@@ -52,7 +52,7 @@ export interface UserConfiguration {
       onMaxDrawdownReached?: boolean;
       onConsecutiveLosses?: number; // Pausar después de X pérdidas consecutivas
       onMarketVolatilityIndexExceeded?: {
-        source: string; // ej. "VIX_CRYPTO_MCP"
+        // source: string; // ej. "VIX_CRYPTO_MCP" <- Eliminado
         threshold: number;
       };
     };
@@ -78,16 +78,7 @@ export interface UserConfiguration {
     realTrading?: number;
   };
 
-  mcpServerPreferences?: Array<{
-    id: string; // Identificador del servidor MCP (ej. "doggybee-ccxt", "web3-research-mainnet")
-    type: string; // Tipo de MCP (ej. "ccxt", "web3", "sentiment_analysis")
-    url?: string; // URL si es configurable
-    apiKey?: string; // Si el MCP requiere una API key específica del usuario (almacenar de forma segura)
-    isEnabled?: boolean;
-    queryFrequencySeconds?: number; // Frecuencia de consulta si aplica
-    reliabilityWeight?: number; // Ponderación de 0 a 1 para la IA al considerar señales de este MCP
-    customParameters?: Record<string, any>; // Parámetros específicos del MCP
-  }>;
+  // mcpServerPreferences ELIMINADO
 
   // --- Preferencias de UI ---
   selectedTheme?: 'dark' | 'light'; // Tema de la interfaz de usuario
@@ -181,10 +172,10 @@ export enum ServiceName {
   MOBULA_API = "MOBULA_API",
   N8N_WEBHOOK = "N8N_WEBHOOK",
   SUPABASE_CLIENT = "SUPABASE_CLIENT",
-  MCP_GENERIC = "MCP_GENERIC",
-  MCP_DOGGYBEE_CCXT = "MCP_DOGGYBEE_CCXT",
-  MCP_METATRADER_BRIDGE = "MCP_METATRADER_BRIDGE",
-  MCP_WEB3_RESEARCH = "MCP_WEB3_RESEARCH",
+  MCP_GENERIC = "MCP_GENERIC", // Mantenido si es necesario para otros usos
+  // MCP_DOGGYBEE_CCXT ELIMINADO
+  // MCP_METATRADER_BRIDGE ELIMINADO
+  // MCP_WEB3_RESEARCH ELIMINADO
   CUSTOM_SERVICE = "CUSTOM_SERVICE"
 }
 
@@ -326,7 +317,7 @@ export interface Trade {
   };
 
   externalEventOrAnalysisLink?: {
-    type: 'news_event' | 'custom_analysis_note' | 'mcp_signal_detail';
+    type: 'news_event' | 'custom_analysis_note'; // 'mcp_signal_detail' ELIMINADO
     referenceId?: string; 
     description?: string; 
   };
@@ -461,7 +452,7 @@ export enum BaseStrategyType {
   GRID_TRADING = "GRID_TRADING",
   DCA_INVESTING = "DCA_INVESTING", // Dollar Cost Averaging
   CUSTOM_AI_DRIVEN = "CUSTOM_AI_DRIVEN",
-  MCP_SIGNAL_FOLLOWER = "MCP_SIGNAL_FOLLOWER",
+  // MCP_SIGNAL_FOLLOWER ELIMINADO
 }
 
 **Strategy-Specific Parameter Models (Implemented)**:
@@ -498,10 +489,7 @@ export interface CustomAIDrivenParameters {
   maxTokensForResponse?: number; // Optional: > 0
 }
 
-export interface MCPSignalFollowerParameters {
-  mcpSourceConfigId: string; // Required: ID reference to UserConfiguration.mcpServerPreferences
-  allowedSignalTypes?: string[]; // Optional
-}
+// MCPSignalFollowerParameters ELIMINADA (primera ocurrencia)
 
 export interface GridTradingParameters {
   gridUpperPrice: number; // Required: > 0, must be > gridLowerPrice
@@ -555,10 +543,7 @@ export interface CustomAIDrivenParameters {
   maxTokensForResponse?: number;
 }
 
-export interface MCPSignalFollowerParameters {
-  mcpSourceConfigId: string; // ID de UserConfiguration.mcpServerPreferences
-  allowedSignalTypes?: string[];
-}
+// MCPSignalFollowerParameters ELIMINADA (segunda ocurrencia)
 
 export interface GridTradingParameters {
   gridUpperPrice: number;
@@ -579,7 +564,7 @@ export type StrategySpecificParameters =
   | DayTradingParameters
   | ArbitrageSimpleParameters
   | CustomAIDrivenParameters
-  | MCPSignalFollowerParameters
+  // | MCPSignalFollowerParameters ELIMINADO de la unión
   | GridTradingParameters
   | DCAInvestingParameters
   | Record<string, any>; // Fallback
@@ -688,7 +673,7 @@ export interface Opportunity {
   symbol: string; 
   detectedAt: Date; 
 
-  sourceType: 'mcp_signal' | 'internal_indicator_algo' | 'ai_suggestion_proactive' | 'manual_entry' | 'user_defined_alert';
+  sourceType: /* 'mcp_signal' ELIMINADO */ | 'internal_indicator_algo' | 'ai_suggestion_proactive' | 'manual_entry' | 'user_defined_alert';
   sourceName?: string; 
   sourceData?: Record<string, any>; 
 
@@ -812,10 +797,10 @@ export enum ServiceNameEnumForRequest { // Podría ser el mismo enum ServiceName
   GEMINI_API = "GEMINI_API",
   MOBULA_API = "MOBULA_API",
   N8N_WEBHOOK = "N8N_WEBHOOK",
-  MCP_GENERIC = "MCP_GENERIC",
-  MCP_DOGGYBEE_CCXT = "MCP_DOGGYBEE_CCXT",
-  MCP_METATRADER_BRIDGE = "MCP_METATRADER_BRIDGE",
-  MCP_WEB3_RESEARCH = "MCP_WEB3_RESEARCH",
+  MCP_GENERIC = "MCP_GENERIC", // Mantenido si es necesario
+  // MCP_DOGGYBEE_CCXT ELIMINADO
+  // MCP_METATRADER_BRIDGE ELIMINADO
+  // MCP_WEB3_RESEARCH ELIMINADO
   CUSTOM_SERVICE = "CUSTOM_SERVICE"
 }
 
@@ -916,18 +901,8 @@ export interface StrategyActivationResponse {
 // API Payload Schema: UpdateUserConfigurationRequest
 // Utilizado para PATCH /api/v1/config
 
-// (Reutilizar/Importar NotificationPreferenceForUpdate, WatchlistForUpdate, etc., como se definieron antes,
-// con la salvedad del cambio en McpServerPreferenceForUpdate)
-
-export interface McpServerPreferenceForUpdate { // Actualizado
-  id: string; // Necesario para identificar cuál actualizar en la lista
-  credentialId?: string | null; // ID de la APICredential asociada (gestionada vía /credentials/)
-  url?: string; // Configuración no sensible
-  isEnabled?: boolean; // Configuración no sensible
-  queryFrequencySeconds?: number; // Configuración no sensible
-  reliabilityWeight?: number; // Configuración no sensible
-  customParameters?: Record<string, any>; // Configuración no sensible
-}
+// (Reutilizar/Importar NotificationPreferenceForUpdate, WatchlistForUpdate, etc., como se definieron antes)
+// McpServerPreferenceForUpdate ELIMINADA
 
 // ... (Las otras interfaces como NotificationPreferenceForUpdate, WatchlistForUpdate, 
 // RiskProfileSettingsForUpdate, RealTradingSettingsForUpdate, AiStrategyConfigurationForUpdate, 
@@ -952,7 +927,7 @@ export interface UpdateUserConfigurationRequest {
 
   // --- Preferencias de IA y Análisis ---
   aiStrategyConfigurations?: Array<AiStrategyConfigurationForUpdate>; // Asume reemplazo de la lista si se envía
-  mcpServerPreferences?: Array<McpServerPreferenceForUpdate>; // Asume reemplazo de la lista si se envía
+  // mcpServerPreferences ELIMINADO
 
   // --- Preferencias de UI ---
   selectedTheme?: 'dark' | 'light';
@@ -1032,7 +1007,7 @@ export interface SaveTradingStrategyConfigRequest {
         -- Preferencias de IA y Análisis
         ai_strategy_configurations JSONB, -- Ej: [{ "id": "uuid_ai_config_1", "name": "Scalping Agresivo BTC", "geminiPromptTemplate": "Analiza esta oportunidad para scalping...", ... }]
         ai_analysis_confidence_thresholds JSONB, -- Ej: { "paperTrading": 0.75, "realTrading": 0.85 }
-        mcp_server_preferences JSONB, -- Ej: [{ "id": "mcp_server_xyz", "type": "ccxt", "credentialId": "uuid_de_api_credential", "isEnabled": true, ... }]. IMPORTANTE: Contiene 'credentialId' (referencia a api_credentials), NO 'apiKey'.
+        -- mcp_server_preferences JSONB ELIMINADO
     
         -- Preferencias de UI
         selected_theme VARCHAR(50) DEFAULT 'dark', -- 'dark' o 'light'
@@ -1295,8 +1270,8 @@ export interface SaveTradingStrategyConfigRequest {
             'ARBITRAGE_TRIANGULAR',
             'GRID_TRADING',
             'DCA_INVESTING',
-            'CUSTOM_AI_DRIVEN',
-            'MCP_SIGNAL_FOLLOWER'
+            'CUSTOM_AI_DRIVEN'
+            -- 'MCP_SIGNAL_FOLLOWER' ELIMINADO
             -- La aplicación debe validar contra un enum BaseStrategyType más completo. El CHECK es una salvaguarda.
         )),
         description TEXT, -- Descripción detallada de la configuración de la estrategia.
@@ -1315,7 +1290,7 @@ export interface SaveTradingStrategyConfigRequest {
         parent_config_id UUID REFERENCES trading_strategy_configs(id) ON DELETE SET NULL, -- Si esta config es una versión/clon de otra. ON DELETE SET NULL para no perder la historia.
     
         performance_metrics JSONB, -- Métricas de rendimiento cacheadas para esta config (actualizadas por la app/job). Ej: { "totalTrades": 150, "winRate": 0.55, "avgPnlPerTrade": 12.34, "lastCalculationAt": "timestamp" }.
-        market_condition_filters JSONB, -- Array de filtros basados en condiciones de mercado para activar/desactivar la estrategia dinámicamente. Ej: [{ "filterType": "VIX_MCP", "condition": "greater_than", "value": 30, "action": "pause_new_trades" }].
+        market_condition_filters JSONB, -- Array de filtros basados en condiciones de mercado para activar/desactivar la estrategia dinámicamente. Ej: [{ "filterType": "VIX_API", "condition": "greater_than", "value": 30, "action": "pause_new_trades" }].
         activation_schedule JSONB, -- Configuración para activar/desactivar la estrategia automáticamente (ej. cron). Ej: { "cronExpression": "0 0 * * MON-FRI", "timeZone": "America/New_York", "action": "activate" }.
         depends_on_strategies JSONB, -- Array de IDs (UUIDs) de otras trading_strategy_configs de las que esta depende. Referencia lógica. Ej: [{ "strategyConfigId": "uuid_parent_strat", "conditionForActivation": "parent_must_be_profitable_last_7d" }].
         sharing_metadata JSONB, -- Metadatos para plantillas o compartición. Ej: { "isTemplate": true, "authorUserId": "uuid_del_creador", "tags": ["scalping", "volatility", "btc"], "communityRating": 4.5, "downloadCount": 100 }.
@@ -1359,14 +1334,14 @@ export interface SaveTradingStrategyConfigRequest {
         detected_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()), -- Cuándo se detectó/creó la oportunidad.
     
         source_type VARCHAR(50) NOT NULL CHECK (source_type IN (
-            'mcp_signal', 
+            -- 'mcp_signal' ELIMINADO
             'internal_indicator_algo', 
             'ai_suggestion_proactive', 
             'manual_entry', 
             'user_defined_alert'
         )),
-        source_name VARCHAR(255), -- Nombre de la fuente específica, ej: "MCP_EMA_Cross_Bot", "Manual_High_Conviction"
-        source_data JSONB, -- Payload original de la fuente (ej. datos del MCP, parámetros del indicador que disparó la alerta).
+        source_name VARCHAR(255), -- Nombre de la fuente específica, ej: "EMA_Cross_Bot", "Manual_High_Conviction"
+        source_data JSONB, -- Payload original de la fuente (ej. datos del indicador que disparó la alerta).
     
         initial_signal JSONB NOT NULL, -- Detalles de la señal inicial. 
                                       -- Ej: { "directionSought": "buy", "entryPrice_target": 30000, "stopLoss_target": 29500, "takeProfit_target": [31000, 32000], "timeframe": "4h", "reasoning_source_text": "Breakout de resistencia clave" }
