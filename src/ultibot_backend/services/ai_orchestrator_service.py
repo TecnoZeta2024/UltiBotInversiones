@@ -121,18 +121,40 @@ class AIOrchestrator:
     def __init__(self):
         """Initialize the AI Orchestrator service."""
         # TODO: Initialize Gemini client and LangChain components.
-        #   When implementing, Google Cloud credentials should be configured.
-        #   Typically, this is done by setting the GOOGLE_APPLICATION_CREDENTIALS
-        #   environment variable to the path of the JSON file containing
-        #   the service account key.
-        #   Example:
-        #   import os
-        #   os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/path/to/your/credentials.json"
-        #   # Then initialize the Gemini client (e.g., using google.generativeai)
         #
-        #   Alternatively, ensure the environment where the backend runs
-        #   (e.g., Docker container, VM) has this variable set or the application
-        #   is configured for default credentials if running on GCP.
+        # --- Google Cloud Authentication for Gemini ---
+        # To connect to Google Cloud services, including Gemini (Vertex AI),
+        # the client libraries need to authenticate. There are two main ways:
+        #
+        # 1. Service Account Key File (GOOGLE_APPLICATION_CREDENTIALS):
+        #    - Set the `GOOGLE_APPLICATION_CREDENTIALS` environment variable
+        #      to the absolute path of the JSON file containing your service account key.
+        #      This key file provides the identity and permissions for your application.
+        #    - The service account associated with this key must have appropriate
+        #      IAM permissions to use Gemini (e.g., roles like "Vertex AI User"
+        #      or "AI Platform Model User" on the project or relevant resources).
+        #    - Example (Python code, typically set outside the app in the environment):
+        #      # import os
+        #      # os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/path/to/your/service-account-key.json"
+        #
+        # 2. Application Default Credentials (ADC):
+        #    - If your application is running in a Google Cloud environment
+        #      (e.g., Google Kubernetes Engine (GKE), Cloud Run, Compute Engine, App Engine),
+        #      ADC can often be used.
+        #    - ADC automatically finds credentials from the environment, typically by using
+        #      the service account associated with the GCE instance or GKE node pool,
+        #      or the runtime service account for Cloud Run/App Engine.
+        #    - Ensure this implicitly used service account also has the necessary
+        #      IAM permissions for Gemini (e.g., "Vertex AI User").
+        #    - No need to set `GOOGLE_APPLICATION_CREDENTIALS` if ADC is correctly configured
+        #      and the environment's service account has permissions.
+        #
+        # Choose the method appropriate for your deployment environment.
+        # For local development, `GOOGLE_APPLICATION_CREDENTIALS` is common.
+        # For GCP deployments, using ADC with the runtime's service account is often preferred.
+        #
+        # After setting up authentication, initialize the Gemini client
+        # (e.g., using `google.generativeai` or `vertexai` SDKs).
 
         # For now, this is a placeholder implementation using a mock,
         # which prevents credential errors in the current development phase.
