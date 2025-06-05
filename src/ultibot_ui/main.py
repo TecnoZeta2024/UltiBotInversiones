@@ -563,8 +563,7 @@ class ApiWorker(QObject):
 
     @pyqtSlot()
     def run(self):
-        # import sys # sys ya está importado globalmente en este archivo
-        loop = None  # Inicializar loop a None
+        loop = None  # Define loop here to ensure it's in scope for finally
         try:
             # Crea y configura un event loop DEDICADO para este hilo
             loop = asyncio.new_event_loop()
@@ -590,7 +589,7 @@ class ApiWorker(QObject):
                 else:
                     error_msg += f" - Detail: {e_api.response_json['detail']}"
             self.error_occurred.emit(error_msg)
-        except Exception as exc:
+        except Exception as exc: # pylint: disable=broad-except
             logger.error(
                 f"ApiWorker: Generic Exception caught during coroutine execution: {str(exc)}",
                 exc_info=True
@@ -599,18 +598,47 @@ class ApiWorker(QObject):
             self.error_occurred.emit(str(exc))
         finally:
             if loop:
-                try:
-                    # Limpiar y cerrar el bucle de eventos del hilo
-                    if hasattr(loop, 'shutdown_asyncgens'): # Para Python 3.6+
-                        loop.run_until_complete(loop.shutdown_asyncgens())
-                    loop.close()
-                    logger.debug(f"ApiWorker: Event loop {loop} closed.")
-                except Exception as e_close:
-                    logger.error(f"ApiWorker: Error closing event loop: {e_close}", exc_info=True)
+                if not loop.is_closed():
+                    try:
+                        async def _shutdown_worker_tasks_and_gens():
+                            # Cancel all tasks except the current one (which is this _shutdown_worker_tasks_and_gens wrapper)
+                            tasks_to_cancel = [
+                                task for task in asyncio.all_tasks(loop=loop)
+                                if task is not asyncio.current_task(loop=loop)
+                            ]
+                            if tasks_to_cancel:
+                                logger.debug(f"ApiWorker: Cancelling {len(tasks_to_cancel)} tasks in worker loop {loop}.")
+                                for task in tasks_to_cancel:
+                                    task.cancel()
+                                await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
+                                logger.debug(f"ApiWorker: Cancelled tasks awaited in worker loop {loop}.")
+
+                            if hasattr(loop, 'shutdown_asyncgens'): # For Python 3.6+
+                                logger.debug(f"ApiWorker: Shutting down async generators in worker loop {loop}.")
+                                await loop.shutdown_asyncgens()
+                                logger.debug(f"ApiWorker: Async generators shut down in worker loop {loop}.")
+
+                        logger.debug(f"ApiWorker: Starting comprehensive shutdown for worker loop {loop}.")
+                        loop.run_until_complete(_shutdown_worker_tasks_and_gens())
+                        logger.debug(f"ApiWorker: Comprehensive shutdown completed for worker loop {loop}.")
+
+                    except RuntimeError as e_runtime:
+                        logger.error(f"ApiWorker: RuntimeError during worker loop shutdown: {e_runtime}", exc_info=True)
+                    except Exception as e_general: # pylint: disable=broad-except
+                        logger.error(f"ApiWorker: General Exception during worker loop shutdown: {e_general}", exc_info=True)
+                    finally:
+                        if not loop.is_closed():
+                            loop.close()
+                            logger.info(f"ApiWorker: Event loop {loop} closed.")
+                        else:
+                            logger.info(f"ApiWorker: Event loop {loop} was already closed before explicit call.")
+                else:
+                    logger.info(f"ApiWorker: Event loop {loop} was already closed. Skipping shutdown procedures.")
+
             # Eliminar la referencia al bucle de eventos del hilo actual
             # para evitar que afecte a otras partes de la aplicación o a futuros hilos.
             asyncio.set_event_loop(None)
-            logger.debug("ApiWorker: asyncio event loop for current thread set to None.")
+            logger.debug("ApiWorker: asyncio event loop for current OS thread set to None.")
 
     # _execute ya no es necesario como método separado, la lógica está en run()
     # async def _execute(self):
