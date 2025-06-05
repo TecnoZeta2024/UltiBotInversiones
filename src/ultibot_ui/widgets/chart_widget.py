@@ -1,11 +1,17 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QComboBox, QHBoxLayout, QLayoutItem
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer # Importar QTimer para actualizaciones dinámicas
 from PyQt5.QtGui import QPainter, QColor, QPen
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QComboBox, QHBoxLayout, QLayoutItem
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer # Importar QTimer para actualizaciones dinámicas
+from PyQt5.QtGui import QPainter, QColor, QPen
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QComboBox, QHBoxLayout, QLayoutItem
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QThread # Importar QTimer y QThread
+from PyQt5.QtGui import QPainter, QColor, QPen
 import mplfinance as mpf
 import pandas as pd
-import asyncio
 from typing import List, Dict, Any, Optional
 from uuid import UUID
+import asyncio # Necesario para obtener el bucle de eventos de qasync
 
 # from src.ultibot_backend.services.market_data_service import MarketDataService # Reemplazado por api_client
 from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError # Importar APIClient
@@ -22,6 +28,8 @@ class ChartWidget(QWidget):
     # Señales para comunicar eventos al servicio de UI o al backend
     symbol_selected = pyqtSignal(str)
     interval_selected = pyqtSignal(str)
+    candlestick_data_fetched = pyqtSignal(list) # Nueva señal para los datos de velas
+    api_error_occurred = pyqtSignal(str) # Señal para errores de API
     
     def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, parent: Optional[QWidget] = None): # Cambiado market_data_service a api_client
         super().__init__(parent)
@@ -30,8 +38,11 @@ class ChartWidget(QWidget):
         self.current_symbol: Optional[str] = None
         self.current_interval: Optional[str] = "1h" # Intervalo por defecto
         self.candlestick_data: List[Dict[str, Any]] = []
+        self.active_api_workers = [] # Para mantener referencia a los workers y threads
 
         self.init_ui()
+        self.candlestick_data_fetched.connect(self.set_candlestick_data)
+        self.api_error_occurred.connect(self._handle_api_error)
 
     def init_ui(self):
         self.main_layout = QVBoxLayout(self)
@@ -74,10 +85,6 @@ class ChartWidget(QWidget):
         # La carga de datos ahora se difiere dentro de load_chart_data
         self.load_chart_data()
 
-    def _schedule_task(self, coro):
-        """Helper method to schedule an asyncio task without returning the task object to QTimer."""
-        asyncio.create_task(coro)
-
     def _on_symbol_changed(self, index: int):
         self.current_symbol = self.symbol_combo.currentText()
         self.symbol_selected.emit(self.current_symbol)
@@ -95,45 +102,66 @@ class ChartWidget(QWidget):
         self.candlestick_data = data
         self.update_chart_display()
 
+    def _handle_api_error(self, message: str):
+        """Maneja los errores de la API y los muestra en la UI."""
+        logger.error(f"Error de API en ChartWidget: {message}")
+        self.set_candlestick_data([])
+        if isinstance(self.chart_area, QLabel):
+            self.chart_area.setText(f"Error API: {message}")
+
     def load_chart_data(self):
         """
         Solicita la carga de datos del gráfico.
-        En una aplicación real, esto emitiría una señal o llamaría a un servicio
-        para obtener los datos del backend de forma asíncrona.
+        Utiliza ApiWorker para ejecutar la llamada asíncrona en un hilo separado.
         """
         if self.current_symbol and self.current_interval:
             self.chart_area.setText(f"Cargando datos para {self.current_symbol} ({self.current_interval})...")
-            print(f"Solicitando datos para {self.current_symbol} - {self.current_interval}")
-            # Llamada real al backend diferida
-            QTimer.singleShot(0, lambda: self._schedule_task(self._fetch_real_data()))
+            logger.info(f"Solicitando datos para {self.current_symbol} - {self.current_interval} usando ApiWorker")
+            
+            # Importar ApiWorker localmente para evitar importaciones circulares
+            from src.ultibot_ui.main import ApiWorker 
+            import qasync # Importar qasync para obtener el bucle de eventos
+
+            # Obtener el bucle de eventos de qasync del hilo principal
+            qasync_loop = asyncio.get_event_loop()
+
+            # Asegurar a Pylance que estos valores no son None aquí
+            current_symbol = self.current_symbol
+            current_interval = self.current_interval
+
+            if current_symbol is None or current_interval is None:
+                logger.error("ChartWidget: Símbolo o intervalo no definidos al intentar cargar datos del gráfico.")
+                self.chart_area.setText("Error: Símbolo o intervalo no definidos.")
+                return
+
+            worker = ApiWorker(
+                lambda: self.api_client.get_candlestick_data(
+                    user_id=self.user_id,
+                    symbol=current_symbol, # Usar la variable local no-None
+                    interval=current_interval, # Usar la variable local no-None
+                    limit=200
+                ),
+                qasync_loop=qasync_loop
+            )
+            thread = QThread()
+            self.active_api_workers.append((worker, thread)) # Mantener referencia
+
+            worker.moveToThread(thread)
+
+            worker.result_ready.connect(self.candlestick_data_fetched.emit)
+            worker.error_occurred.connect(lambda e: self.api_error_occurred.emit(str(e)))
+            
+            # Conectar señales para la limpieza del worker y el thread
+            worker.result_ready.connect(thread.quit)
+            worker.error_occurred.connect(thread.quit)
+            thread.finished.connect(worker.deleteLater)
+            thread.finished.connect(thread.deleteLater)
+            thread.finished.connect(lambda: self.active_api_workers.remove((worker, thread)) if (worker, thread) in self.active_api_workers else None)
+
+            thread.started.connect(worker.run)
+            thread.start() # Iniciar el worker en un hilo separado
         else:
             self.chart_area.setText("Seleccione un par y una temporalidad para ver el gráfico.")
-
-    async def _fetch_real_data(self):
-        """Obtiene datos reales de velas del backend."""
-        try:
-            if self.current_symbol is None or self.current_interval is None:
-                self.chart_area.setText("Error: Símbolo o temporalidad no seleccionados.")
-                return
-            # Ahora pasamos user_id explícitamente
-            candlestick_data = await self.api_client.get_candlestick_data(
-                user_id=self.user_id,
-                symbol=self.current_symbol,
-                interval=self.current_interval,
-                limit=200
-            )
-            self.set_candlestick_data(candlestick_data)
-        except APIError as e:
-            logger.error(f"APIError al obtener datos de velas para {self.current_symbol}-{self.current_interval}: {e.message}", exc_info=True)
-            self.set_candlestick_data([])
-            if isinstance(self.chart_area, QLabel):
-                self.chart_area.setText(f"Error API: {e.message}")
-        except Exception as e:
-            logger.error(f"Error inesperado al obtener datos de velas para {self.current_symbol}-{self.current_interval}: {e}", exc_info=True)
-            self.set_candlestick_data([]) 
-            if isinstance(self.chart_area, QLabel):
-                self.chart_area.setText(f"Error inesperado al cargar datos: {str(e)}")
-
 
     def update_chart_display(self):
         """
@@ -169,8 +197,10 @@ class ChartWidget(QWidget):
                                    figcolor='#1e1e1e', # Fondo de la figura
                                    facecolor='#1e1e1e', # Fondo del área de trazado
                                    gridcolor='#333333', # Color de la cuadrícula
-                                   textcolor='#cccccc', # Color del texto
-                                   rc={'axes.edgecolor': '#333333'}) # Color del borde de los ejes
+                                   rc={'axes.edgecolor': '#333333', # Color del borde de los ejes
+                                       'axes.labelcolor': '#cccccc', # Color de las etiquetas de los ejes
+                                       'xtick.color': '#cccccc', # Color de las etiquetas del eje X
+                                       'ytick.color': '#cccccc'}) # Color de las etiquetas del eje Y
 
             # Crear la figura y los ejes para mplfinance
             fig, axlist = mpf.plot(df,
@@ -179,7 +209,7 @@ class ChartWidget(QWidget):
                                    style=s,
                                    returnfig=True,
                                    figscale=1.5, # Escala de la figura para mejor visualización
-                                   addplot=[mpf.make_addplot(df['Volume'], panel=1, type='bar', color='inherit', ylabel='Volume')],
+                                   addplot=[mpf.make_addplot(df['Volume'], panel=1, type='bar', ylabel='Volume')], # Eliminado color='inherit'
                                    title=f"{self.current_symbol} - {self.current_interval}",
                                    ylabel='Price',
                                    ylabel_lower='Volume',
@@ -223,10 +253,31 @@ class ChartWidget(QWidget):
             self.chart_area.setText(f"Error al renderizar el gráfico: {e}")
             print(f"Error al renderizar el gráfico: {e}")
 
+    def cleanup(self):
+        """
+        Realiza la limpieza de recursos del widget, deteniendo cualquier ApiWorker activo.
+        """
+        logger.info("ChartWidget: Iniciando limpieza de ApiWorkers activos.")
+        for worker, thread in list(self.active_api_workers): # Iterar sobre una copia
+            if thread.isRunning():
+                logger.info(f"ChartWidget: Deteniendo ApiWorker en thread {thread.objectName()}...")
+                thread.quit()
+                if not thread.wait(2000): # Esperar hasta 2 segundos
+                    logger.warning(f"ChartWidget: Thread {thread.objectName()} no terminó a tiempo. Forzando terminación.")
+                    thread.terminate()
+                    thread.wait()
+            if (worker, thread) in self.active_api_workers:
+                self.active_api_workers.remove((worker, thread))
+                worker.deleteLater() # Asegurarse de que el worker se elimine
+                thread.deleteLater() # Asegurarse de que el thread se elimine
+        logger.info("ChartWidget: Limpieza de ApiWorkers completada.")
+
 if __name__ == '__main__':
     from PyQt5.QtWidgets import QApplication, QMainWindow
     import sys
     import logging
+    from src.ultibot_ui.main import ApiWorker # Importar ApiWorker para el ejemplo de prueba
+    import qasync # Importar qasync para el ejemplo de prueba
 
     # Configurar logging para ver mensajes
     logging.basicConfig(level=logging.INFO)
@@ -265,4 +316,8 @@ if __name__ == '__main__':
     main_window.setCentralWidget(chart_widget)
     main_window.show()
 
-    sys.exit(app.exec_())
+    # Configurar el bucle de eventos de qasync para el test
+    event_loop = qasync.QEventLoop(app)
+    asyncio.set_event_loop(event_loop)
+    with event_loop:
+        sys.exit(app.exec_())

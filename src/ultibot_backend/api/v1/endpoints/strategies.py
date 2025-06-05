@@ -130,15 +130,18 @@ async def list_strategies(
     Raises:
         HTTPException: If retrieval fails.
     """
+    logger.debug(f"list_strategies endpoint invoked for user {FIXED_USER_ID}")
     try:
         logger.info(f"Listing strategies for user {FIXED_USER_ID}")
         
+        logger.debug("Calling strategy_service.list_strategy_configs...")
         # Get strategies from service
         strategies = await strategy_service.list_strategy_configs(
             user_id=FIXED_USER_ID,
             active_only=active_only,
             strategy_type=strategy_type
         )
+        logger.debug(f"strategy_service.list_strategy_configs returned {len(strategies)} strategies.")
         
         # Convert to response models
         strategy_responses = [
@@ -152,13 +155,15 @@ async def list_strategies(
         )
         
         logger.info(f"Retrieved {len(strategies)} strategies")
+        logger.debug("list_strategies endpoint finished successfully.")
         return response
         
-    except HTTPException:
+    except HTTPException as e:
         # Re-raise HTTP exceptions from service
+        logger.error(f"HTTPException in list_strategies: {e.detail}")
         raise
     except Exception as e:
-        logger.error(f"Unexpected error listing strategies: {e}")
+        logger.error(f"Unexpected error listing strategies: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve strategy configurations"

@@ -120,9 +120,24 @@ class AIOrchestrator:
     
     def __init__(self):
         """Initialize the AI Orchestrator service."""
-        # TODO: Initialize Gemini client and LangChain components
-        # For now, this is a placeholder implementation
-        pass
+        # TODO: Initialize Gemini client and LangChain components.
+        #   When implementing, Google Cloud credentials should be configured.
+        #   Typically, this is done by setting the GOOGLE_APPLICATION_CREDENTIALS
+        #   environment variable to the path of the JSON file containing
+        #   the service account key.
+        #   Example:
+        #   import os
+        #   os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/path/to/your/credentials.json"
+        #   # Then initialize the Gemini client (e.g., using google.generativeai)
+        #
+        #   Alternatively, ensure the environment where the backend runs
+        #   (e.g., Docker container, VM) has this variable set or the application
+        #   is configured for default credentials if running on GCP.
+
+        # For now, this is a placeholder implementation using a mock,
+        # which prevents credential errors in the current development phase.
+        self.gemini_client = None # Placeholder for the actual client
+        logger.info("AIOrchestrator initialized (using MOCK implementation for Gemini).")
     
     async def analyze_opportunity_with_strategy_context_async(
         self,

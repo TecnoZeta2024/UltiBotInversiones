@@ -6,9 +6,9 @@ Módulo para la vista de gestión de estrategias.
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel, QPushButton, 
                              QTableView, QHeaderView, QAbstractItemView, QApplication,
                              QStyle, QMessageBox, QLineEdit, QComboBox, QHBoxLayout, # Añadir QStyle aquí
-                             QStyledItemDelegate, QCheckBox, QStyleOptionButton)
-from PyQt5.QtCore import Qt, QAbstractTableModel, QVariant, pyqtSignal, QModelIndex, QEvent
-from PyQt5.QtGui import QPainter
+                              QStyledItemDelegate, QCheckBox, QStyleOptionButton)
+from PyQt5.QtCore import Qt, QAbstractTableModel, QVariant, pyqtSignal, QModelIndex, QEvent, QThread
+from PyQt5.QtGui import QPainter, QCloseEvent # Importar QCloseEvent y QThread
 from PyQt5.QtWidgets import QStyleOptionButton, QStyle
 from typing import Any, Optional
 
@@ -168,21 +168,167 @@ class ToggleDelegate(QStyledItemDelegate):
     # Por ahora, el método paint y editorEvent es más directo para un toggle visual.
 
 class StrategyManagementView(QWidget):
-    strategy_data_loaded = pyqtSignal(list)
-    strategy_load_failed = pyqtSignal(str)
+    strategy_data_loaded = pyqtSignal(list) 
+    strategy_load_failed = pyqtSignal(str) 
+    
+    # Nuevas señales para el patrón ApiWorker + Future
+    _strategies_loaded_signal = pyqtSignal(object) 
+    _strategies_error_signal = pyqtSignal(object)  
 
-    def __init__(self, api_client=None, parent=None):
+    def __init__(self, api_client=None, qasync_loop=None, parent=None): # Añadir qasync_loop
         super().__init__(parent)
         self.setWindowTitle("Gestión de Estrategias")
         self.api_client = api_client
+        self.qasync_loop = qasync_loop # Guardar el loop
         self._all_strategies_data = [] # Almacenar todas las estrategias
+        self.active_threads = [] # Inicializar active_threads
         
         if self.api_client is None:
             print("ADVERTENCIA: StrategyManagementView inicializado sin api_client.")
-            
+        if self.qasync_loop is None:
+            # Intentar obtener el loop de asyncio si no se pasó, aunque es mejor pasarlo.
+            try:
+                self.qasync_loop = asyncio.get_event_loop()
+                if self.qasync_loop is None: # Aún podría ser None si no hay un loop corriendo
+                     print("ADVERTENCIA CRÍTICA: StrategyManagementView no pudo obtener qasync_loop.")
+            except RuntimeError: # No hay loop de eventos corriendo
+                 print("ADVERTENCIA CRÍTICA: StrategyManagementView no hay bucle de eventos asyncio corriendo y no se pasó qasync_loop.")
+                 self.qasync_loop = None # Asegurar que es None
+
         self._init_ui()
         self._connect_signals()
-        # self._schedule_load_strategies() # Se llamará externamente
+        # self._schedule_load_strategies() # Reemplazado por la llamada directa a cargar_estrategias
+        self.cargar_estrategias() # Llamar al nuevo método de carga
+
+    def _on_strategias_cargadas(self, strategies_list):
+        """Maneja la señal de estrategias cargadas exitosamente."""
+        self._handle_strategies_loaded(strategies_list)
+        # Aquí también se podría llamar a _plot_strategies si fuera necesario
+
+    def _on_strategias_error(self, error_message):
+        """Maneja la señal de error en la carga de estrategias."""
+        self._show_load_error_message(error_message)
+
+    def cargar_estrategias(self):
+        """
+        Carga las estrategias usando ApiWorker y emite señales apropiadas.
+        """
+        if not self.api_client:
+            print("StrategyManagementView: No se puede cargar estrategias, api_client no está disponible.")
+            self._strategies_error_signal.emit("API client no disponible.")
+            return
+        
+        if self.qasync_loop is None:
+            error_msg = "StrategyManagementView: qasync_loop no está disponible. No se pueden cargar estrategias."
+            print(error_msg)
+            self._strategies_error_signal.emit(error_msg)
+            return
+
+        from ..main import ApiWorker # Importación local para evitar circularidad a nivel de módulo
+        # from PyQt5.QtCore import QThread # Ya importado arriba
+
+        async def load_strategies_coro():
+            """Corutina interna para cargar estrategias y devolver datos o lanzar error."""
+            try:
+                if self.api_client is None: # Doble verificación por si acaso
+                    raise APIError("API client no disponible en corutina.")
+                
+                strategies_data_raw = await self.api_client.get_strategies()
+                strategies_list = []
+                if not isinstance(strategies_data_raw, list):
+                    # Registrar el error antes de lanzar la excepción
+                    error_msg = f"Respuesta inesperada del servidor al obtener estrategias: {type(strategies_data_raw)}"
+                    print(f"StrategyManagementView: {error_msg}") # Usar print o logger si está configurado
+                    raise APIError(error_msg)
+
+                for item_data in strategies_data_raw:
+                    if not isinstance(item_data, dict):
+                        print(f"Advertencia: Se encontró un elemento no diccionario en la respuesta de estrategias: {item_data}")
+                        continue
+
+                    last_modified_raw = item_data.get('lastModified')
+                    last_modified_dt = None
+                    if isinstance(last_modified_raw, str):
+                        try:
+                            if last_modified_raw.endswith('Z'):
+                                last_modified_dt = datetime.fromisoformat(last_modified_raw.replace('Z', '+00:00'))
+                            else:
+                                last_modified_dt = datetime.fromisoformat(last_modified_raw)
+                        except ValueError:
+                            try:
+                                last_modified_dt = datetime.strptime(last_modified_raw, "%Y-%m-%d %H:%M:%S.%f")
+                            except ValueError:
+                                try:
+                                    last_modified_dt = datetime.strptime(last_modified_raw, "%Y-%m-%d %H:%M:%S")
+                                except ValueError:
+                                    print(f"Advertencia: No se pudo parsear la fecha '{last_modified_raw}'.")
+                    elif isinstance(last_modified_raw, datetime):
+                        last_modified_dt = last_modified_raw
+
+                    base_strategy_type_raw = item_data.get('baseStrategyType')
+                    base_strategy_type_enum = None
+                    if isinstance(base_strategy_type_raw, str):
+                        try:
+                            base_strategy_type_enum = BaseStrategyType(base_strategy_type_raw)
+                        except ValueError:
+                            print(f"Advertencia: Tipo de estrategia base desconocido '{base_strategy_type_raw}'.")
+                            base_strategy_type_enum = base_strategy_type_raw # Mantener como string si no es un Enum conocido
+                    elif isinstance(base_strategy_type_raw, BaseStrategyType):
+                        base_strategy_type_enum = base_strategy_type_raw
+                    
+                    strategy_id = item_data.get('id')
+                    if strategy_id is None: # Asegurar que el ID no sea None
+                        strategy_id = f"placeholder_id_{item_data.get('configName', 'unknown')}"
+                    else:
+                        strategy_id = str(strategy_id)
+
+                    strategies_list.append(
+                        TradingStrategyConfig(
+                            id=strategy_id,
+                            configName=item_data.get('configName', 'N/A'),
+                            baseStrategyType=base_strategy_type_enum,
+                            isActivePaperMode=item_data.get('isActivePaperMode', False),
+                            isActiveRealMode=item_data.get('isActiveRealMode', False),
+                            applicabilityRules=item_data.get('applicabilityRules', {}),
+                            lastModified=last_modified_dt
+                        )
+                    )
+                return strategies_list
+            except Exception as e:
+                # Registrar el error antes de relanzarlo para que ApiWorker lo maneje
+                error_msg = f"Error en load_strategies_coro: {type(e).__name__} - {e}"
+                print(f"StrategyManagementView: {error_msg}") # Usar print o logger
+                # QMessageBox.critical(self, "Error Interno Corutina", error_msg) # No mostrar QMessageBox desde aquí
+                raise # Relanzar la excepción para que ApiWorker la capture
+
+        # Crear y iniciar el ApiWorker
+        worker = ApiWorker(coroutine_factory=load_strategies_coro, qasync_loop=self.qasync_loop) # Usar coroutine_factory
+        
+        thread = QThread() # Crear un QThread explícitamente
+        self.active_threads.append(thread)
+        worker.moveToThread(thread)
+
+        # Conectar señales del worker a las señales de la vista
+        worker.result_ready.connect(self._strategies_loaded_signal) # Usar result_ready
+        worker.error_occurred.connect(self._strategies_error_signal)   # Usar error_occurred
+        
+        # Conectar el inicio del thread al método run del worker
+        thread.started.connect(worker.run)
+
+        # Limpieza: cuando el worker termina (éxito o error), el thread debe detenerse.
+        worker.result_ready.connect(thread.quit)
+        worker.error_occurred.connect(thread.quit)
+
+        # Limpieza: cuando el thread termina, debe ser marcado para eliminación.
+        # Y el worker también, después de que haya emitido su señal.
+        thread.finished.connect(thread.deleteLater)
+        worker.result_ready.connect(worker.deleteLater)
+        worker.error_occurred.connect(worker.deleteLater)
+        
+        # Remover el thread de la lista de activos cuando realmente finalice
+        thread.finished.connect(lambda t=thread: self.active_threads.remove(t) if t in self.active_threads else None)
+        
+        thread.start() # Iniciar el QThread, no el worker directamente
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
@@ -261,15 +407,22 @@ class StrategyManagementView(QWidget):
         return None
 
     def _connect_signals(self):
-        self.strategy_data_loaded.connect(self._handle_strategies_loaded)
-        self.strategy_load_failed.connect(self._show_load_error_message)
+        # Conexiones para el nuevo patrón ApiWorker + Future
+        self._strategies_loaded_signal.connect(self._on_strategias_cargadas)
+        self._strategies_error_signal.connect(self._on_strategias_error)
+        
+        # Las señales originales strategy_data_loaded y strategy_load_failed ya no se usan directamente
+        # para iniciar la carga, sino que son reemplazadas por el flujo de _strategies_loaded_signal y _strategies_error_signal.
+        # Si _handle_strategies_loaded y _show_load_error_message tienen lógica UI útil,
+        # _on_strategias_cargadas y _on_strategias_error deberían invocarla o replicarla.
+        # Por ahora, las comentamos para evitar doble manejo si _on_strategias_cargadas/_error ya hacen todo.
+        # self.strategy_data_loaded.connect(self._handle_strategies_loaded)
+        # self.strategy_load_failed.connect(self._show_load_error_message)
+
         self.search_input.textChanged.connect(self._filter_strategies)
         self.filter_combo.currentIndexChanged.connect(self._filter_strategies)
         self.strategies_table.doubleClicked.connect(self._on_table_double_clicked)
-        # self.table_model.dataChanged.connect(self._handle_strategy_activation_change) # Ya conectado
-        # Asegurarse que la conexión a dataChanged esté presente una sola vez.
-        # Si _connect_signals se llama múltiples veces, esto podría ser un problema.
-        # Por ahora, asumimos que se llama una vez.
+        
         if not hasattr(self, '_dataChanged_connected_for_activation'):
             self.table_model.dataChanged.connect(self._handle_strategy_activation_change)
             self._dataChanged_connected_for_activation = True
@@ -644,3 +797,25 @@ class StrategyManagementView(QWidget):
             if name_match and type_match:
                 filtered.append(strat)
         self.table_model.update_data(filtered)
+
+    def closeEvent(self, event: QCloseEvent): # Cambiado QEvent a QCloseEvent
+        """
+        Maneja el evento de cierre de la vista para limpiar hilos activos.
+        """
+        print(f"StrategyManagementView: closeEvent llamado. Hilos activos: {len(self.active_threads)}")
+        for thread in list(self.active_threads): # Iterar sobre una copia
+            if hasattr(thread, 'isRunning') and thread.isRunning():
+                print(f"StrategyManagementView: Intentando detener QThread: {thread}")
+                thread.quit()
+                if not thread.wait(1000): # Esperar máximo 1 segundo
+                    print(f"StrategyManagementView: QThread {thread} no terminó a tiempo, terminando forzosamente.")
+                    thread.terminate()
+                    thread.wait() # Esperar a que la terminación se complete
+            elif thread in self.active_threads: # Si no está corriendo pero aún en la lista
+                 try:
+                    self.active_threads.remove(thread)
+                 except ValueError:
+                    pass # Ya no estaba en la lista, no hay problema
+        
+        print(f"StrategyManagementView: Hilos restantes después de limpieza: {len(self.active_threads)}")
+        super().closeEvent(event)

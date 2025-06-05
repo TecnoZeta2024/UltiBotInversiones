@@ -33,53 +33,73 @@ class UltiBotAPIClient:
         Args:
             base_url: URL base del backend API
         """
-        self.base_url = base_url
+        # Detectar si estamos en Docker y ajustar la base_url si es necesario
+        import os
+        if os.environ.get('RUNNING_IN_DOCKER', '').lower() == 'true':
+            self.base_url = 'http://backend:8000'
+        else:
+            self.base_url = base_url
         self.timeout = 30.0  # Timeout por defecto
-        
-    async def _make_request(self, method: str, endpoint: str, **kwargs) -> Any: # Cambiado a Any
+        # self.client = httpx.AsyncClient(base_url=base_url, timeout=self.timeout) # Eliminado: Instancia única de httpx.AsyncClient
+
+    # Eliminado: aclose ya no es necesario si el cliente se crea por cada solicitud
+    # async def aclose(self) -> None:
+    #     """
+    #     Cierra la sesión del cliente HTTP de forma asíncrona.
+    #     Debe ser llamado al finalizar la aplicación para liberar recursos.
+    #     """
+    #     if not self.client.is_closed:
+    #         logger.info("Cerrando httpx.AsyncClient...")
+    #         await self.client.aclose()
+    #         logger.info("httpx.AsyncClient cerrado.")
+    #     else:
+    #         logger.info("httpx.AsyncClient ya estaba cerrado.")
+
+    async def _make_request(self, method: str, endpoint: str, **kwargs) -> Any:
         """
         Hace una petición HTTP al backend.
-        
+
         Args:
             method: Método HTTP (GET, POST, etc.)
             endpoint: Endpoint relativo a la API
             **kwargs: Argumentos adicionales para httpx
-            
+
         Returns:
             Respuesta JSON deserializada (puede ser Dict o List)
-            
+
         Raises:
             APIError: Si la petición falla
         """
-        logger.debug(f"APIClient: _make_request_invoked for {method} {endpoint}") # <--- NUEVO LOG DE DEBUG
-        url = f"{self.base_url}{endpoint}"
-        
+        logger.debug(f"APIClient: _make_request_invoked for {method} {endpoint}")
+        url = f"{self.base_url}{endpoint}" # La URL completa se construye aquí
+
         try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.request(method, url, **kwargs)
-                response.raise_for_status() # Lanza HTTPStatusError para 4xx/5xx
-                
-                # Para 204 No Content, response.json() fallaría
+            # Crear una nueva instancia de httpx.AsyncClient para cada solicitud
+            # Esto asegura que el cliente se inicialice en el contexto del bucle de eventos del ApiWorker
+            async with httpx.AsyncClient(base_url=self.base_url, timeout=self.timeout) as client:
+                response = await client.request(method, endpoint, **kwargs)
+                response.raise_for_status()
+
                 if response.status_code == 204:
-                    return None 
+                    return None
                 return response.json()
-                
+
         except httpx.HTTPStatusError as e:
             logger.error(f"HTTP error {e.response.status_code} for {method} {url}: {e.response.text}")
             response_body_json = None
             try:
                 response_body_json = e.response.json()
-            except Exception: # No es JSON o está vacío
-                pass # response_body_json permanece None
+            except Exception:
+                pass
             raise APIError(
                 message=f"API request failed with status {e.response.status_code}: {e.response.text}",
                 status_code=e.response.status_code,
                 response_json=response_body_json
             )
-        except httpx.RequestError as e: # Errores de red, DNS, timeout de conexión, etc.
+        except httpx.RequestError as e:
             logger.error(f"Request error for {method} {url}: {e}")
             raise APIError(message=f"Failed to connect to API: {str(e)}")
-        except Exception as e: # Otros errores inesperados (ej. al parsear JSON de respuesta exitosa)
+        except Exception as e:
             logger.error(f"Unexpected error for {method} {url}: {e}", exc_info=True)
             raise APIError(message=f"Unexpected error: {str(e)}")
     
@@ -708,6 +728,18 @@ class UltiBotAPIClient:
         """
         Obtiene oportunidades detectadas por la IA Gemini (mock/demo).
         """
-        logger.debug("APIClient: get_gemini_opportunities_invoked") # <--- NUEVO LOG DE DEBUG
-        logger.info("Obteniendo oportunidades IA Gemini (demo/mock).")
-        return await self._make_request("GET", "/api/v1/gemini/opportunities")
+        logger.debug("APIClient: get_gemini_opportunities_invoked. Iniciando corutina.")
+        try:
+            logger.info("Intentando obtener oportunidades IA Gemini (mock/demo) desde el backend.")
+            # await asyncio.sleep(0.01) # Pequeña pausa para asegurar que otros eventos se procesen si es necesario
+            logger.debug("APIClient: Previo a _make_request para /api/v1/gemini/opportunities")
+            result = await self._make_request("GET", "/api/v1/gemini/opportunities")
+            logger.debug(f"APIClient: _make_request para /api/v1/gemini/opportunities completado. Resultado: {type(result)}")
+            return result
+        except APIError as e:
+            logger.error(f"APIError en get_gemini_opportunities: {e.message} (Status: {e.status_code})", exc_info=True)
+            raise
+        except Exception as e:
+            logger.error(f"Error inesperado en get_gemini_opportunities: {str(e)}", exc_info=True)
+            # Envolver en APIError para consistencia si no es ya una APIError
+            raise APIError(message=f"Error inesperado obteniendo oportunidades Gemini: {str(e)}")

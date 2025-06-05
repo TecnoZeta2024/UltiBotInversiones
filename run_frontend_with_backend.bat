@@ -6,11 +6,11 @@ echo Limpiando directorios __pycache__...
 powershell -Command "Get-ChildItem -Path src -Recurse -Directory -Filter '__pycache__' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
 echo Limpieza de __pycache__ completada.
 
-REM 1. Lanzar el backend (ajusta el path/comando según tu backend)
-start "UltiBot Backend" poetry run python run_backend.py
+REM 1. Lanzar el backend ejecutando el módulo main directamente
+start "UltiBot Backend" cmd /k "poetry run python -m src.ultibot_backend.main"
 
 REM 2. Esperar a que el backend esté listo (bucle de verificación de salud)
-echo Esperando a que el backend inicie en http://127.0.0.1:8000...
+echo Esperando a que el backend inicie en http://127.0.0.1:8000 (o el puerto configurado en .env)...
 :wait_for_backend
     powershell -Command "try { Invoke-WebRequest -Uri http://127.0.0.1:8000/health -UseBasicParsing -TimeoutSec 5 | Out-Null; exit 0 } catch { exit 1 }"
     if %errorlevel% equ 0 (

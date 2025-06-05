@@ -1,6 +1,7 @@
+import asyncio # Añadido para la anotación de tipo AbstractEventLoop
 import logging
 from uuid import UUID
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Coroutine, Callable # Coroutine y Callable importados desde typing
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget, QTableWidgetItem,
@@ -16,11 +17,14 @@ from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
 logger = logging.getLogger(__name__)
 
 class OpportunitiesView(QWidget):
-    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, parent=None):
+    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, qasync_loop: asyncio.AbstractEventLoop, parent=None):
         super().__init__(parent)
+        logger.info("OpportunitiesView: __init__ called.") # Log de inicialización
         self.user_id = user_id
         self.api_client = api_client
+        self.qasync_loop = qasync_loop # Almacenar el bucle qasync
         self.active_threads = []
+        logger.debug(f"OpportunitiesView initialized with qasync_loop: {self.qasync_loop}")
 
         self._setup_ui()
         self._load_initial_data()
@@ -102,8 +106,11 @@ class OpportunitiesView(QWidget):
         self._auto_refresh_timer.start()
 
     def _load_initial_data(self):
-        # Añadir un retraso de 5 segundos para dar tiempo al backend a estabilizarse completamente
-        QTimer.singleShot(5000, self._fetch_opportunities)
+        logger.info("OpportunitiesView: _load_initial_data called.") # Log de llamada a la función
+        # Reducir el retraso para que la carga de oportunidades sea casi inmediata.
+        logger.info("OpportunitiesView: Setting up QTimer.singleShot for _fetch_opportunities in 0.1s.")
+        QTimer.singleShot(100, self._fetch_opportunities) # Retraso de 100 ms
+        logger.info("OpportunitiesView: QTimer.singleShot for _fetch_opportunities has been set.")
 
     def _apply_shadow_effect(self, widget: QWidget, color_hex: str = "#000000", blur_radius: int = 10, x_offset: int = 0, y_offset: int = 1):
         """Applies QGraphicsDropShadowEffect to a widget.
@@ -124,63 +131,134 @@ class OpportunitiesView(QWidget):
         widget.setGraphicsEffect(shadow)
 
     def _fetch_opportunities(self):
-        logger.info("OpportunitiesView: Fetching Gemini IA opportunities.")
+        logger.info("[TRACE] OpportunitiesView: _fetch_opportunities called. Fetching Gemini IA opportunities.")
+        print("[TRACE] OpportunitiesView: _fetch_opportunities called. Fetching Gemini IA opportunities.")
         self.status_label.setText("Loading opportunities...")
         self.refresh_button.setEnabled(False)
-        self.opportunities_table.setRowCount(0) # Clear table while loading
+        self.opportunities_table.setRowCount(0)  # Clear table while loading
+        logger.debug("[TRACE] OpportunitiesView: Attempting to get get_gemini_opportunities coroutine.")
+        print("[TRACE] OpportunitiesView: Attempting to get get_gemini_opportunities coroutine.")
+        self._start_api_worker(lambda: self.api_client.get_gemini_opportunities())
 
-        logger.debug("OpportunitiesView: Attempting to get get_gemini_opportunities coroutine.")
-        coroutine = self.api_client.get_gemini_opportunities()
-        logger.debug(f"OpportunitiesView: Coroutine object created: {coroutine}")
-        self._start_api_worker(coroutine)
-
-    def _start_api_worker(self, *args, **kwargs):
+    def _start_api_worker(self, coroutine_factory: Callable[[], Coroutine]):
         # Import local para evitar ciclo de importación
         from src.ultibot_ui.main import ApiWorker
 
-        worker = ApiWorker(*args, **kwargs)
+        logger.debug(f"OpportunitiesView._start_api_worker: Creating ApiWorker for coroutine_factory.")
+        if not self.qasync_loop:
+            logger.error("OpportunitiesView: qasync_loop no está disponible para _start_api_worker.")
+            self._handle_opportunities_error("Error interno: Bucle de eventos no configurado para worker.")
+            return
+        
+        # Pasar la fábrica de corutinas y el qasync_loop al constructor de ApiWorker
+        worker = ApiWorker(coroutine_factory, self.qasync_loop)
+        logger.debug(f"OpportunitiesView._start_api_worker: ApiWorker instance created: {worker} with loop {self.qasync_loop}")
         thread = QThread()
+        logger.debug(f"OpportunitiesView._start_api_worker: QThread instance created: {thread}")
         self.active_threads.append(thread)
         worker.moveToThread(thread)
+        logger.debug(f"OpportunitiesView._start_api_worker: Worker {worker} moved to thread {thread}. Connecting signals...")
 
         worker.result_ready.connect(self._handle_opportunities_result)
         worker.error_occurred.connect(self._handle_opportunities_error)
 
-        thread.started.connect(worker.run)
+        def _on_thread_started():
+            logger.debug(f"OpportunitiesView._start_api_worker: Thread {thread} for worker {worker} emitted 'started'. Calling worker.run() NOW.")
+            worker.run()
+        thread.started.connect(_on_thread_started)
+
         worker.result_ready.connect(thread.quit)
         worker.error_occurred.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        thread.finished.connect(lambda t=thread: self.active_threads.remove(t) if t in self.active_threads else None)
+        
+        # El worker se autoelimina DESPUÉS de emitir la señal.
+        worker.result_ready.connect(worker.deleteLater)
+        worker.error_occurred.connect(worker.deleteLater)
+
+        # El thread se elimina a sí mismo cuando termina.
+        # No conectar thread.finished directamente a worker.deleteLater.
+        
+        def on_thread_finished():
+            logger.debug(f"OpportunitiesView: Thread {thread} finished. Removing from active_threads.")
+            if thread in self.active_threads:
+                self.active_threads.remove(thread)
+            # El thread se eliminará a sí mismo.
+            thread.deleteLater()
+
+        thread.finished.connect(on_thread_finished)
+        
+        logger.debug(f"OpportunitiesView._start_api_worker: Signals connected. Starting thread for worker: {worker} on thread: {thread}")
         thread.start()
+        logger.debug(f"OpportunitiesView._start_api_worker: thread.start() called for worker: {worker}. IsRunning: {thread.isRunning()}, IsFinished: {thread.isFinished()}")
+        if not thread.isRunning() and not thread.isFinished():
+            logger.warning(f"OpportunitiesView._start_api_worker: Thread {thread} for worker {worker} did not start immediately. Check event loop or thread contention.")
+
 
     def _handle_opportunities_result(self, opportunities_data: List[Dict[str, Any]]):
-        logger.info(f"OpportunitiesView: Received {len(opportunities_data)} opportunities.")
+        logger.info(f"[TRACE] OpportunitiesView: Received {len(opportunities_data)} opportunities. Data: {opportunities_data}")
+        print(f"[TRACE] OpportunitiesView: Received {len(opportunities_data)} opportunities. Data: {opportunities_data}")
         self.status_label.setText(f"Loaded {len(opportunities_data)} opportunities.")
         self.refresh_button.setEnabled(True)
-
+        self.opportunities_table.setRowCount(0)
+        if not opportunities_data:
+            self.opportunities_table.setRowCount(1)
+            placeholder_item = QTableWidgetItem("No opportunities to display.")
+            placeholder_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.opportunities_table.setItem(0, 0, placeholder_item)
+            self.opportunities_table.setSpan(0, 0, 1, self.opportunities_table.columnCount())
+            self.status_label.setText("No high-confidence opportunities found at the moment.")
+            self.opportunities_table.resizeColumnsToContents()
+            self.last_updated_label.setText(f"Last updated: {QDateTime.currentDateTime().toString('yyyy-MM-dd HH:mm:ss')}")
+            return
         self.opportunities_table.setRowCount(len(opportunities_data))
         for row, opp_data in enumerate(opportunities_data):
-            # Example: Adapt these based on the actual structure of opp_data from API
-            self.opportunities_table.setItem(row, 0, QTableWidgetItem(str(opp_data.get("symbol", "N/A"))))
-            self.opportunities_table.setItem(row, 1, QTableWidgetItem(str(opp_data.get("side", "N/A"))))
-            self.opportunities_table.setItem(row, 2, QTableWidgetItem(str(opp_data.get("entry_price", "N/A")))) # entryPrice or similar
-            self.opportunities_table.setItem(row, 3, QTableWidgetItem(str(opp_data.get("confidence_score", "N/A")))) # confidence_score or score
-            self.opportunities_table.setItem(row, 4, QTableWidgetItem(str(opp_data.get("strategy_id", "N/A")))) # strategy_id or strategy_name
-            self.opportunities_table.setItem(row, 5, QTableWidgetItem(str(opp_data.get("exchange", "N/A"))))
-            timestamp = opp_data.get("timestamp_utc", opp_data.get("createdAt", "N/A")) # Check for common timestamp fields
+            symbol = opp_data.get("symbol", "N/A").replace("/", "")
+            side = opp_data.get("side", "N/A")
+            entry_price = opp_data.get("entry_price")
+            confidence_score = opp_data.get("confidence_score")
+            strategy_id = opp_data.get("strategy_id", "N/A")
+            exchange = opp_data.get("exchange", "N/A")
+            timestamp = opp_data.get("timestamp_utc", opp_data.get("createdAt", "N/A"))
+
+            # Columna 0: símbolo
+            self.opportunities_table.setItem(row, 0, QTableWidgetItem(str(symbol)))
+
+            # Columna 1: side
+            side_item = QTableWidgetItem(str(side))
+            if side == "BUY":
+                side_item.setForeground(QColor("lightgreen"))
+            elif side == "SELL":
+                side_item.setForeground(QColor("lightcoral"))
+            self.opportunities_table.setItem(row, 1, side_item)
+
+            # Columna 2: entry_price
+            if isinstance(entry_price, (int, float)):
+                self.opportunities_table.setItem(row, 2, QTableWidgetItem(f"{entry_price:,.2f}"))
+            else:
+                self.opportunities_table.setItem(row, 2, QTableWidgetItem(str(entry_price)))
+
+            # Columna 3: confidence_score
+            if isinstance(confidence_score, (int, float)):
+                score_item = QTableWidgetItem(f"{confidence_score:.2f}")
+                if confidence_score >= 0.9:
+                    score_item.setForeground(QColor("lightgreen"))
+                elif confidence_score >= 0.7:
+                    score_item.setForeground(QColor("yellow"))
+                else:
+                    score_item.setForeground(QColor("orange"))
+                self.opportunities_table.setItem(row, 3, score_item)
+            else:
+                self.opportunities_table.setItem(row, 3, QTableWidgetItem(str(confidence_score)))
+
+            # Columna 4: strategy_id
+            self.opportunities_table.setItem(row, 4, QTableWidgetItem(str(strategy_id)))
+            # Columna 5: exchange
+            self.opportunities_table.setItem(row, 5, QTableWidgetItem(str(exchange)))
+            # Columna 6: timestamp
             self.opportunities_table.setItem(row, 6, QTableWidgetItem(str(timestamp)))
 
-        if not opportunities_data:
-            self.status_label.setText("No high-confidence opportunities found at the moment.")
-            # Optionally, display a message in the table itself if it's empty
-            if self.opportunities_table.rowCount() == 0:
-                self.opportunities_table.setRowCount(1)
-                placeholder_item = QTableWidgetItem("No opportunities to display.")
-                placeholder_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                self.opportunities_table.setItem(0, 0, placeholder_item)
-                self.opportunities_table.setSpan(0, 0, 1, self.opportunities_table.columnCount())
-
+        self.opportunities_table.resizeColumnsToContents()
+        self.opportunities_table.resizeRowsToContents()
+        self.opportunities_table.update()
         self.last_updated_label.setText(f"Last updated: {QDateTime.currentDateTime().toString('yyyy-MM-dd HH:mm:ss')}")
 
     def _handle_opportunities_error(self, error_message: str):
@@ -200,10 +278,19 @@ class OpportunitiesView(QWidget):
 
     def cleanup(self):
         logger.info("OpportunitiesView: Cleaning up...")
+        # Detener el timer de auto-refresco
+        if self._auto_refresh_timer.isActive():
+            self._auto_refresh_timer.stop()
+            logger.info("OpportunitiesView: Auto-refresh timer stopped.")
+
         for thread in list(self.active_threads):
             if thread.isRunning():
+                logger.info(f"OpportunitiesView: Deteniendo thread {thread.objectName()}...")
                 thread.quit()
-                thread.wait()
+                if not thread.wait(2000): # Esperar hasta 2 segundos
+                    logger.warning(f"OpportunitiesView: Thread {thread.objectName()} no terminó a tiempo. Forzando terminación.")
+                    thread.terminate()
+                    thread.wait()
         self.active_threads.clear()
         logger.info("OpportunitiesView: Cleanup finished.")
 
@@ -263,7 +350,14 @@ if __name__ == '__main__':
     mock_client_success = MockUltiBotAPIClient()
     mock_client_success.get_real_trading_candidates = _mock_get_real_trading_candidates_success # type: ignore
 
-    view_success = OpportunitiesView(user_id=UUID("00000000-0000-0000-0000-000000000000"), api_client=mock_client_success) # type: ignore
+    # Para la prueba independiente, necesitamos un mock del bucle de eventos si no se ejecuta qasync completo
+    mock_loop = asyncio.new_event_loop()
+
+    view_success = OpportunitiesView(
+        user_id=UUID("00000000-0000-0000-0000-000000000000"), 
+        api_client=mock_client_success, # type: ignore
+        qasync_loop=mock_loop # Pasar el mock_loop
+    ) 
     view_success.setWindowTitle("Opportunities View - Success Test")
     view_success.show()
 

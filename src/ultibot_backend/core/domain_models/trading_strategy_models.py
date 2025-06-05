@@ -8,7 +8,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator, ValidationError
 
 
 class Timeframe(str, Enum):
@@ -540,12 +540,27 @@ class TradingStrategyConfig(BaseModel):
     def validate_parameters_match_strategy_type(cls, v, values):
         """Validate that parameters match the strategy type."""
         if 'base_strategy_type' not in values:
-            return v
+            # This should ideally not happen if base_strategy_type is a required field
+            # and processed before this validator.
+            return v # Or raise an error if base_strategy_type is strictly needed here
+
+        strategy_type_enum_member = values.get('base_strategy_type')
+
+        # Ensure strategy_type_enum_member is an actual Enum member
+        if not isinstance(strategy_type_enum_member, BaseStrategyType):
+            # If it's a string, Pydantic should have converted it based on type hints.
+            # If it's still a string here, there might be an issue upstream or
+            # the input data was not what Pydantic expected for the enum.
+            # We attempt a final conversion, but this path suggests a potential problem.
+            try:
+                strategy_type_enum_member = BaseStrategyType(str(strategy_type_enum_member))
+            except ValueError:
+                raise ValueError(
+                    f"Invalid base_strategy_type value '{strategy_type_enum_member}'. "
+                    f"Expected one of {list(BaseStrategyType.__members__.keys())}."
+                )
         
-        strategy_type = values['base_strategy_type']
-        
-        # Define expected parameter types for each strategy
-        expected_types = {
+        expected_parameter_models = {
             BaseStrategyType.SCALPING: ScalpingParameters,
             BaseStrategyType.DAY_TRADING: DayTradingParameters,
             BaseStrategyType.ARBITRAGE_SIMPLE: ArbitrageSimpleParameters,
@@ -555,21 +570,30 @@ class TradingStrategyConfig(BaseModel):
             BaseStrategyType.DCA_INVESTING: DCAInvestingParameters,
         }
         
-        expected_type = expected_types.get(strategy_type)
-        if expected_type and not isinstance(v, expected_type):
-            # If v is a dict, try to convert it to the expected type
-            if isinstance(v, dict):
-                try:
-                    v = expected_type(**v)
-                except Exception as e:
-                    raise ValueError(
-                        f"Parameters for {strategy_type} must be valid {expected_type.__name__}: {e}"
-                    )
-            else:
-                raise ValueError(
-                    f"Parameters for {strategy_type} must be of type {expected_type.__name__}"
-                )
+        expected_model = expected_parameter_models.get(strategy_type_enum_member)
         
+        if expected_model:
+            # If 'v' (the parameters field) is a dictionary, and not already an instance
+            # of the expected model, attempt to parse it into the expected model.
+            # Pydantic's Union handling might have left it as a dict if it matched Dict[str, Any] first.
+            if isinstance(v, dict) and not isinstance(v, expected_model):
+                try:
+                    v = expected_model(**v)
+                except ValidationError as e:
+                    # Re-raise with a more informative message, possibly including field details
+                    raise ValueError(
+                        f"Invalid parameters for strategy type '{strategy_type_enum_member.value}'. "
+                        f"Details: {e.errors()}"
+                    )
+            # If 'v' is already an instance of the correct model, or another valid type in the Union,
+            # and it's not a dict that needs conversion, it's fine.
+            elif not isinstance(v, (expected_model, dict)): # Allow dict if no specific model or if it's a fallback
+                 # This case might need refinement based on how StrategySpecificParameters Union is defined
+                 # If StrategySpecificParameters = Union[ModelA, ModelB, Dict[str, Any]],
+                 # then a dict is a valid type for 'v'.
+                 # The goal is to ensure if a specific model is expected, 'v' becomes an instance of it.
+                pass # It's already a specific Pydantic model from the Union or a fallback dict.
+
         return v
 
     @validator('is_active_real_mode')

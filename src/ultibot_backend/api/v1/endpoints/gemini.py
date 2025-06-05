@@ -22,18 +22,19 @@ _CACHE_TTL_SECONDS = 30  # Cache expiry (seconds)
 
 @router.get("/gemini/opportunities", response_model=List[dict])
 async def get_gemini_opportunities():
-    """
-    Devuelve oportunidades detectadas por la IA usando Gemini (mock/demo).
-    Implementa caché en memoria para evitar reprocesar IA en cada request.
-    """
-    logger.info("Solicitud GET a /gemini/opportunities recibida.")
+    logger.info("[TRACE] BACKEND: Solicitud GET a /gemini/opportunities recibida.")
+    print("[TRACE] BACKEND: Solicitud GET a /gemini/opportunities recibida.")
     from time import time
     global _cached_ia_data, _cached_ia_timestamp
     now = time()
     with _cache_lock:
         if _cached_ia_data is not None and _cached_ia_timestamp is not None:
             if now - _cached_ia_timestamp < _CACHE_TTL_SECONDS:
+                logger.info("[TRACE] BACKEND: Devolviendo oportunidades de IA desde la caché.")
+                print("[TRACE] BACKEND: Devolviendo oportunidades de IA desde la caché.")
                 return _cached_ia_data
+    logger.info("[TRACE] BACKEND: Generando nuevas oportunidades de IA (caché expirada o vacía).")
+    print("[TRACE] BACKEND: Generando nuevas oportunidades de IA (caché expirada o vacía).")
     orchestrator = AIOrchestrator()
     # Simulación: crear una oportunidad de ejemplo
     opportunity = OpportunityData(
@@ -98,10 +99,10 @@ async def get_gemini_opportunities():
     transformed_result = {
         "id": opportunity.opportunity_id, # Usar el ID de la oportunidad
         "symbol": opportunity.symbol,
-        "side": analysis_result.suggested_action.upper() if analysis_result.suggested_action else "N/A", # Mapear suggested_action
-        "entry_price": analysis_result.recommended_trade_params.get("entry_price") if analysis_result.recommended_trade_params else "N/A",
-        "confidence_score": analysis_result.calculated_confidence,
-        "strategy_id": strategy.config_name, # Usar el nombre de la estrategia de ejemplo
+        "side": (analysis_result.suggested_action.upper() if analysis_result.suggested_action else "N/A"), # Mapear suggested_action
+        "entry_price": (analysis_result.recommended_trade_params.get("entry_price") if analysis_result.recommended_trade_params and analysis_result.recommended_trade_params.get("entry_price") is not None else "N/A"),
+        "confidence_score": (analysis_result.calculated_confidence if analysis_result.calculated_confidence is not None else 0.0),
+        "strategy_id": (strategy.config_name if strategy.config_name else "N/A"), # Usar el nombre de la estrategia de ejemplo
         "exchange": "Binance (Demo)", # Valor de ejemplo
         "timestamp_utc": analysis_result.analyzed_at.isoformat(), # Usar analyzed_at
         # Incluir otros campos de analysis_result si son útiles para la UI o para depuración
@@ -111,6 +112,7 @@ async def get_gemini_opportunities():
     }
     
     result = [transformed_result] # Devolver una lista con el diccionario transformado
+    logger.info(f"Devolviendo oportunidades de IA: {result}") # Añadir log aquí
 
     with _cache_lock:
         _cached_ia_data = result
