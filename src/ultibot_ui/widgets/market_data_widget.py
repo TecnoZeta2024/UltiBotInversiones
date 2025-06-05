@@ -85,10 +85,10 @@ class MarketDataWidget(QWidget):
     config_saved = pyqtSignal(dict)
     market_data_api_error = pyqtSignal(str)
     
-    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, parent: Optional[QWidget] = None):
+    def __init__(self, user_id: UUID, backend_base_url: str, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.user_id = user_id
-        self.api_client = api_client
+        self.backend_base_url = backend_base_url
         self.selected_pairs: List[str] = [] 
         self.all_available_pairs: List[str] = [] 
         self.active_api_workers = [] # Para mantener referencia a los workers y threads
@@ -102,9 +102,9 @@ class MarketDataWidget(QWidget):
         self.config_saved.connect(self._handle_config_saved_result)
         self.market_data_api_error.connect(self._handle_market_data_api_error)
 
-    def _run_api_worker_and_await_result(self, coro: Coroutine) -> Any:
+    def _run_api_worker_and_await_result(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine]) -> Any:
         """
-        Ejecuta una corutina en un ApiWorker y espera su resultado.
+        Ejecuta una corutina (a través de una factory) en un ApiWorker y espera su resultado.
         Retorna un Future que se puede await.
         """
         from src.ultibot_ui.main import ApiWorker # Importar localmente
@@ -113,7 +113,7 @@ class MarketDataWidget(QWidget):
         qasync_loop = asyncio.get_event_loop()
         future = qasync_loop.create_future()
 
-        worker = ApiWorker(coroutine_factory=lambda: coro, qasync_loop=qasync_loop)
+        worker = ApiWorker(coroutine_factory=coroutine_factory, base_url=self.backend_base_url) # Modificado
         thread = QThread()
         self.active_api_workers.append((worker, thread))
 
@@ -178,8 +178,9 @@ class MarketDataWidget(QWidget):
     def load_initial_configuration(self):
         logger.info("Cargando configuración inicial para MarketDataWidget...")
         try:
-            coro = self.api_client.get_user_configuration()
-            self._run_api_worker_and_await_result(coro).add_done_callback(
+            self._run_api_worker_and_await_result(
+                lambda api_client: api_client.get_user_configuration()
+            ).add_done_callback(
                 lambda f: self.user_config_fetched.emit(f.result()) if not f.exception() else None
             )
             logger.info("load_initial_configuration: Llamada a get_user_configuration programada.")
@@ -239,8 +240,9 @@ class MarketDataWidget(QWidget):
                 self.tickers_table.setRowCount(0)
                 return
 
-            coro = self.api_client.get_ticker_data(self.user_id, self.selected_pairs)
-            self._run_api_worker_and_await_result(coro).add_done_callback(
+            self._run_api_worker_and_await_result(
+                lambda api_client: api_client.get_ticker_data(self.user_id, self.selected_pairs)
+            ).add_done_callback(
                 lambda f: self.tickers_data_fetched.emit(f.result()) if not f.exception() else None
             )
             logger.info("update_tickers_data: Llamada a get_ticker_data programada.")
@@ -267,8 +269,9 @@ class MarketDataWidget(QWidget):
         logger.info(f"Guardando configuración de MarketDataWidget: {self.selected_pairs} (refactorizado)")
         try:
             # Primero obtener la configuración actual
-            coro_get = self.api_client.get_user_configuration()
-            future_get_config = self._run_api_worker_and_await_result(coro_get)
+            future_get_config = self._run_api_worker_and_await_result(
+                lambda api_client: api_client.get_user_configuration()
+            )
 
             def on_get_config_done(f):
                 if f.exception():
@@ -281,8 +284,9 @@ class MarketDataWidget(QWidget):
                 current_config["market_data_widget"]["selected_pairs"] = self.selected_pairs
                 
                 # Luego actualizar la configuración
-                coro_update = self.api_client.update_user_configuration({"market_data_widget": current_config["market_data_widget"]})
-                self._run_api_worker_and_await_result(coro_update).add_done_callback(
+                self._run_api_worker_and_await_result(
+                    lambda api_client: api_client.update_user_configuration({"market_data_widget": current_config["market_data_widget"]})
+                ).add_done_callback(
                     lambda f_update: self.config_saved.emit(f_update.result()) if not f_update.exception() else self.market_data_api_error.emit(f"Error al guardar config: {f_update.exception()}")
                 )
                 logger.info("save_widget_configuration: Llamada a update_user_configuration programada.")
@@ -367,9 +371,9 @@ if __name__ == '__main__':
         asyncio.set_event_loop(loop)
 
         test_user_id = UUID("123e4567-e89b-12d3-a456-426614174000")
-        mock_api_client = MockAPIClient()
+        mock_backend_base_url = "http://localhost:8000" # Usar una URL base de mock
 
-        widget = MarketDataWidget(user_id=test_user_id, api_client=mock_api_client) # type: ignore
+        widget = MarketDataWidget(user_id=test_user_id, backend_base_url=mock_backend_base_url)
         widget.setWindowTitle("Test Market Data Widget")
         widget.setGeometry(100, 100, 800, 600)
         

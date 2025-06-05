@@ -175,16 +175,16 @@ class StrategyManagementView(QWidget):
     _strategies_loaded_signal = pyqtSignal(object) 
     _strategies_error_signal = pyqtSignal(str)  # Changed to str for compatibility
 
-    def __init__(self, api_client=None, qasync_loop=None, parent=None): # Añadir qasync_loop
+    def __init__(self, backend_base_url: Optional[str] = None, qasync_loop=None, parent=None): # Añadir qasync_loop
         super().__init__(parent)
         self.setWindowTitle("Gestión de Estrategias")
-        self.api_client = api_client
+        self.backend_base_url = backend_base_url
         self.qasync_loop = qasync_loop # Guardar el loop
         self._all_strategies_data = [] # Almacenar todas las estrategias
         self.active_threads = [] # Inicializar active_threads
         
-        if self.api_client is None:
-            print("ADVERTENCIA: StrategyManagementView inicializado sin api_client.")
+        if self.backend_base_url is None:
+            print("ADVERTENCIA: StrategyManagementView inicializado sin backend_base_url.")
         if self.qasync_loop is None:
             # Intentar obtener el loop de asyncio si no se pasó, aunque es mejor pasarlo.
             try:
@@ -218,9 +218,9 @@ class StrategyManagementView(QWidget):
         """
         Carga las estrategias usando ApiWorker y emite señales apropiadas.
         """
-        if not self.api_client:
-            print("StrategyManagementView: No se puede cargar estrategias, api_client no está disponible.")
-            self._strategies_error_signal.emit("API client no disponible.")
+        if not self.backend_base_url:
+            print("StrategyManagementView: No se puede cargar estrategias, backend_base_url no está disponible.")
+            self._strategies_error_signal.emit("URL base del backend no disponible.")
             return
         
         if self.qasync_loop is None:
@@ -235,10 +235,12 @@ class StrategyManagementView(QWidget):
         async def load_strategies_coro():
             """Corutina interna para cargar estrategias y devolver datos o lanzar error."""
             try:
-                if self.api_client is None: # Doble verificación por si acaso
-                    raise APIError("API client no disponible en corutina.")
+                if self.backend_base_url is None: # Doble verificación por si acaso
+                    raise APIError("URL base del backend no disponible en corutina.")
                 
-                strategies_data_raw = await self.api_client.get_strategies()
+                # Crear una instancia de UltiBotAPIClient dentro del hilo del worker
+                api_client_instance = UltiBotAPIClient(self.backend_base_url)
+                strategies_data_raw = await api_client_instance.get_strategies()
                 strategies_list = []
                 if not isinstance(strategies_data_raw, list):
                     # Registrar el error antes de lanzar la excepción
@@ -307,7 +309,7 @@ class StrategyManagementView(QWidget):
                 raise # Relanzar la excepción para que ApiWorker la capture
 
         # Crear y iniciar el ApiWorker
-        worker = ApiWorker(coroutine_factory=load_strategies_coro, qasync_loop=self.qasync_loop) # Usar coroutine_factory
+        worker = ApiWorker(lambda api_client: load_strategies_coro(), self.backend_base_url)
         
         thread = QThread() # Crear un QThread explícitamente
         self.active_threads.append(thread)
@@ -446,7 +448,7 @@ class StrategyManagementView(QWidget):
             self._edit_strategy_action(strategy_config)
 
     def _handle_strategy_activation_change(self, topLeft: QModelIndex, bottomRight: QModelIndex, roles: list):
-        if not topLeft.isValid() or not self.api_client:
+        if not topLeft.isValid() or not self.backend_base_url:
             return
 
         # Solo nos interesan los cambios en las columnas de activación y del rol CheckStateRole
@@ -496,10 +498,10 @@ class StrategyManagementView(QWidget):
         asyncio.create_task(self._update_strategy_activation_backend(strategy_id, mode, is_active, topLeft))
 
     async def _update_strategy_activation_backend(self, strategy_id: str, mode: str, active: bool, index_to_revert: QModelIndex):
-        if not self.api_client:
+        if not self.backend_base_url:
             return
         try:
-            await self.api_client.update_strategy_activation_status(strategy_id, mode, active)
+            await UltiBotAPIClient(self.backend_base_url).update_strategy_activation_status(strategy_id, mode, active)
             QMessageBox.information(self, "Éxito", f"Estrategia '{strategy_id}' actualizada en modo '{mode}'.")
             # La UI ya se actualizó optimistamente. Si hay error, se revierte.
             # Podríamos recargar todo, pero es más eficiente así.
@@ -542,7 +544,7 @@ class StrategyManagementView(QWidget):
         from ..dialogs.strategy_config_dialog import StrategyConfigDialog
         ai_profiles = [] # TODO: Cargar perfiles AI si es necesario
         
-        if self.api_client is None:
+        if self.backend_base_url is None:
             QMessageBox.warning(self, "API no disponible", f"No se puede {action_text.lower()} una estrategia sin conexión al backend.")
             return
 
@@ -568,18 +570,19 @@ class StrategyManagementView(QWidget):
                 lastModified=datetime.now(), # Nueva fecha
                 id="" # Forzar creación con string vacío
             )
-            # Aquí podríamos querer pasar los 'parameters' también, copiándolos.
-            # setattr(config_for_dialog, 'parameters', copy.deepcopy(getattr(strategy_to_duplicate, 'parameters', {})))
-
-            dialog = StrategyConfigDialog(api_client=self.api_client,
-                                          strategy_config=config_for_dialog, # Pasamos la copia como si fuera una existente
-                                          ai_profiles=ai_profiles,
-                                          is_duplicating=True, # Flag para indicar al diálogo que es una duplicación
-                                          parent=self)
+            from ..services.api_client import UltiBotAPIClient
+            api_client = UltiBotAPIClient(self.backend_base_url)
+            dialog = StrategyConfigDialog(api_client=api_client,
+                                     strategy_config=config_for_dialog,
+                                     ai_profiles=ai_profiles,
+                                     is_duplicating=True,
+                                     parent=self)
         else:
-            dialog = StrategyConfigDialog(api_client=self.api_client,
-                                          ai_profiles=ai_profiles,
-                                          parent=self)
+            from ..services.api_client import UltiBotAPIClient
+            api_client = UltiBotAPIClient(self.backend_base_url)
+            dialog = StrategyConfigDialog(api_client=api_client,
+                                     ai_profiles=ai_profiles,
+                                     parent=self)
         
         if dialog.exec_():
             self._schedule_load_strategies()
@@ -609,18 +612,18 @@ class StrategyManagementView(QWidget):
 
     async def _fetch_and_duplicate_strategy(self, strategy_id: str):
         # Esta es una implementación más robusta para duplicar, obteniendo datos frescos.
-        if not self.api_client:
+        if not self.backend_base_url:
             QMessageBox.warning(self, "API no disponible", "No se puede duplicar sin conexión al backend.")
             return
         try:
-            strategy_details_dict = await self.api_client.get_strategy_details(strategy_id)
+            strategy_details_dict = await UltiBotAPIClient(self.backend_base_url).get_strategy_details(strategy_id)
             
             # Convertir el dict a un objeto TradingStrategyConfig (o similar)
             # Esto asume que TradingStrategyConfig puede ser instanciado desde un dict,
             # o que tenemos una función de utilidad para ello.
             # Por ahora, vamos a simularlo:
             strategy_obj_to_duplicate = TradingStrategyConfig(
-                id=strategy_details_dict.get('id'), # Se pasará pero el diálogo debe ignorarlo para POST
+                id=str(strategy_details_dict.get('id', "")), # Asegurar que el ID sea str
                 configName=strategy_details_dict.get('configName', 'N/A'),
                 baseStrategyType=BaseStrategyType(strategy_details_dict.get('baseStrategyType')) if strategy_details_dict.get('baseStrategyType') else None,
                 isActivePaperMode=False, # Duplicates start deactivated
@@ -666,11 +669,11 @@ class StrategyManagementView(QWidget):
             asyncio.create_task(self._delete_strategy_backend(strategy_id))
 
     async def _delete_strategy_backend(self, strategy_id: str):
-        if not self.api_client:
+        if not self.backend_base_url:
             QMessageBox.warning(self, "API no disponible", "No se puede eliminar sin conexión al backend.")
             return
         try:
-            await self.api_client.delete_strategy(strategy_id)
+            await UltiBotAPIClient(self.backend_base_url).delete_strategy(strategy_id)
             QMessageBox.information(self, "Éxito", f"Estrategia '{strategy_id}' eliminada correctamente.")
             self._schedule_load_strategies() # Recargar la lista
         except APIError as e:
@@ -684,19 +687,21 @@ class StrategyManagementView(QWidget):
         print(f"Editando estrategia: {getattr(strategy_config, 'configName', 'ID Desconocida')}")
         from ..dialogs.strategy_config_dialog import StrategyConfigDialog
         ai_profiles = []
-        if self.api_client is None:
+        if self.backend_base_url is None:
             QMessageBox.warning(self, "API no disponible", "No se puede editar una estrategia sin conexión al backend.")
             return
-        dialog = StrategyConfigDialog(api_client=self.api_client, 
-                                      strategy_config=strategy_config, 
-                                      ai_profiles=ai_profiles, 
-                                      parent=self)
+        from ..services.api_client import UltiBotAPIClient
+        api_client = UltiBotAPIClient(self.backend_base_url)
+        dialog = StrategyConfigDialog(api_client=api_client,
+                                     strategy_config=strategy_config,
+                                     ai_profiles=ai_profiles,
+                                     parent=self)
         if dialog.exec_():
             self._schedule_load_strategies()
 
     def _schedule_load_strategies(self):
-        if not self.api_client:
-            print("StrategyManagementView: No se puede cargar estrategias, api_client no está disponible.")
+        if not self.backend_base_url:
+            print("StrategyManagementView: No se puede cargar estrategias, backend_base_url no está disponible.")
             return
         try:
             loop = asyncio.get_event_loop()
@@ -710,11 +715,12 @@ class StrategyManagementView(QWidget):
             print(f"Error al programar la carga de estrategias: {e}")
 
     async def _load_strategies_async(self):
-        if self.api_client is None:
-            self.strategy_load_failed.emit("No se puede cargar estrategias: API client no disponible.")
+        if self.backend_base_url is None:
+            self.strategy_load_failed.emit("No se puede cargar estrategias: URL base del backend no disponible.")
             return
         try:
-            strategies_data_raw = await self.api_client.get_strategies()
+            api_client_instance = UltiBotAPIClient(self.backend_base_url)
+            strategies_data_raw = await api_client_instance.get_strategies()
             strategies_list = []
             if not isinstance(strategies_data_raw, list): # Verificar si la respuesta general es una lista
                 print(f"Advertencia: La respuesta de get_strategies no es una lista: {strategies_data_raw}")

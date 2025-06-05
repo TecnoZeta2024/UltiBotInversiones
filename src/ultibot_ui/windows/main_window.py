@@ -22,7 +22,7 @@ from PyQt5.QtWidgets import (
     QWidget,
     QAction, # Added for menu actions
     QTextEdit, # Añadido para panel de logs
-    QVBoxLayout # Añadido para el layout vertical
+    QVBoxLayout # Cambiar QVBox por QVBoxLayout
 )
 
 from src.shared.data_types import UserConfiguration # May not be needed directly in MainWindow anymore for config
@@ -52,21 +52,21 @@ class MainWindow(QMainWindow):
     def __init__(
         self,
         user_id: UUID,
-        api_client: UltiBotAPIClient, # Changed: Pass api_client
+        backend_base_url: str, # Changed: Pass backend_base_url
         qasync_loop: asyncio.AbstractEventLoop, # Added qasync_loop
         parent=None,
     ):
-        """Inicializa la ventana principal con el cliente API y el bucle qasync.
+        """Inicializa la ventana principal con la URL base del backend y el bucle qasync.
 
         Args:
             user_id: Identificador único del usuario
-            api_client: Cliente para interactuar con el backend API.
+            backend_base_url: URL base del backend API.
             qasync_loop: El bucle de eventos qasync del hilo principal.
             parent: Widget padre opcional
         """
         super().__init__(parent)
         self.user_id = user_id
-        self.api_client = api_client # Use the passed-in api_client
+        self.backend_base_url = backend_base_url # Store the backend base URL
         self.qasync_loop = qasync_loop # Store the qasync loop
 
         # Remove old service instances
@@ -241,9 +241,9 @@ class MainWindow(QMainWindow):
             self._handle_paper_trading_status_error(Exception("Error interno: Bucle de eventos no configurado."))
             return
 
-        coroutine_factory = lambda: self.api_client.get_user_configuration()
+        coroutine_factory = lambda api_client: api_client.get_user_configuration()
         future = self.qasync_loop.create_future()
-        worker = ApiWorker(coroutine_factory, self.qasync_loop)
+        worker = ApiWorker(coroutine_factory, self.backend_base_url)
         
         thread = QThread()
         self.active_threads.append(thread)
@@ -304,9 +304,9 @@ class MainWindow(QMainWindow):
             self._handle_real_trading_status_error(Exception("Error interno: Bucle de eventos no configurado."))
             return
 
-        coroutine_factory = lambda: self.api_client.get_real_trading_mode_status()
+        coroutine_factory = lambda api_client: api_client.get_real_trading_mode_status()
         future = self.qasync_loop.create_future()
-        worker = ApiWorker(coroutine_factory, self.qasync_loop)
+        worker = ApiWorker(coroutine_factory, self.backend_base_url)
 
         thread = QThread()
         self.active_threads.append(thread)
@@ -425,10 +425,10 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(self.stacked_widget)
 
         # Añadir vistas al stacked widget
-        # DashboardView constructor needs to be updated to accept api_client
+        # DashboardView constructor needs to be updated to accept backend_base_url
         self.dashboard_view = DashboardView(
             user_id=self.user_id,
-            api_client=self.api_client
+            backend_base_url=self.backend_base_url
             # Removed old services: market_data_service, config_service,
             # notification_service, persistence_service
         )
@@ -443,12 +443,12 @@ class MainWindow(QMainWindow):
             error_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.stacked_widget.addWidget(error_label)
         else:
-            self.opportunities_view = OpportunitiesView(self.user_id, self.api_client, self.qasync_loop)
+            self.opportunities_view = OpportunitiesView(self.user_id, self.backend_base_url, self.qasync_loop)
             self.stacked_widget.addWidget(self.opportunities_view)  # Índice 1
 
         # self.strategies_view = QLabel("Vista de Estrategias (Placeholder)")
         # self.strategies_view.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.strategy_management_view = StrategyManagementView(api_client=self.api_client, parent=self) # Pasar api_client
+        self.strategy_management_view = StrategyManagementView(backend_base_url=self.backend_base_url, parent=self) # Pasar backend_base_url
         self.stacked_widget.addWidget(self.strategy_management_view)  # Índice 2
 
         # New PortfolioView
@@ -458,14 +458,14 @@ class MainWindow(QMainWindow):
             error_label_portfolio.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.stacked_widget.addWidget(error_label_portfolio)
         else:
-            self.portfolio_view = PortfolioView(self.user_id, self.api_client, self.qasync_loop)
+            self.portfolio_view = PortfolioView(self.user_id, self.backend_base_url, self.qasync_loop)
             self.stacked_widget.addWidget(self.portfolio_view) # Index 3
 
         # Vista de historial con el widget de paper trading report
         self.history_view = HistoryView(self.user_id)
         self.stacked_widget.addWidget(self.history_view)  # Índice 4
 
-        self.settings_view = SettingsView(str(self.user_id), self.api_client, self.qasync_loop) # Pasar qasync_loop
+        self.settings_view = SettingsView(str(self.user_id), self.backend_base_url, self.qasync_loop) # Pasar backend_base_url
         self.stacked_widget.addWidget(self.settings_view)  # Índice 5
 
         # View mapping for navigation

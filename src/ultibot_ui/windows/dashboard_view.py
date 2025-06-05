@@ -38,10 +38,10 @@ class DashboardView(QWidget):
     real_trades_count_fetched = pyqtSignal(dict)
     dashboard_api_error = pyqtSignal(str)
 
-    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient):
+    def __init__(self, user_id: UUID, backend_base_url: str):
         super().__init__()
         self.user_id = user_id
-        self.api_client = api_client
+        self.backend_base_url = backend_base_url
         self.trading_mode_manager = get_trading_mode_manager()
         self.active_api_workers = [] # Para mantener referencia a los workers y threads
 
@@ -70,7 +70,7 @@ class DashboardView(QWidget):
         """Inicia la tarea asíncrona de inicialización de componentes."""
         asyncio.create_task(self._initialize_async_components())
 
-    def _run_api_worker_and_await_result(self, coroutine_factory: Callable[[], Coroutine]) -> Any:
+    def _run_api_worker_and_await_result(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine]) -> Any:
         """
         Ejecuta una corutina (a través de una factory) en un ApiWorker y espera su resultado.
         Retorna un Future que se puede await.
@@ -81,7 +81,7 @@ class DashboardView(QWidget):
         qasync_loop = asyncio.get_event_loop()
         future = qasync_loop.create_future()
 
-        worker = ApiWorker(coroutine_factory=coroutine_factory, qasync_loop=qasync_loop)
+        worker = ApiWorker(coroutine_factory=coroutine_factory, base_url=self.backend_base_url) # Eliminado qasync_loop
         thread = QThread()
         self.active_api_workers.append((worker, thread))
 
@@ -122,7 +122,7 @@ class DashboardView(QWidget):
             logger.info("DashboardView: Programando carga de notificaciones...")
             # Se añade un límite razonable para la carga inicial de notificaciones.
             notifications_task = self._run_api_worker_and_await_result(
-                lambda: self.api_client.get_notification_history(user_id=self.user_id, limit=20) 
+                lambda api_client: api_client.get_notification_history(user_id=self.user_id, limit=20) 
             )
             tasks_to_gather.append(notifications_task)
 
@@ -136,7 +136,7 @@ class DashboardView(QWidget):
                 mode_param_for_api = "real"
             
             strategy_performance_task = self._run_api_worker_and_await_result(
-                lambda: self.api_client.get_strategy_performance(
+                lambda api_client: api_client.get_strategy_performance(
                     user_id=self.user_id,
                     mode=mode_param_for_api
                 )
@@ -230,16 +230,16 @@ class DashboardView(QWidget):
         header_layout.addWidget(self.mode_status_bar)
         main_layout.addWidget(header_frame)
 
-        self.market_data_widget = MarketDataWidget(self.user_id, self.api_client)
+        self.market_data_widget = MarketDataWidget(self.user_id, self.backend_base_url)
         main_layout.addWidget(self.market_data_widget)
         
         center_splitter = QSplitter(Qt.Orientation.Horizontal)
         center_splitter.setContentsMargins(0, 0, 0, 0)
         center_splitter.setChildrenCollapsible(False)
-        self.portfolio_widget = PortfolioWidget(self.user_id, self.api_client)
+        self.portfolio_widget = PortfolioWidget(self.user_id, self.backend_base_url)
         center_splitter.addWidget(self.portfolio_widget)
         self.portfolio_widget.start_updates()
-        self.chart_widget = ChartWidget(self.user_id, self.api_client)
+        self.chart_widget = ChartWidget(self.user_id, self.backend_base_url)
         center_splitter.addWidget(self.chart_widget)
         self.chart_widget.symbol_selected.connect(self._handle_chart_symbol_selection)
         self.chart_widget.interval_selected.connect(self._handle_chart_interval_selection)
@@ -251,9 +251,12 @@ class DashboardView(QWidget):
         bottom_tab_widget = QTabWidget()
         bottom_tab_widget.setMaximumHeight(300)
         qasync_loop_for_notifications = asyncio.get_event_loop()
-        self.notification_widget = NotificationWidget(api_client=self.api_client, user_id=self.user_id, qasync_loop=qasync_loop_for_notifications)
+        from src.ultibot_ui.services.api_client import UltiBotAPIClient
+        # Crear el cliente API usando la base_url
+        api_client = UltiBotAPIClient(base_url=self.backend_base_url)
+        self.notification_widget = NotificationWidget(api_client=api_client, user_id=self.user_id, qasync_loop=qasync_loop_for_notifications)
         bottom_tab_widget.addTab(self.notification_widget, "📢 Notificaciones")
-        self.order_form_widget = OrderFormWidget(self.user_id, self.api_client)
+        self.order_form_widget = OrderFormWidget(self.user_id, self.backend_base_url)
         self.order_form_widget.order_executed.connect(self._handle_order_executed)
         self.order_form_widget.order_failed.connect(self._handle_order_failed)
         bottom_tab_widget.addTab(self.order_form_widget, "📈 Crear Orden")
@@ -316,7 +319,7 @@ class DashboardView(QWidget):
             # Ejecutar la corutina a través de ApiWorker
             # No await aquí, el resultado se emitirá a través de la señal
             self._run_api_worker_and_await_result(
-                lambda: self.api_client.get_strategy_performance(
+                lambda api_client: api_client.get_strategy_performance(
                     user_id=self.user_id,
                     mode=mode_param_for_api
                 )
@@ -455,7 +458,7 @@ class DashboardView(QWidget):
         logger.info("DashboardView._load_and_subscribe_notifications: INICIO (refactorizado)")
         try:
             self._run_api_worker_and_await_result(
-                lambda: self.api_client.get_notification_history(user_id=self.user_id)
+                lambda api_client: api_client.get_notification_history(user_id=self.user_id)
             ).add_done_callback(
                 lambda f: self.notifications_history_fetched.emit(f.result()) if not f.exception() else None
             )
@@ -567,7 +570,7 @@ class DashboardView(QWidget):
         logger.info("DashboardView._fetch_new_notifications: INICIO (refactorizado)")
         try:
             self._run_api_worker_and_await_result(
-                lambda: self.api_client.get_notification_history(user_id=self.user_id)
+                lambda api_client: api_client.get_notification_history(user_id=self.user_id)
             ).add_done_callback(
                 lambda f: self.new_notifications_fetched.emit(f.result()) if not f.exception() else None
             )
@@ -589,7 +592,9 @@ class DashboardView(QWidget):
             if opportunities:
                 opportunity_to_confirm = opportunities[0]
                 logger.info(f"Oportunidad pendiente de confirmación encontrada: {opportunity_to_confirm.id}")
-                dialog = RealTradeConfirmationDialog(opportunity_to_confirm, self.api_client, self)
+                from src.ultibot_ui.services.api_client import UltiBotAPIClient
+                api_client = UltiBotAPIClient(base_url=self.backend_base_url)
+                dialog = RealTradeConfirmationDialog(opportunity_to_confirm, api_client, self)
                 dialog.trade_confirmed.connect(self._handle_trade_confirmed)
                 dialog.trade_cancelled.connect(self._handle_trade_cancelled)
                 dialog.exec_()
@@ -603,7 +608,7 @@ class DashboardView(QWidget):
         logger.info("DashboardView._check_pending_real_opportunities: INICIO (refactorizado)")
         try:
             self._run_api_worker_and_await_result(
-                lambda: self.api_client.get_real_trading_candidates()
+                lambda api_client: api_client.get_real_trading_candidates()
             ).add_done_callback(
                 lambda f: self.real_opportunities_fetched.emit(f.result()) if not f.exception() else None
             )
@@ -635,7 +640,7 @@ class DashboardView(QWidget):
         logger.info("DashboardView._update_real_trades_count_ui: INICIO (refactorizado)")
         try:
             self._run_api_worker_and_await_result(
-                lambda: self.api_client.get_real_trading_mode_status()
+                lambda api_client: api_client.get_real_trading_mode_status()
             ).add_done_callback(
                 lambda f: self.real_trades_count_fetched.emit(f.result()) if not f.exception() else None
             )

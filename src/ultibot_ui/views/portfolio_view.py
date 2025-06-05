@@ -18,10 +18,10 @@ from src.ultibot_ui.services.trading_mode_state import get_trading_mode_manager,
 logger = logging.getLogger(__name__)
 
 class PortfolioView(QWidget):
-    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, qasync_loop, parent: Optional[QWidget] = None):
+    def __init__(self, user_id: UUID, backend_base_url: str, qasync_loop, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.user_id = user_id
-        self.api_client = api_client
+        self.backend_base_url = backend_base_url
         self.qasync_loop = qasync_loop # Store the qasync_loop
         self.active_threads: List[QThread] = []
         self.current_portfolio_data: Optional[Dict[str, Any]] = None
@@ -134,10 +134,8 @@ class PortfolioView(QWidget):
         # Importar ApiWorker aquí para evitar import circular a nivel de módulo
         from src.ultibot_ui.main import ApiWorker
         # CORREGIDO: pasar factory (lambda), no corutina pre-creada
-        worker = ApiWorker(lambda: self.api_client.get_portfolio_snapshot(
-            user_id=self.user_id,
-            trading_mode=self.trading_mode_manager.current_mode
-        ), self.qasync_loop)
+        worker = ApiWorker(lambda api_client: api_client.get_portfolio_snapshot(
+            user_id=self.user_id, trading_mode=self.trading_mode), self.backend_base_url)
         thread = QThread()
         self.active_threads.append(thread)
         worker.moveToThread(thread)
@@ -321,7 +319,7 @@ if __name__ == '__main__':
     ApiWorker = MockApiWorker
 
     class MockUltiBotAPIClient:
-        def __init__(self, base_url=""): pass
+        def __init__(self, base_url: str = ""): self.base_url = base_url
         async def get_portfolio_snapshot(self, user_id: UUID, trading_mode: str):
             return _mock_get_portfolio_snapshot(trading_mode)
 
@@ -358,14 +356,14 @@ if __name__ == '__main__':
     # import qasync
     # loop = qasync.QEventLoop(app)
     # asyncio.set_event_loop(loop)
-    # view = PortfolioView(user_id=UUID("00000000-0000-0000-0000-000000000000"), api_client=MockUltiBotAPIClient(), qasync_loop=loop)
+    # view = PortfolioView(user_id=UUID("00000000-0000-0000-0000-000000000000"), backend_base_url="http://localhost:8000", qasync_loop=loop)
 
     # Simpler mock for qasync_loop for this specific test case, as MockApiWorker might not use it.
     class MockQAsyncLoop:
         def create_task(self, coro):
             pass # Mock implementation
 
-    view = PortfolioView(user_id=UUID("00000000-0000-0000-0000-000000000000"), api_client=MockUltiBotAPIClient(), qasync_loop=MockQAsyncLoop()) # type: ignore
+    view = PortfolioView(user_id=UUID("00000000-0000-0000-0000-000000000000"), backend_base_url="http://localhost:8000", qasync_loop=MockQAsyncLoop()) # type: ignore
     view.setWindowTitle("Portfolio View - Test")
     view.setGeometry(100, 100, 1000, 700)
     view.show()

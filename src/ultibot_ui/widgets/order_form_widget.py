@@ -4,56 +4,21 @@ Soporta tanto paper trading como real trading con awareness del modo actual.
 """
 import logging
 import asyncio
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Callable, Coroutine
 from uuid import UUID
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QLabel, QPushButton, 
     QLineEdit, QComboBox, QDoubleSpinBox, QFrame, QGroupBox, QMessageBox,
     QTextEdit, QCheckBox, QProgressBar
 )
-from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QObject, QRunnable, QThreadPool
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QObject, QThread # Cambiado QRunnable, QThreadPool a QThread
 from PyQt5.QtGui import QFont, QColor, QDoubleValidator
 
-from src.ultibot_ui.services.api_client import UltiBotAPIClient
+from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError # Añadido APIError
 from src.ultibot_ui.services.trading_mode_state import get_trading_mode_manager, TradingModeStateManager
 from src.shared.data_types import TradeOrderDetails
 
 logger = logging.getLogger(__name__)
-
-class OrderExecutionWorker(QRunnable):
-    """Worker para ejecutar órdenes de mercado en un hilo separado."""
-    
-    def __init__(self, api_client: UltiBotAPIClient, order_data: Dict[str, Any]):
-        super().__init__()
-        self.api_client = api_client
-        self.order_data = order_data
-        self.signals = OrderWorkerSignals()
-
-    def run(self):
-        """Ejecuta la orden de mercado."""
-        try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            
-            # Llamar al endpoint de market order
-            result = loop.run_until_complete(
-                self.api_client.execute_market_order(self.order_data)
-            )
-            
-            self.signals.result.emit(result)
-            
-        except Exception as e:
-            error_msg = f"Error ejecutando orden: {e}"
-            logger.error(error_msg, exc_info=True)
-            self.signals.error.emit(error_msg)
-        finally:
-            self.signals.finished.emit()
-
-class OrderWorkerSignals(QObject):
-    """Señales disponibles del worker de órdenes."""
-    result = pyqtSignal(object)
-    error = pyqtSignal(str)
-    finished = pyqtSignal()
 
 class OrderFormWidget(QWidget):
     """
@@ -66,11 +31,11 @@ class OrderFormWidget(QWidget):
     order_executed = pyqtSignal(object)  # Emite los detalles de la orden ejecutada
     order_failed = pyqtSignal(str)       # Emite mensaje de error
     
-    def __init__(self, user_id: UUID, api_client: Optional[UltiBotAPIClient] = None, parent: Optional[QWidget] = None):
+    def __init__(self, user_id: UUID, backend_base_url: str, parent: Optional[QWidget] = None): # Cambiado a backend_base_url
         super().__init__(parent)
         self.user_id = user_id
-        self.api_client = api_client or UltiBotAPIClient()
-        self.thread_pool = QThreadPool()
+        self.backend_base_url = backend_base_url # Nueva propiedad
+        self.active_api_workers = [] # Para mantener referencia a los workers y threads
         
         # Connect to trading mode state manager
         self.trading_mode_manager: TradingModeStateManager = get_trading_mode_manager()
@@ -80,6 +45,44 @@ class OrderFormWidget(QWidget):
         self._update_mode_display()
         
         logger.info("OrderFormWidget initialized")
+
+    def _run_api_worker_and_await_result(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine]) -> Any:
+        """
+        Ejecuta una corutina (a través de una factory) en un ApiWorker y espera su resultado.
+        Retorna un Future que se puede await.
+        """
+        from src.ultibot_ui.main import ApiWorker # Importar localmente
+        import qasync # Importar qasync para obtener el bucle de eventos
+
+        qasync_loop = asyncio.get_event_loop()
+        future = qasync_loop.create_future()
+
+        worker = ApiWorker(coroutine_factory=coroutine_factory, base_url=self.backend_base_url)
+        thread = QThread()
+        self.active_api_workers.append((worker, thread))
+
+        worker.moveToThread(thread)
+
+        def _on_result(result):
+            if not future.done():
+                qasync_loop.call_soon_threadsafe(future.set_result, result)
+        def _on_error(error_msg):
+            if not future.done():
+                qasync_loop.call_soon_threadsafe(future.set_exception, Exception(error_msg))
+        
+        worker.result_ready.connect(_on_result)
+        worker.error_occurred.connect(_on_error)
+        
+        thread.started.connect(worker.run)
+
+        worker.result_ready.connect(thread.quit)
+        worker.error_occurred.connect(thread.quit)
+        thread.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        thread.finished.connect(lambda: self.active_api_workers.remove((worker, thread)) if (worker, thread) in self.active_api_workers else None)
+
+        thread.start()
+        return future
 
     def init_ui(self):
         """Inicializa la interfaz de usuario."""
@@ -375,14 +378,30 @@ Estado: ✅ Orden válida y lista para ejecutar
         self.progress_bar.setRange(0, 0)  # Indeterminate progress
         self.execute_button.setEnabled(False)
         
-        # Ejecutar en worker
-        worker = OrderExecutionWorker(self.api_client, order_data)
-        worker.signals.result.connect(self._handle_order_result)
-        worker.signals.error.connect(self._handle_order_error)
-        worker.signals.finished.connect(self._handle_order_finished)
-        self.thread_pool.start(worker)
+        # Ejecutar la orden a través de ApiWorker
+        self._run_api_worker_and_await_result(
+            lambda api_client: api_client.execute_market_order(
+                user_id=UUID(order_data["user_id"]), # Convertir a UUID
+                symbol=order_data["symbol"],
+                side=order_data["side"],
+                quantity=order_data["quantity"],
+                trading_mode=order_data["trading_mode"],
+                api_key=order_data.get("api_key"),
+                api_secret=order_data.get("api_secret")
+            )
+        ).add_done_callback(self._handle_order_result_from_future)
         
         logger.info(f"Ejecutando orden: {order_data}")
+
+    def _handle_order_result_from_future(self, future: asyncio.Future):
+        """Maneja el resultado de la ejecución de la orden desde el Future."""
+        try:
+            result = future.result()
+            self._handle_order_result(result)
+        except Exception as e:
+            self._handle_order_error(str(e))
+        finally:
+            self._handle_order_finished()
 
     def _get_order_data(self) -> Dict[str, Any]:
         """Obtiene los datos de la orden del formulario."""
@@ -472,3 +491,22 @@ Por favor, verifique:
         """Establece una cantidad por defecto."""
         self.quantity_input.setValue(quantity)
         self._validate_form()
+
+    def cleanup(self):
+        """
+        Realiza la limpieza de recursos del widget, deteniendo cualquier ApiWorker activo.
+        """
+        logger.info("OrderFormWidget: Iniciando limpieza de ApiWorkers activos.")
+        for worker, thread in list(self.active_api_workers): # Iterar sobre una copia
+            if thread.isRunning():
+                logger.info(f"OrderFormWidget: Deteniendo ApiWorker en thread {thread.objectName()}...")
+                thread.quit()
+                if not thread.wait(2000): # Esperar hasta 2 segundos
+                    logger.warning(f"OrderFormWidget: Thread {thread.objectName()} no terminó a tiempo. Forzando terminación.")
+                    thread.terminate()
+                    thread.wait()
+            if (worker, thread) in self.active_api_workers:
+                self.active_api_workers.remove((worker, thread))
+                worker.deleteLater() # Asegurarse de que el worker se elimine
+                thread.deleteLater() # Asegurarse de que el thread se elimine
+        logger.info("OrderFormWidget: Limpieza de ApiWorkers completada.")

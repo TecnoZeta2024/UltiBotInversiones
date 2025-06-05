@@ -17,10 +17,10 @@ class SettingsView(QWidget):
     config_changed = pyqtSignal(UserConfiguration)
     real_trading_mode_status_changed = pyqtSignal(bool, int, int) # isActive, executedCount, limit
 
-    def __init__(self, user_id: str, api_client: UltiBotAPIClient, qasync_loop, parent=None): # Añadir qasync_loop
+    def __init__(self, user_id: str, backend_base_url: str, qasync_loop, parent=None): # Añadir qasync_loop
         super().__init__(parent)
         self.user_id = user_id
-        self.api_client = api_client
+        self.backend_base_url = backend_base_url
         self.qasync_loop = qasync_loop # Almacenar qasync_loop
         self.current_config: Optional[UserConfiguration] = None
         self.real_trading_status: Dict[str, Any] = {"isActive": False, "executedCount": 0, "limit": 5}
@@ -101,7 +101,7 @@ class SettingsView(QWidget):
         logger.info("SettingsView: Solicitando configuración de usuario general.")
         # Import local para evitar ciclo de importación
         from src.ultibot_ui.main import ApiWorker
-        worker = ApiWorker(lambda: self.api_client.get_user_configuration(), self.qasync_loop)
+        worker = ApiWorker(lambda api_client: api_client.get_user_configuration(), base_url=self.backend_base_url)
         thread = QThread()
         self.active_threads.append(thread)
         worker.moveToThread(thread)
@@ -137,7 +137,7 @@ class SettingsView(QWidget):
         logger.info("SettingsView: Solicitando estado de operativa real.")
         # Import local para evitar ciclo de importación
         from src.ultibot_ui.main import ApiWorker
-        worker = ApiWorker(lambda: self.api_client.get_real_trading_mode_status(), self.qasync_loop)
+        worker = ApiWorker(lambda api_client: api_client.get_real_trading_mode_status(), base_url=self.backend_base_url)
         thread = QThread()
         self.active_threads.append(thread)
         worker.moveToThread(thread)
@@ -207,7 +207,7 @@ class SettingsView(QWidget):
             logger.info("SettingsView: Solicitando guardar configuración de usuario general.")
             # Import local para evitar ciclo de importación
             from src.ultibot_ui.main import ApiWorker
-            worker = ApiWorker(lambda: self.api_client.update_user_configuration(updated_config_model.model_dump(mode='json', by_alias=True, exclude_none=True)), self.qasync_loop)
+            worker = ApiWorker(lambda api_client: api_client.update_user_configuration(updated_config_model.model_dump(mode='json', by_alias=True, exclude_none=True)), base_url=self.backend_base_url)
             thread = QThread()
             self.active_threads.append(thread)
             worker.moveToThread(thread)
@@ -270,7 +270,7 @@ class SettingsView(QWidget):
             logger.info("SettingsView: Solicitando activar modo de operativa real.")
             # Import local para evitar ciclo de importación
             from src.ultibot_ui.main import ApiWorker
-            worker = ApiWorker(lambda: self.api_client.activate_real_trading_mode(), self.qasync_loop)
+            worker = ApiWorker(lambda api_client: api_client.activate_real_trading_mode(), base_url=self.backend_base_url)
             thread = QThread()
             self.active_threads.append(thread)
             worker.moveToThread(thread)
@@ -304,7 +304,7 @@ class SettingsView(QWidget):
         logger.info("SettingsView: Solicitando desactivar modo de operativa real.")
         # Import local para evitar ciclo de importación
         from src.ultibot_ui.main import ApiWorker
-        worker = ApiWorker(lambda: self.api_client.deactivate_real_trading_mode(), self.qasync_loop)
+        worker = ApiWorker(lambda api_client: api_client.deactivate_real_trading_mode(), base_url=self.backend_base_url)
         thread = QThread()
         self.active_threads.append(thread)
         worker.moveToThread(thread)

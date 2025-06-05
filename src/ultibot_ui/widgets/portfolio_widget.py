@@ -1,113 +1,40 @@
 import logging
 import asyncio
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Callable, Coroutine
 from uuid import UUID
 from datetime import datetime
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QGroupBox, QFormLayout, QHBoxLayout, 
     QTableWidget, QTableWidgetItem, QHeaderView, QScrollArea, QFrame, QPushButton,
-    QTabWidget, QProgressBar, QMessageBox # Añadir QMessageBox
+    QTabWidget, QProgressBar, QMessageBox
 )
-from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QObject, QRunnable, QThreadPool
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QObject, QThread # Cambiado QRunnable, QThreadPool a QThread
 from PyQt5.QtGui import QFont, QColor
 
-from src.shared.data_types import PortfolioSnapshot, PortfolioSummary, PortfolioAsset # PortfolioSnapshot podría ser Dict si no se parsea
-# from src.ultibot_backend.services.portfolio_service import PortfolioService # Reemplazado por api_client
-# from src.ultibot_backend.services.config_service import ConfigService # No se usa directamente
-# from src.ultibot_backend.services.market_data_service import MarketDataService # No se usa directamente
-from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError # Asegurar APIError si se usa
+import qasync
+
+from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
 from src.ultibot_ui.services.trading_mode_state import get_trading_mode_manager, TradingModeStateManager
 
 
 logger = logging.getLogger(__name__)
-
-class DataUpdateWorker(QRunnable):
-    """
-    Worker para actualizar datos del portafolio y operaciones abiertas según el modo de trading.
-    Utiliza UltiBotAPIClient.
-    """
-    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, trading_mode: str): # Eliminado portfolio_service
-        super().__init__()
-        self.user_id = user_id
-        self.api_client = api_client # api_client es ahora el único proveedor de datos
-        self.trading_mode = trading_mode
-        self.signals = WorkerSignals()
-
-    def run(self):
-        """
-        Ejecuta la actualización de datos en un hilo separado con filtrado por trading mode.
-        """
-        try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            
-            logger.debug(f"DataUpdateWorker: Iniciando actualización para user {self.user_id}, modo {self.trading_mode}")
-            
-            # Obtener snapshot del portafolio para el modo específico usando api_client
-            portfolio_snapshot = loop.run_until_complete(
-                self.api_client.get_portfolio_snapshot(user_id=self.user_id, trading_mode=self.trading_mode)
-            )
-            logger.debug(f"DataUpdateWorker: portfolio_snapshot obtenido: {portfolio_snapshot is not None}")
-            
-            # Obtener trades abiertos para el modo específico
-            open_trades = loop.run_until_complete(
-                self.api_client.get_open_trades_by_mode(user_id=self.user_id, trading_mode=self.trading_mode)
-            )
-            logger.debug(f"DataUpdateWorker: open_trades obtenido: {open_trades is not None}")
-            
-            # Obtener estado de gestión de capital
-            capital_status = loop.run_until_complete(
-                self.api_client.get_capital_management_status() # Este método no parece depender del user_id o trading_mode en su signatura actual
-            )
-            logger.debug(f"DataUpdateWorker: capital_status obtenido: {capital_status is not None}")
-            
-            result_data = {
-                "portfolio_snapshot": portfolio_snapshot,
-                "open_trades": open_trades,
-                "capital_status": capital_status,
-                "trading_mode": self.trading_mode
-            }
-            
-            self.signals.result.emit(result_data)
-            
-        except APIError as e: # Capturar APIError específicamente
-            error_msg = f"Error de API actualizando datos del portafolio (modo {self.trading_mode}): {e.message} (status: {e.status_code})"
-            logger.error(error_msg, exc_info=True)
-            self.signals.error.emit(error_msg)
-        except Exception as e:
-            error_msg = f"Error inesperado actualizando datos del portafolio (modo {self.trading_mode}): {e}"
-            logger.error(error_msg, exc_info=True)
-            self.signals.error.emit(error_msg)
-        finally:
-            self.signals.finished.emit()
-
-class WorkerSignals(QObject):
-    """
-    Señales disponibles de un worker.
-    """
-    result = pyqtSignal(object)
-    error = pyqtSignal(str)
-    finished = pyqtSignal()
 
 class PortfolioWidget(QWidget):
     """
     Widget para la visualización del estado del portafolio con soporte completo
     para diferenciación entre modos de trading (paper vs real).
     """
-    portfolio_updated = pyqtSignal(PortfolioSnapshot)
+    portfolio_updated = pyqtSignal(object) # Cambiado a object para flexibilidad
     error_occurred = pyqtSignal(str)
 
-    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, parent: Optional[QWidget] = None): # Eliminado portfolio_service, api_client es requerido
+    def __init__(self, user_id: UUID, backend_base_url: str, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.user_id = user_id
-        # self.portfolio_service = portfolio_service # Eliminado
-        self.api_client = api_client # api_client ahora es requerido y no opcional
-        self.current_snapshot: Optional[PortfolioSnapshot] = None # O Optional[Dict[str, Any]]
-        self.current_snapshot_dict: Optional[Dict[str, Any]] = None # Para el dict crudo
+        self.backend_base_url = backend_base_url
+        self.current_snapshot: Optional[Dict[str, Any]] = None # Ahora es un dict
         self.current_capital_status: Optional[Dict[str, Any]] = None
         self.open_trades: List[Dict[str, Any]] = []
-        self.thread_pool = QThreadPool()
-        self.thread_pool.setMaxThreadCount(2) # Limitar hilos para no saturar
+        self.active_api_workers = [] # Para mantener referencia a los workers y threads
 
         # Connect to trading mode state manager
         self.trading_mode_manager: TradingModeStateManager = get_trading_mode_manager()
@@ -116,9 +43,43 @@ class PortfolioWidget(QWidget):
         self.init_ui()
         self.setup_update_timer()
 
-        # Connect to TradingModeService signal and set initial visibility (from subtask 3)
-        self.trading_mode_service.mode_changed.connect(self._handle_mode_change)
-        self._update_visibility_based_on_mode()
+    def _run_api_worker_and_await_result(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine]) -> Any:
+        """
+        Ejecuta una corutina (a través de una factory) en un ApiWorker y espera su resultado.
+        Retorna un Future que se puede await.
+        """
+        from src.ultibot_ui.main import ApiWorker # Importar localmente
+        import qasync # Importar qasync para obtener el bucle de eventos
+
+        qasync_loop = asyncio.get_event_loop()
+        future = qasync_loop.create_future()
+
+        worker = ApiWorker(coroutine_factory=coroutine_factory, base_url=self.backend_base_url)
+        thread = QThread()
+        self.active_api_workers.append((worker, thread))
+
+        worker.moveToThread(thread)
+
+        def _on_result(result):
+            if not future.done():
+                qasync_loop.call_soon_threadsafe(future.set_result, result)
+        def _on_error(error_msg):
+            if not future.done():
+                qasync_loop.call_soon_threadsafe(future.set_exception, Exception(error_msg))
+        
+        worker.result_ready.connect(_on_result)
+        worker.error_occurred.connect(_on_error)
+        
+        thread.started.connect(worker.run)
+
+        worker.result_ready.connect(thread.quit)
+        worker.error_occurred.connect(thread.quit)
+        thread.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        thread.finished.connect(lambda: self.active_api_workers.remove((worker, thread)) if (worker, thread) in self.active_api_workers else None)
+
+        thread.start()
+        return future
 
     def init_ui(self):
         """
@@ -380,13 +341,13 @@ class PortfolioWidget(QWidget):
         table.setHorizontalHeaderLabels(["Símbolo", "Cantidad", "Precio Entrada", "Precio Actual", "Valor USD", "PnL (%)"])
         
         h_header = table.horizontalHeader()
-        if h_header: # Check if not None
-            h_header.setSectionResizeMode(QHeaderView.Stretch) # type: ignore
+        if h_header:
+            h_header.setSectionResizeMode(QHeaderView.Stretch)
         v_header = table.verticalHeader()
-        if v_header: # Check if not None
+        if v_header:
             v_header.setVisible(False)
             
-        table.setEditTriggers(QTableWidget.NoEditTriggers) # type: ignore
+        table.setEditTriggers(QTableWidget.NoEditTriggers)
         table.setStyleSheet(self._get_table_style())
         return table
 
@@ -402,13 +363,13 @@ class PortfolioWidget(QWidget):
         ])
         
         h_header = table.horizontalHeader()
-        if h_header: # Check if not None
-            h_header.setSectionResizeMode(QHeaderView.Stretch) # type: ignore
+        if h_header:
+            h_header.setSectionResizeMode(QHeaderView.Stretch)
         v_header = table.verticalHeader()
-        if v_header: # Check if not None
+        if v_header:
             v_header.setVisible(False)
             
-        table.setEditTriggers(QTableWidget.NoEditTriggers) # type: ignore
+        table.setEditTriggers(QTableWidget.NoEditTriggers)
         table.setStyleSheet(self._get_table_style())
         return table
 
@@ -467,21 +428,68 @@ class PortfolioWidget(QWidget):
 
     def _start_update_worker(self):
         """
-        Inicia el worker para actualizar datos según el modo actual.
+        Inicia la actualización de datos del portafolio usando ApiWorker.
         """
         current_mode = self.trading_mode_manager.current_mode
-        # Pasar solo api_client al worker
-        worker = DataUpdateWorker(self.user_id, self.api_client, current_mode)
-        worker.signals.result.connect(self._handle_update_result)
-        worker.signals.error.connect(self._handle_worker_error)
-        worker.signals.finished.connect(self._worker_finished)
+        logger.info(f"Actualizando datos del portafolio para modo: {current_mode}")
 
-        # Feedback before starting worker
         self.last_updated_label.setText(f"Actualizando portafolio ({current_mode.title()})...")
         if hasattr(self, 'refresh_button'): self.refresh_button.setEnabled(False)
 
-        self.thread_pool.start(worker)
-        logger.info(f"Actualizando datos del portafolio para modo: {current_mode}")
+        # Usar _run_api_worker_and_await_result para cada llamada API
+        # y luego combinar los resultados en un solo manejador.
+        
+        # Future para el snapshot del portafolio
+        future_portfolio = self._run_api_worker_and_await_result(
+            lambda api_client: api_client.get_portfolio_snapshot(user_id=self.user_id, trading_mode=current_mode)
+        )
+        
+        # Future para los trades abiertos
+        future_open_trades = self._run_api_worker_and_await_result(
+            lambda api_client: api_client.get_open_trades_by_mode(user_id=self.user_id, trading_mode=current_mode)
+        )
+
+        # Future para el estado de gestión de capital
+        future_capital_status = self._run_api_worker_and_await_result(
+            lambda api_client: api_client.get_capital_management_status()
+        )
+
+        # Usar asyncio.gather para esperar por todos los resultados
+        # y luego procesarlos en un solo callback.
+        qasync_loop = asyncio.get_event_loop()
+        combined_future = qasync_loop.create_future()
+
+        async def _gather_results():
+            try:
+                portfolio_snapshot = await future_portfolio
+                open_trades = await future_open_trades
+                capital_status = await future_capital_status
+                combined_future.set_result({
+                    "portfolio_snapshot": portfolio_snapshot,
+                    "open_trades": open_trades,
+                    "capital_status": capital_status,
+                    "trading_mode": current_mode
+                })
+            except Exception as e:
+                combined_future.set_exception(e)
+
+        qasync_loop.create_task(_gather_results())
+        
+        combined_future.add_done_callback(self._handle_update_result_from_future)
+
+    def _handle_update_result_from_future(self, future: asyncio.Future):
+        """
+        Maneja el resultado combinado de la actualización de datos desde el Future.
+        """
+        try:
+            result_data = future.result()
+            self._handle_update_result(result_data)
+        except Exception as e:
+            self._handle_worker_error(str(e))
+        finally:
+            # Re-habilitar el botón de refresco aquí, ya que el proceso completo ha terminado.
+            if hasattr(self, 'refresh_button'):
+                self.refresh_button.setEnabled(True)
 
     def _handle_update_result(self, result_data: Dict[str, Any]):
         """
@@ -493,90 +501,66 @@ class PortfolioWidget(QWidget):
             
             if result_mode != current_mode:
                 logger.debug(f"Ignorando datos de modo {result_mode}, modo actual es {current_mode}")
-                # Do not re-enable buttons here if another update is expected for the current mode.
-                # However, if this is the only worker response, then re-enable.
-                # For simplicity, assume this worker is the one for the current mode.
-                if hasattr(self, 'refresh_button'): self.refresh_button.setEnabled(True)
                 return
 
-            # Actualizar snapshot del portafolio
-            # The API returns a dict, PortfolioSnapshot is a Pydantic model.
-            # _update_portfolio_ui needs to handle a dict or we need to parse here.
-            # Assuming _update_portfolio_ui can handle the dict directly for ahora.
             portfolio_snapshot_data = result_data.get("portfolio_snapshot")
-            self.current_snapshot_dict = portfolio_snapshot_data if portfolio_snapshot_data is not None else {}
-            if self.current_snapshot_dict is not None:
-                self._update_portfolio_ui(self.current_snapshot_dict, current_mode)
+            self.current_snapshot = portfolio_snapshot_data if portfolio_snapshot_data is not None else {}
+            if self.current_snapshot is not None:
+                self._update_portfolio_ui(self.current_snapshot, current_mode)
             else:
-                self._update_portfolio_ui({}, current_mode) # Pass empty dict if snapshot is None
+                self._update_portfolio_ui({}, current_mode)
 
-            # Actualizar operaciones abiertas
             open_trades_data = result_data.get("open_trades", []) 
             self.open_trades = open_trades_data if open_trades_data is not None else []
             self._update_open_trades_ui(self.open_trades)
 
-            # Actualizar estado de gestión de capital
             capital_status_data = result_data.get("capital_status")
             self.current_capital_status = capital_status_data if capital_status_data is not None else {}
             if self.current_capital_status is not None:
                 self._update_capital_management_ui(self.current_capital_status)
             else:
-                self._update_capital_management_ui({}) # Pass empty dict if status is None
-
+                self._update_capital_management_ui({})
 
             self.last_updated_label.setText(f"Última actualización: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-            self.error_label.setText("") # Clear previous errors
+            self.error_label.setText("")
 
         except Exception as e:
             error_msg = f"Error procesando datos actualizados del portafolio: {e}"
             logger.error(error_msg, exc_info=True)
-            self.error_label.setText(error_msg) # Display error on dedicated label
+            self.error_label.setText(error_msg)
             QMessageBox.warning(self, "Portfolio Update Error",
                                 f"Hubo un error al procesar los datos del portafolio.\n"
                                 f"Detalles: {error_msg}")
-            # No re-enable el botón aquí si el worker_finished lo hace.
-            # self.refresh_button.setEnabled(True) # Movido a _worker_finished o gestionado por el estado del pool
 
-
-    def _update_portfolio_ui(self, snapshot_dict: Dict[str, Any], mode: str): # snapshot_dict puede ser {}
+    def _update_portfolio_ui(self, snapshot_dict: Dict[str, Any], mode: str):
         """
         Actualiza la UI del portafolio con el snapshot_dict para el modo específico.
         """
-        # Extract the correct part of the snapshot dict based on the mode
-        # Si snapshot_dict es {}, portfolio_mode_dict también será {}
         portfolio_mode_dict = snapshot_dict.get(f"{mode}_trading", {}) 
 
         currency = "USDT (Virtual)" if mode == "paper" else "USDT"
 
-        # Actualizar labels principales
         self.balance_label.setText(f"Saldo Disponible: {portfolio_mode_dict.get('available_balance_usdt', 0.0):,.2f} {currency}")
         self.total_assets_label.setText(f"Valor Total Activos: {portfolio_mode_dict.get('total_assets_value_usd', 0.0):,.2f} USD")
         self.portfolio_value_label.setText(f"Valor Total Portafolio: {portfolio_mode_dict.get('total_portfolio_value_usd', 0.0):,.2f} USD")
         
-        # Actualizar tabla de activos
-        # The assets list is expected to be a list of dicts, matching PortfolioAsset structure
         assets_list = portfolio_mode_dict.get('assets', [])
         self._populate_assets_table(self.assets_table, assets_list)
 
-        # Actualizar información comparativa
         other_mode = "real" if mode == "paper" else "paper"
         other_mode_dict = snapshot_dict.get(f"{other_mode}_trading", {}) if snapshot_dict else {}
         self.comparison_info.setText(
             f"Portafolio {other_mode.title()}: {other_mode_dict.get('total_portfolio_value_usd', 0.0):,.2f} USD"
         )
 
-        # Manejar errores (assuming error_message is a field in portfolio_mode_dict)
         error_message = portfolio_mode_dict.get("error_message")
         if error_message:
             self.current_mode_group.setStyleSheet("QGroupBox { border: 1px solid red; }")
-            # self.error_label is a general error label, this specific one might be different
             logger.warning(f"Error message in portfolio data ({mode}): {error_message}")
             QMessageBox.warning(self, f"Error en Portafolio ({mode.title()})", error_message)
-            # Consider showing this specific error more prominently if needed
         else:
-            # Solo resetear si no hay error. Si portfolio_mode_dict está vacío, no habrá error_message.
-            if portfolio_mode_dict: # Solo resetear si hay datos, sino podría haber un error global
-                 self.current_mode_group.setStyleSheet("") # Reset border
+            if portfolio_mode_dict:
+                 self.current_mode_group.setStyleSheet("")
 
     def _update_open_trades_ui(self, trades: List[Dict[str, Any]]):
         """
@@ -592,10 +576,8 @@ class PortfolioWidget(QWidget):
         self.open_trades_table.setRowCount(len(trades))
 
         for row, trade in enumerate(trades):
-            # Símbolo
             self.open_trades_table.setItem(row, 0, QTableWidgetItem(trade.get("symbol", "N/A")))
             
-            # Tipo (BUY/SELL)
             side = trade.get("side", "N/A")
             side_item = QTableWidgetItem(side)
             if side == "BUY":
@@ -604,25 +586,20 @@ class PortfolioWidget(QWidget):
                 side_item.setForeground(QColor("lightcoral"))
             self.open_trades_table.setItem(row, 1, side_item)
             
-            # Cantidad
             entry_order = trade.get("entryOrder", {})
             quantity = entry_order.get("executedQuantity", 0)
             self.open_trades_table.setItem(row, 2, QTableWidgetItem(f"{quantity:,.8f}"))
             
-            # Precio de entrada
             entry_price = entry_order.get("executedPrice", 0)
             self.open_trades_table.setItem(row, 3, QTableWidgetItem(f"{entry_price:,.4f}"))
             
-            # Precio actual (necesitaríamos obtenerlo del mercado)
-            current_price = trade.get("currentPrice", entry_price)  # Placeholder
+            current_price = trade.get("currentPrice", entry_price)
             self.open_trades_table.setItem(row, 4, QTableWidgetItem(f"{current_price:,.4f}"))
             
-            # Take Profit
             tp_price = trade.get("takeProfitPrice")
             tp_text = f"{tp_price:,.4f}" if tp_price else "N/A"
             self.open_trades_table.setItem(row, 5, QTableWidgetItem(tp_text))
             
-            # Stop Loss actual
             current_sl = trade.get("currentStopPrice_tsl")
             sl_text = f"{current_sl:,.4f}" if current_sl else "N/A"
             sl_item = QTableWidgetItem(sl_text)
@@ -630,14 +607,12 @@ class PortfolioWidget(QWidget):
                 sl_item.setForeground(QColor("orange"))
             self.open_trades_table.setItem(row, 6, sl_item)
             
-            # Estado TSL
             position_status = trade.get("positionStatus", "unknown")
             status_item = QTableWidgetItem(position_status.upper())
             if position_status == "open":
                 status_item.setForeground(QColor("lightgreen"))
             self.open_trades_table.setItem(row, 7, status_item)
             
-            # PnL actual
             pnl = trade.get("pnl_usd")
             if pnl is not None:
                 pnl_text = f"{pnl:,.2f} USD"
@@ -658,7 +633,6 @@ class PortfolioWidget(QWidget):
         if not capital_status:
             return
 
-        # Actualizar labels de información
         total_capital = capital_status.get("total_capital_usd", 0)
         available_capital = capital_status.get("available_for_new_trades_usd", 0)
         committed_capital = capital_status.get("daily_capital_committed_usd", 0)
@@ -669,12 +643,10 @@ class PortfolioWidget(QWidget):
         self.committed_capital_label.setText(f"Capital Comprometido Hoy: {committed_capital:,.2f} USD")
         self.daily_limit_label.setText(f"Límite Diario (50%): {daily_limit:,.2f} USD")
 
-        # Actualizar barra de progreso
         if daily_limit > 0:
             usage_percentage = (committed_capital / daily_limit) * 100
             self.daily_usage_progress.setValue(int(usage_percentage))
             
-            # Cambiar color según el nivel de uso
             if usage_percentage >= 100:
                 self.daily_usage_progress.setStyleSheet(self._get_progress_style("#dc3545"))
             elif usage_percentage >= 85:
@@ -682,7 +654,6 @@ class PortfolioWidget(QWidget):
             else:
                 self.daily_usage_progress.setStyleSheet(self._get_progress_style("#28a745"))
 
-        # Mostrar alertas si es necesario
         self._update_capital_alerts(capital_status)
 
     def _get_progress_style(self, color: str) -> str:
@@ -709,7 +680,6 @@ class PortfolioWidget(QWidget):
         """
         alerts = []
         
-        # Verificar límite diario
         daily_limit = capital_status.get("daily_capital_limit_usd", 0)
         committed_capital = capital_status.get("daily_capital_committed_usd", 0)
         
@@ -723,17 +693,14 @@ class PortfolioWidget(QWidget):
             elif usage_percentage >= 75:
                 alerts.append("ℹ️ ADVERTENCIA: Ha usado el 75% del límite diario de capital.")
 
-        # Verificar si hay operaciones en riesgo alto
         if capital_status.get("high_risk_positions_count", 0) > 0:
             alerts.append("⚠️ Hay operaciones con alto riesgo. Revise las posiciones abiertas.")
 
-        # Mostrar u ocultar el frame de alertas
         if alerts:
             alert_text = "\n".join(alerts)
             self.capital_alert_label.setText(alert_text)
             self.capital_alerts_frame.setVisible(True)
             
-            # Cambiar color del borde según la severidad
             if any("LÍMITE DIARIO ALCANZADO" in alert for alert in alerts):
                 self.capital_alerts_frame.setStyleSheet("""
                     QFrame {
@@ -762,10 +729,8 @@ class PortfolioWidget(QWidget):
         """
         table.setRowCount(len(assets))
         for row, asset in enumerate(assets):
-            # Comprobar si estamos trabajando con un objeto o un diccionario
             is_dict = isinstance(asset, dict)
             
-            # Obtener los valores según el tipo de dato
             symbol = asset["symbol"] if is_dict else asset.symbol
             quantity = asset["quantity"] if is_dict else asset.quantity
             entry_price = asset["entry_price"] if is_dict else asset.entry_price
@@ -792,35 +757,24 @@ class PortfolioWidget(QWidget):
         Maneja errores reportados por el worker.
         """
         logger.error(f"PortfolioWidget: Error en DataUpdateWorker: {error_msg}")
-        # Usar QMessageBox del módulo QtWidgets
-        from PyQt5.QtWidgets import QMessageBox # Importar aquí si no está global
         QMessageBox.critical(self, "Error de Datos del Portafolio",
                              f"No se pudieron cargar los datos del portafolio.\n"
                              f"Detalles: {error_msg}\n\n"
                              "Por favor, intente actualizar manualmente o revise la conexión.")
-        self.error_label.setText(f"Error al cargar datos. Ver logs.") # Usar el label de error dedicado
+        self.error_label.setText(f"Error al cargar datos. Ver logs.")
         self.last_updated_label.setText("Actualización fallida.")
         
-        # Ensure UI is re-enabled (esto se podría manejar en _worker_finished)
-        # if hasattr(self, 'refresh_button'): self.refresh_button.setEnabled(True)
-
-        # Clear potentially stale data from tables by populating with empty lists
-        # Asegurarse de que las tablas existen antes de llamar a estos métodos
         if hasattr(self, 'assets_table'):
             self._populate_assets_table(self.assets_table, [])
         if hasattr(self, 'open_trades_table'):
-            self._update_open_trades_ui([]) # This will show "No hay operaciones abiertas"
+            self._update_open_trades_ui([])
         
-        # Reset capital management UI elements to default/error state
         self.total_capital_label.setText("Capital Total: Error")
         self.available_capital_label.setText("Disponible para Nuevas Operaciones: Error")
         self.committed_capital_label.setText("Capital Comprometido Hoy: Error")
         self.daily_limit_label.setText("Límite Diario (50%): Error")
         self.daily_usage_progress.setValue(0)
         self.capital_alerts_frame.setVisible(False)
-
-        self.error_occurred.emit(error_msg)
-
 
     def _worker_finished(self):
         """
@@ -855,9 +809,16 @@ class PortfolioWidget(QWidget):
         Realiza la limpieza de recursos del widget, deteniendo timers y workers.
         """
         self.stop_updates()
-        logger.info("PortfolioWidget: Esperando a que los workers del thread_pool terminen...")
-        self.thread_pool.waitForDone(5000) # Esperar hasta 5 segundos para que los workers terminen
-        if self.thread_pool.activeThreadCount() > 0:
-            logger.warning(f"PortfolioWidget: {self.thread_pool.activeThreadCount()} workers aún activos después de 5s. Forzando terminación.")
-            # No hay un método directo para "terminar" QRunnable, pero podemos confiar en el timeout.
+        # Limpiar workers y threads activos
+        for worker, thread in self.active_api_workers[:]:
+            if thread.isRunning():
+                logger.info(f"PortfolioWidget: Cleaning up active ApiWorker thread {thread.objectName()}.")
+                thread.quit()
+                if not thread.wait(2000): # Esperar un máximo de 2 segundos
+                    logger.warning(f"PortfolioWidget: Thread {thread.objectName()} did not finish in time. Terminating.")
+                    thread.terminate()
+                    thread.wait()
+            if (worker, thread) in self.active_api_workers:
+                self.active_api_workers.remove((worker, thread))
+        logger.info(f"PortfolioWidget: All active ApiWorkers ({len(self.active_api_workers)} remaining) processed for cleanup.")
         logger.info("PortfolioWidget: Limpieza completada.")

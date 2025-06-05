@@ -1,1 +1,54 @@
-2025-06-05 08:47:32,669 - src.ultibot_ui.main - DEBUG - [Dummy-4:3568] - main.py:641 - ApiWorker: asyncio event loop for current OS thread set to None.
+2025-06-05 18:21:30,436 - src.ultibot_ui.services.api_client - INFO - [Dummy-48:4212] - api_client.py:51 - Cerrando httpx.AsyncClient...
+2025-06-05 18:21:30,436 - httpcore.connection - DEBUG - [Dummy-50:12204] - _trace.py:87 - close.complete
+2025-06-05 18:21:30,437 - src.ultibot_ui.services.api_client - INFO - [Dummy-50:12204] - api_client.py:53 - httpx.AsyncClient cerrado.
+2025-06-05 18:21:30,437 - httpcore.connection - DEBUG - [Dummy-48:4212] - _trace.py:87 - close.started
+2025-06-05 18:21:30,437 - src.ultibot_ui.main - DEBUG - [Dummy-50:12204] - main.py:611 - ApiWorker: httpx.AsyncClient cerrado para worker loop <_WindowsSelectorEventLoop running=False closed=False debug=False>.
+2025-06-05 18:21:30,437 - src.ultibot_ui.main - INFO - [Dummy-50:12204] - main.py:649 - ApiWorker: Event loop <_WindowsSelectorEventLoop running=False closed=False debug=False> is not running or already closed. Skipping shutdown procedures.
+2025-06-05 18:21:30,437 - httpcore.connection - DEBUG - [Dummy-48:4212] - _trace.py:87 - close.complete
+2025-06-05 18:21:30,439 - src.ultibot_ui.main - DEBUG - [Dummy-50:12204] - main.py:653 - ApiWorker: asyncio event loop for current OS thread set to None.
+2025-06-05 18:21:30,439 - src.ultibot_ui.services.api_client - INFO - [Dummy-48:4212] - api_client.py:53 - httpx.AsyncClient cerrado.
+2025-06-05 18:21:30,439 - src.ultibot_ui.main - DEBUG - [Dummy-48:4212] - main.py:611 - ApiWorker: httpx.AsyncClient cerrado para worker loop <_WindowsSelectorEventLoop running=False closed=False debug=False>.
+2025-06-05 18:21:30,439 - src.ultibot_ui.main - INFO - [Dummy-48:4212] - main.py:649 - ApiWorker: Event loop <_WindowsSelectorEventLoop running=False closed=False debug=False> is not running or already closed. Skipping shutdown procedures.
+2025-06-05 18:21:30,439 - src.ultibot_ui.main - DEBUG - [Dummy-48:4212] - main.py:653 - ApiWorker: asyncio event loop for current OS thread set to None.
+2025-06-05 18:21:33,193 - src.ultibot_ui.windows.main_window - INFO - [MainThread:17928] - main_window.py:214 - MainWindow: User selected dark theme.
+2025-06-05 18:21:33,194 - qdarkstyle - DEBUG - [MainThread:17928] - __init__.py:259 - Reading QSS file in: :qdarkstyle\dark\darkstyle.qss
+2025-06-05 18:21:33,194 - qdarkstyle - INFO - [MainThread:17928] - __init__.py:269 - QSS file successfully loaded.
+2025-06-05 18:21:33,194 - qdarkstyle - DEBUG - [MainThread:17928] - __init__.py:276 - Checking patches for being applied.
+2025-06-05 18:21:33,194 - qdarkstyle - INFO - [MainThread:17928] - __init__.py:172 - Found version patches to be applied.
+2025-06-05 18:21:33,194 - qdarkstyle - INFO - [MainThread:17928] - __init__.py:192 - Found application patches to be applied.
+2025-06-05 18:21:33,441 - src.ultibot_ui.main - INFO - [MainThread:17928] - main.py:550 - Applied dark theme to the application.
+2025-06-05 18:21:33,902 - __main__ - INFO - [MainThread:17928] - main.py:984 - QASYNC_LOOP_HEARTBEAT: El bucle qasync está vivo - pulso #23
+2025-06-05 18:21:35,359 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread:17928] - dashboard_view.py:608 - DashboardView._check_pending_real_opportunities: INICIO (refactorizado)
+2025-06-05 18:21:35,359 - src.ultibot_ui.main - DEBUG - [MainThread:17928] - main.py:562 - ApiWorker initialized with base_url: http://localhost:8000
+2025-06-05 18:21:35,359 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread:17928] - dashboard_view.py:615 - DashboardView._check_pending_real_opportunities: Llamada a api_client.get_real_trading_candidates programada.
+2025-06-05 18:21:35,360 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread:17928] - dashboard_view.py:620 - DashboardView._check_pending_real_opportunities: FIN (programación)
+2025-06-05 18:21:35,360 - asyncio - DEBUG - [Dummy-51:19928] - selector_events.py:64 - Using selector: SelectSelector
+2025-06-05 18:21:35,361 - httpx - DEBUG - [Dummy-51:19928] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-05 18:21:35,362 - httpx - DEBUG - [Dummy-51:19928] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-05 18:21:35,528 - src.ultibot_ui.services.api_client - INFO - [Dummy-51:19928] - api_client.py:301 - Obteniendo oportunidades de trading real pendientes de confirmación.
+2025-06-05 18:21:35,528 - src.ultibot_ui.services.api_client - DEBUG - [Dummy-51:19928] - api_client.py:72 - APIClient: _make_request_invoked for GET /api/v1/opportunities/real-trading-candidates
+2025-06-05 18:21:35,528 - httpcore.connection - DEBUG - [Dummy-51:19928] - _trace.py:87 - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-05 18:21:35,793 - httpcore.connection - DEBUG - [Dummy-51:19928] - _trace.py:87 - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x00000293FC6D7F20>
+2025-06-05 18:21:35,793 - httpcore.http11 - DEBUG - [Dummy-51:19928] - _trace.py:87 - send_request_headers.started request=<Request [b'GET']>
+2025-06-05 18:21:35,794 - httpcore.http11 - DEBUG - [Dummy-51:19928] - _trace.py:87 - send_request_headers.complete
+2025-06-05 18:21:35,794 - httpcore.http11 - DEBUG - [Dummy-51:19928] - _trace.py:87 - send_request_body.started request=<Request [b'GET']>
+2025-06-05 18:21:35,794 - httpcore.http11 - DEBUG - [Dummy-51:19928] - _trace.py:87 - send_request_body.complete
+2025-06-05 18:21:35,794 - httpcore.http11 - DEBUG - [Dummy-51:19928] - _trace.py:87 - receive_response_headers.started request=<Request [b'GET']>
+2025-06-05 18:21:36,545 - httpcore.http11 - DEBUG - [Dummy-51:19928] - _trace.py:87 - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Thu, 05 Jun 2025 22:21:35 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
+2025-06-05 18:21:36,545 - httpx - INFO - [Dummy-51:19928] - _client.py:1786 - HTTP Request: GET http://localhost:8000/api/v1/opportunities/real-trading-candidates "HTTP/1.1 200 OK"
+2025-06-05 18:21:36,545 - httpcore.http11 - DEBUG - [Dummy-51:19928] - _trace.py:87 - receive_response_body.started request=<Request [b'GET']>
+2025-06-05 18:21:36,545 - httpcore.http11 - DEBUG - [Dummy-51:19928] - _trace.py:87 - receive_response_body.complete
+2025-06-05 18:21:36,545 - httpcore.http11 - DEBUG - [Dummy-51:19928] - _trace.py:87 - response_closed.started
+2025-06-05 18:21:36,545 - httpcore.http11 - DEBUG - [Dummy-51:19928] - _trace.py:87 - response_closed.complete
+2025-06-05 18:21:36,545 - src.ultibot_ui.main - DEBUG - [Dummy-51:19928] - main.py:607 - ApiWorker: Cerrando httpx.AsyncClient para worker loop <_WindowsSelectorEventLoop running=False closed=False debug=False>.
+2025-06-05 18:21:36,545 - src.ultibot_ui.services.api_client - INFO - [Dummy-51:19928] - api_client.py:51 - Cerrando httpx.AsyncClient...
+2025-06-05 18:21:36,546 - httpcore.connection - DEBUG - [Dummy-51:19928] - _trace.py:87 - close.started
+2025-06-05 18:21:36,546 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread:17928] - dashboard_view.py:589 - DashboardView._handle_real_opportunities_result: INICIO
+2025-06-05 18:21:36,546 - src.ultibot_ui.windows.dashboard_view - DEBUG - [MainThread:17928] - dashboard_view.py:604 - No hay oportunidades de trading real pendientes de confirmación.
+2025-06-05 18:21:36,546 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread:17928] - dashboard_view.py:605 - DashboardView._handle_real_opportunities_result: FIN
+2025-06-05 18:21:36,546 - httpcore.connection - DEBUG - [Dummy-51:19928] - _trace.py:87 - close.complete
+2025-06-05 18:21:36,546 - src.ultibot_ui.services.api_client - INFO - [Dummy-51:19928] - api_client.py:53 - httpx.AsyncClient cerrado.
+2025-06-05 18:21:36,546 - src.ultibot_ui.main - DEBUG - [Dummy-51:19928] - main.py:611 - ApiWorker: httpx.AsyncClient cerrado para worker loop <_WindowsSelectorEventLoop running=False closed=False debug=False>.
+2025-06-05 18:21:36,546 - src.ultibot_ui.main - INFO - [Dummy-51:19928] - main.py:649 - ApiWorker: Event loop <_WindowsSelectorEventLoop running=False closed=False debug=False> is not running or already closed. Skipping shutdown procedures.
+2025-06-05 18:21:36,546 - src.ultibot_ui.main - DEBUG - [Dummy-51:19928] - main.py:653 - ApiWorker: asyncio event loop for current OS thread set to None.
+2025-06-05 18:21:38,925 - __main__ - INFO - [MainThread:17928] - main.py:984 - QASYNC_LOOP_HEARTBEAT: El bucle qasync está vivo - pulso #24
