@@ -40,20 +40,19 @@ class UltiBotAPIClient:
         else:
             self.base_url = base_url
         self.timeout = 30.0  # Timeout por defecto
-        # self.client = httpx.AsyncClient(base_url=base_url, timeout=self.timeout) # Eliminado: Instancia única de httpx.AsyncClient
+        self.client = httpx.AsyncClient(base_url=self.base_url, timeout=self.timeout)
 
-    # Eliminado: aclose ya no es necesario si el cliente se crea por cada solicitud
-    # async def aclose(self) -> None:
-    #     """
-    #     Cierra la sesión del cliente HTTP de forma asíncrona.
-    #     Debe ser llamado al finalizar la aplicación para liberar recursos.
-    #     """
-    #     if not self.client.is_closed:
-    #         logger.info("Cerrando httpx.AsyncClient...")
-    #         await self.client.aclose()
-    #         logger.info("httpx.AsyncClient cerrado.")
-    #     else:
-    #         logger.info("httpx.AsyncClient ya estaba cerrado.")
+    async def aclose(self) -> None:
+        """
+        Cierra la sesión del cliente HTTP de forma asíncrona.
+        Debe ser llamado al finalizar la aplicación para liberar recursos.
+        """
+        if not self.client.is_closed:
+            logger.info("Cerrando httpx.AsyncClient...")
+            await self.client.aclose()
+            logger.info("httpx.AsyncClient cerrado.")
+        else:
+            logger.info("httpx.AsyncClient ya estaba cerrado.")
 
     async def _make_request(self, method: str, endpoint: str, **kwargs) -> Any:
         """
@@ -74,15 +73,12 @@ class UltiBotAPIClient:
         url = f"{self.base_url}{endpoint}" # La URL completa se construye aquí
 
         try:
-            # Crear una nueva instancia de httpx.AsyncClient para cada solicitud
-            # Esto asegura que el cliente se inicialice en el contexto del bucle de eventos del ApiWorker
-            async with httpx.AsyncClient(base_url=self.base_url, timeout=self.timeout) as client:
-                response = await client.request(method, endpoint, **kwargs)
-                response.raise_for_status()
+            response = await self.client.request(method, endpoint, **kwargs)
+            response.raise_for_status()
 
-                if response.status_code == 204:
-                    return None
-                return response.json()
+            if response.status_code == 204:
+                return None
+            return response.json()
 
         except httpx.HTTPStatusError as e:
             logger.error(f"HTTP error {e.response.status_code} for {method} {url}: {e.response.text}")

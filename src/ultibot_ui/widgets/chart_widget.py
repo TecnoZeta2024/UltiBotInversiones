@@ -31,10 +31,10 @@ class ChartWidget(QWidget):
     candlestick_data_fetched = pyqtSignal(list) # Nueva señal para los datos de velas
     api_error_occurred = pyqtSignal(str) # Señal para errores de API
     
-    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, parent: Optional[QWidget] = None): # Cambiado market_data_service a api_client
+    def __init__(self, user_id: UUID, backend_base_url: str, parent: Optional[QWidget] = None): # Cambiado a backend_base_url
         super().__init__(parent)
         self.user_id = user_id
-        self.api_client = api_client # Guardar la referencia al api_client
+        self.backend_base_url = backend_base_url # Guardar la referencia a la URL base
         self.current_symbol: Optional[str] = None
         self.current_interval: Optional[str] = "1h" # Intervalo por defecto
         self.candlestick_data: List[Dict[str, Any]] = []
@@ -135,13 +135,13 @@ class ChartWidget(QWidget):
                 return
 
             worker = ApiWorker(
-                lambda: self.api_client.get_candlestick_data(
+                lambda api_client: api_client.get_candlestick_data( # Pasa api_client a la lambda
                     user_id=self.user_id,
                     symbol=current_symbol, # Usar la variable local no-None
                     interval=current_interval, # Usar la variable local no-None
                     limit=200
                 ),
-                qasync_loop=qasync_loop
+                self.backend_base_url # Pasa backend_base_url
             )
             thread = QThread()
             self.active_api_workers.append((worker, thread)) # Mantener referencia
@@ -311,8 +311,8 @@ if __name__ == '__main__':
                 row["volume"] = float(row["volume"])
             return sample_data
 
-    mock_api_client = MockAPIClient() # Usar MockAPIClient
-    chart_widget = ChartWidget(user_id=test_user_id, api_client=mock_api_client) # type: ignore
+    mock_backend_base_url = "http://localhost:8000" # Usar una URL base de mock
+    chart_widget = ChartWidget(user_id=test_user_id, backend_base_url=mock_backend_base_url)
     main_window.setCentralWidget(chart_widget)
     main_window.show()
 

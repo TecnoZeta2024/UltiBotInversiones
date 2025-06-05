@@ -17,11 +17,11 @@ from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
 logger = logging.getLogger(__name__)
 
 class OpportunitiesView(QWidget):
-    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, qasync_loop: asyncio.AbstractEventLoop, parent=None):
+    def __init__(self, user_id: UUID, backend_base_url: str, qasync_loop: asyncio.AbstractEventLoop, parent=None):
         super().__init__(parent)
         logger.info("OpportunitiesView: __init__ called.") # Log de inicialización
         self.user_id = user_id
-        self.api_client = api_client
+        self.backend_base_url = backend_base_url
         self.qasync_loop = qasync_loop # Almacenar el bucle qasync
         self.active_threads = []
         logger.debug(f"OpportunitiesView initialized with qasync_loop: {self.qasync_loop}")
@@ -138,9 +138,9 @@ class OpportunitiesView(QWidget):
         self.opportunities_table.setRowCount(0)  # Clear table while loading
         logger.debug("[TRACE] OpportunitiesView: Attempting to get get_gemini_opportunities coroutine.")
         print("[TRACE] OpportunitiesView: Attempting to get get_gemini_opportunities coroutine.")
-        self._start_api_worker(lambda: self.api_client.get_gemini_opportunities())
+        self._start_api_worker(lambda api_client: api_client.get_gemini_opportunities(),)
 
-    def _start_api_worker(self, coroutine_factory: Callable[[], Coroutine]):
+    def _start_api_worker(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine]):
         # Import local para evitar ciclo de importación
         from src.ultibot_ui.main import ApiWorker
 
@@ -150,8 +150,8 @@ class OpportunitiesView(QWidget):
             self._handle_opportunities_error("Error interno: Bucle de eventos no configurado para worker.")
             return
         
-        # Pasar la fábrica de corutinas y el qasync_loop al constructor de ApiWorker
-        worker = ApiWorker(coroutine_factory, self.qasync_loop)
+        # Pasar la fábrica de corutinas, la URL base del backend y el qasync_loop al constructor de ApiWorker
+        worker = ApiWorker(coroutine_factory, self.backend_base_url)
         logger.debug(f"OpportunitiesView._start_api_worker: ApiWorker instance created: {worker} with loop {self.qasync_loop}")
         thread = QThread()
         logger.debug(f"OpportunitiesView._start_api_worker: QThread instance created: {thread}")
@@ -162,10 +162,7 @@ class OpportunitiesView(QWidget):
         worker.result_ready.connect(self._handle_opportunities_result)
         worker.error_occurred.connect(self._handle_opportunities_error)
 
-        def _on_thread_started():
-            logger.debug(f"OpportunitiesView._start_api_worker: Thread {thread} for worker {worker} emitted 'started'. Calling worker.run() NOW.")
-            worker.run()
-        thread.started.connect(_on_thread_started)
+        thread.started.connect(worker.run)
 
         worker.result_ready.connect(thread.quit)
         worker.error_occurred.connect(thread.quit)
@@ -388,7 +385,7 @@ if __name__ == '__main__':
     # para que no afecte el scope global del módulo cuando es importado.
 
     class MockUltiBotAPIClient:
-        def __init__(self, base_url=""): pass
+        def __init__(self, base_url: str = ""): self.base_url = base_url
         async def get_real_trading_candidates(self): # Make it async for consistency with real one
             # This method will be replaced with the mock functions for testing
             return []
@@ -419,7 +416,7 @@ if __name__ == '__main__':
 
     view_success = OpportunitiesView(
         user_id=UUID("00000000-0000-0000-0000-000000000000"), 
-        api_client=mock_client_success, # type: ignore
+        backend_base_url="http://localhost:8000", # type: ignore
         qasync_loop=mock_loop # Pasar el mock_loop
     ) 
     view_success.setWindowTitle("Opportunities View - Success Test")

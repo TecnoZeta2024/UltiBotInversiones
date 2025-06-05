@@ -22,7 +22,7 @@ echo Esperando a que el backend inicie en http://127.0.0.1:8000 (o el puerto con
     )
 
 REM 3. Lanzar el frontend
-start "UltiBot Frontend" cmd /k "poetry run python -m src.ultibot_ui.main"
+start "UltiBot Frontend" cmd /k "poetry run python -m src.ultibot_ui.main & PAUSE"
 
 REM 4. Mensaje final
 @echo UltiBotInversiones: Backend y Frontend lanzados en ventanas separadas.

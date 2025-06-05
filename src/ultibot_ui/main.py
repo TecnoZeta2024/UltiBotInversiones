@@ -555,26 +555,32 @@ class ApiWorker(QObject):
     result_ready = pyqtSignal(object)
     error_occurred = pyqtSignal(str)
 
-    def __init__(self, coroutine_factory: Callable[[], Coroutine], qasync_loop: asyncio.AbstractEventLoop):
+    def __init__(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine], base_url: str): # Modificado: recibe base_url
         super().__init__()
         self.coroutine_factory = coroutine_factory
-        self.qasync_loop = qasync_loop
-        logger.debug(f"ApiWorker initialized with loop: {self.qasync_loop}")
+        self.base_url = base_url # Almacena base_url
+        logger.debug(f"ApiWorker initialized with base_url: {self.base_url}")
 
     @pyqtSlot()
     def run(self):
-        loop = None  # Define loop here to ensure it's in scope for finally
+        loop = None
+        api_client_instance = None # Nueva instancia de api_client para este hilo
         try:
             # Crea y configura un event loop DEDICADO para este hilo
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             
-            # Crear y ejecutar la corutina
-            coroutine = self.coroutine_factory()
-            result = loop.run_until_complete(coroutine)
+            # Crea una nueva instancia de UltiBotAPIClient para este hilo y su bucle de eventos
+            api_client_instance = UltiBotAPIClient(base_url=self.base_url)
             
-            # Emitir el resultado. Qt maneja la transición al hilo principal.
+            coroutine = self.coroutine_factory(api_client_instance) # Pasa la instancia al factory
+            task = loop.create_task(coroutine) # Crear la tarea
+            
+            result = loop.run_until_complete(task)
             self.result_ready.emit(result)
+        except asyncio.CancelledError:
+            logger.info(f"ApiWorker: Coroutine was cancelled in worker loop {loop}.")
+            self.error_occurred.emit("Operación cancelada.")
         except APIError as e_api:
             logger.error(
                 f"ApiWorker: APIError caught during coroutine execution: {e_api.message}, "
@@ -594,55 +600,57 @@ class ApiWorker(QObject):
                 f"ApiWorker: Generic Exception caught during coroutine execution: {str(exc)}",
                 exc_info=True
             )
-            # Emitir el error. Qt maneja la transición.
             self.error_occurred.emit(str(exc))
         finally:
-            if loop:
-                if not loop.is_closed():
-                    try:
-                        async def _shutdown_worker_tasks_and_gens():
-                            # Cancel all tasks except the current one (which is this _shutdown_worker_tasks_and_gens wrapper)
-                            tasks_to_cancel = [
-                                task for task in asyncio.all_tasks(loop=loop) 
-                                if task is not asyncio.current_task(loop=loop)
-                            ]
-                            if tasks_to_cancel:
-                                logger.debug(f"ApiWorker: Cancelling {len(tasks_to_cancel)} tasks in worker loop {loop}.")
-                                for task in tasks_to_cancel:
-                                    task.cancel()
-                                await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
-                                logger.debug(f"ApiWorker: Cancelled tasks awaited in worker loop {loop}.")
-                            
-                            if hasattr(loop, 'shutdown_asyncgens'): # For Python 3.6+
-                                logger.debug(f"ApiWorker: Shutting down async generators in worker loop {loop}.")
-                                await loop.shutdown_asyncgens()
-                                logger.debug(f"ApiWorker: Async generators shut down in worker loop {loop}.")
+            # Asegurarse de cerrar el cliente HTTP de este hilo
+            if api_client_instance and loop: # Añadida verificación 'and loop'
+                logger.debug(f"ApiWorker: Cerrando httpx.AsyncClient para worker loop {loop}.")
+                # Ejecutar aclose de forma síncrona en este hilo, ya que el bucle está a punto de cerrarse
+                try:
+                    loop.run_until_complete(api_client_instance.aclose())
+                    logger.debug(f"ApiWorker: httpx.AsyncClient cerrado para worker loop {loop}.")
+                except Exception as e_aclose:
+                    logger.error(f"ApiWorker: Error al cerrar httpx.AsyncClient en worker loop {loop}: {e_aclose}", exc_info=True)
 
-                        logger.debug(f"ApiWorker: Starting comprehensive shutdown for worker loop {loop}.")
-                        loop.run_until_complete(_shutdown_worker_tasks_and_gens())
-                        logger.debug(f"ApiWorker: Comprehensive shutdown completed for worker loop {loop}.")
+            if loop and loop.is_running(): # Solo intentar limpiar si el loop está corriendo
+                try:
+                    # Cancelar todas las tareas pendientes en este bucle de eventos
+                    pending_tasks = [t for t in asyncio.all_tasks(loop=loop) if not t.done()]
+                    if pending_tasks:
+                        logger.debug(f"ApiWorker: Cancelling {len(pending_tasks)} pending tasks in worker loop {loop}.")
+                        for t in pending_tasks:
+                            t.cancel()
+                        # Esperar a que las tareas se cancelen. return_exceptions=True para no fallar si una tarea ya está cancelada.
+                        loop.run_until_complete(asyncio.gather(*pending_tasks, return_exceptions=True))
+                        logger.debug(f"ApiWorker: Pending tasks cancelled and awaited in worker loop {loop}.")
 
-                    except RuntimeError as e_runtime:
-                        logger.error(f"ApiWorker: RuntimeError during worker loop shutdown: {e_runtime}", exc_info=True)
-                    except Exception as e_general: # pylint: disable=broad-except
-                        logger.error(f"ApiWorker: General Exception during worker loop shutdown: {e_general}", exc_info=True)
-                    finally:
-                        if not loop.is_closed():
-                            loop.close()
-                            logger.info(f"ApiWorker: Event loop {loop} closed.")
-                        else:
-                            logger.info(f"ApiWorker: Event loop {loop} was already closed before explicit call.")
-                else:
-                    logger.info(f"ApiWorker: Event loop {loop} was already closed. Skipping shutdown procedures.")
+                    # Apagar los generadores asíncronos
+                    if hasattr(loop, 'shutdown_asyncgens'):
+                        logger.debug(f"ApiWorker: Shutting down async generators in worker loop {loop}.")
+                        loop.run_until_complete(loop.shutdown_asyncgens())
+                        logger.debug(f"ApiWorker: Async generators shut down in worker loop {loop}.")
+
+                    # Apagar el ejecutor por defecto (ThreadPoolExecutor)
+                    # Esto es crucial para evitar "cannot schedule new futures after shutdown"
+                    if hasattr(loop, 'shutdown_default_executor'):
+                        logger.debug(f"ApiWorker: Shutting down default executor in worker loop {loop}.")
+                        loop.run_until_complete(loop.shutdown_default_executor())
+                        logger.debug(f"ApiWorker: Default executor shut down in worker loop {loop}.")
+
+                except Exception as e_shutdown:
+                    logger.error(f"ApiWorker: Error during worker loop shutdown procedures: {e_shutdown}", exc_info=True)
+                finally:
+                    if not loop.is_closed():
+                        loop.close()
+                        logger.info(f"ApiWorker: Event loop {loop} closed.")
+                    else:
+                        logger.info(f"ApiWorker: Event loop {loop} was already closed.")
+            else:
+                logger.info(f"ApiWorker: Event loop {loop} is not running or already closed. Skipping shutdown procedures.")
             
-            # Eliminar la referencia al bucle de eventos del hilo actual
-            # para evitar que afecte a otras partes de la aplicación o a futuros hilos.
+            # Siempre desvincular el bucle de eventos del hilo actual
             asyncio.set_event_loop(None)
             logger.debug("ApiWorker: asyncio event loop for current OS thread set to None.")
-
-    # _execute ya no es necesario como método separado, la lógica está en run()
-    # async def _execute(self):
-    #     ...
 
 
 class UltiBotApplication:
@@ -652,7 +660,8 @@ class UltiBotApplication:
         self.settings: Optional[AppSettings] = None
         self.user_id: Optional[UUID] = None
         self.active_threads: List[QThread] = []
-        self.api_client: Optional[UltiBotAPIClient] = None
+        self.api_client: Optional[UltiBotAPIClient] = None # Este ya no se usará para llamadas en hilos
+        self.backend_base_url: str = "http://localhost:8000" # Nueva propiedad para pasar a ApiWorker
         self.qasync_loop: Optional[asyncio.AbstractEventLoop] = None
     
     def setup_qt_application(self) -> None:
@@ -674,27 +683,34 @@ class UltiBotApplication:
             raise ValueError(
                 "CREDENTIAL_ENCRYPTION_KEY no está configurada en .env file o variables de entorno."
             )
-        base_url = os.getenv("BACKEND_BASE_URL", "http://localhost:8000")
+        self.backend_base_url = os.getenv("BACKEND_BASE_URL", "http://localhost:8000") # Asignar a la nueva propiedad
         settings = AppSettings(CREDENTIAL_ENCRYPTION_KEY=credential_encryption_key)
         self.settings = settings
         self.user_id = settings.FIXED_USER_ID
-        self.api_client = UltiBotAPIClient(base_url=base_url)
+        # self.api_client = UltiBotAPIClient(base_url=self.backend_base_url) # Ya no se inicializa aquí para llamadas en hilos
         return settings
 
     async def initialize_core_services(self) -> None:
         if not self.settings:
             raise RuntimeError("Configuration not loaded")
-        if not self.api_client:
-            raise RuntimeError("API Client not initialized")
+        # if not self.api_client: # Ya no se usa directamente aquí
+        #     raise RuntimeError("API Client not initialized")
         
+        # Para verificar la conexión inicial, podemos crear un cliente temporal
+        temp_api_client = UltiBotAPIClient(base_url=self.backend_base_url)
         try:
-            print("API Client is configurado. Core services are now accesibles via the API client.")
+            print("API Client is configurado. Core services are now accesible via the API client.")
+            # Opcional: probar la conexión aquí
+            # if not await temp_api_client.test_connection():
+            #     raise APIError(message="Backend connection test failed.")
         except APIError as e:
             raise RuntimeError(f"Failed to connect or initialize with API backend: {e}")
+        finally:
+            await temp_api_client.aclose() # Asegurarse de cerrar el cliente temporal
 
     async def ensure_user_configuration(self) -> Any:
-        if not self.api_client:
-            raise RuntimeError("API Client not initialized for ensure_user_configuration")
+        # if not self.api_client: # Ya no se usa directamente aquí
+        #     raise RuntimeError("API Client not initialized for ensure_user_configuration")
         if not self.user_id:
             raise RuntimeError("User ID not initialized for ensure_user_configuration")
 
@@ -707,13 +723,8 @@ class UltiBotApplication:
         logger.debug(f"ensure_user_configuration: Using qasync event loop: {loop}")
         future = loop.create_future()
 
-        # Asegurarse de que self.api_client no es None para Pylance
-        api_client_instance = self.api_client
-        if api_client_instance is None:
-            logger.error("API Client no inicializado en ensure_user_configuration.")
-            raise RuntimeError("API Client no inicializado.")
-            
-        worker = ApiWorker(lambda: api_client_instance.get_user_configuration(), loop)
+        # La coroutine_factory ahora acepta un api_client_instance
+        worker = ApiWorker(lambda api_client: api_client.get_user_configuration(), self.backend_base_url) # Pasa base_url
         thread = QThread()
         self.active_threads.append(thread)
         worker.moveToThread(thread)
@@ -755,48 +766,62 @@ class UltiBotApplication:
             print("Advertencia: BINANCE_API_KEY o BINANCE_API_SECRET no encontradas. Omitiendo guardado automático de credenciales de Binance.")
             return
 
-        if not self.api_client:
-            raise RuntimeError("API Client not initialized")
+        # if not self.api_client: # Ya no se usa directamente aquí
+        #     raise RuntimeError("API Client not initialized")
         if not self.user_id:
             raise RuntimeError("user_id no inicializado")
 
         print("NOTA: La lógica de 'setup_binance_credentials' para guardar credenciales directamente"
               " desde el UI está siendo refactorizada.")
+        
+        # Si esta función necesita hacer una llamada a la API,
+        # debería usar un ApiWorker o crear un cliente temporal aquí.
+        # Por ahora, solo es un print.
 
     def create_main_window(self) -> MainWindow:
         if self.user_id is None:
             raise RuntimeError("user_id not initialized")
-        if self.api_client is None:
-            raise RuntimeError("api_client not initialized")
+        # if self.api_client is None: # Ya no se usa directamente aquí
+        #     raise RuntimeError("api_client not initialized")
         if self.qasync_loop is None:
             raise RuntimeError("qasync_loop not initialized in UltiBotApplication for create_main_window")
 
+        # MainWindow ahora recibirá la base_url para que sus widgets puedan crear ApiWorkers
         main_window = MainWindow(
             user_id=self.user_id,
-            api_client=self.api_client,
+            backend_base_url=self.backend_base_url, # Pasa la base_url
             qasync_loop=self.qasync_loop
         )
         self.main_window = main_window
         return main_window
     
-    async def cleanup_resources(self) -> None:
-        print("Iniciando limpieza de recursos asíncronos...")
-        for thread in self.active_threads[:]: 
-            if thread.isRunning():
-                logger.info(f"Waiting for thread {thread} to finish...")
-                thread.quit() 
-                if not thread.wait(5000): 
-                    logger.warning(f"Thread {thread} did not finish in time. Forcing termination.")
-                    thread.terminate() 
-                    thread.wait() 
-            if thread in self.active_threads: 
-                self.active_threads.remove(thread)
+    async def cleanup_resources(self) -> None: # Cambiado a asíncrono
+        logger.info("Iniciando limpieza de recursos de UltiBotApplication.")
         
-        # self.api_client.aclose() ya no es necesario ya que httpx.AsyncClient se crea y cierra por cada solicitud
-        # if self.api_client:
-        #     await self.api_client.aclose()
-        logger.info(f"All active QThreads ({len(self.active_threads)} remaining) processed for cleanup.")
-        print("Limpieza de recursos asíncronos (ahora minimal, API client manages its connections).")
+        # Crear una copia de la lista para evitar problemas de modificación durante la iteración
+        threads_to_clean = self.active_threads[:] 
+        self.active_threads.clear() # Limpiar la lista original inmediatamente
+
+        for thread in threads_to_clean: 
+            if thread.isRunning():
+                logger.info(f"Sending quit signal to thread {thread} and waiting for it to finish...")
+                thread.quit() 
+                # Esperar indefinidamente a que el hilo termine. Esto es crucial.
+                # Si el hilo no responde a quit(), wait() bloqueará hasta que termine o se termine forzosamente.
+                if not thread.wait(30000): # Aumentar el timeout a 30 segundos
+                    logger.warning(f"Thread {thread} did not finish in time (30s). Forcing termination.")
+                    thread.terminate() 
+                    thread.wait() # Esperar a que la terminación forzada se complete
+            else:
+                logger.info(f"Thread {thread} is not running, skipping cleanup.")
+        
+        logger.info(f"All active QThreads processed for cleanup. Remaining: {len(self.active_threads)}.")
+        
+        # Añadir una pequeña espera para permitir que las tareas pendientes en el bucle principal se resuelvan
+        # antes de que el bucle principal se cierre completamente.
+        await asyncio.sleep(0.1) # Espera de 100ms
+        
+        print("Limpieza de recursos completada.")
     
     def show_error_and_exit(self, title: str, message: str, exit_code: int = 1) -> None:
         if self.app:
@@ -815,29 +840,87 @@ async def run_application(qt_app_instance: QApplication, q_event_loop: qasync.QE
     try:
         ultibot_app.setup_qt_application() 
         apply_application_style("dark") 
-        ultibot_app.load_configuration()
+        ultibot_app.load_configuration() # Esto carga backend_base_url
         await ultibot_app.initialize_core_services()
-
         try:
-            user_config = await asyncio.wait_for(ultibot_app.ensure_user_configuration(), timeout=30)
-            logger.info(f"User configuration loaded successfully: {user_config}")
+            # Aumentamos el timeout y agregamos reintentos para la obtención de la configuración del usuario
+            retries = 3
+            timeout_per_try = 15
+            retry_count = 0
+            last_error = None
+            
+            while retry_count < retries:
+                try:
+                    logger.info(f"Intentando obtener configuración de usuario (intento {retry_count+1}/{retries})...")
+                    user_config = await asyncio.wait_for(ultibot_app.ensure_user_configuration(), timeout=timeout_per_try)
+                    logger.info(f"User configuration loaded successfully: {user_config}")
+                    break  # Si tiene éxito, salimos del bucle
+                except asyncio.TimeoutError as e:
+                    retry_count += 1
+                    last_error = e
+                    if retry_count < retries:
+                        logger.warning(f"Timeout al obtener configuración de usuario (intento {retry_count}/{retries}). Reintentando...")
+                        await asyncio.sleep(2)  # Esperar 2 segundos antes de reintentar
+                    else:
+                        raise  # Relanzar la excepción si agotamos los intentos
+                except Exception as e:
+                    retry_count += 1
+                    last_error = e
+                    if retry_count < retries:
+                        logger.warning(f"Error al obtener configuración de usuario (intento {retry_count}/{retries}): {str(e)}. Reintentando...")
+                        await asyncio.sleep(2)
+                    else:
+                        raise
+            
+            if retry_count == retries:
+                if last_error is None:
+                    # Esto no debería suceder si el bucle de reintentos se ejecutó y falló,
+                    # pero es una salvaguarda.
+                    logger.critical("Estado inesperado: Se agotaron los reintentos pero no hay último error registrado.")
+                    raise RuntimeError("Fallo en la obtención de la configuración del usuario después de reintentos, sin error específico.")
+                else:
+                    raise last_error
+                
         except asyncio.TimeoutError:
+            logger.error("Timeout final al obtener la configuración de usuario después de múltiples intentos")
             ultibot_app.show_error_and_exit(
                 "Timeout de configuración de usuario",
-                "No se recibió respuesta del backend o del hilo de configuración en 30 segundos."
+                "No se recibió respuesta del backend o del hilo de configuración después de varios intentos."
             )
             return 1 
         except Exception as e:
+            logger.error(f"Error final al obtener la configuración de usuario: {str(e)}")
             ultibot_app.show_error_and_exit(
                 "Error de Configuración de Usuario",
                 f"No se pudo cargar la configuración del usuario: {str(e)}"
             )
-            return 1 
+            return 1
         
         await ultibot_app.setup_binance_credentials()
-        main_window = ultibot_app.create_main_window()
+        main_window = ultibot_app.create_main_window() # Pasa backend_base_url a MainWindow
         main_window.show()
         
+        # Mantener la corrutina viva hasta que la aplicación se cierre
+        # QApplication.instance().aboutToQuit se puede usar para establecer este evento
+        app_close_event = asyncio.Event()
+        original_close_event = main_window.closeEvent
+        
+        def custom_close_event(event):
+            if original_close_event:
+                original_close_event(event) # Llama al manejador original si existe
+            if event.isAccepted(): # Solo si el cierre es aceptado
+                logger.info("MainWindow close event accepted, setting app_close_event for run_application.")
+                # Es importante llamar a set() desde el hilo del bucle de eventos de asyncio
+                if ultibot_app.qasync_loop:
+                    ultibot_app.qasync_loop.call_soon_threadsafe(app_close_event.set)
+                else:
+                    logger.error("custom_close_event: ultibot_app.qasync_loop is None! Cannot set app_close_event.")
+        
+        main_window.closeEvent = custom_close_event
+        logger.info("run_application: Esperando a que app_close_event se establezca (cierre de la ventana principal)...")
+        await app_close_event.wait()
+        logger.info("run_application: app_close_event establecido, la corrutina run_application finalizará.")
+
     except ValueError as ve:
         ultibot_app.show_error_and_exit(
             "Error de Configuración Inicial",
@@ -851,7 +934,8 @@ async def run_application(qt_app_instance: QApplication, q_event_loop: qasync.QE
         )
         exit_code = 1
     finally:
-        await ultibot_app.cleanup_resources()
+        # cleanup_resources ahora es síncrono, se llamará en el finally de main()
+        pass 
     
     return exit_code
 
@@ -924,10 +1008,9 @@ def main() -> None:
                                  f"Ha ocurrido un error crítico inesperado: {e}\n\nLa aplicación se cerrará.")
         exit_code = 1
     finally:
-        # Asegurarse de que la limpieza de recursos de la aplicación se realice antes del cierre del bucle
         if ultibot_app: # Asegurarse de que la instancia existe
             logger.info("Iniciando limpieza de recursos de UltiBotApplication antes del cierre del bucle principal.")
-            # Ejecutar cleanup_resources en el mismo bucle de eventos
+            # Llamar a cleanup_resources de forma asíncrona en el bucle principal
             event_loop.run_until_complete(ultibot_app.cleanup_resources())
             logger.info("Limpieza de recursos de UltiBotApplication completada.")
 
@@ -937,9 +1020,10 @@ def main() -> None:
         
         try:
             # Cancelar la tarea del logger periódico explícitamente
-            if periodic_logger_task and not periodic_logger_task.done():
+            if 'periodic_logger_task' in locals() and periodic_logger_task and not periodic_logger_task.done():
                 periodic_logger_task.cancel()
                 try:
+                    # Esperar la cancelación de la tarea del logger periódico
                     event_loop.run_until_complete(periodic_logger_task)
                 except asyncio.CancelledError:
                     logger.info("Tarea periodic_async_logger cancelada.")
