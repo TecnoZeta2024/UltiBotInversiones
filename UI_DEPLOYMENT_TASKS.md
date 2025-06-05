@@ -141,6 +141,8 @@ Asegurar que la interfaz de usuario (PyQt5) se despliegue y ejecute correctament
     -   [ ] ⬜️ Subtarea 3.1.4: Investigar otras áreas potenciales de optimización en la carga inicial de `DashboardView` y sus widgets principales.
 -   [ ] ⬜️ **Tarea 3.2:** Refactorizar código de la UI para mejorar la claridad y mantenibilidad (según sea necesario).
 -   [ ] ⬜️ **Tarea 3.3:** Asegurar la correcta gestión de hilos si hay operaciones de backend bloqueantes.
+-   [x] ✅ **Tarea 3.4 (Nueva):** Mejorar el logging del frontend para reducir la verbosidad de bibliotecas de terceros.
+    -   [x] ✅ Subtarea 3.4.1: Modificar `src/ultibot_ui/main.py` para establecer el nivel de log de `matplotlib` a `INFO`.
 
 ## Fase 5: Refactorización de Llamadas Asíncronas en UI (Nueva Tarea)
 
@@ -267,19 +269,19 @@ Asegurar que la interfaz de usuario (PyQt5) se despliegue y ejecute correctament
     - [ ] ⬜️ Subtarea 2.7.3: Depurar la lógica de `StrategyManagementView` en el frontend para la carga y visualización de estrategias.
     - [ ] ⬜️ Subtarea 2.7.4: Asegurar que el formato de datos de las estrategias sea compatible entre frontend y backend.
 
-- [x] ✅ **Tarea 2.8:** Depurar y resolver la falta de interacción con la IA (endpoint `/gemini/opportunities`) cuando se usa `run_frontend_with_backend.bat`.
-    - [x] ✅ Subtarea 2.8.1: Confirmar que el backend recibe las solicitudes al endpoint `/api/v1/gemini/opportunities` cuando se ejecuta de forma aislada.
-        - [x] ✅ Sub-subtarea 2.8.1.1: Ejecutar el backend de forma aislada (`uvicorn src.ultibot_backend.main:app --reload`) y probar el endpoint con `curl`. (Resultado: Funciona, devuelve 200 OK y JSON. El log de recepción aparece en `logs/backend.log`).
-    - [x] ✅ Subtarea 2.8.1.2: Investigar por qué la solicitud del frontend no llega/procesa correctamente cuando se ejecuta con `run_frontend_with_backend.bat`.
-        - [x] ✅ Analizar la estabilidad del backend (reinicios) durante la ejecución con `run_frontend_with_backend.bat`. (Backend ahora estable al inicio).
-        - [x] ✅ **Resolución de `sniffio._impl.AsyncLibraryNotFoundError` y `RuntimeError: Cannot enter into task...` para `ApiWorker`:** Se modificó `ApiWorker.run()` en `src/ultibot_ui/main.py` para crear y ejecutar un bucle de eventos `asyncio` dedicado en el hilo del worker. Esto aísla la ejecución de `httpx` y resuelve los problemas de contexto para las llamadas realizadas a través de `ApiWorker`.
-        - [x] ✅ **Confirmación de recepción en backend para `/gemini/opportunities`:** Los logs del backend (`logs/backend.log`) confirman que las solicitudes a `/api/v1/gemini/opportunities` ahora llegan y son procesadas con `Status: 200 OK` durante la ejecución normal de la aplicación.
+- [] ✅ **Tarea 2.8:** Depurar y resolver la falta de interacción con la IA (endpoint `/gemini/opportunities`) cuando se usa `run_frontend_with_backend.bat`.
+    - [] ✅ Subtarea 2.8.1: Confirmar que el backend recibe las solicitudes al endpoint `/api/v1/gemini/opportunities` cuando se ejecuta de forma aislada.
+        - [] ✅ Sub-subtarea 2.8.1.1: Ejecutar el backend de forma aislada (`uvicorn src.ultibot_backend.main:app --reload`) y probar el endpoint con `curl`. (Resultado: Funciona, devuelve 200 OK y JSON. El log de recepción aparece en `logs/backend.log`).
+    - [] ✅ Subtarea 2.8.1.2: Investigar por qué la solicitud del frontend no llega/procesa correctamente cuando se ejecuta con `run_frontend_with_backend.bat`.
+        - [] ✅ Analizar la estabilidad del backend (reinicios) durante la ejecución con `run_frontend_with_backend.bat`. (Backend ahora estable al inicio).
+        - [] ✅ **Resolución de `sniffio._impl.AsyncLibraryNotFoundError` y `RuntimeError: Cannot enter into task...` para `ApiWorker`:** Se modificó `ApiWorker.run()` en `src/ultibot_ui/main.py` para crear y ejecutar un bucle de eventos `asyncio` dedicado en el hilo del worker. Esto aísla la ejecución de `httpx` y resuelve los problemas de contexto para las llamadas realizadas a través de `ApiWorker`.
+        - [] ✅ **Confirmación de recepción en backend para `/gemini/opportunities`:** Los logs del backend (`logs/backend.log`) confirman que las solicitudes a `/api/v1/gemini/opportunities` ahora llegan y son procesadas con `Status: 200 OK` durante la ejecución normal de la aplicación.
         - **Diagnóstico Actual para `OpportunitiesView`:** La `OpportunitiesView` ahora llama a `_fetch_opportunities` y recibe datos del backend. El problema ya no es la comunicación de bajo nivel o los errores asíncronos para esta vista. El problema actual es que la `OpportunitiesView` del frontend no está procesando o mostrando correctamente los datos recibidos.
-    - [x] ✅ Subtarea 2.8.2: Añadir un retraso en `OpportunitiesView._load_initial_data` antes de llamar a `_fetch_opportunities` para dar más tiempo al backend. (Implementado retraso de 5 segundos. Modificado a 100ms el 2025-06-04 ~19:20. **Este retraso ya no es la causa principal del problema, ya que la comunicación API es exitosa.**).
+    - [] ✅ Subtarea 2.8.2: Añadir un retraso en `OpportunitiesView._load_initial_data` antes de llamar a `_fetch_opportunities` para dar más tiempo al backend. (Implementado retraso de 5 segundos. Modificado a 100ms el 2025-06-04 ~19:20. **Este retraso ya no es la causa principal del problema, ya que la comunicación API es exitosa.**).
     - [ ] 🚧 Subtarea 2.8.3: Una vez que la comunicación sea estable con `run_frontend_with_backend.bat`, verificar que la lógica en `get_gemini_opportunities` (incluyendo el mock y la transformación de datos) funcione como se espera en ese contexto.
-    - [ ] 🚧 Subtarea 2.8.4: Verificar que el frontend (`OpportunitiesView`) procese y muestre correctamente los datos recibidos del backend en ese contexto. (Buscar log `OpportunitiesView: Received ... opportunities.` en `logs/frontend.log`).
+    - [ ] 🚧 Subtarea 2.8.4: Verificar que el frontend (`OpportunitiesView`) procese y muestre correctamente los datos recibidos del backend en ese contexto. (Buscar log `OpportunitiesView: Received ... opportunities.` en `logs/frontend.log`). (MANDATORIO)
     - [ ] ⬜️ Subtarea 2.8.5: Revisar la configuración del LLM Provider en el backend y las variables de entorno (aunque actualmente se usa un mock).
-    - [ ] ⬜️ Subtarea 2.8.6: Resolver el error de credenciales de Google Cloud para LLM Provider (si se decide usar el LLM real).
+    - [ ] ⬜️ Subtarea 2.8.6: Resolver el error de credenciales de Google Cloud para LLM Provider (MANDATORIO).
 
 - [x] ✅ **Tarea 2.9:** Investigar y resolver el `psycopg.OperationalError` en el backend al obtener trades cerrados. (Resuelto).
 
