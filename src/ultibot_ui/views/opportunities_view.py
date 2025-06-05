@@ -295,7 +295,24 @@ class OpportunitiesView(QWidget):
         self.opportunities_table.resizeColumnsToContents()
         self.opportunities_table.resizeRowsToContents()
         self.opportunities_table.update()
+        self.opportunities_table.repaint() # Added repaint call
+
         self.last_updated_label.setText(f"Last updated: {QDateTime.currentDateTime().toString('yyyy-MM-dd HH:mm:ss')}")
+
+        # [DEBUG_UI] Logging
+        logger.debug(f"[DEBUG_UI] Table visible: {self.opportunities_table.isVisible()}")
+        logger.debug(f"[DEBUG_UI] OpportunitiesView visible: {self.isVisible()}")
+        logger.debug(f"[DEBUG_UI] Table size: {self.opportunities_table.size().width()}x{self.opportunities_table.size().height()}")
+        logger.debug(f"[DEBUG_UI] Table rowCount: {self.opportunities_table.rowCount()}, columnCount: {self.opportunities_table.columnCount()}")
+        for i in range(self.opportunities_table.columnCount()):
+            logger.debug(f"[DEBUG_UI] Column {i} width: {self.opportunities_table.columnWidth(i)}")
+        # Only log row heights if there are rows, to avoid issues if table is empty or has placeholder
+        if self.opportunities_table.rowCount() > 0 and opportunities_data: # Check opportunities_data to avoid logging placeholder row height
+            for i in range(self.opportunities_table.rowCount()):
+                logger.debug(f"[DEBUG_UI] Row {i} height: {self.opportunities_table.rowHeight(i)}")
+        elif not opportunities_data:
+            logger.debug("[DEBUG_UI] No actual data rows to log heights for (placeholder might be present).")
+
 
     def _handle_opportunities_error(self, error_message: str):
         logger.error(f"OpportunitiesView: Error fetching opportunities: {error_message}")

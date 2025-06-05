@@ -603,7 +603,7 @@ class ApiWorker(QObject):
                         async def _shutdown_worker_tasks_and_gens():
                             # Cancel all tasks except the current one (which is this _shutdown_worker_tasks_and_gens wrapper)
                             tasks_to_cancel = [
-                                task for task in asyncio.all_tasks(loop=loop) 
+                                task for task in asyncio.all_tasks(loop=loop)
                                 if task is not asyncio.current_task(loop=loop)
                             ]
                             if tasks_to_cancel:
@@ -612,7 +612,7 @@ class ApiWorker(QObject):
                                     task.cancel()
                                 await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
                                 logger.debug(f"ApiWorker: Cancelled tasks awaited in worker loop {loop}.")
-                            
+
                             if hasattr(loop, 'shutdown_asyncgens'): # For Python 3.6+
                                 logger.debug(f"ApiWorker: Shutting down async generators in worker loop {loop}.")
                                 await loop.shutdown_asyncgens()
@@ -634,7 +634,7 @@ class ApiWorker(QObject):
                             logger.info(f"ApiWorker: Event loop {loop} was already closed before explicit call.")
                 else:
                     logger.info(f"ApiWorker: Event loop {loop} was already closed. Skipping shutdown procedures.")
-            
+
             # Eliminar la referencia al bucle de eventos del hilo actual
             # para evitar que afecte a otras partes de la aplicación o a futuros hilos.
             asyncio.set_event_loop(None)
