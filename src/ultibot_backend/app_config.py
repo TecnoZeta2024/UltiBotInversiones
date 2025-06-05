@@ -32,4 +32,9 @@ class AppSettings(BaseSettings):
     # Google Gemini API Key (optional)
     GEMINI_API_KEY: Optional[str] = None
 
+    # Uvicorn server settings (can be overridden by .env)
+    BACKEND_HOST: str = "127.0.0.1"
+    BACKEND_PORT: int = 8000
+    DEBUG_MODE: bool = False # For Uvicorn reload
+
 settings = AppSettings()

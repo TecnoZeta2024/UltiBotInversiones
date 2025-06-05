@@ -5,6 +5,7 @@ proporcionando la interfaz de usuario principal con navegación lateral y vistas
 intercambiables para diferentes funcionalidades del bot de trading.
 """
 
+import asyncio # Añadido para la anotación de tipo AbstractEventLoop
 import logging
 logger = logging.getLogger(__name__)
 
@@ -52,18 +53,21 @@ class MainWindow(QMainWindow):
         self,
         user_id: UUID,
         api_client: UltiBotAPIClient, # Changed: Pass api_client
+        qasync_loop: asyncio.AbstractEventLoop, # Added qasync_loop
         parent=None,
     ):
-        """Inicializa la ventana principal con el cliente API.
+        """Inicializa la ventana principal con el cliente API y el bucle qasync.
 
         Args:
             user_id: Identificador único del usuario
             api_client: Cliente para interactuar con el backend API.
+            qasync_loop: El bucle de eventos qasync del hilo principal.
             parent: Widget padre opcional
         """
         super().__init__(parent)
         self.user_id = user_id
         self.api_client = api_client # Use the passed-in api_client
+        self.qasync_loop = qasync_loop # Store the qasync loop
 
         # Remove old service instances
         # self.market_data_service = market_data_service
@@ -127,6 +131,14 @@ class MainWindow(QMainWindow):
         self._log_debug("MainWindow inicializada y visible.")
         self.statusBar.showMessage("Ventana principal desplegada correctamente.")
 
+    def _safe_set_future_result(self, future_instance, result_value):
+        """Helper para llamar a future.set_result de forma segura desde un hilo."""
+        self.qasync_loop.call_soon_threadsafe(future_instance.set_result, result_value)
+
+    def _safe_set_future_exception(self, future_instance, exception_value):
+        """Helper para llamar a future.set_exception de forma segura desde un hilo."""
+        self.qasync_loop.call_soon_threadsafe(future_instance.set_exception, exception_value)
+
     def _schedule_initial_load(self):
         """Programa la carga inicial del estado de Paper Trading y Real Trading.
 
@@ -134,7 +146,8 @@ class MainWindow(QMainWindow):
         """
         # Remove direct asyncio.create_task usage. Will use ApiWorker.
         logging.info("Programando carga inicial de estados de trading con ApiWorker.")
-        self._load_initial_paper_trading_status() # CORREGIDO: Quitar _worker
+        # Estas llamadas ahora usarán el patrón con asyncio.Future
+        self._load_initial_paper_trading_status()
         self._load_initial_real_trading_status_worker()
 
     def _check_initialization_complete(self):
@@ -217,37 +230,56 @@ class MainWindow(QMainWindow):
         # Ensure user_id is string for API calls if needed by client, though get_user_configuration might not need it.
         # The current api_client.get_user_configuration takes no args.
         from src.ultibot_ui.main import ApiWorker
-        worker = ApiWorker(self.api_client.get_user_configuration())
+        if not self.qasync_loop:
+            logger.error("MainWindow: qasync_loop no está disponible para _load_initial_paper_trading_status")
+            self._handle_paper_trading_status_error(Exception("Error interno: Bucle de eventos no configurado."))
+            return
+
+        coroutine_factory = lambda: self.api_client.get_user_configuration()
+        future = self.qasync_loop.create_future()
+        worker = ApiWorker(coroutine_factory, self.qasync_loop)
+        
         thread = QThread()
         self.active_threads.append(thread)
         worker.moveToThread(thread)
 
-        worker.result_ready.connect(self._handle_paper_trading_status_result)
-        worker.error_occurred.connect(self._handle_paper_trading_status_error)
+        # Conectar señales del worker para establecer el resultado/excepción del futuro EN EL HILO PRINCIPAL
+        worker.result_ready.connect(lambda result: self._safe_set_future_result(future, result))
+        worker.error_occurred.connect(lambda err_msg: self._safe_set_future_exception(future, APIError(message=err_msg)))
 
         thread.started.connect(worker.run)
         worker.result_ready.connect(thread.quit)
         worker.error_occurred.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        thread.finished.connect(lambda: self.active_threads.remove(thread))
+        worker.result_ready.connect(worker.deleteLater) # Worker se autodestruye
+        worker.error_occurred.connect(worker.deleteLater) # Worker se autodestruye
+        thread.finished.connect(thread.deleteLater) # Thread se autodestruye
+        thread.finished.connect(lambda t=thread: self.active_threads.remove(t) if t in self.active_threads else None)
+        
         thread.start()
+
+        # Añadir un callback al futuro que se ejecutará en el hilo principal
+        future.add_done_callback(
+            lambda fut: self._handle_paper_trading_status_result(fut.result())
+            if not fut.exception() else self._handle_paper_trading_status_error(
+                fut.exception() # Pasamos la excepción directamente, el handler la convertirá a str
+            )
+        )
 
     def _handle_paper_trading_status_result(self, result: dict): # Type hint result as dict (from JSON)
         """Maneja el resultado exitoso de la carga del estado de Paper Trading."""
         try:
-            # Assuming result is a dict similar to UserConfiguration or parts of it
-            is_active = result.get("paperTradingActive", False) # Adapt key if necessary
+            is_active = result.get("paperTradingActive", False) 
             self._update_paper_trading_status_label(is_active)
             logging.info(f"Estado de Paper Trading cargado: {'Activo' if is_active else 'Inactivo'}")
         except Exception as e:
-            self._handle_paper_trading_status_error(f"Error al procesar resultado de Paper Trading: {e}")
+            self._handle_paper_trading_status_error(e) # Pasar la excepción directamente
         finally:
             self._paper_trading_status_loaded = True
             self._check_initialization_complete()
 
-    def _handle_paper_trading_status_error(self, error_message: str):
+    def _handle_paper_trading_status_error(self, error: BaseException | None): # Aceptar BaseException | None
         """Maneja errores durante la carga del estado de Paper Trading."""
+        error_message = str(error if error is not None else "Error desconocido")
         self.paper_trading_status_label.setText("Modo: Error")
         self.paper_trading_status_label.setStyleSheet("font-weight: bold; color: red;")
         self.statusBar.showMessage(f"Error al cargar modo Paper: {error_message}")
@@ -261,39 +293,56 @@ class MainWindow(QMainWindow):
         logging.info("Iniciando ApiWorker para _load_initial_real_trading_status.")
 
         from src.ultibot_ui.main import ApiWorker
-        worker = ApiWorker(self.api_client.get_real_trading_mode_status())
+        if not self.qasync_loop:
+            logger.error("MainWindow: qasync_loop no está disponible para _load_initial_real_trading_status_worker")
+            self._handle_real_trading_status_error(Exception("Error interno: Bucle de eventos no configurado."))
+            return
+
+        coroutine_factory = lambda: self.api_client.get_real_trading_mode_status()
+        future = self.qasync_loop.create_future()
+        worker = ApiWorker(coroutine_factory, self.qasync_loop)
+
         thread = QThread()
         self.active_threads.append(thread)
         worker.moveToThread(thread)
 
-        worker.result_ready.connect(self._handle_real_trading_status_result)
-        worker.error_occurred.connect(self._handle_real_trading_status_error)
+        worker.result_ready.connect(lambda result: self._safe_set_future_result(future, result))
+        worker.error_occurred.connect(lambda err_msg: self._safe_set_future_exception(future, APIError(message=err_msg)))
 
         thread.started.connect(worker.run)
         worker.result_ready.connect(thread.quit)
         worker.error_occurred.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
+        worker.result_ready.connect(worker.deleteLater)
+        worker.error_occurred.connect(worker.deleteLater)
         thread.finished.connect(thread.deleteLater)
-        thread.finished.connect(lambda: self.active_threads.remove(thread))
+        thread.finished.connect(lambda t=thread: self.active_threads.remove(t) if t in self.active_threads else None)
+
         thread.start()
+
+        future.add_done_callback(
+            lambda fut: self._handle_real_trading_status_result(fut.result())
+            if not fut.exception() else self._handle_real_trading_status_error(
+                fut.exception() # Pasamos la excepción directamente, el handler la convertirá a str
+            )
+        )
 
     def _handle_real_trading_status_result(self, status_data: dict): # Type hint
         """Maneja el resultado exitoso de la carga del estado de Real Trading."""
         try:
-            self._update_real_trading_status_label(
-                status_data.get("isActive", False),
-                status_data.get("executedCount", 0),
-                status_data.get("limit", 5) # Default limit if not provided
-            )
-            logging.info(f"Estado de Real Trading cargado: {'Activo' if status_data.get('isActive') else 'Inactivo'}")
+            is_active = status_data.get("isActive", False)
+            executed_count = status_data.get("executedCount", 0)
+            limit = status_data.get("limit", 5) # Default limit if not provided
+            self._update_real_trading_status_label(is_active, executed_count, limit)
+            logging.info(f"Estado de Real Trading cargado: {'Activo' if is_active else 'Inactivo'}")
         except Exception as e:
-            self._handle_real_trading_status_error(f"Error al procesar resultado de Real Trading: {e}")
+            self._handle_real_trading_status_error(e)
         finally:
             self._real_trading_status_loaded = True
             self._check_initialization_complete()
 
-    def _handle_real_trading_status_error(self, error_message: str):
+    def _handle_real_trading_status_error(self, error: BaseException | None): # Aceptar BaseException | None
         """Maneja errores durante la carga del estado de Real Trading."""
+        error_message = str(error if error is not None else "Error desconocido")
         self.real_trading_status_label.setText("Modo Real: Error")
         self.real_trading_status_label.setStyleSheet("font-weight: bold; color: red;")
         self.statusBar.showMessage(f"Error al cargar modo Real: {error_message}")
@@ -381,8 +430,15 @@ class MainWindow(QMainWindow):
         self.dashboard_view.initialization_complete.connect(self._on_dashboard_initialized) # Conectar señal
 
         # Replace placeholder with OpportunitiesView
-        self.opportunities_view = OpportunitiesView(self.user_id, self.api_client)
-        self.stacked_widget.addWidget(self.opportunities_view)  # Índice 1
+        if not self.qasync_loop:
+            logger.critical("MainWindow: qasync_loop no está disponible al crear OpportunitiesView. Esto es un error fatal.")
+            # Podríamos crear un QLabel de error aquí en lugar de OpportunitiesView
+            error_label = QLabel("Error Crítico: Bucle de eventos no disponible para OpportunitiesView.")
+            error_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.stacked_widget.addWidget(error_label)
+        else:
+            self.opportunities_view = OpportunitiesView(self.user_id, self.api_client, self.qasync_loop)
+            self.stacked_widget.addWidget(self.opportunities_view)  # Índice 1
 
         # self.strategies_view = QLabel("Vista de Estrategias (Placeholder)")
         # self.strategies_view.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -390,14 +446,20 @@ class MainWindow(QMainWindow):
         self.stacked_widget.addWidget(self.strategy_management_view)  # Índice 2
 
         # New PortfolioView
-        self.portfolio_view = PortfolioView(self.user_id, self.api_client)
-        self.stacked_widget.addWidget(self.portfolio_view) # Index 3
+        if not self.qasync_loop:
+            logger.critical("MainWindow: qasync_loop no está disponible al crear PortfolioView. Esto es un error fatal.")
+            error_label_portfolio = QLabel("Error Crítico: Bucle de eventos no disponible para PortfolioView.")
+            error_label_portfolio.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.stacked_widget.addWidget(error_label_portfolio)
+        else:
+            self.portfolio_view = PortfolioView(self.user_id, self.api_client, self.qasync_loop)
+            self.stacked_widget.addWidget(self.portfolio_view) # Index 3
 
         # Vista de historial con el widget de paper trading report
         self.history_view = HistoryView(self.user_id)
         self.stacked_widget.addWidget(self.history_view)  # Índice 4
 
-        self.settings_view = SettingsView(str(self.user_id), self.api_client)
+        self.settings_view = SettingsView(str(self.user_id), self.api_client, self.qasync_loop) # Pasar qasync_loop
         self.stacked_widget.addWidget(self.settings_view)  # Índice 5
 
         # View mapping for navigation

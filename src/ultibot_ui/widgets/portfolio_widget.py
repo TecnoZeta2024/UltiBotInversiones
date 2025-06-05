@@ -201,13 +201,13 @@ class PortfolioWidget(QWidget):
         self.portfolio_value_label = QLabel("Valor Total Portafolio: N/A")
         self.assets_table = self._create_assets_table()
         
-        mode_layout = self.current_mode_group.layout()
-        if isinstance(mode_layout, QFormLayout):
-            mode_layout.addRow(self.balance_label)
-            mode_layout.addRow(self.total_assets_label)
-            mode_layout.addRow(self.portfolio_value_label)
-            mode_layout.addRow(QLabel("Activos Poseídos:"))
-            mode_layout.addRow(self.assets_table)
+        # Asignar el layout al QGroupBox aquí
+        portfolio_form_layout = QFormLayout(self.current_mode_group)
+        portfolio_form_layout.addRow(self.balance_label)
+        portfolio_form_layout.addRow(self.total_assets_label)
+        portfolio_form_layout.addRow(self.portfolio_value_label)
+        portfolio_form_layout.addRow(QLabel("Activos Poseídos:"))
+        portfolio_form_layout.addRow(self.assets_table)
         layout.addWidget(self.current_mode_group)
 
         # Información comparativa (opcional)
@@ -345,7 +345,7 @@ class PortfolioWidget(QWidget):
         Crea un grupo con estilo consistente.
         """
         group_box = QGroupBox(title)
-        group_box.setLayout(QFormLayout())
+        # No asignar layout aquí, se asignará en init_portfolio_tab
         group_box.setStyleSheet("""
             QGroupBox {
                 border: 1px solid #333;
@@ -844,3 +844,15 @@ class PortfolioWidget(QWidget):
         """
         self.update_timer.stop()
         logger.info("Actualizaciones del portafolio detenidas.")
+
+    def cleanup(self):
+        """
+        Realiza la limpieza de recursos del widget, deteniendo timers y workers.
+        """
+        self.stop_updates()
+        logger.info("PortfolioWidget: Esperando a que los workers del thread_pool terminen...")
+        self.thread_pool.waitForDone(5000) # Esperar hasta 5 segundos para que los workers terminen
+        if self.thread_pool.activeThreadCount() > 0:
+            logger.warning(f"PortfolioWidget: {self.thread_pool.activeThreadCount()} workers aún activos después de 5s. Forzando terminación.")
+            # No hay un método directo para "terminar" QRunnable, pero podemos confiar en el timeout.
+        logger.info("PortfolioWidget: Limpieza completada.")

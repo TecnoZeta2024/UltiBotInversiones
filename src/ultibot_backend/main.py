@@ -21,11 +21,20 @@ from uuid import UUID
 
 # Solución para Windows ProactorEventLoop con psycopg - DEBE SER LO PRIMERO
 if sys.platform == "win32":
+    print("BACKEND_MAIN: PLATFORM IS WIN32. Intentando establecer WindowsSelectorEventLoopPolicy...", file=sys.stderr)
     try:
-        import win32api # Intenta importar win32api para verificar si el entorno es compatible
+        import win32api
+        print("BACKEND_MAIN: win32api importado exitosamente.", file=sys.stderr)
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+        print("BACKEND_MAIN: WindowsSelectorEventLoopPolicy establecida exitosamente.", file=sys.stderr)
     except ImportError:
-        logging.warning("win32api no encontrado. No se pudo establecer WindowsSelectorEventLoopPolicy. Esto puede causar problemas en Windows.")
+        print("BACKEND_MAIN: CRITICAL - win32api no encontrado. No se pudo establecer WindowsSelectorEventLoopPolicy. Saliendo.", file=sys.stderr)
+        sys.exit(1) # Salir inmediatamente si win32api no está
+    except Exception as e:
+        print(f"BACKEND_MAIN: CRITICAL - Error inesperado al establecer WindowsSelectorEventLoopPolicy: {e}. Saliendo.", file=sys.stderr)
+        sys.exit(1) # Salir inmediatamente si hay otro error
+else:
+    print("BACKEND_MAIN: PLATFORM IS NOT WIN32. No se requiere WindowsSelectorEventLoopPolicy.", file=sys.stderr)
 
 from fastapi import FastAPI, Request
 
@@ -84,8 +93,10 @@ if root_logger_backend.hasHandlers():
 root_logger_backend.addHandler(backend_handler)
 root_logger_backend.setLevel(logging.INFO) # Nivel INFO para el logger raíz del backend
 
-logger = logging.getLogger(__name__)
-logger.info("Logging configurado con RotatingFileHandler para escribir en logs/backend.log (max ~100KB).")
+logger = logging.getLogger(__name__) # Definir logger aquí para el ámbito global
+
+# El mensaje logger.info("Logging configurado...") se moverá a initialize_services
+# para que solo se ejecute si la configuración de la política de eventos es exitosa.
 
 # FIXED_USER_ID se accede a través de settings
 from .app_config import settings
@@ -125,6 +136,12 @@ async def initialize_services() -> None:
     global paper_order_execution_service, unified_order_execution_service, trading_engine_service
     global strategy_service, performance_service, trading_report_service, ai_orchestrator, mobula_adapter # trading_report_service añadido
     global llm_provider, user_configuration
+
+    # Mover la inicialización del logger y el mensaje de configuración de logging aquí,
+    # después de que el bloque de política de eventos se haya ejecutado (o causado una salida).
+    logger = logging.getLogger(__name__)
+    logger.info("Logging configurado con RotatingFileHandler para escribir en logs/backend.log (max ~100KB).")
+    print("BACKEND_MAIN: Configuración de logging completada.", file=sys.stderr)
     
     logger.info("Iniciando UltiBot Backend...")
     
@@ -479,4 +496,28 @@ app.include_router(gemini.router, prefix="/api/v1", tags=["gemini"])
 app.include_router(strategies.router, prefix="/api/v1", tags=["strategies"])
 app.include_router(trading.router, prefix="/api/v1", tags=["trading"])
 app.include_router(market_data.router, prefix="/api/v1", tags=["market"])
-app.include_router(capital_management, prefix="/api/v1/trading", tags=["capital-management"])
+app.include_router(capital_management, prefix="/api/v1/trading", tags=["capital-management"]) # Corregido: capital_management es el router
+
+if __name__ == "__main__":
+    import uvicorn
+    print("BACKEND_MAIN: Ejecutando main.py directamente. Iniciando Uvicorn programáticamente.", file=sys.stderr)
+    
+    # La política de bucle de eventos ya debería estar establecida si es win32
+    # por el código al inicio del script.
+    
+    # Asegurarse de que el logger esté configurado antes de que uvicorn lo use
+    # (aunque ya está configurado globalmente, esto es por si acaso)
+    if not root_logger_backend.hasHandlers():
+        root_logger_backend.addHandler(backend_handler)
+        root_logger_backend.setLevel(logging.INFO)
+        logger.info("Logging re-asegurado para ejecución directa de main.py.")
+
+    uvicorn.run(
+        "src.ultibot_backend.main:app", # app_module:app_variable
+        host=settings.BACKEND_HOST, # Usar host de settings
+        port=settings.BACKEND_PORT, # Usar port de settings
+        log_level=settings.LOG_LEVEL.lower(), # Usar log_level de settings
+        reload=settings.DEBUG_MODE, # Corregido: Usar DEBUG_MODE de settings para reload
+        lifespan="on" # Asegurar que el lifespan se maneja
+    )
+    print("BACKEND_MAIN: Uvicorn ha terminado.", file=sys.stderr)

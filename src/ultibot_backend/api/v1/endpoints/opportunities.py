@@ -45,11 +45,11 @@ async def get_real_trading_candidates(
         # Opcional: podrías considerar guardar esta configuración por defecto en la BD
         # await config_service.upsert_user_configuration(FIXED_USER_ID, user_config.model_dump())
 
-    if not real_trading_settings.real_trading_mode_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="El modo de trading real no está activo para este usuario."
-        )
+    # if not real_trading_settings.real_trading_mode_active:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_403_FORBIDDEN,
+    #         detail="El modo de trading real no está activo para este usuario."
+    #     )
 
     # Obtener el número de operaciones reales cerradas para el usuario
     closed_real_trades_count = await persistence_service.get_closed_trades_count(

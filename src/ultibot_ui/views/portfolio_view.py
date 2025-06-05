@@ -18,10 +18,11 @@ from src.ultibot_ui.services.trading_mode_state import get_trading_mode_manager,
 logger = logging.getLogger(__name__)
 
 class PortfolioView(QWidget):
-    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, parent: Optional[QWidget] = None):
+    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, qasync_loop, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.user_id = user_id
         self.api_client = api_client
+        self.qasync_loop = qasync_loop # Store the qasync_loop
         self.active_threads: List[QThread] = []
         self.current_portfolio_data: Optional[Dict[str, Any]] = None
 
@@ -130,11 +131,13 @@ class PortfolioView(QWidget):
         self.refresh_button.setEnabled(False)
         self.assets_table.setRowCount(0) # Clear table
 
-        # Use user_id from self.user_id and mode from trading_mode_manager
-        coroutine = self.api_client.get_portfolio_snapshot(user_id=self.user_id, trading_mode=self.trading_mode_manager.current_mode)
         # Importar ApiWorker aquí para evitar import circular a nivel de módulo
         from src.ultibot_ui.main import ApiWorker
-        worker = ApiWorker(coroutine)
+        # CORREGIDO: pasar factory (lambda), no corutina pre-creada
+        worker = ApiWorker(lambda: self.api_client.get_portfolio_snapshot(
+            user_id=self.user_id,
+            trading_mode=self.trading_mode_manager.current_mode
+        ), self.qasync_loop)
         thread = QThread()
         self.active_threads.append(thread)
         worker.moveToThread(thread)
@@ -347,7 +350,22 @@ if __name__ == '__main__':
     # Apply a basic style for testing if needed
     # app.setStyleSheet(DARK_GLOBAL_STYLESHEET) # Assuming DARK_GLOBAL_STYLESHEET is defined or imported
 
-    view = PortfolioView(user_id=UUID("00000000-0000-0000-0000-000000000000"), api_client=MockUltiBotAPIClient()) # type: ignore
+    # For standalone test, qasync_loop might not be fully available or needed if ApiWorker is mocked correctly
+    # For simplicity, we can pass None or a mock qasync_loop if the MockApiWorker doesn't use it.
+    # However, the real ApiWorker now expects it.
+    # Let's assume MockApiWorker is updated or doesn't strictly need it for this test.
+    # If using a real qasync loop for testing:
+    # import qasync
+    # loop = qasync.QEventLoop(app)
+    # asyncio.set_event_loop(loop)
+    # view = PortfolioView(user_id=UUID("00000000-0000-0000-0000-000000000000"), api_client=MockUltiBotAPIClient(), qasync_loop=loop)
+
+    # Simpler mock for qasync_loop for this specific test case, as MockApiWorker might not use it.
+    class MockQAsyncLoop:
+        def create_task(self, coro):
+            pass # Mock implementation
+
+    view = PortfolioView(user_id=UUID("00000000-0000-0000-0000-000000000000"), api_client=MockUltiBotAPIClient(), qasync_loop=MockQAsyncLoop()) # type: ignore
     view.setWindowTitle("Portfolio View - Test")
     view.setGeometry(100, 100, 1000, 700)
     view.show()

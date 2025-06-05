@@ -33,6 +33,8 @@ from src.ultibot_backend.core.domain_models.user_configuration_models import (
     AIStrategyConfiguration,
     ConfidenceThresholds,
 )
+from psycopg.rows import dict_row
+from psycopg.sql import SQL, Identifier
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +79,15 @@ class StrategyService:
             
             # Prepare strategy data with required fields
             strategy_data_copy = strategy_data.copy()
+            
+            # Ensure base_strategy_type is an Enum instance before Pydantic validation
+            if "base_strategy_type" in strategy_data_copy and isinstance(strategy_data_copy["base_strategy_type"], str):
+                try:
+                    strategy_data_copy["base_strategy_type"] = BaseStrategyType(strategy_data_copy["base_strategy_type"])
+                except ValueError as e:
+                    logger.error(f"Invalid base_strategy_type value: {strategy_data_copy['base_strategy_type']} - {e}")
+                    raise HTTPException(status_code=400, detail=f"Invalid base_strategy_type: {strategy_data_copy['base_strategy_type']}")
+
             strategy_data_copy.update({
                 "id": strategy_id,
                 "user_id": user_id,
@@ -490,12 +501,32 @@ class StrategyService:
                 return json.dumps(field_value.dict())
             else:
                 return json.dumps(field_value)
+
+        # Asegurar que base_strategy_type se convierte a su valor string para la BD
+        base_strategy_value_for_db = strategy.base_strategy_type
+        if isinstance(strategy.base_strategy_type, BaseStrategyType): # Chequea si es una instancia del Enum
+            base_strategy_value_for_db = strategy.base_strategy_type.value
+        elif isinstance(strategy.base_strategy_type, str):
+            # Si ya es un string, y es un valor válido del enum, usarlo.
+            # Si no, esto podría ser un problema de datos, pero al menos no fallará aquí.
+            try:
+                BaseStrategyType(strategy.base_strategy_type) # Validar que es un valor de enum válido
+                base_strategy_value_for_db = strategy.base_strategy_type
+            except ValueError:
+                logger.error(f"Invalid string value for base_strategy_type in TradingStrategyConfig instance: {strategy.base_strategy_type}")
+                # Decidir cómo manejar esto: ¿lanzar error o usar un default? Por ahora, se usará el string tal cual.
+                base_strategy_value_for_db = strategy.base_strategy_type # O lanzar una excepción
+        else:
+            # Tipo inesperado para base_strategy_type
+            logger.error(f"Unexpected type for strategy.base_strategy_type: {type(strategy.base_strategy_type)}. Value: {strategy.base_strategy_type}")
+            # Intentar convertir a string como último recurso, o lanzar error
+            base_strategy_value_for_db = str(strategy.base_strategy_type)
         
         return {
             "id": strategy.id,
             "user_id": strategy.user_id,
             "config_name": strategy.config_name,
-            "base_strategy_type": strategy.base_strategy_type.value,
+            "base_strategy_type": base_strategy_value_for_db,
             "description": strategy.description,
             "is_active_paper_mode": strategy.is_active_paper_mode,
             "is_active_real_mode": strategy.is_active_real_mode,
@@ -564,7 +595,7 @@ class StrategyService:
     def _convert_parameters_by_type(
         self, 
         strategy_type: BaseStrategyType, 
-        parameters_data: Dict[str, Any]
+        parameters_data: Optional[Dict[str, Any]]
     ) -> StrategySpecificParameters:
         """Convert parameters data to the appropriate type based on strategy type.
         
@@ -609,6 +640,7 @@ class StrategyService:
             strategy_data: Dictionary with strategy data in database format.
         """
         await self.persistence_service._ensure_connection()
+        assert self.persistence_service.connection is not None
         
         query = """
         INSERT INTO trading_strategy_configs (
@@ -642,9 +674,6 @@ class StrategyService:
         """
         
         try:
-            from psycopg.rows import dict_row
-            from psycopg.sql import SQL
-            
             async with self.persistence_service.connection.cursor(row_factory=dict_row) as cur:
                 await cur.execute(
                     SQL(query),
@@ -692,6 +721,7 @@ class StrategyService:
             Dictionary with strategy data or None if not found.
         """
         await self.persistence_service._ensure_connection()
+        assert self.persistence_service.connection is not None
         
         query = """
         SELECT * FROM trading_strategy_configs 
@@ -699,9 +729,6 @@ class StrategyService:
         """
         
         try:
-            from psycopg.rows import dict_row
-            from psycopg.sql import SQL
-            
             async with self.persistence_service.connection.cursor(row_factory=dict_row) as cur:
                 await cur.execute(SQL(query), (strategy_id, user_id))
                 record = await cur.fetchone()
@@ -727,30 +754,25 @@ class StrategyService:
             List of strategy dictionaries.
         """
         await self.persistence_service._ensure_connection()
+        assert self.persistence_service.connection is not None
         
         # Build query with filters
-        conditions = ["user_id = %s"]
+        conditions_sql = [SQL("user_id = %s")]
         params = [user_id]
         
         if active_only:
-            conditions.append("(is_active_paper_mode = true OR is_active_real_mode = true)")
+            conditions_sql.append(SQL("(is_active_paper_mode = true OR is_active_real_mode = true)"))
         
         if strategy_type:
-            conditions.append("base_strategy_type = %s")
+            conditions_sql.append(SQL("base_strategy_type = %s"))
             params.append(strategy_type.value)
         
-        query = f"""
-        SELECT * FROM trading_strategy_configs 
-        WHERE {' AND '.join(conditions)}
-        ORDER BY created_at DESC;
-        """
+        # Construct the query using SQL and join conditions
+        query = SQL("SELECT * FROM trading_strategy_configs WHERE ") + SQL(" AND ").join(conditions_sql) + SQL(" ORDER BY created_at DESC;")
         
         try:
-            from psycopg.rows import dict_row
-            from psycopg.sql import SQL
-            
             async with self.persistence_service.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(SQL(query), params)
+                await cur.execute(query, params)
                 records = await cur.fetchall()
                 return [dict(record) for record in records]
         except Exception as e:
@@ -772,6 +794,7 @@ class StrategyService:
             True if deleted, False if not found.
         """
         await self.persistence_service._ensure_connection()
+        assert self.persistence_service.connection is not None
         
         query = """
         DELETE FROM trading_strategy_configs 
@@ -779,9 +802,6 @@ class StrategyService:
         """
         
         try:
-            from psycopg.rows import dict_row
-            from psycopg.sql import SQL
-            
             async with self.persistence_service.connection.cursor(row_factory=dict_row) as cur:
                 await cur.execute(SQL(query), (strategy_id, user_id))
                 await self.persistence_service.connection.commit()
@@ -806,22 +826,16 @@ class StrategyService:
             List of active strategy dictionaries.
         """
         await self.persistence_service._ensure_connection()
+        assert self.persistence_service.connection is not None
         
         # Determine which column to check based on mode
         active_column = "is_active_paper_mode" if mode == "paper" else "is_active_real_mode"
         
-        query = f"""
-        SELECT * FROM trading_strategy_configs 
-        WHERE user_id = %s AND {active_column} = true
-        ORDER BY created_at DESC;
-        """
+        query = SQL("SELECT * FROM trading_strategy_configs WHERE user_id = %s AND ") + Identifier(active_column) + SQL(" = true ORDER BY created_at DESC;")
         
         try:
-            from psycopg.rows import dict_row
-            from psycopg.sql import SQL
-            
             async with self.persistence_service.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(SQL(query), (user_id,))
+                await cur.execute(query, (user_id,))
                 records = await cur.fetchall()
                 return [dict(record) for record in records]
         except Exception as e:
