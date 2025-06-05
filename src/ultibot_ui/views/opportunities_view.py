@@ -195,32 +195,58 @@ class OpportunitiesView(QWidget):
 
     def _handle_opportunities_result(self, opportunities_data: List[Dict[str, Any]]):
         logger.info(f"[TRACE] OpportunitiesView: Received {len(opportunities_data)} opportunities. Data: {opportunities_data}")
-        print(f"[TRACE] OpportunitiesView: Received {len(opportunities_data)} opportunities. Data: {opportunities_data}")
+        # print(f"[TRACE] OpportunitiesView: Received {len(opportunities_data)} opportunities. Data: {opportunities_data}") # Redundant with logger
+        logger.debug(f"[DEBUG_TABLE] Total opportunities received: {len(opportunities_data)}")
+        logger.debug(f"[DEBUG_TABLE] Raw opportunities_data: {opportunities_data}")
+
         self.status_label.setText(f"Loaded {len(opportunities_data)} opportunities.")
         self.refresh_button.setEnabled(True)
         self.opportunities_table.setRowCount(0)
+
         if not opportunities_data:
+            logger.debug("[DEBUG_TABLE] No opportunities data. Setting placeholder message.")
             self.opportunities_table.setRowCount(1)
             placeholder_item = QTableWidgetItem("No opportunities to display.")
             placeholder_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             self.opportunities_table.setItem(0, 0, placeholder_item)
+            logger.debug("[DEBUG_TABLE] Set placeholder item at row 0, col 0.")
             self.opportunities_table.setSpan(0, 0, 1, self.opportunities_table.columnCount())
             self.status_label.setText("No high-confidence opportunities found at the moment.")
             self.opportunities_table.resizeColumnsToContents()
             self.last_updated_label.setText(f"Last updated: {QDateTime.currentDateTime().toString('yyyy-MM-dd HH:mm:ss')}")
             return
+
         self.opportunities_table.setRowCount(len(opportunities_data))
+        logger.debug(f"[DEBUG_TABLE] Set opportunities_table row count to: {len(opportunities_data)}")
+
         for row, opp_data in enumerate(opportunities_data):
+            logger.debug(f"[DEBUG_TABLE] Processing row index: {row}")
+
             symbol = opp_data.get("symbol", "N/A").replace("/", "")
+            logger.debug(f"[DEBUG_TABLE] Row {row}: Extracted symbol: {symbol}")
+
             side = opp_data.get("side", "N/A")
+            logger.debug(f"[DEBUG_TABLE] Row {row}: Extracted side: {side}")
+
             entry_price = opp_data.get("entry_price")
+            logger.debug(f"[DEBUG_TABLE] Row {row}: Extracted entry_price: {entry_price}")
+
             confidence_score = opp_data.get("confidence_score")
+            logger.debug(f"[DEBUG_TABLE] Row {row}: Extracted confidence_score: {confidence_score}")
+
             strategy_id = opp_data.get("strategy_id", "N/A")
+            logger.debug(f"[DEBUG_TABLE] Row {row}: Extracted strategy_id: {strategy_id}")
+
             exchange = opp_data.get("exchange", "N/A")
+            logger.debug(f"[DEBUG_TABLE] Row {row}: Extracted exchange: {exchange}")
+
             timestamp = opp_data.get("timestamp_utc", opp_data.get("createdAt", "N/A"))
+            logger.debug(f"[DEBUG_TABLE] Row {row}: Extracted timestamp: {timestamp}")
 
             # Columna 0: símbolo
-            self.opportunities_table.setItem(row, 0, QTableWidgetItem(str(symbol)))
+            symbol_item = QTableWidgetItem(str(symbol))
+            self.opportunities_table.setItem(row, 0, symbol_item)
+            logger.debug(f"[DEBUG_TABLE] Row {row}, Col 0: SetItem with symbol: {symbol}")
 
             # Columna 1: side
             side_item = QTableWidgetItem(str(side))
@@ -229,33 +255,43 @@ class OpportunitiesView(QWidget):
             elif side == "SELL":
                 side_item.setForeground(QColor("lightcoral"))
             self.opportunities_table.setItem(row, 1, side_item)
+            logger.debug(f"[DEBUG_TABLE] Row {row}, Col 1: SetItem with side: {side}")
 
             # Columna 2: entry_price
-            if isinstance(entry_price, (int, float)):
-                self.opportunities_table.setItem(row, 2, QTableWidgetItem(f"{entry_price:,.2f}"))
-            else:
-                self.opportunities_table.setItem(row, 2, QTableWidgetItem(str(entry_price)))
+            entry_price_str = f"{entry_price:,.2f}" if isinstance(entry_price, (int, float)) else str(entry_price)
+            entry_price_item = QTableWidgetItem(entry_price_str)
+            self.opportunities_table.setItem(row, 2, entry_price_item)
+            logger.debug(f"[DEBUG_TABLE] Row {row}, Col 2: SetItem with entry_price: {entry_price_str}")
 
             # Columna 3: confidence_score
+            confidence_score_str = f"{confidence_score:.2f}" if isinstance(confidence_score, (int, float)) else str(confidence_score)
+            score_item = QTableWidgetItem(confidence_score_str)
             if isinstance(confidence_score, (int, float)):
-                score_item = QTableWidgetItem(f"{confidence_score:.2f}")
                 if confidence_score >= 0.9:
                     score_item.setForeground(QColor("lightgreen"))
                 elif confidence_score >= 0.7:
                     score_item.setForeground(QColor("yellow"))
                 else:
                     score_item.setForeground(QColor("orange"))
-                self.opportunities_table.setItem(row, 3, score_item)
-            else:
-                self.opportunities_table.setItem(row, 3, QTableWidgetItem(str(confidence_score)))
+            self.opportunities_table.setItem(row, 3, score_item)
+            logger.debug(f"[DEBUG_TABLE] Row {row}, Col 3: SetItem with confidence_score: {confidence_score_str}")
 
             # Columna 4: strategy_id
-            self.opportunities_table.setItem(row, 4, QTableWidgetItem(str(strategy_id)))
-            # Columna 5: exchange
-            self.opportunities_table.setItem(row, 5, QTableWidgetItem(str(exchange)))
-            # Columna 6: timestamp
-            self.opportunities_table.setItem(row, 6, QTableWidgetItem(str(timestamp)))
+            strategy_id_item = QTableWidgetItem(str(strategy_id))
+            self.opportunities_table.setItem(row, 4, strategy_id_item)
+            logger.debug(f"[DEBUG_TABLE] Row {row}, Col 4: SetItem with strategy_id: {strategy_id}")
 
+            # Columna 5: exchange
+            exchange_item = QTableWidgetItem(str(exchange))
+            self.opportunities_table.setItem(row, 5, exchange_item)
+            logger.debug(f"[DEBUG_TABLE] Row {row}, Col 5: SetItem with exchange: {exchange}")
+
+            # Columna 6: timestamp
+            timestamp_item = QTableWidgetItem(str(timestamp))
+            self.opportunities_table.setItem(row, 6, timestamp_item)
+            logger.debug(f"[DEBUG_TABLE] Row {row}, Col 6: SetItem with timestamp: {timestamp}")
+
+        logger.debug("[DEBUG_TABLE] Table population loop complete.")
         self.opportunities_table.resizeColumnsToContents()
         self.opportunities_table.resizeRowsToContents()
         self.opportunities_table.update()
