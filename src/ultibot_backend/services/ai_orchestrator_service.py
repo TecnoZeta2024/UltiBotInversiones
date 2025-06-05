@@ -331,12 +331,12 @@ Respond in JSON format:
             Formatted string of strategy parameters.
         """
         params_dict = {}
-        
+
         if hasattr(strategy.parameters, 'dict'):
-            params_dict = strategy.parameters.dict()
+            params_dict = strategy.parameters.dict()  # type: ignore
         elif isinstance(strategy.parameters, dict):
             params_dict = strategy.parameters
-        
+
         formatted_params = []
         for key, value in params_dict.items():
             formatted_params.append(f"- {key}: {value}")

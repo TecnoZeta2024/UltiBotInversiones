@@ -173,7 +173,7 @@ class StrategyManagementView(QWidget):
     
     # Nuevas señales para el patrón ApiWorker + Future
     _strategies_loaded_signal = pyqtSignal(object) 
-    _strategies_error_signal = pyqtSignal(object)  
+    _strategies_error_signal = pyqtSignal(str)  # Changed to str for compatibility
 
     def __init__(self, api_client=None, qasync_loop=None, parent=None): # Añadir qasync_loop
         super().__init__(parent)
@@ -205,8 +205,13 @@ class StrategyManagementView(QWidget):
         self._handle_strategies_loaded(strategies_list)
         # Aquí también se podría llamar a _plot_strategies si fuera necesario
 
-    def _on_strategias_error(self, error_message):
+    def _on_strategias_error(self, error_message: str): # Added type hint
         """Maneja la señal de error en la carga de estrategias."""
+        # Consider adding logging here if not already present in _show_load_error_message
+        # For example:
+        # import logging
+        # logger = logging.getLogger(__name__) # Ensure logger is defined at module level
+        # logger.error(f"StrategyManagementView: Error en carga de estrategias: {error_message}")
         self._show_load_error_message(error_message)
 
     def cargar_estrategias(self):

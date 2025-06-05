@@ -312,6 +312,17 @@ class OpportunitiesView(QWidget):
         self.opportunities_table.setItem(0, 0, error_item)
         self.opportunities_table.setSpan(0, 0, 1, self.opportunities_table.columnCount())
 
+        # Schedule fetching notification history
+        if self.qasync_loop and self.api_client and self.user_id:
+            try:
+                self.qasync_loop.create_task(self.api_client.get_notification_history(self.user_id))
+                logger.info("OpportunitiesView: Scheduled get_notification_history task in error handler.")
+            except Exception as e:
+                logger.error(f"OpportunitiesView: Failed to schedule get_notification_history: {e}", exc_info=True)
+        else:
+            logger.warning("OpportunitiesView: qasync_loop, api_client, or user_id not available. Cannot schedule get_notification_history.")
+
+
     def cleanup(self):
         logger.info("OpportunitiesView: Cleaning up...")
         # Detener el timer de auto-refresco
