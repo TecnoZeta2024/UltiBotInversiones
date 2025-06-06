@@ -10,7 +10,9 @@ from src.ultibot_backend.dependencies import ( # Importar desde el nuevo módulo
     get_persistence_service,
     get_config_service
 )
-from src.ultibot_backend.app_config import settings # Importar settings
+# from src.ultibot_backend.app_config import settings # Ya no se usa settings.FIXED_USER_ID
+from src.ultibot_backend.security import core as security_core
+from src.ultibot_backend.security import schemas as security_schemas
 
 logger = logging.getLogger(__name__) # Inicializar logger
 
@@ -21,17 +23,21 @@ logger.info(f"Router de oportunidades inicializado: {router}") # Añadir log par
 @router.get("/opportunities/real-trading-candidates", response_model=List[Opportunity])
 async def get_real_trading_candidates(
     persistence_service: SupabasePersistenceService = Depends(get_persistence_service),
-    config_service: ConfigService = Depends(get_config_service)
+    config_service: ConfigService = Depends(get_config_service),
+    current_user: security_schemas.User = Depends(security_core.get_current_active_user)
 ):
     """
     Devuelve una lista de oportunidades de muy alta confianza pendientes de confirmación
-    para operativa real, si el modo de trading real está activo y hay cupos disponibles.
+    para operativa real para el usuario autenticado, si el modo de trading real está activo y hay cupos disponibles.
     """
+    if not isinstance(current_user.id, UUID):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User ID is not a valid UUID.")
+
     # Las dependencias ya están inyectadas, no es necesario verificar si son None aquí.
 
     # config_service.get_user_configuration ya devuelve una instancia de UserConfiguration
     # o una configuración por defecto si no se encuentra en la BD.
-    user_config: UserConfiguration = await config_service.get_user_configuration(str(settings.FIXED_USER_ID))
+    user_config: UserConfiguration = await config_service.get_user_configuration(str(current_user.id))
 
     # Asegurarse de que realTradingSettings no sea None
     real_trading_settings = user_config.realTradingSettings
@@ -53,7 +59,7 @@ async def get_real_trading_candidates(
 
     # Obtener el número de operaciones reales cerradas para el usuario
     closed_real_trades_count = await persistence_service.get_closed_trades_count(
-        user_id=settings.FIXED_USER_ID,
+        user_id=current_user.id,
         is_real_trade=True
     )
 
@@ -65,7 +71,7 @@ async def get_real_trading_candidates(
 
     # Obtener oportunidades con estado PENDING_USER_CONFIRMATION_REAL
     opportunities = await persistence_service.get_opportunities_by_status(
-        user_id=settings.FIXED_USER_ID,
+        user_id=current_user.id,
         status=OpportunityStatus.PENDING_USER_CONFIRMATION_REAL
     )
 

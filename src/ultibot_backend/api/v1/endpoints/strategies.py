@@ -18,14 +18,14 @@ from src.ultibot_backend.api.v1.models.strategy_models import (
 from src.ultibot_backend.core.domain_models.trading_strategy_models import BaseStrategyType
 from src.ultibot_backend.services.strategy_service import StrategyService
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from src.ultibot_backend.security import core as security_core # Importar security_core
+from src.ultibot_backend.security import schemas as security_schemas # Importar security_schemas
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Fixed user ID for v1.0 (single user application)
-FIXED_USER_ID = "00000000-0000-0000-0000-000000000001"
-
+# FIXED_USER_ID ya no se usará directamente, se obtendrá del usuario autenticado.
 
 def get_persistence_service() -> SupabasePersistenceService:
     """Dependency to get persistence service instance."""
@@ -53,13 +53,15 @@ def get_strategy_service(
 )
 async def create_strategy(
     strategy_request: CreateTradingStrategyRequest,
-    strategy_service: StrategyService = Depends(get_strategy_service)
+    strategy_service: StrategyService = Depends(get_strategy_service),
+    current_user: security_schemas.User = Depends(security_core.get_current_active_user)
 ) -> TradingStrategyResponse:
-    """Create a new trading strategy configuration.
+    """Create a new trading strategy configuration for the authenticated user.
     
     Args:
         strategy_request: The strategy configuration data.
         strategy_service: The strategy service dependency.
+        current_user: Authenticated user object.
         
     Returns:
         The created strategy configuration.
@@ -68,14 +70,16 @@ async def create_strategy(
         HTTPException: If creation fails or data is invalid.
     """
     try:
-        logger.info(f"Creating new strategy: {strategy_request.config_name}")
+        if not isinstance(current_user.id, UUID):
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User ID is not a valid UUID.")
+        logger.info(f"Creating new strategy: {strategy_request.config_name} for user {current_user.id}")
         
         # Convert request to dict for service
         strategy_data = strategy_request.dict(exclude_unset=True)
         
         # Create strategy through service
         created_strategy = await strategy_service.create_strategy_config(
-            user_id=FIXED_USER_ID,
+            user_id=str(current_user.id), # Convert UUID to str
             strategy_data=strategy_data
         )
         
@@ -115,14 +119,16 @@ async def list_strategies(
         None, 
         description="Filter by strategy type"
     ),
-    strategy_service: StrategyService = Depends(get_strategy_service)
+    strategy_service: StrategyService = Depends(get_strategy_service),
+    current_user: security_schemas.User = Depends(security_core.get_current_active_user)
 ) -> StrategyListResponse:
-    """List all trading strategy configurations.
+    """List all trading strategy configurations for the authenticated user.
     
     Args:
         active_only: Whether to return only active strategies.
         strategy_type: Optional filter by strategy type.
         strategy_service: The strategy service dependency.
+        current_user: Authenticated user object.
         
     Returns:
         List of strategy configurations.
@@ -130,14 +136,16 @@ async def list_strategies(
     Raises:
         HTTPException: If retrieval fails.
     """
-    logger.debug(f"list_strategies endpoint invoked for user {FIXED_USER_ID}")
     try:
-        logger.info(f"Listing strategies for user {FIXED_USER_ID}")
+        if not isinstance(current_user.id, UUID):
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User ID is not a valid UUID.")
+        logger.debug(f"list_strategies endpoint invoked for user {current_user.id}")
+        logger.info(f"Listing strategies for user {current_user.id}")
         
         logger.debug("Calling strategy_service.list_strategy_configs...")
         # Get strategies from service
         strategies = await strategy_service.list_strategy_configs(
-            user_id=FIXED_USER_ID,
+            user_id=str(current_user.id), # Convert UUID to str
             active_only=active_only,
             strategy_type=strategy_type
         )
@@ -183,13 +191,15 @@ async def list_strategies(
 )
 async def get_strategy(
     strategy_id: str,
-    strategy_service: StrategyService = Depends(get_strategy_service)
+    strategy_service: StrategyService = Depends(get_strategy_service),
+    current_user: security_schemas.User = Depends(security_core.get_current_active_user)
 ) -> TradingStrategyResponse:
-    """Get a trading strategy configuration by ID.
+    """Get a trading strategy configuration by ID for the authenticated user.
     
     Args:
         strategy_id: The strategy configuration ID.
         strategy_service: The strategy service dependency.
+        current_user: Authenticated user object.
         
     Returns:
         The strategy configuration.
@@ -198,12 +208,14 @@ async def get_strategy(
         HTTPException: If strategy not found or retrieval fails.
     """
     try:
-        logger.info(f"Getting strategy {strategy_id}")
+        if not isinstance(current_user.id, UUID):
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User ID is not a valid UUID.")
+        logger.info(f"Getting strategy {strategy_id} for user {current_user.id}")
         
         # Get strategy from service
         strategy = await strategy_service.get_strategy_config(
             strategy_id=strategy_id,
-            user_id=FIXED_USER_ID
+            user_id=str(current_user.id) # Convert UUID to str
         )
         
         if not strategy:
@@ -244,14 +256,16 @@ async def get_strategy(
 async def update_strategy(
     strategy_id: str,
     strategy_request: UpdateTradingStrategyRequest,
-    strategy_service: StrategyService = Depends(get_strategy_service)
+    strategy_service: StrategyService = Depends(get_strategy_service),
+    current_user: security_schemas.User = Depends(security_core.get_current_active_user)
 ) -> TradingStrategyResponse:
-    """Update a trading strategy configuration.
+    """Update a trading strategy configuration for the authenticated user.
     
     Args:
         strategy_id: The strategy configuration ID.
         strategy_request: The updated strategy data.
         strategy_service: The strategy service dependency.
+        current_user: Authenticated user object.
         
     Returns:
         The updated strategy configuration.
@@ -260,7 +274,9 @@ async def update_strategy(
         HTTPException: If strategy not found, data invalid, or update fails.
     """
     try:
-        logger.info(f"Updating strategy {strategy_id}")
+        if not isinstance(current_user.id, UUID):
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User ID is not a valid UUID.")
+        logger.info(f"Updating strategy {strategy_id} for user {current_user.id}")
         
         # Convert request to dict for service
         strategy_data = strategy_request.dict(exclude_unset=True)
@@ -268,7 +284,7 @@ async def update_strategy(
         # Update strategy through service
         updated_strategy = await strategy_service.update_strategy_config(
             strategy_id=strategy_id,
-            user_id=FIXED_USER_ID,
+            user_id=str(current_user.id), # Convert UUID to str
             strategy_data=strategy_data
         )
         
@@ -308,24 +324,28 @@ async def update_strategy(
 )
 async def delete_strategy(
     strategy_id: str,
-    strategy_service: StrategyService = Depends(get_strategy_service)
+    strategy_service: StrategyService = Depends(get_strategy_service),
+    current_user: security_schemas.User = Depends(security_core.get_current_active_user)
 ) -> None:
-    """Delete a trading strategy configuration.
+    """Delete a trading strategy configuration for the authenticated user.
     
     Args:
         strategy_id: The strategy configuration ID.
         strategy_service: The strategy service dependency.
+        current_user: Authenticated user object.
         
     Raises:
         HTTPException: If strategy not found or deletion fails.
     """
     try:
-        logger.info(f"Deleting strategy {strategy_id}")
+        if not isinstance(current_user.id, UUID):
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User ID is not a valid UUID.")
+        logger.info(f"Deleting strategy {strategy_id} for user {current_user.id}")
         
         # Delete strategy through service
         deleted = await strategy_service.delete_strategy_config(
             strategy_id=strategy_id,
-            user_id=FIXED_USER_ID
+            user_id=str(current_user.id) # Convert UUID to str
         )
         
         if not deleted:
@@ -362,14 +382,16 @@ async def delete_strategy(
 async def activate_strategy(
     strategy_id: str,
     activation_request: ActivateStrategyRequest,
-    strategy_service: StrategyService = Depends(get_strategy_service)
+    strategy_service: StrategyService = Depends(get_strategy_service),
+    current_user: security_schemas.User = Depends(security_core.get_current_active_user)
 ) -> StrategyActivationResponse:
-    """Activate a trading strategy in the specified mode.
+    """Activate a trading strategy in the specified mode for the authenticated user.
     
     Args:
         strategy_id: The strategy configuration ID.
         activation_request: The activation request with mode.
         strategy_service: The strategy service dependency.
+        current_user: Authenticated user object.
         
     Returns:
         Strategy activation response.
@@ -378,12 +400,14 @@ async def activate_strategy(
         HTTPException: If strategy not found, mode invalid, or activation fails.
     """
     try:
-        logger.info(f"Activating strategy {strategy_id} in {activation_request.mode} mode")
+        if not isinstance(current_user.id, UUID):
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User ID is not a valid UUID.")
+        logger.info(f"Activating strategy {strategy_id} in {activation_request.mode} mode for user {current_user.id}")
         
         # Activate strategy through service
         updated_strategy = await strategy_service.activate_strategy(
             strategy_id=strategy_id,
-            user_id=FIXED_USER_ID,
+            user_id=str(current_user.id), # Convert UUID to str
             mode=activation_request.mode
         )
         
@@ -436,14 +460,16 @@ async def activate_strategy(
 async def deactivate_strategy(
     strategy_id: str,
     deactivation_request: ActivateStrategyRequest,
-    strategy_service: StrategyService = Depends(get_strategy_service)
+    strategy_service: StrategyService = Depends(get_strategy_service),
+    current_user: security_schemas.User = Depends(security_core.get_current_active_user)
 ) -> StrategyActivationResponse:
-    """Deactivate a trading strategy in the specified mode.
+    """Deactivate a trading strategy in the specified mode for the authenticated user.
     
     Args:
         strategy_id: The strategy configuration ID.
         deactivation_request: The deactivation request with mode.
         strategy_service: The strategy service dependency.
+        current_user: Authenticated user object.
         
     Returns:
         Strategy deactivation response.
@@ -452,12 +478,14 @@ async def deactivate_strategy(
         HTTPException: If strategy not found, mode invalid, or deactivation fails.
     """
     try:
-        logger.info(f"Deactivating strategy {strategy_id} in {deactivation_request.mode} mode")
+        if not isinstance(current_user.id, UUID):
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User ID is not a valid UUID.")
+        logger.info(f"Deactivating strategy {strategy_id} in {deactivation_request.mode} mode for user {current_user.id}")
         
         # Deactivate strategy through service
         updated_strategy = await strategy_service.deactivate_strategy(
             strategy_id=strategy_id,
-            user_id=FIXED_USER_ID,
+            user_id=str(current_user.id), # Convert UUID to str
             mode=deactivation_request.mode
         )
         
@@ -508,13 +536,15 @@ async def deactivate_strategy(
 )
 async def get_active_strategies_by_mode(
     mode: str,
-    strategy_service: StrategyService = Depends(get_strategy_service)
+    strategy_service: StrategyService = Depends(get_strategy_service),
+    current_user: security_schemas.User = Depends(security_core.get_current_active_user)
 ) -> StrategyListResponse:
-    """Get all active strategies for a specific trading mode.
+    """Get all active strategies for a specific trading mode for the authenticated user.
     
     Args:
         mode: The trading mode ("paper" or "real").
         strategy_service: The strategy service dependency.
+        current_user: Authenticated user object.
         
     Returns:
         List of active strategy configurations.
@@ -523,11 +553,13 @@ async def get_active_strategies_by_mode(
         HTTPException: If mode invalid or retrieval fails.
     """
     try:
-        logger.info(f"Getting active {mode} strategies for user {FIXED_USER_ID}")
+        if not isinstance(current_user.id, UUID):
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User ID is not a valid UUID.")
+        logger.info(f"Getting active {mode} strategies for user {current_user.id}")
         
         # Get active strategies from service
         strategies = await strategy_service.get_active_strategies(
-            user_id=FIXED_USER_ID,
+            user_id=str(current_user.id), # Convert UUID to str
             mode=mode
         )
         

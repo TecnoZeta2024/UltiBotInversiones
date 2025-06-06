@@ -138,3 +138,60 @@ class UnifiedOrderExecutionService:
             True if valid, False otherwise
         """
         return trading_mode in self.get_supported_trading_modes()
+
+    async def execute_order(
+        self,
+        order_details: TradeOrderDetails,
+        user_id: UUID,
+        trading_mode: TradingMode,
+        symbol: str, # Añadido para consistencia con execute_market_order
+        side: str, # Añadido para consistencia con execute_market_order
+        api_key: Optional[str] = None,
+        api_secret: Optional[str] = None,
+    ) -> TradeOrderDetails:
+        """
+        Execute an order based on its type and the specified trading mode.
+        Currently, only supports MARKET orders.
+
+        Args:
+            order_details: The details of the order to execute.
+            user_id: User identifier.
+            trading_mode: Trading mode ('paper' or 'real').
+            symbol: Trading symbol.
+            side: Order side ('BUY' or 'SELL').
+            api_key: API key for real trading.
+            api_secret: API secret for real trading.
+
+        Returns:
+            TradeOrderDetails with execution results.
+
+        Raises:
+            OrderExecutionError: If execution fails or order type is not supported.
+            ConfigurationError: If required parameters are missing for real trading.
+        """
+        logger.info(
+            f"UnifiedOrderExecutionService: Attempting to execute {order_details.type.value} order "
+            f"ID {order_details.order_id_internal} for {symbol} {side} "
+            f"in {trading_mode} mode for user {user_id}."
+        )
+
+        if order_details.type == "market": # Comparar con el valor del Enum si es necesario, o string
+            # Delegar a execute_market_order
+            return await self.execute_market_order(
+                user_id=user_id,
+                symbol=symbol, # Usar el símbolo pasado
+                side=side, # Usar el lado pasado
+                quantity=order_details.requested_quantity,
+                trading_mode=trading_mode,
+                api_key=api_key,
+                api_secret=api_secret,
+                oco_order_list_id=order_details.oco_group_id_exchange # Pasar OCO ID si existe
+            )
+        # TODO: Añadir manejo para otros tipos de órdenes (LIMIT, STOP_LOSS, etc.)
+        # elif order_details.type == OrderType.LIMIT:
+        #     # Lógica para órdenes LIMIT
+        #     pass
+        else:
+            error_msg = f"Order type '{order_details.type}' not yet supported by UnifiedOrderExecutionService."
+            logger.error(error_msg)
+            raise OrderExecutionError(error_msg)

@@ -26,10 +26,12 @@ langchain-google-genai = "^2.1.5"
 pyparsing = "^3.2.3"
 matplotlib = "^3.10.3"
 mplfinance = "^0.12.10b0"
-# UI Dependencies
-PyQt5 = "^5.15.10"
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+# UI Dependencies (Temporarily commented out to resolve installation issues)
+PyQt5 = "5.15.10"
 qdarkstyle = "^3.2.3"
-pywin32 = {version = "*", platform = "win32"} # Para WindowsSelectorEventLoopPolicy
+# pywin32 = {version = "*", platform = "win32"} # Para WindowsSelectorEventLoopPolicy
 
 [tool.poetry.group.dev.dependencies]
 ruff = "*"

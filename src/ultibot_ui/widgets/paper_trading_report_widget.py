@@ -68,9 +68,11 @@ class PaperTradingReportWidget(QWidget):
     Widget principal para mostrar resultados y rendimiento del Paper Trading.
     """
     
-    def __init__(self, parent=None):
+    def __init__(self, user_id: uuid.UUID, backend_base_url: str, parent=None): # Modificado
         super().__init__(parent)
-        self.api_client = UltiBotAPIClient()
+        self.user_id = user_id # Nuevo
+        self.backend_base_url = backend_base_url # Nuevo
+        self.api_client = UltiBotAPIClient(base_url=self.backend_base_url) # Modificado
         self.current_trades_data = []
         self.current_metrics_data = {}
         
@@ -93,7 +95,7 @@ class PaperTradingReportWidget(QWidget):
         layout.addWidget(title_label)
         
         # Splitter principal para dividir métricas y tabla
-        main_splitter = QSplitter(Qt.Vertical)
+        main_splitter = QSplitter(Qt.Orientation.Vertical) # Modificado
         layout.addWidget(main_splitter)
         
         # === SECCIÓN 1: MÉTRICAS DE RENDIMIENTO ===
@@ -135,7 +137,7 @@ class PaperTradingReportWidget(QWidget):
                      self.avg_pnl_label, self.best_trade_label, self.worst_trade_label, 
                      self.total_volume_label]:
             label.setFont(metric_font)
-            label.setAlignment(Qt.AlignCenter)
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter) # Modificado
         
         # Organizar métricas en grid
         layout.addWidget(QLabel("Total de Operaciones:"), 0, 0)
@@ -237,7 +239,8 @@ class PaperTradingReportWidget(QWidget):
         
         # Configurar tamaños de columnas
         header = self.trades_table.horizontalHeader()
-        header.setStretchLastSection(True)
+        if header: # Añadida comprobación
+            header.setStretchLastSection(True)
         
         # Ajustar ancho de columnas específicas
         self.trades_table.setColumnWidth(0, 120)  # Fecha
@@ -318,7 +321,7 @@ class PaperTradingReportWidget(QWidget):
             offset=0,
             # TODO: Obtener el user_id de una fuente apropiada (configuración, sesión, etc.)
             # Por ahora, usamos el FIXED_USER_ID conocido del backend.
-            user_id=uuid.UUID("00000000-0000-0000-0000-000000000001") 
+            user_id=self.user_id # Modificado
         )
         self.trades_worker.data_loaded.connect(self.on_trades_loaded)
         self.trades_worker.error_occurred.connect(self.on_error)

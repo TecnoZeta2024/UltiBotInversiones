@@ -13,13 +13,18 @@ class AppSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     # Supabase
-    SUPABASE_URL: str = "https://your-supabase-project.supabase.co" # Valor por defecto para desarrollo
-    SUPABASE_ANON_KEY: str = "your-anon-key-for-development" # Valor por defecto para desarrollo
-    SUPABASE_SERVICE_ROLE_KEY: str = "your-service-role-key-for-development" # Valor por defecto para desarrollo
-    DATABASE_URL: str = "postgresql://postgres:your-postgres-password@db.your-supabase-project.supabase.co:5432/postgres" # Valor por defecto para desarrollo
+    SUPABASE_URL: str
+    SUPABASE_ANON_KEY: str
+    SUPABASE_SERVICE_ROLE_KEY: str
+    DATABASE_URL: str
 
     # Credential Encryption
     CREDENTIAL_ENCRYPTION_KEY: str
+
+    # Exchange API Keys
+    BINANCE_API_KEY: Optional[str] = None
+    BINANCE_API_SECRET: Optional[str] = None
+    MOBULA_API_KEY: Optional[str] = None
 
     # Logging
     LOG_LEVEL: str = "INFO"
@@ -31,6 +36,11 @@ class AppSettings(BaseSettings):
 
     # Google Gemini API Key (optional)
     GEMINI_API_KEY: Optional[str] = None
+
+    # JWT Settings
+    JWT_SECRET_KEY: str # Debe estar en .env
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     # Uvicorn server settings (can be overridden by .env)
     BACKEND_HOST: str = "127.0.0.1"

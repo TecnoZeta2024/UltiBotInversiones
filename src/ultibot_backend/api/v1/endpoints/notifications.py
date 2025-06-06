@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 from uuid import UUID
 
+from src.ultibot_backend.security import core as security_core # Importar security_core
+from src.ultibot_backend.security import schemas as security_schemas # Importar security_schemas
 # Importar el módulo de dependencias
 from src.ultibot_backend import dependencies as deps
 
@@ -24,15 +26,18 @@ router = APIRouter()
 
 @router.get("/history", response_model=List[Notification])
 async def get_notification_history(
-    user_id: UUID,
+    current_user: security_schemas.User = Depends(security_core.get_current_active_user),
     limit: int = 50,
     notification_service: NotificationService = Depends(deps.get_notification_service)
 ):
     """
-    Recupera el historial de notificaciones para un usuario.
+    Recupera el historial de notificaciones para el usuario autenticado.
     """
     try:
-        notifications = await notification_service.get_notification_history(user_id, limit)
+        if not isinstance(current_user.id, UUID):
+            # Esto no debería ocurrir si la autenticación funciona y User.id se popula correctamente.
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User ID is not a valid UUID.")
+        notifications = await notification_service.get_notification_history(current_user.id, limit)
         return notifications
     except NotificationError as e:
         raise HTTPException(
@@ -48,18 +53,21 @@ async def get_notification_history(
 @router.post("/{notification_id}/mark-as-read", response_model=Notification)
 async def mark_notification_as_read(
     notification_id: UUID,
-    user_id: UUID,
+    current_user: security_schemas.User = Depends(security_core.get_current_active_user),
     notification_service: NotificationService = Depends(deps.get_notification_service)
 ):
     """
-    Marca una notificación específica como leída.
+    Marca una notificación específica como leída para el usuario autenticado.
     """
     try:
-        updated_notification = await notification_service.mark_notification_as_read(notification_id, user_id)
+        if not isinstance(current_user.id, UUID):
+            # Esto no debería ocurrir si la autenticación funciona y User.id se popula correctamente.
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User ID is not a valid UUID.")
+        updated_notification = await notification_service.mark_notification_as_read(notification_id, current_user.id)
         if not updated_notification:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Notificación con ID {notification_id} no encontrada o no pertenece al usuario {user_id}."
+                detail=f"Notificación con ID {notification_id} no encontrada o no pertenece al usuario {current_user.id}."
             )
         return updated_notification
     except NotificationError as e:

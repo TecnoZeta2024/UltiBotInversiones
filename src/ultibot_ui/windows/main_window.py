@@ -7,6 +7,7 @@ intercambiables para diferentes funcionalidades del bot de trading.
 
 import asyncio # Añadido para la anotación de tipo AbstractEventLoop
 import logging
+from typing import Optional
 logger = logging.getLogger(__name__)
 
 from uuid import UUID
@@ -27,6 +28,7 @@ from PyQt5.QtWidgets import (
 
 from src.shared.data_types import UserConfiguration # May not be needed directly in MainWindow anymore for config
 # Removed direct service imports, will use api_client
+# from src.ultibot_backend.app_config import AppSettings # Eliminado
 # from src.ultibot_backend.services.config_service import ConfigService
 # from src.ultibot_backend.services.market_data_service import MarketDataService
 # from src.ultibot_backend.services.notification_service import NotificationService
@@ -52,8 +54,9 @@ class MainWindow(QMainWindow):
     def __init__(
         self,
         user_id: UUID,
-        backend_base_url: str, # Changed: Pass backend_base_url
-        qasync_loop: asyncio.AbstractEventLoop, # Added qasync_loop
+        backend_base_url: str,
+        qasync_loop: asyncio.AbstractEventLoop,
+        auth_token: Optional[str] = None,
         parent=None,
     ):
         """Inicializa la ventana principal con la URL base del backend y el bucle qasync.
@@ -62,12 +65,14 @@ class MainWindow(QMainWindow):
             user_id: Identificador único del usuario
             backend_base_url: URL base del backend API.
             qasync_loop: El bucle de eventos qasync del hilo principal.
+            auth_token: El token de autenticación JWT.
             parent: Widget padre opcional
         """
         super().__init__(parent)
         self.user_id = user_id
-        self.backend_base_url = backend_base_url # Store the backend base URL
-        self.qasync_loop = qasync_loop # Store the qasync loop
+        self.backend_base_url = backend_base_url
+        self.qasync_loop = qasync_loop
+        self.auth_token = auth_token # Almacenar el token
 
         # Remove old service instances
         # self.market_data_service = market_data_service
@@ -243,7 +248,8 @@ class MainWindow(QMainWindow):
 
         coroutine_factory = lambda api_client: api_client.get_user_configuration()
         future = self.qasync_loop.create_future()
-        worker = ApiWorker(coroutine_factory, self.backend_base_url)
+        # Pasar el token al worker para esta llamada
+        worker = ApiWorker(base_url=self.backend_base_url, coroutine_factory=coroutine_factory, token=self.auth_token)
         
         thread = QThread()
         self.active_threads.append(thread)
@@ -306,7 +312,8 @@ class MainWindow(QMainWindow):
 
         coroutine_factory = lambda api_client: api_client.get_real_trading_mode_status()
         future = self.qasync_loop.create_future()
-        worker = ApiWorker(coroutine_factory, self.backend_base_url)
+        # Pasar el token al worker para esta llamada
+        worker = ApiWorker(base_url=self.backend_base_url, coroutine_factory=coroutine_factory, token=self.auth_token)
 
         thread = QThread()
         self.active_threads.append(thread)
@@ -462,7 +469,7 @@ class MainWindow(QMainWindow):
             self.stacked_widget.addWidget(self.portfolio_view) # Index 3
 
         # Vista de historial con el widget de paper trading report
-        self.history_view = HistoryView(self.user_id)
+        self.history_view = HistoryView(user_id=self.user_id, backend_base_url=self.backend_base_url) # Modificado
         self.stacked_widget.addWidget(self.history_view)  # Índice 4
 
         self.settings_view = SettingsView(str(self.user_id), self.backend_base_url, self.qasync_loop) # Pasar backend_base_url

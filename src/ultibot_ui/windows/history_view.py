@@ -23,9 +23,10 @@ class HistoryView(QWidget):
     Incluye tanto paper trading como trading real en pestañas separadas.
     """
     
-    def __init__(self, user_id: UUID, parent=None):
+    def __init__(self, user_id: UUID, backend_base_url: str, parent=None): # Modificado
         super().__init__(parent)
         self.user_id = user_id
+        self.backend_base_url = backend_base_url # Nuevo
         
         self.setup_ui()
         logger.info(f"HistoryView inicializada para usuario {user_id}")
@@ -75,7 +76,10 @@ class HistoryView(QWidget):
         layout.setContentsMargins(5, 5, 5, 5)
         
         # Integrar el widget de paper trading report
-        self.paper_trading_report_widget = PaperTradingReportWidget()
+        self.paper_trading_report_widget = PaperTradingReportWidget(
+            user_id=self.user_id, 
+            backend_base_url=self.backend_base_url
+        ) # Modificado
         layout.addWidget(self.paper_trading_report_widget)
         
         return tab
@@ -93,7 +97,7 @@ class HistoryView(QWidget):
             "de las operaciones de trading real una vez que "
             "se implementen las funcionalidades correspondientes."
         )
-        placeholder_label.setAlignment(Qt.AlignCenter)
+        placeholder_label.setAlignment(Qt.AlignmentFlag.AlignCenter) # Modificado
         placeholder_label.setStyleSheet("""
             QLabel {
                 font-size: 14px;

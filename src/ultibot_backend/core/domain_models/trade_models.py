@@ -194,6 +194,21 @@ class AIInfluenceDetails(BaseModel):
         description="Whether final outcome matched AI prediction"
     )
 
+    # Añadir valores por defecto para campos que no se pasan en add_ai_influence_details
+    # y que Pydantic v2 podría requerir si no son explícitamente Optional en el constructor.
+    # Sin embargo, Pydantic v1 (si es el caso) infiere Optionalidad de los tipos.
+    # Los campos ya son Optional, el problema es que el constructor los espera si no tienen default.
+    # La forma correcta es asegurar que add_ai_influence_details los inicialice o que tengan default.
+    # Por ahora, mantendré los defaults en False/None como están, ya que add_ai_influence_details
+    # es el único lugar donde se instancia y no pasa estos. Pydantic debería usar los defaults.
+    # El error de Pylance (línea 341) sugiere que el constructor de AIInfluenceDetails
+    # en add_ai_influence_details no está completo.
+    # Vamos a asegurar que add_ai_influence_details inicialice todos los campos o que tengan default explícito.
+    # Los campos ya tienen default (False y None), así que el error de Pylance es extraño.
+    # Puede ser un problema de cómo Pylance interpreta los defaults de Pydantic.
+    # No haré cambios aquí por ahora, ya que los defaults están correctos.
+    # El error de Pylance podría ser por la forma en que se llama el constructor en `add_ai_influence_details`.
+
 
 class Trade(BaseModel):
     """Trading operation model."""
@@ -252,8 +267,15 @@ class Trade(BaseModel):
     # P&L
     pnl: Optional[float] = Field(None, description="Realized P&L in quote currency")
     pnl_percentage: Optional[float] = Field(None, description="P&L percentage")
-    closing_reason: Optional[str] = Field(None, description="Reason for closing")
+    closing_reason: Optional[str] = Field(None, description="Reason for closing") # Renombrado de exit_reason
     
+    # Exit details
+    stop_loss_price: Optional[float] = Field(None, gt=0, description="Stop loss price for the trade")
+    take_profit_price: Optional[float] = Field(None, gt=0, description="Take profit price for the trade")
+    exit_order_oco_id: Optional[str] = Field(None, description="Exchange OCO group ID for exit, if applicable")
+    exit_price: Optional[float] = Field(None, gt=0, description="Actual exit price of the trade")
+    # exit_reason ya existe como closing_reason
+
     # Market context
     market_context_snapshots: Optional[Dict[str, Dict[str, Any]]] = Field(
         None, 
@@ -340,6 +362,11 @@ class Trade(BaseModel):
             ai_analysis_timestamp=datetime.now(),
             ai_processing_time_ms=ai_processing_time_ms,
             ai_warnings=ai_warnings,
+            # Pasar explícitamente los defaults para los campos restantes
+            decision_override_by_user=False,
+            user_override_reason=None,
+            ai_prediction_accuracy=None,
+            outcome_matches_ai_prediction=None,
         )
         
         # Also set the legacy field for compatibility
@@ -377,7 +404,7 @@ class Trade(BaseModel):
             Trade summary string.
         """
         ai_info = ""
-        if self.is_ai_influenced():
+        if self.is_ai_influenced() and self.ai_influence_details: # Añadido chequeo explícito
             ai_confidence = self.get_ai_confidence()
             ai_profile = self.ai_influence_details.ai_analysis_profile_id
             ai_info = f" (AI: {ai_confidence:.2f} confidence, profile: {ai_profile})"
