@@ -5,9 +5,9 @@ results with strategy logic to make informed trading decisions.
 """
 
 import logging
-import uuid
+from uuid import UUID # Importar UUID explícitamente
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING # Añadir TYPE_CHECKING
 
 from fastapi import HTTPException
 
@@ -24,6 +24,9 @@ from src.ultibot_backend.core.domain_models.opportunity_models import (
     OpportunityStatus,
     AIAnalysis,
     SuggestedAction,
+    RecommendedTradeParams, # Añadir importación
+    DataVerification, # Añadir importación
+    InitialSignal, # Añadir importación
 )
 from src.ultibot_backend.services.ai_orchestrator_service import (
     AIOrchestrator,
@@ -33,7 +36,20 @@ from src.ultibot_backend.services.ai_orchestrator_service import (
 from src.ultibot_backend.core.domain_models.trade_models import (
     Trade,
     AIInfluenceDetails,
+    PositionStatus, # Corregido de TradeStatus
+    OrderType, # Añadido
+    TradeOrderDetails, # Añadido para la creación de la orden de salida
+    OrderStatus, # Añadido
 )
+from src.ultibot_backend.services.market_data_service import MarketDataService # Añadido
+from src.ultibot_backend.services.unified_order_execution_service import UnifiedOrderExecutionService # Añadido
+from src.ultibot_backend.services.credential_service import CredentialService # Añadido
+from src.ultibot_backend.services.notification_service import NotificationService # Añadido para Tarea 1.4.2
+from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService # Añadido para Tarea 1.4.2
+from src.ultibot_backend.core.domain_models.trade_models import TradeMode, TradeSide # Añadido para enums
+from src.ultibot_backend.core.exceptions import MarketDataError, BinanceAPIError # Añadido BinanceAPIError
+from src.shared.data_types import ServiceName # Añadido
+
 
 logger = logging.getLogger(__name__)
 
@@ -71,15 +87,15 @@ class TradingDecision:
         self.decision = decision
         self.confidence = confidence
         self.reasoning = reasoning
-        self.opportunity_id = opportunity_id
-        self.strategy_id = strategy_id
+        self.opportunity_id = opportunity_id if opportunity_id is not None else "UNKNOWN_OPPORTUNITY_ID"
+        self.strategy_id = strategy_id if strategy_id is not None else "UNKNOWN_STRATEGY_ID"
         self.ai_analysis_used = ai_analysis_used
         self.ai_analysis_profile_id = ai_analysis_profile_id
         self.recommended_trade_params = recommended_trade_params
         self.risk_assessment = risk_assessment
         self.warnings = warnings or []
         self.timestamp = datetime.now(timezone.utc)
-        self.decision_id = str(uuid.uuid4())
+        self.decision_id = str(UUID().hex) # Usar UUID importado y generar un string
 
 
 class TradingEngine:
@@ -87,20 +103,45 @@ class TradingEngine:
     
     def __init__(
         self,
-        strategy_service: 'StrategyService',
-        configuration_service: 'ConfigurationService',
+        persistence_service: "SupabasePersistenceService",
+        market_data_service: MarketDataService,
+        unified_order_execution_service: UnifiedOrderExecutionService,
+        credential_service: CredentialService,
+        notification_service: "NotificationService",
         ai_orchestrator: Optional[AIOrchestrator] = None,
+        strategy_service: Optional["StrategyService"] = None,
+        configuration_service: Optional["ConfigurationService"] = None,
+        portfolio_service: Optional["PortfolioService"] = None,
     ):
         """Initialize the trading engine.
         
         Args:
-            strategy_service: Strategy service for accessing strategy configurations.
-            configuration_service: Configuration service for user settings.
+            persistence_service: Service for data persistence.
+            market_data_service: Service for fetching market data.
+            unified_order_execution_service: Service for executing orders.
+            credential_service: Service for managing user credentials.
+            notification_service: Service for sending notifications.
             ai_orchestrator: AI orchestrator for AI analysis (optional).
+            strategy_service: Strategy service for accessing strategy configurations (optional).
+            configuration_service: Configuration service for user settings (optional).
+            portfolio_service: Service for portfolio management (optional).
         """
         self.strategy_service = strategy_service
         self.configuration_service = configuration_service
+        self.market_data_service = market_data_service
+        self.unified_order_execution_service = unified_order_execution_service
+        self.credential_service = credential_service
+        self.notification_service = notification_service
+        self.persistence_service = persistence_service
         self.ai_orchestrator = ai_orchestrator or AIOrchestrator()
+        self.portfolio_service = portfolio_service
+
+if TYPE_CHECKING:
+    from src.ultibot_backend.services.strategy_service import StrategyService
+    from src.ultibot_backend.services.configuration_service import ConfigurationService
+    from src.ultibot_backend.services.notification_service import NotificationService # Added
+    from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService # Added
+    from src.ultibot_backend.services.portfolio_service import PortfolioService
     
     async def evaluate_opportunity_with_strategy(
         self,
@@ -203,8 +244,8 @@ class TradingEngine:
                     decision="reject_opportunity",
                     confidence=0.0,
                     reasoning=f"AI analysis failed and strategy cannot operate autonomously: {e}",
-                    opportunity_id=opportunity.id,
-                    strategy_id=strategy.id,
+                    opportunity_id=str(opportunity.id) if opportunity.id is not None else "UNKNOWN_OPPORTUNITY_ID",
+                    strategy_id=str(strategy.id) if strategy.id is not None else "UNKNOWN_STRATEGY_ID",
                     ai_analysis_used=False,
                     warnings=[f"AI analysis failed: {e}"],
                 )
@@ -248,8 +289,8 @@ class TradingEngine:
             decision=decision_result["decision"],
             confidence=decision_result["confidence"],
             reasoning=decision_result["reasoning"],
-            opportunity_id=opportunity.id,
-            strategy_id=strategy.id,
+            opportunity_id=str(opportunity.id) if opportunity.id is not None else "UNKNOWN_OPPORTUNITY_ID",
+            strategy_id=str(strategy.id) if strategy.id is not None else "UNKNOWN_STRATEGY_ID",
             ai_analysis_used=False,
             recommended_trade_params=decision_result.get("trade_params"),
             risk_assessment=decision_result.get("risk_assessment"),
@@ -318,13 +359,9 @@ class TradingEngine:
         # Calculate stop loss and take profit based on scalping parameters
         entry_price = signal.entry_price_target
         
-        if hasattr(params, 'profit_target_percentage'):
-            profit_target_pct = params.profit_target_percentage
-            stop_loss_pct = params.stop_loss_percentage
-        else:
-            # Default scalping parameters
-            profit_target_pct = 0.01  # 1%
-            stop_loss_pct = 0.005  # 0.5%
+        # Acceso seguro a parámetros
+        profit_target_pct = getattr(params, 'profit_target_percentage', 0.01) if hasattr(params, 'profit_target_percentage') else params.get('profit_target_percentage', 0.01) if isinstance(params, dict) else 0.01
+        stop_loss_pct = getattr(params, 'stop_loss_percentage', 0.005) if hasattr(params, 'stop_loss_percentage') else params.get('stop_loss_percentage', 0.005) if isinstance(params, dict) else 0.005
         
         # Calculate trade parameters
         if signal.direction_sought == "buy":
@@ -455,8 +492,8 @@ class TradingEngine:
             decision=decision,
             confidence=ai_result.calculated_confidence,
             reasoning=reasoning,
-            opportunity_id=opportunity.id,
-            strategy_id=strategy.id,
+            opportunity_id=str(opportunity.id) if opportunity.id is not None else "UNKNOWN_OPPORTUNITY_ID",
+            strategy_id=str(strategy.id) if strategy.id is not None else "UNKNOWN_STRATEGY_ID",
             ai_analysis_used=True,
             ai_analysis_profile_id=strategy.ai_analysis_profile_id,
             recommended_trade_params=ai_result.recommended_trade_params,
@@ -472,13 +509,33 @@ class TradingEngine:
         Returns:
             OpportunityData for AI analysis.
         """
+        initial_signal_data: Dict[str, Any]
+
+        if opportunity.initial_signal is None:
+            logger.warning(f"Initial signal is None for opportunity {opportunity.id}. Using empty dict.")
+            initial_signal_data = {}
+        elif isinstance(opportunity.initial_signal, dict):
+            initial_signal_data = opportunity.initial_signal
+        elif hasattr(opportunity.initial_signal, 'model_dump'):  # Pydantic v2+
+            initial_signal_data = opportunity.initial_signal.model_dump()
+        elif hasattr(opportunity.initial_signal, 'dict'):  # Pydantic v1
+            initial_signal_data = opportunity.initial_signal.dict()
+        else:
+            try:
+                # Intento de conversión genérica si no es Pydantic ni dict
+                initial_signal_data = dict(opportunity.initial_signal)
+                logger.warning(f"Initial_signal for opportunity {opportunity.id} was converted to dict using generic dict(). Type was {type(opportunity.initial_signal)}")
+            except (TypeError, ValueError) as e:
+                logger.error(f"Could not convert initial_signal to dict for opportunity {opportunity.id}. Type: {type(opportunity.initial_signal)}. Error: {e}")
+                initial_signal_data = {}  # Fallback a dict vacío
+
         return OpportunityData(
-            opportunity_id=opportunity.id,
+            opportunity_id=str(opportunity.id) if opportunity.id is not None else "UNKNOWN_OPPORTUNITY_ID", # Usar un ID por defecto más descriptivo
             symbol=opportunity.symbol,
-            initial_signal=opportunity.initial_signal.dict() if hasattr(opportunity.initial_signal, 'dict') else opportunity.initial_signal,
-            source_type=opportunity.source_type.value,
-            source_name=opportunity.source_name,
-            source_data=opportunity.source_data,
+            initial_signal=initial_signal_data, # Esto debe ser un Dict[str, Any]
+            source_type=opportunity.source_type.value if opportunity.source_type else "UNKNOWN", # Manejar Optional
+            source_name=opportunity.source_name if opportunity.source_name else "UNKNOWN", # Manejar Optional
+            source_data=opportunity.source_data if opportunity.source_data else {}, # Manejar Optional
             detected_at=opportunity.detected_at,
         )
     
@@ -494,18 +551,54 @@ class TradingEngine:
             ai_result: AI analysis results.
         """
         # Convert AI result to AIAnalysis model
+        # Asegurarse que los tipos coinciden con el modelo AIAnalysis
+        
+        # Convertir suggested_action a Enum si es string
+        action_enum = ai_result.suggested_action
+        if isinstance(action_enum, str):
+            try:
+                action_enum = SuggestedAction(action_enum)
+            except ValueError:
+                logger.error(f"Invalid suggested_action string: {ai_result.suggested_action}. Cannot convert to Enum.")
+                # Manejar el error, por ejemplo, usando un valor por defecto o levantando una excepción
+                action_enum = SuggestedAction.FURTHER_INVESTIGATION_NEEDED # O alguna otra acción por defecto
+
+        # Asegurar que recommended_trade_params y data_verification son instancias de sus modelos o None
+        
+        parsed_rec_params: Optional[RecommendedTradeParams] = None
+        if isinstance(ai_result.recommended_trade_params, RecommendedTradeParams):
+            parsed_rec_params = ai_result.recommended_trade_params
+        elif isinstance(ai_result.recommended_trade_params, dict):
+            try:
+                parsed_rec_params = RecommendedTradeParams(**ai_result.recommended_trade_params)
+            except Exception as e_rec:
+                logger.warning(f"Could not parse recommended_trade_params dict into model: {e_rec}. Params: {ai_result.recommended_trade_params}")
+        elif ai_result.recommended_trade_params is not None:
+            logger.warning(f"recommended_trade_params is not a dict, None, or RecommendedTradeParams instance. Type: {type(ai_result.recommended_trade_params)}. Setting to None.")
+
+        parsed_data_ver: Optional[DataVerification] = None
+        if isinstance(ai_result.data_verification, DataVerification):
+            parsed_data_ver = ai_result.data_verification
+        elif isinstance(ai_result.data_verification, dict):
+            try:
+                parsed_data_ver = DataVerification(**ai_result.data_verification)
+            except Exception as e_data:
+                logger.warning(f"Could not parse data_verification dict into model: {e_data}. Data: {ai_result.data_verification}")
+        elif ai_result.data_verification is not None:
+            logger.warning(f"data_verification is not a dict, None, or DataVerification instance. Type: {type(ai_result.data_verification)}. Setting to None.")
+            
         ai_analysis = AIAnalysis(
-            analysis_id=ai_result.analysis_id,
-            analyzed_at=ai_result.analyzed_at,
-            model_used=ai_result.model_used,
-            calculated_confidence=ai_result.calculated_confidence,
-            suggested_action=ai_result.suggested_action,
-            recommended_trade_strategy_type=ai_result.recommended_trade_strategy_type,
-            recommended_trade_params=ai_result.recommended_trade_params,
-            reasoning_ai=ai_result.reasoning_ai,
-            data_verification=ai_result.data_verification,
-            processing_time_ms=ai_result.processing_time_ms,
-            ai_warnings=ai_result.ai_warnings,
+            analysis_id=ai_result.analysis_id, # str
+            analyzed_at=ai_result.analyzed_at, # datetime
+            model_used=ai_result.model_used, # Optional[str]
+            calculated_confidence=ai_result.calculated_confidence, # float
+            suggested_action=action_enum, # SuggestedAction (Enum)
+            recommended_trade_strategy_type=ai_result.recommended_trade_strategy_type, # Optional[str]
+            recommended_trade_params=parsed_rec_params, # Optional[RecommendedTradeParams]
+            reasoning_ai=ai_result.reasoning_ai, # str
+            data_verification=parsed_data_ver, # Optional[DataVerification]
+            processing_time_ms=ai_result.processing_time_ms, # Optional[int]
+            ai_warnings=ai_result.ai_warnings, # Optional[List[str]]
         )
         
         # Update opportunity
@@ -958,7 +1051,17 @@ class TradingEngine:
             f"Updated opportunity {opportunity.id} status to {status.value}: {reason_text}"
         )
         
-        # TODO: Persist opportunity status update to database
+        try:
+            await self.persistence_service.update_opportunity_status(
+                opportunity_id=opportunity.id,
+                user_id=opportunity.user_id, # Asumiendo que opportunity.user_id está disponible y es correcto
+                new_status=status,
+                status_reason=reason_text 
+            )
+            logger.info(f"Persisted status update for opportunity {opportunity.id}")
+        except Exception as e_persist:
+            logger.error(f"Failed to persist status update for opportunity {opportunity.id}: {e_persist}", exc_info=True)
+            # Considerar cómo manejar este error. ¿Reintentar? ¿Marcar la oportunidad de alguna manera?
 
     async def create_trade_from_decision(
         self, 
@@ -988,18 +1091,70 @@ class TradingEngine:
             trade_mode = getattr(decision, 'mode', 'paper')
             
             # Create basic trade structure
+            
+            # Convertir trade_mode y trade_side a sus respectivos Enums
+            # from src.ultibot_backend.core.domain_models.trade_models import TradeMode, TradeSide # Ya importados arriba
+            
+            try:
+                actual_trade_mode = TradeMode(trade_mode)
+            except ValueError:
+                logger.error(f"Invalid trade_mode value: {trade_mode}. Defaulting to PAPER.")
+                actual_trade_mode = TradeMode.PAPER
+
+            try:
+                actual_trade_side = TradeSide(trade_side)
+            except ValueError:
+                logger.error(f"Invalid trade_side value: {trade_side}. Cannot create trade.")
+                return None # O lanzar una excepción más específica
+
+            # Manejo seguro de take_profit_price
+            tp_price = None
+            if decision.recommended_trade_params:
+                tp_value = decision.recommended_trade_params.get("take_profit")
+                if isinstance(tp_value, list) and len(tp_value) > 0:
+                    tp_price = tp_value[0]
+                elif isinstance(tp_value, (float, int)): # Si es un solo valor
+                    tp_price = float(tp_value)
+                # Asegurar que tp_price es float o None
+                if tp_price is not None and not isinstance(tp_price, (float, int)):
+                    logger.warning(f"take_profit_price is not float or int: {tp_price}. Setting to None.")
+                    tp_price = None
+
+
             trade = Trade(
-                id=str(uuid.uuid4()),
-                user_id=strategy.user_id,
-                mode=trade_mode,
+                id=str(UUID().hex),
+                user_id=str(strategy.user_id),
+                mode=actual_trade_mode,
                 symbol=opportunity.symbol,
-                side=trade_side,
-                strategy_id=strategy.id,  # AC5: Ensure strategy_id is populated
-                opportunity_id=opportunity.id,
-                position_status="pending_entry_conditions",
+                side=actual_trade_side,
+                strategy_id=str(strategy.id) if strategy.id else "UNKNOWN_STRATEGY_ID",
+                opportunity_id=str(opportunity.id) if opportunity.id else "UNKNOWN_OPPORTUNITY_ID",
+                position_status=PositionStatus.PENDING_ENTRY_CONDITIONS,
                 entry_order=self._create_entry_order_from_decision(decision, opportunity),
-                notes=f"Trade created from strategy '{strategy.config_name}' (ID: {strategy.id}) via decision {decision.decision_id}. {decision.reasoning}",
+                ai_analysis_confidence=decision.confidence if decision.ai_analysis_used else None,
+                strategy_execution_instance_id=None,
+                exit_orders=None,
+                initial_risk_quote_amount=None,
+                initial_reward_to_risk_ratio=None,
+                risk_reward_adjustments=None,
+                current_risk_quote_amount=None,
+                current_reward_to_risk_ratio=None,
+                pnl=None,
+                pnl_percentage=None,
+                closing_reason=None,
+                stop_loss_price=decision.recommended_trade_params.get("stop_loss") if decision.recommended_trade_params else None,
+                take_profit_price=tp_price,
+                exit_order_oco_id=None,
+                exit_price=None,
+                market_context_snapshots=None,
+                external_event_or_analysis_link=None,
+                backtest_details=None,
+                ai_influence_details=None,  # Se añade después a través de add_ai_influence_to_trade
+                notes=f"Trade created from strategy '{strategy.config_name}' (ID: {str(strategy.id) if strategy.id else 'UNKNOWN_STRATEGY_ID'}) via decision {decision.decision_id}. {decision.reasoning}",
                 created_at=datetime.now(timezone.utc),
+                opened_at=None,
+                closed_at=None,
+                updated_at=datetime.now(timezone.utc)
             )
             
             # Add AI influence details if AI was used
@@ -1009,16 +1164,95 @@ class TradingEngine:
             # Log trade creation with AI influence information
             logger.info(f"Created trade {trade.id} from decision {decision.decision_id}")
             logger.info(trade.get_trade_summary_for_logging())
-            
-            # TODO: Save trade to database via persistence service
+
+            # Persistir el trade inicial antes de intentar ejecutar órdenes
+            try:
+                await self.persistence_service.save_trade(trade) # Asumiendo que existe save_trade
+                logger.info(f"Trade {trade.id} inicial guardado antes de la ejecución.")
+            except Exception as e_persist:
+                logger.error(f"Error al guardar trade inicial {trade.id} antes de la ejecución: {e_persist}", exc_info=True)
+                # Podríamos decidir no continuar si no se puede persistir el trade inicial.
+                # Por ahora, se loguea y se intenta continuar con la ejecución.
+                # Considerar lanzar una excepción aquí si la persistencia inicial es crítica.
+
+            # Intentar ejecutar la orden de entrada y potencialmente OCO
+            if trade.mode == TradeMode.REAL: # Solo para trades reales por ahora
+                try:
+                    logger.info(f"Attempting to place entry order for real trade {trade.id}")
+                    # Aquí se debería llamar a UnifiedOrderExecutionService para colocar la orden de entrada
+                    # y si la estrategia lo requiere, la orden OCO.
+                    # Esta parte necesita una implementación más detallada de cómo se colocan las OCOs.
+                    # Por ahora, simularemos un intento y un posible fallo para la Tarea 1.4.2.
+
+                    # Ejemplo de cómo se podría intentar colocar una OCO (requiere que OrderExecutionService/BinanceAdapter lo soporten)
+                    # if strategy.requires_oco_exit: # Suponiendo que la estrategia tiene esta info
+                    #     oco_details = await self.unified_order_execution_service.create_oco_order_for_trade(trade, user_id=UUID(trade.user_id))
+                    #     trade.exit_order_oco_id = oco_details.get("listClientOrderId") # o el campo correspondiente
+                    # else:
+                    #     # Colocar solo la orden de entrada
+                    #     executed_entry_order = await self.unified_order_execution_service.execute_order(
+                    #         order_details=trade.entry_order,
+                    #         user_id=UUID(trade.user_id),
+                    #         trading_mode=trade.mode,
+                    #         symbol=trade.symbol,
+                    #         side=trade.side.value, # Asegurar que es string 'buy' o 'sell'
+                    #         # api_key y api_secret se obtendrían de CredentialService
+                    #     )
+                    #     trade.entry_order = executed_entry_order # Actualizar con detalles de ejecución
+                    
+                    # SIMULACIÓN DE FALLO OCO para Tarea 1.4.2 - ESTO DEBERÍA SER REAL
+                    # En un flujo real, la excepción vendría de unified_order_execution_service o binance_adapter
+                    if opportunity.symbol == "FAIL_OCO_SYMBOL_TEST": # Condición de prueba para simular fallo
+                        raise BinanceAPIError(message="Simulated OCO placement failure for test.", status_code=400, response_data={"code": -2010, "msg": "OCO order placement failed due to margin."})
+
+                    # Si la ejecución fue exitosa (simulado por ahora, no hay fallo)
+                    trade.position_status = PositionStatus.OPEN # O PENDING_EXECUTION si la orden no es market o no se llena de inmediato
+                    trade.opened_at = datetime.now(timezone.utc)
+                    logger.info(f"Real trade {trade.id} entry order placed/simulated successfully.")
+
+                except BinanceAPIError as e_oco: # Capturar específicamente el error de la API de Binance
+                    logger.error(f"CRITICAL: Failed to place OCO or entry order for real trade {trade.id} for symbol {trade.symbol}. Error: {e_oco.message}", exc_info=True)
+                    trade.notes = (trade.notes or "") + f" | CRITICAL: OCO/Entry order placement failed: {e_oco.message}. Manual intervention required."
+                    trade.position_status = PositionStatus.ERROR # Usar estado de error genérico
+                    
+                    # Enviar notificación de error crítico
+                    await self.notification_service.send_real_trade_status_notification(
+                        user_id=UUID(trade.user_id),
+                        message=f"Fallo CRÍTICO al colocar orden OCO/entrada para {trade.symbol} (Trade ID: {trade.id}). Se requiere intervención manual. Error: {e_oco.message}",
+                        status_level="CRITICAL",
+                        symbol=trade.symbol,
+                        trade_id=UUID(trade.id)
+                    )
+                except Exception as e_exec: # Capturar otros errores de ejecución
+                    logger.error(f"CRITICAL: Unexpected error during order execution for real trade {trade.id} for symbol {trade.symbol}. Error: {e_exec}", exc_info=True)
+                    trade.notes = (trade.notes or "") + f" | CRITICAL: Unexpected error during order execution: {str(e_exec)}. Manual intervention required."
+                    trade.position_status = PositionStatus.ERROR # Usar estado de error genérico
+                    
+                    await self.notification_service.send_real_trade_status_notification(
+                        user_id=UUID(trade.user_id),
+                        message=f"Fallo CRÍTICO inesperado durante ejecución de orden para {trade.symbol} (Trade ID: {trade.id}). Se requiere intervención manual. Error: {str(e_exec)}",
+                        status_level="CRITICAL",
+                        symbol=trade.symbol,
+                        trade_id=UUID(trade.id)
+                    )
+                finally:
+                    # Siempre persistir el estado final del trade después del intento de ejecución
+                    try:
+                        await self.persistence_service.save_trade(trade)
+                        logger.info(f"Trade {trade.id} estado final ({trade.position_status.value}) guardado después del intento de ejecución.")
+                    except Exception as e_persist_final:
+                        logger.error(f"Error al guardar estado final del trade {trade.id}: {e_persist_final}", exc_info=True)
+                        # Aquí podría ser necesario un mecanismo de alerta adicional si la persistencia falla críticamente.
             
             return trade
             
-        except Exception as e:
-            logger.error(f"Error creating trade from decision {decision.decision_id}: {e}")
+        except Exception as e: # Captura de errores en la creación del objeto Trade en sí
+            logger.error(f"Error creating trade object from decision {decision.decision_id}: {e}", exc_info=True)
+            # No se puede enviar notificación sobre un trade_id si el objeto trade no se pudo crear.
+            # Se podría enviar una notificación genérica si es relevante.
             raise HTTPException(
                 status_code=500,
-                detail=f"Failed to create trade: {str(e)}"
+                detail=f"Failed to create trade object: {str(e)}"
             )
     
     async def _add_ai_influence_to_trade(
@@ -1098,16 +1332,60 @@ class TradingEngine:
         # Use recommended trade params if available, otherwise use opportunity signal
         if decision.recommended_trade_params:
             entry_price = decision.recommended_trade_params.get("entry_price")
+            # Aquí también se debería obtener la cantidad de los parámetros recomendados si es posible
+            requested_quantity = decision.recommended_trade_params.get("position_size_percentage", 1.0) # Ejemplo, ajustar
         else:
             entry_price = opportunity.initial_signal.entry_price_target
+            requested_quantity = 1.0 # Default quantity
         
+        # Asegurar que todos los campos requeridos por TradeOrderDetails se proveen
+        # y que los tipos son correctos.
+        
+        # Convertir entry_price a float si no es None, de lo contrario, None.
+        actual_entry_price: Optional[float] = None
+        if entry_price is not None:
+            try:
+                actual_entry_price = float(entry_price)
+            except (ValueError, TypeError):
+                logger.warning(f"Could not convert entry_price '{entry_price}' to float. Setting to None.")
+        
+        # Asegurar que requested_quantity es float.
+        actual_requested_quantity: float
+        try:
+            actual_requested_quantity = float(requested_quantity)
+        except (ValueError, TypeError):
+            logger.error(f"Could not convert requested_quantity '{requested_quantity}' to float. Defaulting to 1.0.")
+            actual_requested_quantity = 1.0
+
+
         return TradeOrderDetails(
-            order_id_internal=str(uuid.uuid4()),
-            type=OrderType.MARKET,  # Default to market order
+            order_id_internal=str(UUID().hex),
+            type=OrderType.MARKET, # Asumiendo MARKET para la entrada inicial basada en decisión
             status=OrderStatus.NEW,
-            requested_price=entry_price,
-            requested_quantity=1.0,  # Default quantity, should be calculated based on position sizing
+            requested_price=actual_entry_price, # Puede ser None para MARKET, pero lo pasamos si está disponible
+            requested_quantity=actual_requested_quantity,
             timestamp=datetime.now(timezone.utc),
+            # Todos los demás campos son Optional y Pydantic los manejará con sus defaults (None)
+            # si no se proveen explícitamente.
+            order_id_exchange=None,
+            client_order_id_exchange=None,
+            exchange_status_raw=None,
+            rejection_reason_code=None,
+            rejection_reason_message=None,
+            stop_price=None,
+            executed_price=None,
+            slippage_amount=None,
+            slippage_percentage=None,
+            executed_quantity=None,
+            cumulative_quote_qty=None,
+            commissions=None,
+            submitted_at=None,
+            last_update_timestamp=None,
+            fill_timestamp=None,
+            trailing_stop_activation_price=None,
+            trailing_stop_callback_rate=None,
+            current_stop_price_tsl=None,
+            oco_group_id_exchange=None
         )
     
     async def log_ai_invocation_details(
@@ -1156,22 +1434,34 @@ class TradingEngine:
     
     def _summarize_strategy_params_for_logging(self, strategy: TradingStrategyConfig) -> str:
         """Summarize strategy parameters for logging."""
-        if hasattr(strategy.parameters, 'dict'):
-            params = strategy.parameters.dict()
-        elif isinstance(strategy.parameters, dict):
-            params = strategy.parameters
+        params_to_log: Dict[str, Any] = {}
+        
+        if isinstance(strategy.parameters, dict):
+            # If parameters is already a dict, use it directly
+            params_dict = strategy.parameters
+        elif hasattr(strategy.parameters, 'model_dump'): # Pydantic v2+
+            params_dict = strategy.parameters.model_dump()
+        elif hasattr(strategy.parameters, 'dict'): # Pydantic v1
+            params_dict = strategy.parameters.dict()
         else:
+            # Fallback if parameters is not a dict or Pydantic model
+            logger.warning(f"Strategy parameters for {strategy.config_name} are not a dict or Pydantic model. Type: {type(strategy.parameters)}")
+            return "Parameters not in expected format"
+
+        if not params_dict:
             return "No parameters"
-        
+            
         # Log only key parameters to avoid verbosity
-        key_params = {}
-        for key, value in params.items():
+        for key, value in params_dict.items():
             if 'percentage' in key.lower() or 'price' in key.lower() or 'threshold' in key.lower():
-                key_params[key] = value
-            elif len(key_params) < 5:  # Limit to 5 key parameters
-                key_params[key] = value
+                params_to_log[key] = value
+            elif len(params_to_log) < 5:  # Limit to 5 key parameters
+                params_to_log[key] = value
         
-        return ", ".join([f"{k}={v}" for k, v in key_params.items()])
+        if not params_to_log:
+            return "No key parameters to log"
+            
+        return ", ".join([f"{k}={v}" for k, v in params_to_log.items()])
     
     def _summarize_opportunity_signal_for_logging(self, opportunity: Opportunity) -> str:
         """Summarize opportunity signal for logging."""
@@ -1229,3 +1519,179 @@ class TradingEngine:
         # Default to buy if direction not specified or unclear
         logger.warning(f"Could not determine trade side from opportunity {opportunity.id}, defaulting to 'buy'")
         return "buy"
+
+    async def monitor_and_manage_real_trade_exit(
+        self, 
+        trade: Trade, 
+        user_id: str
+    ) -> None:
+        """
+        Monitors a real trade and executes a market order if TSL or TP is hit,
+        especially for trades not managed by OCO orders.
+
+        Args:
+            trade: The trade object to monitor.
+            user_id: The ID of the user owning the trade.
+        """
+        if trade.mode != "real" or trade.position_status != PositionStatus.OPEN: # Corregido a PositionStatus.OPEN
+            logger.debug(f"Trade {trade.id} is not an active real trade (Status: {trade.position_status}). Skipping exit monitoring.")
+            return
+
+        # Asumimos que si no hay exit_order_oco_id, no está gestionado por OCO.
+        # O podríamos añadir un flag explícito `is_oco_managed` al modelo Trade.
+        is_oco_managed = bool(trade.exit_order_oco_id) 
+        if is_oco_managed:
+            logger.debug(f"Trade {trade.id} is OCO managed. Skipping manual exit monitoring.")
+            return
+
+        logger.info(f"Monitoring non-OCO real trade {trade.id} for TSL/TP.")
+
+        try:
+            current_price: float
+            try:
+                current_price = await self.market_data_service.get_latest_price(trade.symbol)
+            except MarketDataError as e:
+                logger.warning(f"Could not fetch current price for {trade.symbol} for trade {trade.id}: {e}")
+                return
+            
+            logger.info(f"Trade {trade.id} ({trade.symbol}): Current Price = {current_price}, SL = {trade.stop_loss_price}, TP = {trade.take_profit_price}")
+
+            exit_reason = None
+            exit_price = None
+
+            if trade.side == "buy": # Long position
+                if trade.stop_loss_price and current_price <= trade.stop_loss_price:
+                    exit_reason = "stop_loss_hit"
+                    exit_price = trade.stop_loss_price
+                    logger.info(f"Trade {trade.id}: Stop Loss triggered at {current_price} (SL: {trade.stop_loss_price}).")
+                elif trade.take_profit_price and current_price >= trade.take_profit_price:
+                    exit_reason = "take_profit_hit"
+                    exit_price = trade.take_profit_price
+                    logger.info(f"Trade {trade.id}: Take Profit triggered at {current_price} (TP: {trade.take_profit_price}).")
+            
+            elif trade.side == "sell": # Short position
+                if trade.stop_loss_price and current_price >= trade.stop_loss_price:
+                    exit_reason = "stop_loss_hit"
+                    exit_price = trade.stop_loss_price
+                    logger.info(f"Trade {trade.id}: Stop Loss triggered at {current_price} (SL: {trade.stop_loss_price}).")
+                elif trade.take_profit_price and current_price <= trade.take_profit_price:
+                    exit_reason = "take_profit_hit"
+                    exit_price = trade.take_profit_price
+                    logger.info(f"Trade {trade.id}: Take Profit triggered at {current_price} (TP: {trade.take_profit_price}).")
+
+            if exit_reason:
+                logger.info(f"Trade {trade.id}: {exit_reason}. Attempting to close position with market order.")
+                
+                # Determinar la cantidad a cerrar. Asumimos que es la cantidad abierta del trade.
+                # El modelo Trade debería tener `open_quantity` o similar.
+                # Por ahora, usaremos `entry_order.executed_quantity` si existe.
+                quantity_to_close = trade.entry_order.executed_quantity if trade.entry_order and trade.entry_order.executed_quantity else None
+                
+                if not quantity_to_close:
+                    logger.error(f"Cannot determine quantity to close for trade {trade.id}. Aborting market exit.")
+                    # Podríamos actualizar el estado del trade a un estado de error aquí.
+                    return
+
+                exit_order_details = TradeOrderDetails(
+                    order_id_internal=str(UUID().hex), # Usar UUID importado
+                    type=OrderType.MARKET, # OrderType Enum
+                    status=OrderStatus.NEW, # OrderStatus Enum
+                    requested_quantity=quantity_to_close, # float
+                    timestamp=datetime.now(timezone.utc), # datetime
+                    # Campos opcionales con None por defecto si no se especifican
+                    order_id_exchange=None, # Optional[str]
+                    client_order_id_exchange=None, # Optional[str]
+                    exchange_status_raw=None, # Optional[str]
+                    rejection_reason_code=None, # Optional[str]
+                    rejection_reason_message=None, # Optional[str]
+                    requested_price=None, # Market order no tiene requested_price # Optional[float]
+                    stop_price=None, # Optional[float]
+                    executed_price=None, # Optional[float]
+                    slippage_amount=None, # Optional[float]
+                    slippage_percentage=None, # Optional[float]
+                    executed_quantity=None, # Optional[float]
+                    cumulative_quote_qty=None, # Optional[float]
+                    commissions=None, # Optional[List[Commission]]
+                    submitted_at=None, # Optional[datetime]
+                    last_update_timestamp=None, # Optional[datetime]
+                    fill_timestamp=None, # Optional[datetime]
+                    trailing_stop_activation_price=None, # Optional[float]
+                    trailing_stop_callback_rate=None, # Optional[float]
+                    current_stop_price_tsl=None, # Optional[float]
+                    oco_group_id_exchange=None # Optional[str]
+                )
+                # Las notas sobre la orden deberían ir en el Trade o en un log separado.
+                # El TradeOrderDetails en sí no tiene un campo 'notes'.
+                # El 'side' y 'symbol' se infieren del trade al que se asocia la orden.
+                
+                # TODO: El `execute_order` del UnifiedOrderExecutionService necesita ser definido/revisado.
+                # Asumiendo que toma TradeOrderDetails, user_id, trade_mode.
+                # Necesitamos asegurar que UnifiedOrderExecutionService tiene un método `execute_order`
+                # que puede manejar esto.
+
+                # Obtener credenciales para modo real
+                api_key: Optional[str] = None
+                api_secret: Optional[str] = None
+                if trade.mode == TradeMode.REAL: # Usar Enum
+                    try:
+                        # Convertir user_id a UUID si es string. Asumimos que user_id ya es UUID o compatible.
+                        # Si user_id viene como string, se debe convertir: user_uuid = UUID(user_id)
+                        # Por ahora, asumimos que user_id es del tipo correcto para el servicio.
+                        credential = await self.credential_service.get_credential(
+                            user_id=UUID(user_id), # Asegurar que user_id es UUID
+                            service_name=ServiceName.BINANCE_SPOT, # Asumir Spot por ahora
+                            credential_label="default" # Asumir default
+                        )
+                        if credential:
+                            # Las credenciales ya deberían estar desencriptadas por el CredentialService
+                            api_key = credential.api_key 
+                            api_secret = credential.secret_key
+                        else:
+                            logger.error(f"No se encontraron credenciales para user {user_id} para cerrar trade {trade.id}")
+                            # Marcar el trade para intervención manual si no hay credenciales
+                            trade.notes = (trade.notes or "") + f" | CRITICAL: No credentials found to auto-close on {exit_reason}. Manual intervention required."
+                            # TODO: Persist trade update with error note.
+                            return 
+                    except Exception as cred_exc:
+                        logger.error(f"Error obteniendo credenciales para user {user_id} para cerrar trade {trade.id}: {cred_exc}")
+                        trade.notes = (trade.notes or "") + f" | CRITICAL: Credential error during auto-close on {exit_reason}. Manual intervention required."
+                        # TODO: Persist trade update with error note.
+                        return
+                
+                # Determinar el lado de la orden de salida
+                exit_order_side = TradeSide.SELL if trade.side == TradeSide.BUY else TradeSide.BUY
+
+                executed_order = await self.unified_order_execution_service.execute_order(
+                    order_details=exit_order_details,
+                    user_id=UUID(user_id), # Asegurar que user_id es UUID
+                    trading_mode=trade.mode,
+                    symbol=trade.symbol, # Pasar el símbolo
+                    side=exit_order_side.value, # Pasar el lado correcto de la orden de salida
+                    api_key=api_key, # Pasar api_key
+                    api_secret=api_secret # Pasar api_secret
+                )
+
+                if executed_order and executed_order.status == OrderStatus.FILLED:
+                    if trade.exit_orders is None:
+                        trade.exit_orders = []
+                    trade.exit_orders.append(executed_order)
+                    trade.position_status = PositionStatus.CLOSED # Corregido
+                    trade.exit_price = executed_order.executed_price
+                    trade.closing_reason = exit_reason # Corregido
+                    trade.closed_at = datetime.now(timezone.utc)
+                    logger.info(f"Trade {trade.id} closed successfully via market order at {executed_order.executed_price}.")
+                    # TODO: Persist trade update
+                else:
+                    logger.error(f"Failed to execute market exit order for trade {trade.id} or order not filled. Status: {executed_order.status if executed_order else 'None'}")
+                    # TODO: Implement robust error reporting and alerts (Task 1.4.2)
+                    # Marcar el trade para intervención manual.
+                    trade.notes = (trade.notes or "") + f" | CRITICAL: Failed to auto-close on {exit_reason}. Manual intervention required."
+                    # TODO: Persist trade update with error note.
+                    # TODO: Send notification (Task 1.4.2)
+
+        except Exception as e:
+            logger.error(f"Error in monitor_and_manage_real_trade_exit for trade {trade.id}: {e}", exc_info=True)
+            # TODO: Considerar cómo manejar errores aquí, ¿reintentar? ¿alertar?
+            trade.notes = (trade.notes or "") + f" | ERROR during exit monitoring: {str(e)[:100]}" # Truncate error
+            # TODO: Persist trade update with error note.
+            # TODO: Send notification (Task 1.4.2)

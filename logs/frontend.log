@@ -1,54 +1,100 @@
-2025-06-05 18:21:30,436 - src.ultibot_ui.services.api_client - INFO - [Dummy-48:4212] - api_client.py:51 - Cerrando httpx.AsyncClient...
-2025-06-05 18:21:30,436 - httpcore.connection - DEBUG - [Dummy-50:12204] - _trace.py:87 - close.complete
-2025-06-05 18:21:30,437 - src.ultibot_ui.services.api_client - INFO - [Dummy-50:12204] - api_client.py:53 - httpx.AsyncClient cerrado.
-2025-06-05 18:21:30,437 - httpcore.connection - DEBUG - [Dummy-48:4212] - _trace.py:87 - close.started
-2025-06-05 18:21:30,437 - src.ultibot_ui.main - DEBUG - [Dummy-50:12204] - main.py:611 - ApiWorker: httpx.AsyncClient cerrado para worker loop <_WindowsSelectorEventLoop running=False closed=False debug=False>.
-2025-06-05 18:21:30,437 - src.ultibot_ui.main - INFO - [Dummy-50:12204] - main.py:649 - ApiWorker: Event loop <_WindowsSelectorEventLoop running=False closed=False debug=False> is not running or already closed. Skipping shutdown procedures.
-2025-06-05 18:21:30,437 - httpcore.connection - DEBUG - [Dummy-48:4212] - _trace.py:87 - close.complete
-2025-06-05 18:21:30,439 - src.ultibot_ui.main - DEBUG - [Dummy-50:12204] - main.py:653 - ApiWorker: asyncio event loop for current OS thread set to None.
-2025-06-05 18:21:30,439 - src.ultibot_ui.services.api_client - INFO - [Dummy-48:4212] - api_client.py:53 - httpx.AsyncClient cerrado.
-2025-06-05 18:21:30,439 - src.ultibot_ui.main - DEBUG - [Dummy-48:4212] - main.py:611 - ApiWorker: httpx.AsyncClient cerrado para worker loop <_WindowsSelectorEventLoop running=False closed=False debug=False>.
-2025-06-05 18:21:30,439 - src.ultibot_ui.main - INFO - [Dummy-48:4212] - main.py:649 - ApiWorker: Event loop <_WindowsSelectorEventLoop running=False closed=False debug=False> is not running or already closed. Skipping shutdown procedures.
-2025-06-05 18:21:30,439 - src.ultibot_ui.main - DEBUG - [Dummy-48:4212] - main.py:653 - ApiWorker: asyncio event loop for current OS thread set to None.
-2025-06-05 18:21:33,193 - src.ultibot_ui.windows.main_window - INFO - [MainThread:17928] - main_window.py:214 - MainWindow: User selected dark theme.
-2025-06-05 18:21:33,194 - qdarkstyle - DEBUG - [MainThread:17928] - __init__.py:259 - Reading QSS file in: :qdarkstyle\dark\darkstyle.qss
-2025-06-05 18:21:33,194 - qdarkstyle - INFO - [MainThread:17928] - __init__.py:269 - QSS file successfully loaded.
-2025-06-05 18:21:33,194 - qdarkstyle - DEBUG - [MainThread:17928] - __init__.py:276 - Checking patches for being applied.
-2025-06-05 18:21:33,194 - qdarkstyle - INFO - [MainThread:17928] - __init__.py:172 - Found version patches to be applied.
-2025-06-05 18:21:33,194 - qdarkstyle - INFO - [MainThread:17928] - __init__.py:192 - Found application patches to be applied.
-2025-06-05 18:21:33,441 - src.ultibot_ui.main - INFO - [MainThread:17928] - main.py:550 - Applied dark theme to the application.
-2025-06-05 18:21:33,902 - __main__ - INFO - [MainThread:17928] - main.py:984 - QASYNC_LOOP_HEARTBEAT: El bucle qasync está vivo - pulso #23
-2025-06-05 18:21:35,359 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread:17928] - dashboard_view.py:608 - DashboardView._check_pending_real_opportunities: INICIO (refactorizado)
-2025-06-05 18:21:35,359 - src.ultibot_ui.main - DEBUG - [MainThread:17928] - main.py:562 - ApiWorker initialized with base_url: http://localhost:8000
-2025-06-05 18:21:35,359 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread:17928] - dashboard_view.py:615 - DashboardView._check_pending_real_opportunities: Llamada a api_client.get_real_trading_candidates programada.
-2025-06-05 18:21:35,360 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread:17928] - dashboard_view.py:620 - DashboardView._check_pending_real_opportunities: FIN (programación)
-2025-06-05 18:21:35,360 - asyncio - DEBUG - [Dummy-51:19928] - selector_events.py:64 - Using selector: SelectSelector
-2025-06-05 18:21:35,361 - httpx - DEBUG - [Dummy-51:19928] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
-2025-06-05 18:21:35,362 - httpx - DEBUG - [Dummy-51:19928] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
-2025-06-05 18:21:35,528 - src.ultibot_ui.services.api_client - INFO - [Dummy-51:19928] - api_client.py:301 - Obteniendo oportunidades de trading real pendientes de confirmación.
-2025-06-05 18:21:35,528 - src.ultibot_ui.services.api_client - DEBUG - [Dummy-51:19928] - api_client.py:72 - APIClient: _make_request_invoked for GET /api/v1/opportunities/real-trading-candidates
-2025-06-05 18:21:35,528 - httpcore.connection - DEBUG - [Dummy-51:19928] - _trace.py:87 - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
-2025-06-05 18:21:35,793 - httpcore.connection - DEBUG - [Dummy-51:19928] - _trace.py:87 - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x00000293FC6D7F20>
-2025-06-05 18:21:35,793 - httpcore.http11 - DEBUG - [Dummy-51:19928] - _trace.py:87 - send_request_headers.started request=<Request [b'GET']>
-2025-06-05 18:21:35,794 - httpcore.http11 - DEBUG - [Dummy-51:19928] - _trace.py:87 - send_request_headers.complete
-2025-06-05 18:21:35,794 - httpcore.http11 - DEBUG - [Dummy-51:19928] - _trace.py:87 - send_request_body.started request=<Request [b'GET']>
-2025-06-05 18:21:35,794 - httpcore.http11 - DEBUG - [Dummy-51:19928] - _trace.py:87 - send_request_body.complete
-2025-06-05 18:21:35,794 - httpcore.http11 - DEBUG - [Dummy-51:19928] - _trace.py:87 - receive_response_headers.started request=<Request [b'GET']>
-2025-06-05 18:21:36,545 - httpcore.http11 - DEBUG - [Dummy-51:19928] - _trace.py:87 - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Thu, 05 Jun 2025 22:21:35 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
-2025-06-05 18:21:36,545 - httpx - INFO - [Dummy-51:19928] - _client.py:1786 - HTTP Request: GET http://localhost:8000/api/v1/opportunities/real-trading-candidates "HTTP/1.1 200 OK"
-2025-06-05 18:21:36,545 - httpcore.http11 - DEBUG - [Dummy-51:19928] - _trace.py:87 - receive_response_body.started request=<Request [b'GET']>
-2025-06-05 18:21:36,545 - httpcore.http11 - DEBUG - [Dummy-51:19928] - _trace.py:87 - receive_response_body.complete
-2025-06-05 18:21:36,545 - httpcore.http11 - DEBUG - [Dummy-51:19928] - _trace.py:87 - response_closed.started
-2025-06-05 18:21:36,545 - httpcore.http11 - DEBUG - [Dummy-51:19928] - _trace.py:87 - response_closed.complete
-2025-06-05 18:21:36,545 - src.ultibot_ui.main - DEBUG - [Dummy-51:19928] - main.py:607 - ApiWorker: Cerrando httpx.AsyncClient para worker loop <_WindowsSelectorEventLoop running=False closed=False debug=False>.
-2025-06-05 18:21:36,545 - src.ultibot_ui.services.api_client - INFO - [Dummy-51:19928] - api_client.py:51 - Cerrando httpx.AsyncClient...
-2025-06-05 18:21:36,546 - httpcore.connection - DEBUG - [Dummy-51:19928] - _trace.py:87 - close.started
-2025-06-05 18:21:36,546 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread:17928] - dashboard_view.py:589 - DashboardView._handle_real_opportunities_result: INICIO
-2025-06-05 18:21:36,546 - src.ultibot_ui.windows.dashboard_view - DEBUG - [MainThread:17928] - dashboard_view.py:604 - No hay oportunidades de trading real pendientes de confirmación.
-2025-06-05 18:21:36,546 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread:17928] - dashboard_view.py:605 - DashboardView._handle_real_opportunities_result: FIN
-2025-06-05 18:21:36,546 - httpcore.connection - DEBUG - [Dummy-51:19928] - _trace.py:87 - close.complete
-2025-06-05 18:21:36,546 - src.ultibot_ui.services.api_client - INFO - [Dummy-51:19928] - api_client.py:53 - httpx.AsyncClient cerrado.
-2025-06-05 18:21:36,546 - src.ultibot_ui.main - DEBUG - [Dummy-51:19928] - main.py:611 - ApiWorker: httpx.AsyncClient cerrado para worker loop <_WindowsSelectorEventLoop running=False closed=False debug=False>.
-2025-06-05 18:21:36,546 - src.ultibot_ui.main - INFO - [Dummy-51:19928] - main.py:649 - ApiWorker: Event loop <_WindowsSelectorEventLoop running=False closed=False debug=False> is not running or already closed. Skipping shutdown procedures.
-2025-06-05 18:21:36,546 - src.ultibot_ui.main - DEBUG - [Dummy-51:19928] - main.py:653 - ApiWorker: asyncio event loop for current OS thread set to None.
-2025-06-05 18:21:38,925 - __main__ - INFO - [MainThread:17928] - main.py:984 - QASYNC_LOOP_HEARTBEAT: El bucle qasync está vivo - pulso #24
+2025-06-06 16:05:52,989 - asyncio - DEBUG - [MainThread] - proactor_events.py:631 - Using proactor: _IocpProactor
+2025-06-06 16:05:52,992 - qasync._windows._EventPoller - DEBUG - [MainThread] - _windows.py:213 - Starting (proactor: <_IocpProactor overlapped#=0 result#=0>)...
+2025-06-06 16:05:52,994 - qasync._windows._EventWorker - DEBUG - [Dummy-1] - _windows.py:192 - Thread started
+2025-06-06 16:05:52,995 - __main__ - INFO - [MainThread] - main.py:516 - QApplication instance confirmed.
+2025-06-06 16:05:53,003 - qdarkstyle - DEBUG - [MainThread] - __init__.py:259 - Reading QSS file in: :qdarkstyle\dark\darkstyle.qss
+2025-06-06 16:05:53,005 - qdarkstyle - INFO - [MainThread] - __init__.py:269 - QSS file successfully loaded.
+2025-06-06 16:05:53,005 - qdarkstyle - DEBUG - [MainThread] - __init__.py:276 - Checking patches for being applied.
+2025-06-06 16:05:53,028 - qdarkstyle - INFO - [MainThread] - __init__.py:172 - Found version patches to be applied.
+2025-06-06 16:05:53,029 - qdarkstyle - INFO - [MainThread] - __init__.py:192 - Found application patches to be applied.
+2025-06-06 16:05:53,031 - __main__ - INFO - [MainThread] - main.py:501 - Applied dark theme to the application.
+2025-06-06 16:05:53,031 - __main__ - INFO - [MainThread] - main.py:599 - No pre-existing auth token found. Showing login dialog.
+2025-06-06 16:06:45,426 - src.ultibot_ui.dialogs.login_dialog - INFO - [MainThread] - login_dialog.py:83 - Iniciando intento de login para el usuario: zamora.carlos.eduardo@gmail.com
+2025-06-06 16:06:45,429 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: http://localhost:8000, token: absent, coroutine_factory: set
+2025-06-06 16:07:42,732 - src.ultibot_ui.dialogs.login_dialog - INFO - [MainThread] - login_dialog.py:124 - Diálogo de login cancelado por el usuario.
+2025-06-06 16:07:42,761 - __main__ - WARNING - [MainThread] - main.py:634 - Login was cancelled or failed. Exiting application.
+2025-06-06 16:10:49,559 - asyncio - DEBUG - [MainThread] - proactor_events.py:631 - Using proactor: _IocpProactor
+2025-06-06 16:10:49,561 - qasync._windows._EventPoller - DEBUG - [MainThread] - _windows.py:213 - Starting (proactor: <_IocpProactor overlapped#=0 result#=0>)...
+2025-06-06 16:10:49,561 - qasync._windows._EventWorker - DEBUG - [Dummy-1] - _windows.py:192 - Thread started
+2025-06-06 16:10:49,562 - __main__ - INFO - [MainThread] - main.py:516 - QApplication instance confirmed.
+2025-06-06 16:10:49,565 - qdarkstyle - DEBUG - [MainThread] - __init__.py:259 - Reading QSS file in: :qdarkstyle\dark\darkstyle.qss
+2025-06-06 16:10:49,566 - qdarkstyle - INFO - [MainThread] - __init__.py:269 - QSS file successfully loaded.
+2025-06-06 16:10:49,566 - qdarkstyle - DEBUG - [MainThread] - __init__.py:276 - Checking patches for being applied.
+2025-06-06 16:10:49,590 - qdarkstyle - INFO - [MainThread] - __init__.py:172 - Found version patches to be applied.
+2025-06-06 16:10:49,590 - qdarkstyle - INFO - [MainThread] - __init__.py:192 - Found application patches to be applied.
+2025-06-06 16:10:49,591 - __main__ - INFO - [MainThread] - main.py:501 - Applied dark theme to the application.
+2025-06-06 16:10:49,591 - __main__ - INFO - [MainThread] - main.py:599 - No pre-existing auth token found. Showing login dialog.
+2025-06-06 16:11:12,425 - src.ultibot_ui.dialogs.login_dialog - INFO - [MainThread] - login_dialog.py:109 - Iniciando intento de login para el usuario: zamora.carlos.eduardo@gmail.com
+2025-06-06 16:11:12,425 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: http://localhost:8000, token: absent, coroutine_factory: set
+2025-06-06 16:11:14,950 - src.ultibot_ui.dialogs.login_dialog - INFO - [MainThread] - login_dialog.py:109 - Iniciando intento de login para el usuario: zamora.carlos.eduardo@gmail.com
+2025-06-06 16:11:14,950 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: http://localhost:8000, token: absent, coroutine_factory: set
+2025-06-06 16:15:43,018 - asyncio - DEBUG - [MainThread] - proactor_events.py:631 - Using proactor: _IocpProactor
+2025-06-06 16:15:43,021 - qasync._windows._EventPoller - DEBUG - [MainThread] - _windows.py:213 - Starting (proactor: <_IocpProactor overlapped#=0 result#=0>)...
+2025-06-06 16:15:43,021 - qasync._windows._EventWorker - DEBUG - [Dummy-1] - _windows.py:192 - Thread started
+2025-06-06 16:15:43,022 - __main__ - INFO - [MainThread] - main.py:516 - QApplication instance confirmed.
+2025-06-06 16:15:43,026 - qdarkstyle - DEBUG - [MainThread] - __init__.py:259 - Reading QSS file in: :qdarkstyle\dark\darkstyle.qss
+2025-06-06 16:15:43,026 - qdarkstyle - INFO - [MainThread] - __init__.py:269 - QSS file successfully loaded.
+2025-06-06 16:15:43,026 - qdarkstyle - DEBUG - [MainThread] - __init__.py:276 - Checking patches for being applied.
+2025-06-06 16:15:43,053 - qdarkstyle - INFO - [MainThread] - __init__.py:172 - Found version patches to be applied.
+2025-06-06 16:15:43,053 - qdarkstyle - INFO - [MainThread] - __init__.py:192 - Found application patches to be applied.
+2025-06-06 16:15:43,053 - __main__ - INFO - [MainThread] - main.py:501 - Applied dark theme to the application.
+2025-06-06 16:15:43,053 - __main__ - INFO - [MainThread] - main.py:599 - No pre-existing auth token found. Showing login dialog.
+2025-06-06 16:15:46,224 - src.ultibot_ui.dialogs.login_dialog - INFO - [MainThread] - login_dialog.py:110 - Iniciando intento de login para el usuario: zamora.carlos.eduardo@gmail.com
+2025-06-06 16:15:46,224 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: http://localhost:8000, token: absent, coroutine_factory: set
+2025-06-06 16:15:46,225 - asyncio - DEBUG - [Dummy-2] - selector_events.py:64 - Using selector: SelectSelector
+2025-06-06 16:15:46,226 - httpx - DEBUG - [Dummy-2] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-06 16:15:46,228 - httpx - DEBUG - [Dummy-2] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-06 16:15:46,408 - src.ultibot_ui.services.api_client - INFO - [Dummy-2] - api_client.py:771 - Intentando login para el usuario: zamora.carlos.eduardo@gmail.com
+2025-06-06 16:15:46,408 - src.ultibot_ui.services.api_client - DEBUG - [Dummy-2] - api_client.py:79 - APIClient: _make_request_invoked for POST /api/v1/auth/login
+2025-06-06 16:15:46,412 - httpcore.connection - DEBUG - [Dummy-2] - _trace.py:87 - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-06 16:15:46,671 - httpcore.connection - DEBUG - [Dummy-2] - _trace.py:87 - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000002AB9C7D5E80>
+2025-06-06 16:15:46,671 - httpcore.http11 - DEBUG - [Dummy-2] - _trace.py:87 - send_request_headers.started request=<Request [b'POST']>
+2025-06-06 16:15:46,672 - httpcore.http11 - DEBUG - [Dummy-2] - _trace.py:87 - send_request_headers.complete
+2025-06-06 16:15:46,672 - httpcore.http11 - DEBUG - [Dummy-2] - _trace.py:87 - send_request_body.started request=<Request [b'POST']>
+2025-06-06 16:15:46,672 - httpcore.http11 - DEBUG - [Dummy-2] - _trace.py:87 - send_request_body.complete
+2025-06-06 16:15:46,672 - httpcore.http11 - DEBUG - [Dummy-2] - _trace.py:87 - receive_response_headers.started request=<Request [b'POST']>
+2025-06-06 16:15:47,043 - httpcore.http11 - DEBUG - [Dummy-2] - _trace.py:87 - receive_response_headers.complete return_value=(b'HTTP/1.1', 401, b'Unauthorized', [(b'date', b'Fri, 06 Jun 2025 20:15:45 GMT'), (b'server', b'uvicorn'), (b'www-authenticate', b'Bearer'), (b'content-length', b'40'), (b'content-type', b'application/json')])
+2025-06-06 16:15:47,043 - httpx - INFO - [Dummy-2] - _client.py:1786 - HTTP Request: POST http://localhost:8000/api/v1/auth/login "HTTP/1.1 401 Unauthorized"
+2025-06-06 16:15:47,043 - httpcore.http11 - DEBUG - [Dummy-2] - _trace.py:87 - receive_response_body.started request=<Request [b'POST']>
+2025-06-06 16:15:47,043 - httpcore.http11 - DEBUG - [Dummy-2] - _trace.py:87 - receive_response_body.complete
+2025-06-06 16:15:47,044 - httpcore.http11 - DEBUG - [Dummy-2] - _trace.py:87 - response_closed.started
+2025-06-06 16:15:47,044 - httpcore.http11 - DEBUG - [Dummy-2] - _trace.py:87 - response_closed.complete
+2025-06-06 16:15:47,044 - src.ultibot_ui.services.api_client - ERROR - [Dummy-2] - api_client.py:98 - HTTP error 401 for POST http://localhost:8000/api/v1/auth/login: {"detail":"Incorrect email or password"}
+2025-06-06 16:15:47,044 - src.ultibot_ui.services.api_client - ERROR - [Dummy-2] - api_client.py:799 - APIError durante el login para zamora.carlos.eduardo@gmail.com: API request failed with status 401: {"detail":"Incorrect email or password"}
+2025-06-06 16:15:47,044 - src.ultibot_ui.workers - ERROR - [Dummy-2] - workers.py:52 - ApiWorker: APIError: APIError(status_code=401, message='API request failed with status 401: {"detail":"Incorrect email or password"}', response_json={'detail': 'Incorrect email or password'})
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 91, in _make_request
+    response.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'http://localhost:8000/api/v1/auth/login'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\workers.py", line 49, in run
+    result = loop.run_until_complete(coroutine)
+  File "C:\Users\zamor\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 775, in login
+    response_data = await self._make_request(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+    )
+    ^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 104, in _make_request
+    raise APIError(
+    ...<3 lines>...
+    )
+src.ultibot_ui.services.api_client.APIError: APIError(status_code=401, message='API request failed with status 401: {"detail":"Incorrect email or password"}', response_json={'detail': 'Incorrect email or password'})
+2025-06-06 16:15:47,070 - src.ultibot_ui.services.api_client - INFO - [Dummy-2] - api_client.py:58 - Cerrando httpx.AsyncClient...
+2025-06-06 16:15:47,070 - src.ultibot_ui.dialogs.login_dialog - WARNING - [MainThread] - login_dialog.py:144 - LoginDialog: Señal de login fallido recibida: Error de API (401): API request failed with status 401: {"detail":"Incorrect email or password"}
+2025-06-06 16:15:47,070 - httpcore.connection - DEBUG - [Dummy-2] - _trace.py:87 - close.started
+2025-06-06 16:15:47,070 - httpcore.connection - DEBUG - [Dummy-2] - _trace.py:87 - close.complete
+2025-06-06 16:15:47,071 - src.ultibot_ui.services.api_client - INFO - [Dummy-2] - api_client.py:60 - httpx.AsyncClient cerrado.
+2025-06-06 16:15:47,112 - src.ultibot_ui.dialogs.login_dialog - DEBUG - [MainThread] - login_dialog.py:154 - Cleaning up thread and worker references.
+2025-06-06 16:15:51,225 - src.ultibot_ui.dialogs.login_dialog - INFO - [MainThread] - login_dialog.py:160 - Diálogo de login cancelado por el usuario.
+2025-06-06 16:15:51,245 - __main__ - WARNING - [MainThread] - main.py:634 - Login was cancelled or failed. Exiting application.

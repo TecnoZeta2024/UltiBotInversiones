@@ -26,12 +26,13 @@ class UltiBotAPIClient:
     Cliente para interactuar con la API REST del backend de UltiBotInversiones.
     """
     
-    def __init__(self, base_url: str = "http://localhost:8000"):
+    def __init__(self, base_url: str = "http://localhost:8000", token: Optional[str] = None):
         """
         Inicializa el cliente API.
         
         Args:
             base_url: URL base del backend API
+            token: Token JWT de autenticación opcional
         """
         # Detectar si estamos en Docker y ajustar la base_url si es necesario
         import os
@@ -40,7 +41,13 @@ class UltiBotAPIClient:
         else:
             self.base_url = base_url
         self.timeout = 30.0  # Timeout por defecto
-        self.client = httpx.AsyncClient(base_url=self.base_url, timeout=self.timeout)
+        self.token = token
+        
+        headers = {}
+        if self.token:
+            headers["Authorization"] = f"Bearer {self.token}"
+            
+        self.client = httpx.AsyncClient(base_url=self.base_url, timeout=self.timeout, headers=headers)
 
     async def aclose(self) -> None:
         """
@@ -72,8 +79,15 @@ class UltiBotAPIClient:
         logger.debug(f"APIClient: _make_request_invoked for {method} {endpoint}")
         url = f"{self.base_url}{endpoint}" # La URL completa se construye aquí
 
+        # Prepara los encabezados para la solicitud.
+        # Si ya hay encabezados en kwargs, los actualizamos.
+        # Si no, creamos un nuevo diccionario de encabezados.
+        request_headers = kwargs.pop("headers", {}) 
+        if self.token:
+            request_headers["Authorization"] = f"Bearer {self.token}"
+
         try:
-            response = await self.client.request(method, endpoint, **kwargs)
+            response = await self.client.request(method, endpoint, headers=request_headers, **kwargs)
             response.raise_for_status()
 
             if response.status_code == 204:
@@ -739,3 +753,52 @@ class UltiBotAPIClient:
             logger.error(f"Error inesperado en get_gemini_opportunities: {str(e)}", exc_info=True)
             # Envolver en APIError para consistencia si no es ya una APIError
             raise APIError(message=f"Error inesperado obteniendo oportunidades Gemini: {str(e)}")
+
+    async def login(self, email: str, password: str) -> str:
+        """
+        Autentica al usuario y obtiene un token de acceso.
+
+        Args:
+            email: Email del usuario.
+            password: Contraseña del usuario.
+
+        Returns:
+            El token de acceso JWT si el login es exitoso.
+
+        Raises:
+            APIError: Si el login falla.
+        """
+        logger.info(f"Intentando login para el usuario: {email}")
+        try:
+            # El endpoint de login espera los datos como 'form data' (application/x-www-form-urlencoded)
+            # y no como JSON. httpx maneja esto automáticamente si se pasa 'data' en lugar de 'json'.
+            response_data = await self._make_request(
+                "POST",
+                "/api/v1/auth/login",
+                data={"username": email, "password": password}, # FastAPI espera 'username' para el email en OAuth2PasswordRequestForm
+                headers={"Content-Type": "application/x-www-form-urlencoded"} # Es buena práctica especificarlo
+            )
+            # El token se devuelve en la clave 'access_token'
+            if "access_token" in response_data:
+                access_token = response_data["access_token"]
+                # Actualizar el token del cliente para futuras solicitudes
+                self.token = access_token
+                # Recrear el cliente httpx con el nuevo token en los encabezados por defecto
+                # Esto es importante si el mismo cliente se reutiliza después del login.
+                # Sin embargo, en el flujo típico, se creará un nuevo ApiWorker/ApiClient
+                # con el token después del login. Por ahora, solo actualizamos self.token.
+                # Si se decide reutilizar el mismo AsyncClient, se necesitaría algo como:
+                # await self.aclose() # Cerrar el cliente actual
+                # self.client = httpx.AsyncClient(base_url=self.base_url, timeout=self.timeout, headers={"Authorization": f"Bearer {self.token}"})
+                logger.info(f"Login exitoso para {email}. Token obtenido.")
+                return access_token
+            else:
+                logger.error(f"Login fallido para {email}: 'access_token' no encontrado en la respuesta.")
+                raise APIError(message="Login fallido: 'access_token' no encontrado en la respuesta.", response_json=response_data)
+        except APIError as e:
+            logger.error(f"APIError durante el login para {email}: {e.message}")
+            # Re-lanzar la excepción para que sea manejada por el llamador
+            raise
+        except Exception as e:
+            logger.error(f"Error inesperado durante el login para {email}: {str(e)}", exc_info=True)
+            raise APIError(message=f"Error inesperado durante el login: {str(e)}")

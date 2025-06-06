@@ -15,6 +15,7 @@ from urllib.parse import urlparse, unquote
 from typing import Optional, List, Dict, Any, TYPE_CHECKING
 from uuid import UUID
 from src.shared.data_types import APICredential, ServiceName, Notification, Opportunity, OpportunityStatus, Trade, TradeOrderDetails # Importar Trade y TradeOrderDetails
+from src.ultibot_backend.security import schemas as security_schemas # Añadir import para esquemas de seguridad
 from datetime import datetime, timezone
 from psycopg.sql import SQL, Identifier, Literal, Composed, Composable # Importar SQL y otros componentes necesarios
 
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING: # Bloque para type hints que evitan importaciones circulares en runtime
     pass
+    # from src.ultibot_backend.security.schemas import UserCreate, UserInDB # Esto podría causar problemas si se usa directamente aquí
     
 # Definir type hints para uso en el módulo
 OpportunityTypeHint = Opportunity
@@ -161,20 +163,20 @@ class SupabasePersistenceService:
             logger.error(f"Error al obtener credenciales por servicio para usuario {user_id} y servicio {service_name.value} (psycopg_pool): {e}")
             raise
 
-    async def get_credential_by_id(self, credential_id: UUID) -> Optional[APICredential]:
+    async def get_credential_by_id(self, credential_id: UUID, user_id: UUID) -> Optional[APICredential]:
         if not self.pool: await self.connect()
         assert self.pool is not None, "Pool debe estar inicializado."
-        query = SQL("SELECT * FROM api_credentials WHERE id = %s;")
+        query = SQL("SELECT * FROM api_credentials WHERE id = %s AND user_id = %s;")
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(query, (credential_id,))
+                    await cur.execute(query, (credential_id, user_id))
                     record = await cur.fetchone()
                     if record:
                         return APICredential(**record)
             return None
         except Exception as e:
-            logger.error(f"Error al obtener credencial por ID (psycopg_pool): {e}")
+            logger.error(f"Error al obtener credencial por ID {credential_id} para usuario {user_id} (psycopg_pool): {e}")
             raise
 
     async def get_credential_by_service_label(self, user_id: UUID, service_name: ServiceName, credential_label: str) -> Optional[APICredential]:
@@ -196,38 +198,38 @@ class SupabasePersistenceService:
             logger.error(f"Error al obtener credencial por servicio y etiqueta (psycopg_pool): {e}")
             raise
 
-    async def update_credential_status(self, credential_id: UUID, new_status: str, last_verified_at: Optional[datetime] = None) -> Optional[APICredential]:
+    async def update_credential_status(self, credential_id: UUID, user_id: UUID, new_status: str, last_verified_at: Optional[datetime] = None) -> Optional[APICredential]:
         if not self.pool: await self.connect()
         assert self.pool is not None, "Pool debe estar inicializado."
         query = SQL("""
         UPDATE api_credentials 
         SET status = %s, last_verified_at = %s, updated_at = timezone('utc'::text, now())
-        WHERE id = %s
+        WHERE id = %s AND user_id = %s
         RETURNING *;
         """)
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(query, (new_status, last_verified_at, credential_id))
+                    await cur.execute(query, (new_status, last_verified_at, credential_id, user_id))
                     record = await cur.fetchone()
                     if record:
                         return APICredential(**record)
             return None
         except Exception as e:
-            logger.error(f"Error al actualizar estado de credencial (psycopg_pool): {e}")
+            logger.error(f"Error al actualizar estado de credencial {credential_id} para usuario {user_id} (psycopg_pool): {e}")
             raise
 
-    async def delete_credential(self, credential_id: UUID) -> bool:
+    async def delete_credential(self, credential_id: UUID, user_id: UUID) -> bool:
         if not self.pool: await self.connect()
         assert self.pool is not None, "Pool debe estar inicializado."
-        query = SQL("DELETE FROM api_credentials WHERE id = %s;")
+        query = SQL("DELETE FROM api_credentials WHERE id = %s AND user_id = %s;")
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(query, (credential_id,))
+                    await cur.execute(query, (credential_id, user_id))
                     return cur.rowcount > 0
         except Exception as e:
-            logger.error(f"Error al eliminar credencial (psycopg_pool): {e}")
+            logger.error(f"Error al eliminar credencial {credential_id} para usuario {user_id} (psycopg_pool): {e}")
             raise
 
     async def get_user_configuration(self, user_id: UUID) -> Optional[Dict[str, Any]]:
@@ -325,25 +327,25 @@ class SupabasePersistenceService:
             logger.error(f"Error al guardar/actualizar configuración de usuario para {user_id} (psycopg_pool): {e}", exc_info=True)
             raise
 
-    async def update_credential_permissions(self, credential_id: UUID, permissions: List[str], permissions_checked_at: datetime) -> Optional[APICredential]:
+    async def update_credential_permissions(self, credential_id: UUID, user_id: UUID, permissions: List[str], permissions_checked_at: datetime) -> Optional[APICredential]:
         if not self.pool: await self.connect()
         assert self.pool is not None, "Pool debe estar inicializado."
         query = SQL("""
         UPDATE api_credentials 
         SET permissions = %s, permissions_checked_at = %s, updated_at = timezone('utc'::text, now())
-        WHERE id = %s
+        WHERE id = %s AND user_id = %s
         RETURNING *;
         """)
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(query, (permissions, permissions_checked_at, credential_id))
+                    await cur.execute(query, (permissions, permissions_checked_at, credential_id, user_id))
                     record = await cur.fetchone()
                     if record:
                         return APICredential(**record)
             return None
         except Exception as e:
-            logger.error(f"Error al actualizar permisos de credencial (psycopg_pool): {e}")
+            logger.error(f"Error al actualizar permisos de credencial {credential_id} para usuario {user_id} (psycopg_pool): {e}")
             raise
 
     async def save_notification(self, notification: Notification) -> Notification:
@@ -594,19 +596,19 @@ class SupabasePersistenceService:
             logger.error(f"Error al guardar/actualizar oportunidad (psycopg_pool): {e}", exc_info=True)
             raise
 
-    async def update_opportunity_status(self, opportunity_id: UUID, new_status: OpportunityStatusTypeHint, status_reason: Optional[str] = None) -> Optional[OpportunityTypeHint]:
+    async def update_opportunity_status(self, opportunity_id: UUID, user_id: UUID, new_status: OpportunityStatusTypeHint, status_reason: Optional[str] = None) -> Optional[OpportunityTypeHint]:
         if not self.pool: await self.connect()
         assert self.pool is not None, "Pool debe estar inicializado."
         query_str: str = """
         UPDATE opportunities
         SET status = %s, status_reason = %s, updated_at = timezone('utc'::text, now())
-        WHERE id = %s
+        WHERE id = %s AND user_id = %s
         RETURNING *;
         """
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(SQL(query_str), (new_status.value, status_reason, opportunity_id))
+                    await cur.execute(SQL(query_str), (new_status.value, status_reason, opportunity_id, user_id))
                     record = await cur.fetchone()
                     if record:
                         return Opportunity(**record)
@@ -615,19 +617,19 @@ class SupabasePersistenceService:
             logger.error(f"Error al actualizar estado de oportunidad {opportunity_id} (psycopg_pool): {e}", exc_info=True)
             raise
 
-    async def get_open_paper_trades(self) -> List['Trade']:
+    async def get_open_paper_trades(self, user_id: UUID) -> List['Trade']:
         if not self.pool: await self.connect()
         assert self.pool is not None, "Pool debe estar inicializado."
         from src.shared.data_types import Trade 
 
         query = SQL("""
             SELECT * FROM trades
-            WHERE mode = 'paper' AND position_status = 'open';
+            WHERE user_id = %s AND mode = 'paper' AND position_status = 'open';
         """)
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(query)
+                    await cur.execute(query, (user_id,))
                     records = await cur.fetchall()
                 
                 trades = []
@@ -673,22 +675,22 @@ class SupabasePersistenceService:
                     trades.append(Trade(**record_copy))
                 return trades
         except Exception as e:
-            logger.error(f"Error al obtener trades abiertos en paper trading (psycopg_pool): {e}", exc_info=True)
+            logger.error(f"Error al obtener trades abiertos en paper trading para usuario {user_id} (psycopg_pool): {e}", exc_info=True)
             raise
 
-    async def get_open_real_trades(self) -> List['Trade']:
+    async def get_open_real_trades(self, user_id: UUID) -> List['Trade']:
         if not self.pool: await self.connect()
         assert self.pool is not None, "Pool debe estar inicializado."
         from src.shared.data_types import Trade 
 
         query = SQL("""
             SELECT * FROM trades
-            WHERE mode = 'real' AND position_status = 'open';
+            WHERE user_id = %s AND mode = 'real' AND position_status = 'open';
         """)
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(query)
+                    await cur.execute(query, (user_id,))
                     records = await cur.fetchall()
                 
                 trades = []
@@ -734,7 +736,7 @@ class SupabasePersistenceService:
                     trades.append(Trade(**record_copy))
                 return trades
         except Exception as e:
-            logger.error(f"Error al obtener trades abiertos en real trading (psycopg_pool): {e}", exc_info=True)
+            logger.error(f"Error al obtener trades abiertos en real trading para usuario {user_id} (psycopg_pool): {e}", exc_info=True)
             raise
 
     async def upsert_trade(self, user_id: UUID, trade_data: Dict[str, Any]):
@@ -812,7 +814,8 @@ class SupabasePersistenceService:
 
     async def update_opportunity_analysis(
         self, 
-        opportunity_id: UUID, 
+        opportunity_id: UUID,
+        user_id: UUID,
         status: OpportunityStatusTypeHint, 
         ai_analysis: Optional[str] = None, 
         confidence_score: Optional[float] = None,
@@ -830,14 +833,14 @@ class SupabasePersistenceService:
             suggested_action = %s,
             status_reason = %s,
             updated_at = timezone('utc'::text, now())
-        WHERE id = %s
+        WHERE id = %s AND user_id = %s
         RETURNING *;
         """
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
                     await cur.execute(SQL(query_str), (
-                        status.value, ai_analysis, confidence_score, suggested_action, status_reason, opportunity_id
+                        status.value, ai_analysis, confidence_score, suggested_action, status_reason, opportunity_id, user_id
                     ))
                     record = await cur.fetchone()
                     if record:
@@ -1052,20 +1055,23 @@ class SupabasePersistenceService:
             logger.error(f"Error al obtener todos los trades para el usuario {user_id} (psycopg_pool): {e}", exc_info=True)
             raise
 
-    async def get_opportunity_by_id(self, opportunity_id: UUID) -> Optional[OpportunityTypeHint]:
+    async def get_opportunity_by_id(self, opportunity_id: UUID, user_id: Optional[UUID] = None) -> Optional[OpportunityTypeHint]: # Añadido user_id opcional
         if not self.pool: await self.connect()
         assert self.pool is not None, "Pool debe estar inicializado."
 
-        query = SQL("""
-            SELECT * FROM opportunities
-            WHERE id = {};
-        """).format(
-            Literal(opportunity_id)
-        )
+        params = [opportunity_id]
+        sql_query = "SELECT * FROM opportunities WHERE id = %s"
+        if user_id:
+            sql_query += " AND user_id = %s"
+            params.append(user_id)
+        sql_query += ";"
+        
+        query = SQL(sql_query)
+
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(query)
+                    await cur.execute(query, tuple(params))
                     record = await cur.fetchone()
                 
                 if record:
@@ -1158,4 +1164,99 @@ class SupabasePersistenceService:
                 return opportunities
         except Exception as e:
             logger.error(f"Error al obtener oportunidades por estado para user {user_id}, status={status.value} (psycopg_pool): {e}", exc_info=True)
+            raise
+
+    async def get_user_by_email(self, email: str) -> Optional[security_schemas.UserInDB]:
+        if not self.pool: await self.connect()
+        assert self.pool is not None, "Pool debe estar inicializado."
+        query = SQL("SELECT * FROM app_users WHERE email = %s;")
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, (email,))
+                    record = await cur.fetchone()
+                    if record:
+                        # Convertir id de str (UUID de la DB) a UUID object si es necesario
+                        if isinstance(record.get("id"), str):
+                            record["id"] = UUID(record["id"])
+                        return security_schemas.UserInDB(**record)
+            return None
+        except Exception as e:
+            logger.error(f"Error al obtener usuario por email {email} (psycopg_pool): {e}", exc_info=True)
+            raise
+
+    async def get_user_by_id(self, user_id: UUID) -> Optional[security_schemas.UserInDB]:
+        if not self.pool: await self.connect()
+        assert self.pool is not None, "Pool debe estar inicializado."
+        query = SQL("SELECT * FROM app_users WHERE id = %s;")
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, (user_id,))
+                    record = await cur.fetchone()
+                    if record:
+                        if isinstance(record.get("id"), str):
+                            record["id"] = UUID(record["id"])
+                        return security_schemas.UserInDB(**record)
+            return None
+        except Exception as e:
+            logger.error(f"Error al obtener usuario por ID {user_id} (psycopg_pool): {e}", exc_info=True)
+            raise
+
+    async def create_user(self, user_in: security_schemas.UserCreate, hashed_password: str) -> security_schemas.UserInDB:
+        if not self.pool: await self.connect()
+        assert self.pool is not None, "Pool debe estar inicializado."
+        
+        # El ID será generado por la DB (DEFAULT gen_random_uuid())
+        query = SQL("""
+        INSERT INTO app_users (email, hashed_password, is_active, is_superuser)
+        VALUES (%s, %s, %s, %s)
+        RETURNING *;
+        """)
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(
+                        query,
+                        (
+                            user_in.email,
+                            hashed_password,
+                            user_in.is_active if hasattr(user_in, 'is_active') else True, # Default a True si no está en UserCreate
+                            user_in.is_superuser if hasattr(user_in, 'is_superuser') else False # Default a False
+                        )
+                    )
+                    record = await cur.fetchone()
+                    if record:
+                        if isinstance(record.get("id"), str):
+                            record["id"] = UUID(record["id"])
+                        # Crear UserInDB a partir del registro.
+                        # UserCreate no tiene 'id' ni 'hashed_password', estos vienen del 'record'.
+                        # UserInDB espera todos los campos de la tabla.
+                        user_data_for_in_db = {
+                            "id": record["id"],
+                            "email": record["email"],
+                            "hashed_password": record["hashed_password"],
+                            "is_active": record["is_active"],
+                            "is_superuser": record["is_superuser"],
+                            # Añadir otros campos de UserInDB si UserCreate los tuviera y fueran a la DB
+                            # Por ejemplo, si UserCreate tuviera 'full_name', y UserInDB también.
+                        }
+                        # Si UserCreate tiene más campos que se mapean directamente a UserInDB (y a la tabla)
+                        # podríamos hacer user_in.model_dump() y sobreescribir/añadir id y hashed_password.
+                        # Pero UserCreate es simple (email, password, opcionalmente is_active, is_superuser).
+                        
+                        # Aseguramos que todos los campos necesarios para UserInDB están presentes.
+                        # Los campos como created_at, updated_at son manejados por la DB.
+                        # UserInDB hereda de User, que tiene email, is_active, is_superuser, id.
+                        # UserInDB añade hashed_password.
+                        
+                        # El 'record' ya debería tener todos los campos de la tabla.
+                        return security_schemas.UserInDB(**record) # type: ignore
+            raise ValueError("No se pudo crear el usuario y obtener el registro de retorno (psycopg_pool).")
+        except psycopg.errors.UniqueViolation as e:
+            logger.warning(f"Intento de crear usuario con email duplicado {user_in.email}: {e}")
+            # No relanzar aquí, dejar que el endpoint de API maneje el HTTPException
+            raise # Relanzar para que el endpoint lo maneje como HTTP 400
+        except Exception as e:
+            logger.error(f"Error al crear usuario {user_in.email} (psycopg_pool): {e}", exc_info=True)
             raise
