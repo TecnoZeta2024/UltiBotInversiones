@@ -1,0 +1,24 @@
+INFO:     Will watch for changes in these directories: ['C:\\Users\\zamor\\UltiBotInversiones']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [27852] using WatchFiles
+C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\pydantic\_internal\_config.py:373: UserWarning: Valid config keys have changed in V2:
+* 'orm_mode' has been renamed to 'from_attributes'
+  warnings.warn(message, UserWarning)
+2025-06-06 20:56:32,326 - src.ultibot_backend.main - INFO - Logging configurado con RotatingFileHandler para escribir en logs/backend.log (max ~100KB).
+INFO:     Started server process [4060]
+INFO:     Waiting for application startup.
+TRACE:    ASGI [1] Started scope={'type': 'lifespan', 'asgi': {'version': '3.0', 'spec_version': '2.0'}, 'state': {}}
+TRACE:    ASGI [1] Receive {'type': 'lifespan.startup'}
+2025-06-06 20:56:32,347 - src.ultibot_backend.main - INFO - Iniciando UltiBot Backend...
+2025-06-06 20:56:32,347 - src.ultibot_backend.main - INFO - Inicializando servicios...
+2025-06-06 20:56:32,347 - src.ultibot_backend.adapters.persistence_service - INFO - Pool de conexiones a Supabase (psycopg_pool) establecido exitosamente. Min: 2, Max: 10
+2025-06-06 20:56:32,531 - src.ultibot_backend.services.credential_service - INFO - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
+2025-06-06 20:56:32,531 - src.ultibot_backend.services.credential_service - INFO - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-06 20:56:32,707 - src.ultibot_backend.services.order_execution_service - INFO - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-06 20:56:32,707 - src.ultibot_backend.services.unified_order_execution_service - INFO - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-06 20:56:32,707 - src.ultibot_backend.services.ai_orchestrator_service - INFO - AIOrchestrator initialized (using MOCK implementation for Gemini).
+2025-06-06 20:56:32,708 - src.ultibot_backend.main - INFO - Todos los servicios principales inicializados y almacenados en app.state.
+2025-06-06 20:56:32,708 - src.ultibot_backend.main - INFO - Aplicación iniciada correctamente.
+TRACE:    ASGI [1] Send {'type': 'lifespan.startup.complete'}
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'run.py'. Reloading...

@@ -10,17 +10,17 @@ from src.ultibot_backend.services.credential_service import CredentialService
 from src.ultibot_backend.core.exceptions import CredentialError, NotificationError, TelegramNotificationError, ExternalAPIError
 
 if TYPE_CHECKING:
-    from src.ultibot_backend.services.configuration_service import ConfigurationService
+    from src.ultibot_backend.services.config_service import ConfigurationService
     from src.ultibot_backend.core.domain_models.user_configuration_models import UserConfiguration
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class NotificationService:
-    def __init__(self, credential_service: CredentialService, persistence_service: SupabasePersistenceService, config_service: "ConfigurationService"):
+    def __init__(self, credential_service: CredentialService, persistence_service: SupabasePersistenceService, configuration_service: "ConfigurationService"):
         self.credential_service = credential_service
         self.persistence_service = persistence_service
-        self.config_service = config_service
+        self.configuration_service = configuration_service
         self._telegram_adapter: Optional[TelegramAdapter] = None
 
     async def _get_telegram_adapter(self, user_id: UUID) -> Optional[TelegramAdapter]:
@@ -132,7 +132,7 @@ class NotificationService:
         opportunity_id: Optional[UUID] = None,
         dataPayload: Optional[Dict[str, Any]] = None
     ) -> bool:
-        user_config: "Optional[UserConfiguration]" = await self.config_service.get_user_configuration(user_id=str(user_id))
+        user_config: "Optional[UserConfiguration]" = await self.configuration_service.get_user_configuration(user_id=str(user_id))
         if not user_config:
             logger.error(f"No se pudo obtener la configuración para el usuario {user_id}. No se pueden enviar notificaciones.")
             return False

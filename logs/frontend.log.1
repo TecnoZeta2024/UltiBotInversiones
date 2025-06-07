@@ -1,1 +1,671 @@
-2025-06-06 14:11:55,035 - __main__ - INFO - [MainThread:8988] - main.py:791 - Iniciando limpieza de recursos de UltiBotApplication.
+2025-06-06 20:53:07,920 - httpcore.http11 - DEBUG - [Dummy-4] - _trace.py:87 - receive_response_body.started request=<Request [b'GET']>
+2025-06-06 20:53:07,925 - httpcore.http11 - DEBUG - [Dummy-4] - _trace.py:87 - receive_response_body.complete
+2025-06-06 20:53:07,925 - httpcore.http11 - DEBUG - [Dummy-4] - _trace.py:87 - response_closed.started
+2025-06-06 20:53:07,925 - httpcore.http11 - DEBUG - [Dummy-4] - _trace.py:87 - response_closed.complete
+2025-06-06 20:53:07,926 - src.ultibot_ui.widgets.paper_trading_report_widget - INFO - [MainThread] - paper_trading_report_widget.py:336 - Métricas de rendimiento cargadas exitosamente
+2025-06-06 20:53:10,908 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: <coroutine object UltiBotAPIClient.get_notification_history at 0x000001918CE63BC0>, token: absent, coroutine_factory: set
+2025-06-06 20:53:15,939 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:608 - DashboardView._check_pending_real_opportunities: INICIO (refactorizado)
+2025-06-06 20:53:15,939 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: http://localhost:8000, token: absent, coroutine_factory: set
+2025-06-06 20:53:15,939 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:615 - DashboardView._check_pending_real_opportunities: Llamada a api_client.get_real_trading_candidates programada.
+2025-06-06 20:53:15,939 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:620 - DashboardView._check_pending_real_opportunities: FIN (programación)
+2025-06-06 20:53:15,940 - asyncio - DEBUG - [Dummy-8] - selector_events.py:64 - Using selector: SelectSelector
+2025-06-06 20:53:15,941 - httpx - DEBUG - [Dummy-8] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-06 20:53:15,942 - httpx - DEBUG - [Dummy-8] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-06 20:53:16,119 - src.ultibot_ui.services.api_client - INFO - [Dummy-8] - api_client.py:313 - Obteniendo oportunidades de trading real pendientes de confirmación.
+2025-06-06 20:53:16,119 - src.ultibot_ui.services.api_client - DEBUG - [Dummy-8] - api_client.py:79 - APIClient: _make_request_invoked for GET /api/v1/opportunities/real-trading-candidates
+2025-06-06 20:53:16,120 - httpcore.connection - DEBUG - [Dummy-8] - _trace.py:87 - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-06 20:53:16,376 - httpcore.connection - DEBUG - [Dummy-8] - _trace.py:87 - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000019191D26E00>
+2025-06-06 20:53:16,376 - httpcore.http11 - DEBUG - [Dummy-8] - _trace.py:87 - send_request_headers.started request=<Request [b'GET']>
+2025-06-06 20:53:16,376 - httpcore.http11 - DEBUG - [Dummy-8] - _trace.py:87 - send_request_headers.complete
+2025-06-06 20:53:16,376 - httpcore.http11 - DEBUG - [Dummy-8] - _trace.py:87 - send_request_body.started request=<Request [b'GET']>
+2025-06-06 20:53:16,376 - httpcore.http11 - DEBUG - [Dummy-8] - _trace.py:87 - send_request_body.complete
+2025-06-06 20:53:16,376 - httpcore.http11 - DEBUG - [Dummy-8] - _trace.py:87 - receive_response_headers.started request=<Request [b'GET']>
+2025-06-06 20:53:19,839 - src.ultibot_ui.windows.dashboard_view - ERROR - [MainThread] - dashboard_view.py:170 - DashboardView: Error al cargar desempeño de estrategias: Error de API (404): API request failed with status 404: {"detail":"Not Found"}
+Exception: Error de API (404): API request failed with status 404: {"detail":"Not Found"}
+2025-06-06 20:53:19,840 - src.ultibot_ui.windows.dashboard_view - ERROR - [MainThread] - dashboard_view.py:682 - DashboardView: Error de API general: Error al cargar desempeño de estrategias: Error de API (404): API request failed with status 404: {"detail":"Not Found"}
+2025-06-06 20:53:20,352 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:183 - DashboardView: Iniciando market_data_widget.load_initial_configuration (no-bloqueante)...
+2025-06-06 20:53:20,352 - src.ultibot_ui.widgets.market_data_widget - INFO - [MainThread] - market_data_widget.py:179 - Cargando configuración inicial para MarketDataWidget...
+2025-06-06 20:53:20,352 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: http://localhost:8000, token: absent, coroutine_factory: set
+2025-06-06 20:53:20,352 - src.ultibot_ui.widgets.market_data_widget - INFO - [MainThread] - market_data_widget.py:186 - load_initial_configuration: Llamada a get_user_configuration programada.
+2025-06-06 20:53:20,352 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:186 - DashboardView: market_data_widget.load_initial_configuration INICIADO.
+2025-06-06 20:53:20,352 - src.ultibot_ui.windows.dashboard_view - WARNING - [MainThread] - dashboard_view.py:198 - DashboardView: Carga paralela de componentes asíncronos principales completada, PERO con errores en uno o más componentes.
+2025-06-06 20:53:20,352 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:205 - DashboardView: Emitiendo initialization_complete. Estado de carga exitosa: False
+2025-06-06 20:53:20,352 - src.ultibot_ui.windows.main_window - INFO - [MainThread] - main_window.py:512 - MainWindow: _on_dashboard_initialized INVOCADO.
+2025-06-06 20:53:20,352 - src.ultibot_ui.windows.main_window - INFO - [MainThread] - main_window.py:513 - MainWindow: DashboardView inicializado. Cargando estrategias...
+2025-06-06 20:53:20,352 - asyncio - DEBUG - [Dummy-9] - selector_events.py:64 - Using selector: SelectSelector
+2025-06-06 20:53:20,353 - httpx - DEBUG - [MainThread] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-06 20:53:20,353 - httpx - DEBUG - [MainThread] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-06 20:53:20,353 - httpx - DEBUG - [Dummy-9] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-06 20:53:20,354 - httpx - DEBUG - [Dummy-9] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-06 20:53:20,605 - src.ultibot_ui.services.api_client - INFO - [Dummy-9] - api_client.py:266 - Obteniendo configuración de usuario.
+2025-06-06 20:53:20,605 - src.ultibot_ui.services.api_client - DEBUG - [Dummy-9] - api_client.py:79 - APIClient: _make_request_invoked for GET /api/v1/config
+2025-06-06 20:53:20,605 - httpcore.connection - DEBUG - [Dummy-9] - _trace.py:87 - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-06 20:53:20,608 - src.ultibot_ui.services.api_client - INFO - [MainThread] - api_client.py:359 - Obteniendo todas las configuraciones de estrategias.
+2025-06-06 20:53:20,608 - src.ultibot_ui.services.api_client - DEBUG - [MainThread] - api_client.py:79 - APIClient: _make_request_invoked for GET /api/v1/strategies
+2025-06-06 20:53:20,609 - httpcore.connection - DEBUG - [MainThread] - _trace.py:87 - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-06 20:53:20,609 - qasync.QThreadExecutor - DEBUG - [MainThread] - __init__.py:201 - Submitting callback <function getaddrinfo at 0x00000191DB604E00> with args (b'localhost', 8000, <AddressFamily.AF_UNSPEC: 0>, <SocketKind.SOCK_STREAM: 1>, 0, 0) and kwargs {} to thread worker queue
+2025-06-06 20:53:20,610 - qasync._QThreadWorker - DEBUG - [Dummy-10] - __init__.py:135 - #1 got callback <function getaddrinfo at 0x00000191DB604E00> with args (b'localhost', 8000, <AddressFamily.AF_UNSPEC: 0>, <SocketKind.SOCK_STREAM: 1>, 0, 0) and kwargs {} from queue
+2025-06-06 20:53:20,610 - qasync._QThreadWorker - DEBUG - [Dummy-10] - __init__.py:143 - Invoking callback
+2025-06-06 20:53:20,610 - qasync._QThreadWorker - DEBUG - [Dummy-10] - __init__.py:150 - Setting Future result: [(<AddressFamily.AF_INET6: 23>, <SocketKind.SOCK_STREAM: 1>, 0, '', ('::1', 8000, 0, 0)), (<AddressFamily.AF_INET: 2>, <SocketKind.SOCK_STREAM: 1>, 0, '', ('127.0.0.1', 8000))]
+2025-06-06 20:53:20,624 - src.ultibot_ui.widgets.portfolio_widget - INFO - [MainThread] - portfolio_widget.py:433 - Actualizando datos del portafolio para modo: paper
+2025-06-06 20:53:20,861 - httpcore.connection - DEBUG - [Dummy-9] - _trace.py:87 - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000019195751590>
+2025-06-06 20:53:20,861 - httpcore.http11 - DEBUG - [Dummy-9] - _trace.py:87 - send_request_headers.started request=<Request [b'GET']>
+2025-06-06 20:53:20,862 - httpcore.http11 - DEBUG - [Dummy-9] - _trace.py:87 - send_request_headers.complete
+2025-06-06 20:53:20,862 - httpcore.http11 - DEBUG - [Dummy-9] - _trace.py:87 - send_request_body.started request=<Request [b'GET']>
+2025-06-06 20:53:20,863 - httpcore.http11 - DEBUG - [Dummy-9] - _trace.py:87 - send_request_body.complete
+2025-06-06 20:53:20,863 - httpcore.http11 - DEBUG - [Dummy-9] - _trace.py:87 - receive_response_headers.started request=<Request [b'GET']>
+2025-06-06 20:53:20,863 - qasync._windows._EventWorker - DEBUG - [Dummy-1] - _windows.py:198 - Got events from poll: [(<_OverlappedFuture pending cb=[Task.task_wakeup()]>, <function IocpProactor.connect.<locals>.finish_connect at 0x0000019195739C60>, 0, 0, <_overlapped.Overlapped object at 0x00000191956D4930>)]
+2025-06-06 20:53:20,864 - qasync._QEventLoop - DEBUG - [MainThread] - _windows.py:42 - Invoking event callback <function IocpProactor.connect.<locals>.finish_connect at 0x0000019195739C60>
+2025-06-06 20:53:20,864 - httpcore.http11 - DEBUG - [Dummy-9] - _trace.py:87 - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Sat, 07 Jun 2025 00:53:20 GMT'), (b'server', b'uvicorn'), (b'content-length', b'1001'), (b'content-type', b'application/json')])
+2025-06-06 20:53:20,864 - httpx - INFO - [Dummy-9] - _client.py:1786 - HTTP Request: GET http://localhost:8000/api/v1/config "HTTP/1.1 200 OK"
+2025-06-06 20:53:20,865 - httpcore.http11 - DEBUG - [Dummy-9] - _trace.py:87 - receive_response_body.started request=<Request [b'GET']>
+2025-06-06 20:53:20,865 - httpcore.http11 - DEBUG - [Dummy-9] - _trace.py:87 - receive_response_body.complete
+2025-06-06 20:53:20,865 - httpcore.http11 - DEBUG - [Dummy-9] - _trace.py:87 - response_closed.started
+2025-06-06 20:53:20,865 - qasync._windows._EventWorker - DEBUG - [Dummy-1] - _windows.py:198 - Got events from poll: [(<_OverlappedFuture cancelled>, <function IocpProactor.connect.<locals>.finish_connect at 0x00000191957398A0>, 0, 0, <_overlapped.Overlapped object at 0x00000191956D4AB0>)]
+2025-06-06 20:53:20,866 - httpcore.http11 - DEBUG - [Dummy-9] - _trace.py:87 - response_closed.complete
+2025-06-06 20:53:20,866 - httpcore.connection - DEBUG - [MainThread] - _trace.py:87 - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001918D052A50>
+2025-06-06 20:53:20,866 - qasync._QEventLoop - DEBUG - [MainThread] - _windows.py:42 - Invoking event callback <function IocpProactor.connect.<locals>.finish_connect at 0x00000191957398A0>
+2025-06-06 20:53:20,866 - src.ultibot_ui.services.api_client - INFO - [Dummy-9] - api_client.py:58 - Cerrando httpx.AsyncClient...
+2025-06-06 20:53:20,866 - qasync._QEventLoop - DEBUG - [MainThread] - _windows.py:45 - Event callback failed
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\qasync\_windows.py", line 43, in _process_events
+    value = callback(transferred, key, ov)
+  File "C:\Users\zamor\AppData\Local\Programs\Python\Python313\Lib\asyncio\windows_events.py", line 600, in finish_connect
+    ov.getresult()
+    ~~~~~~~~~~~~^^
+OSError: [WinError 995] La operación de E/S se anuló por una salida de subproceso o por una solicitud de aplicación
+2025-06-06 20:53:20,866 - httpcore.connection - DEBUG - [Dummy-9] - _trace.py:87 - close.started
+2025-06-06 20:53:20,867 - httpcore.http11 - DEBUG - [MainThread] - _trace.py:87 - send_request_headers.started request=<Request [b'GET']>
+2025-06-06 20:53:20,868 - httpcore.connection - DEBUG - [Dummy-9] - _trace.py:87 - close.complete
+2025-06-06 20:53:20,868 - src.ultibot_ui.services.api_client - INFO - [Dummy-9] - api_client.py:60 - httpx.AsyncClient cerrado.
+2025-06-06 20:53:20,868 - httpcore.http11 - DEBUG - [MainThread] - _trace.py:87 - send_request_headers.complete
+2025-06-06 20:53:20,868 - httpcore.http11 - DEBUG - [MainThread] - _trace.py:87 - send_request_body.started request=<Request [b'GET']>
+2025-06-06 20:53:20,868 - httpcore.http11 - DEBUG - [MainThread] - _trace.py:87 - send_request_body.complete
+2025-06-06 20:53:20,868 - httpcore.http11 - DEBUG - [MainThread] - _trace.py:87 - receive_response_headers.started request=<Request [b'GET']>
+2025-06-06 20:53:20,868 - src.ultibot_ui.widgets.market_data_widget - INFO - [MainThread] - market_data_widget.py:175 - Configuración cargada: Pares seleccionados: ['BTC/USDT', 'ETH/USDT'], Intervalo: 30000ms
+2025-06-06 20:53:20,868 - src.ultibot_ui.widgets.market_data_widget - INFO - [MainThread] - market_data_widget.py:236 - Actualizando datos de tickers para: ['BTC/USDT', 'ETH/USDT'] (refactorizado)
+2025-06-06 20:53:20,868 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: http://localhost:8000, token: absent, coroutine_factory: set
+2025-06-06 20:53:20,868 - src.ultibot_ui.widgets.market_data_widget - INFO - [MainThread] - market_data_widget.py:248 - update_tickers_data: Llamada a get_ticker_data programada.
+2025-06-06 20:53:20,869 - asyncio - DEBUG - [Dummy-11] - selector_events.py:64 - Using selector: SelectSelector
+2025-06-06 20:53:20,869 - httpx - DEBUG - [Dummy-11] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-06 20:53:20,870 - httpx - DEBUG - [Dummy-11] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-06 20:53:21,042 - src.ultibot_ui.widgets.paper_trading_report_widget - ERROR - [MainThread] - paper_trading_report_widget.py:483 - Error mostrado al usuario: Error cargando datos: APIError(status_code=404, message='API request failed with status 404: {"detail":"Not Found"}', response_json={'detail': 'Not Found'})
+2025-06-06 20:53:21,045 - src.ultibot_ui.services.api_client - INFO - [Dummy-11] - api_client.py:654 - Obteniendo datos de ticker para usuario 00000000-0000-0000-0000-000000000000 y símbolos: ['BTC/USDT', 'ETH/USDT']
+2025-06-06 20:53:21,045 - src.ultibot_ui.services.api_client - DEBUG - [Dummy-11] - api_client.py:79 - APIClient: _make_request_invoked for GET /api/v1/market/tickers
+2025-06-06 20:53:21,046 - httpcore.connection - DEBUG - [Dummy-11] - _trace.py:87 - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-06 20:53:21,300 - httpcore.connection - DEBUG - [Dummy-11] - _trace.py:87 - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001919574E450>
+2025-06-06 20:53:21,300 - httpcore.http11 - DEBUG - [Dummy-11] - _trace.py:87 - send_request_headers.started request=<Request [b'GET']>
+2025-06-06 20:53:21,300 - httpcore.http11 - DEBUG - [Dummy-11] - _trace.py:87 - send_request_headers.complete
+2025-06-06 20:53:21,300 - httpcore.http11 - DEBUG - [Dummy-11] - _trace.py:87 - send_request_body.started request=<Request [b'GET']>
+2025-06-06 20:53:21,300 - httpcore.http11 - DEBUG - [Dummy-11] - _trace.py:87 - send_request_body.complete
+2025-06-06 20:53:21,300 - httpcore.http11 - DEBUG - [Dummy-11] - _trace.py:87 - receive_response_headers.started request=<Request [b'GET']>
+2025-06-06 20:53:22,149 - qasync._windows._EventWorker - DEBUG - [Dummy-1] - _windows.py:198 - Got events from poll: [(<_OverlappedFuture pending cb=[_ProactorReadPipeTransport._loop_reading()]>, <function IocpProactor.finish_socket_func at 0x00000191DD506C00>, 124, 0, <_overlapped.Overlapped object at 0x0000019191CAB0F0>)]
+2025-06-06 20:53:22,149 - qasync._QEventLoop - DEBUG - [MainThread] - _windows.py:42 - Invoking event callback <function IocpProactor.finish_socket_func at 0x00000191DD506C00>
+2025-06-06 20:53:22,149 - httpcore.http11 - DEBUG - [MainThread] - _trace.py:87 - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Sat, 07 Jun 2025 00:53:20 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
+2025-06-06 20:53:22,150 - httpx - INFO - [MainThread] - _client.py:1786 - HTTP Request: GET http://localhost:8000/api/v1/strategies "HTTP/1.1 200 OK"
+2025-06-06 20:53:22,150 - httpcore.http11 - DEBUG - [MainThread] - _trace.py:87 - receive_response_body.started request=<Request [b'GET']>
+2025-06-06 20:53:22,150 - httpcore.http11 - DEBUG - [MainThread] - _trace.py:87 - receive_response_body.complete
+2025-06-06 20:53:22,150 - httpcore.http11 - DEBUG - [MainThread] - _trace.py:87 - response_closed.started
+2025-06-06 20:53:22,150 - httpcore.http11 - DEBUG - [MainThread] - _trace.py:87 - response_closed.complete
+2025-06-06 20:53:22,295 - qasync._windows._EventPoller - DEBUG - [MainThread] - _windows.py:218 - Stopping worker thread...
+2025-06-06 20:53:22,300 - qasync._windows._EventWorker - DEBUG - [Dummy-1] - _windows.py:201 - Exiting thread
+2025-06-06 20:53:22,301 - qasync._windows._EventPoller - DEBUG - [MainThread] - _windows.py:213 - Starting (proactor: <_IocpProactor overlapped#=1 result#=0>)...
+2025-06-06 20:53:22,302 - qasync._windows._EventWorker - DEBUG - [Dummy-12] - _windows.py:192 - Thread started
+2025-06-06 20:53:22,302 - __main__ - INFO - [MainThread] - main.py:572 - Cleaning up resources...
+2025-06-06 20:53:22,313 - httpcore.http11 - DEBUG - [Dummy-8] - _trace.py:87 - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Sat, 07 Jun 2025 00:53:15 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
+2025-06-06 20:53:22,313 - httpx - INFO - [Dummy-8] - _client.py:1786 - HTTP Request: GET http://localhost:8000/api/v1/opportunities/real-trading-candidates "HTTP/1.1 200 OK"
+2025-06-06 20:53:22,313 - httpcore.http11 - DEBUG - [Dummy-8] - _trace.py:87 - receive_response_body.started request=<Request [b'GET']>
+2025-06-06 20:53:22,313 - httpcore.http11 - DEBUG - [Dummy-8] - _trace.py:87 - receive_response_body.complete
+2025-06-06 20:53:22,313 - httpcore.http11 - DEBUG - [Dummy-8] - _trace.py:87 - response_closed.started
+2025-06-06 20:53:22,313 - httpcore.http11 - DEBUG - [Dummy-8] - _trace.py:87 - response_closed.complete
+2025-06-06 20:53:22,313 - src.ultibot_ui.services.api_client - INFO - [Dummy-8] - api_client.py:58 - Cerrando httpx.AsyncClient...
+2025-06-06 20:53:22,314 - httpcore.connection - DEBUG - [Dummy-8] - _trace.py:87 - close.started
+2025-06-06 20:53:22,314 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:589 - DashboardView._handle_real_opportunities_result: INICIO
+2025-06-06 20:53:22,314 - httpcore.connection - DEBUG - [Dummy-8] - _trace.py:87 - close.complete
+2025-06-06 20:53:22,314 - src.ultibot_ui.windows.dashboard_view - DEBUG - [MainThread] - dashboard_view.py:604 - No hay oportunidades de trading real pendientes de confirmación.
+2025-06-06 20:53:22,314 - src.ultibot_ui.services.api_client - INFO - [Dummy-8] - api_client.py:60 - httpx.AsyncClient cerrado.
+2025-06-06 20:53:22,315 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:605 - DashboardView._handle_real_opportunities_result: FIN
+2025-06-06 20:53:22,409 - __main__ - INFO - [MainThread] - main.py:581 - Cleanup complete.
+2025-06-06 20:53:22,409 - qasync._windows._EventPoller - DEBUG - [MainThread] - _windows.py:218 - Stopping worker thread...
+2025-06-06 20:53:22,425 - qasync._windows._EventWorker - DEBUG - [Dummy-12] - _windows.py:201 - Exiting thread
+2025-06-06 20:53:22,425 - qasync.QThreadExecutor - DEBUG - [MainThread] - __init__.py:219 - Shutting down
+2025-06-06 20:53:22,425 - qasync._QThreadWorker - DEBUG - [MainThread] - __init__.py:158 - Waiting for thread #1 to stop...
+2025-06-06 20:53:22,425 - qasync._QThreadWorker - DEBUG - [Dummy-13] - __init__.py:155 - Thread #8 stopped
+2025-06-06 20:53:22,426 - qasync._QThreadWorker - DEBUG - [Dummy-14] - __init__.py:155 - Thread #6 stopped
+2025-06-06 20:53:22,426 - qasync._QThreadWorker - DEBUG - [Dummy-15] - __init__.py:155 - Thread #4 stopped
+2025-06-06 20:53:22,426 - qasync._QThreadWorker - DEBUG - [Dummy-16] - __init__.py:155 - Thread #9 stopped
+2025-06-06 20:53:22,426 - qasync._QThreadWorker - DEBUG - [Dummy-17] - __init__.py:155 - Thread #3 stopped
+2025-06-06 20:53:22,426 - qasync._QThreadWorker - DEBUG - [Dummy-18] - __init__.py:155 - Thread #7 stopped
+2025-06-06 20:53:22,426 - qasync._QThreadWorker - DEBUG - [Dummy-19] - __init__.py:155 - Thread #5 stopped
+2025-06-06 20:53:22,426 - qasync._QThreadWorker - DEBUG - [Dummy-20] - __init__.py:155 - Thread #10 stopped
+2025-06-06 20:53:22,426 - qasync._QThreadWorker - DEBUG - [Dummy-10] - __init__.py:155 - Thread #1 stopped
+2025-06-06 20:53:22,426 - qasync._QThreadWorker - DEBUG - [Dummy-21] - __init__.py:155 - Thread #2 stopped
+2025-06-06 20:53:22,427 - qasync._QThreadWorker - DEBUG - [MainThread] - __init__.py:158 - Waiting for thread #2 to stop...
+2025-06-06 20:53:22,427 - qasync._QThreadWorker - DEBUG - [MainThread] - __init__.py:158 - Waiting for thread #3 to stop...
+2025-06-06 20:53:22,427 - qasync._QThreadWorker - DEBUG - [MainThread] - __init__.py:158 - Waiting for thread #4 to stop...
+2025-06-06 20:53:22,427 - qasync._QThreadWorker - DEBUG - [MainThread] - __init__.py:158 - Waiting for thread #5 to stop...
+2025-06-06 20:53:22,427 - qasync._QThreadWorker - DEBUG - [MainThread] - __init__.py:158 - Waiting for thread #6 to stop...
+2025-06-06 20:53:22,427 - qasync._QThreadWorker - DEBUG - [MainThread] - __init__.py:158 - Waiting for thread #7 to stop...
+2025-06-06 20:53:22,427 - qasync._QThreadWorker - DEBUG - [MainThread] - __init__.py:158 - Waiting for thread #8 to stop...
+2025-06-06 20:53:22,427 - qasync._QThreadWorker - DEBUG - [MainThread] - __init__.py:158 - Waiting for thread #9 to stop...
+2025-06-06 20:53:22,427 - qasync._QThreadWorker - DEBUG - [MainThread] - __init__.py:158 - Waiting for thread #10 to stop...
+2025-06-06 20:53:22,427 - qasync._windows._IocpProactor - DEBUG - [MainThread] - _windows.py:75 - Closing
+2025-06-06 20:53:22,428 - __main__ - INFO - [MainThread] - main.py:681 - Exiting with code 0
+2025-06-06 20:56:47,606 - asyncio - DEBUG - [MainThread] - proactor_events.py:631 - Using proactor: _IocpProactor
+2025-06-06 20:56:47,608 - qasync._windows._EventPoller - DEBUG - [MainThread] - _windows.py:213 - Starting (proactor: <_IocpProactor overlapped#=0 result#=0>)...
+2025-06-06 20:56:47,608 - qasync._windows._EventWorker - DEBUG - [Dummy-1] - _windows.py:192 - Thread started
+2025-06-06 20:56:47,608 - __main__ - INFO - [MainThread] - main.py:516 - QApplication instance confirmed.
+2025-06-06 20:56:47,612 - qdarkstyle - DEBUG - [MainThread] - __init__.py:260 - Reading QSS file in: :qdarkstyle\dark\darkstyle.qss
+2025-06-06 20:56:47,613 - qdarkstyle - INFO - [MainThread] - __init__.py:270 - QSS file successfully loaded.
+2025-06-06 20:56:47,613 - qdarkstyle - DEBUG - [MainThread] - __init__.py:277 - Checking patches for being applied.
+2025-06-06 20:56:47,635 - qdarkstyle - INFO - [MainThread] - __init__.py:173 - Found version patches to be applied.
+2025-06-06 20:56:47,635 - qdarkstyle - INFO - [MainThread] - __init__.py:193 - Found application patches to be applied.
+2025-06-06 20:56:47,635 - __main__ - INFO - [MainThread] - main.py:501 - Applied dark theme to the application.
+2025-06-06 20:56:47,635 - __main__ - INFO - [MainThread] - main.py:599 - Skipping login dialog for development.
+2025-06-06 20:56:47,635 - __main__ - INFO - [MainThread] - main.py:607 - Auth token found in environment. Proceeding directly to main application.
+2025-06-06 20:56:47,636 - httpx - DEBUG - [MainThread] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-06 20:56:47,637 - httpx - DEBUG - [MainThread] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-06 20:56:47,813 - __main__ - INFO - [MainThread] - main.py:521 - Core services can be initialized.
+2025-06-06 20:56:47,813 - src.ultibot_ui.services.api_client - INFO - [MainThread] - api_client.py:58 - Cerrando httpx.AsyncClient...
+2025-06-06 20:56:47,818 - src.ultibot_ui.services.api_client - INFO - [MainThread] - api_client.py:60 - httpx.AsyncClient cerrado.
+2025-06-06 20:56:47,819 - __main__ - INFO - [MainThread] - main.py:612 - Fetching user configuration...
+2025-06-06 20:56:47,819 - __main__ - INFO - [MainThread] - main.py:533 - Fetching user configuration for 00000000-0000-0000-0000-000000000000...
+2025-06-06 20:56:47,819 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: http://localhost:8000, token: present, coroutine_factory: set
+2025-06-06 20:56:47,819 - asyncio - DEBUG - [Dummy-2] - selector_events.py:64 - Using selector: SelectSelector
+2025-06-06 20:56:47,820 - httpx - DEBUG - [Dummy-2] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-06 20:56:47,820 - httpx - DEBUG - [Dummy-2] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-06 20:56:47,999 - src.ultibot_ui.services.api_client - INFO - [Dummy-2] - api_client.py:266 - Obteniendo configuración de usuario.
+2025-06-06 20:56:47,999 - src.ultibot_ui.services.api_client - DEBUG - [Dummy-2] - api_client.py:79 - APIClient: _make_request_invoked for GET /api/v1/config
+2025-06-06 20:56:48,000 - httpcore.connection - DEBUG - [Dummy-2] - _trace.py:87 - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-06 20:56:48,266 - httpcore.connection - DEBUG - [Dummy-2] - _trace.py:87 - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000018990A01160>
+2025-06-06 20:56:48,266 - httpcore.http11 - DEBUG - [Dummy-2] - _trace.py:87 - send_request_headers.started request=<Request [b'GET']>
+2025-06-06 20:56:48,267 - httpcore.http11 - DEBUG - [Dummy-2] - _trace.py:87 - send_request_headers.complete
+2025-06-06 20:56:48,267 - httpcore.http11 - DEBUG - [Dummy-2] - _trace.py:87 - send_request_body.started request=<Request [b'GET']>
+2025-06-06 20:56:48,267 - httpcore.http11 - DEBUG - [Dummy-2] - _trace.py:87 - send_request_body.complete
+2025-06-06 20:56:48,267 - httpcore.http11 - DEBUG - [Dummy-2] - _trace.py:87 - receive_response_headers.started request=<Request [b'GET']>
+2025-06-06 20:56:48,268 - httpcore.http11 - DEBUG - [Dummy-2] - _trace.py:87 - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Sat, 07 Jun 2025 00:56:48 GMT'), (b'server', b'uvicorn'), (b'content-length', b'1001'), (b'content-type', b'application/json')])
+2025-06-06 20:56:48,269 - httpx - INFO - [Dummy-2] - _client.py:1786 - HTTP Request: GET http://localhost:8000/api/v1/config "HTTP/1.1 200 OK"
+2025-06-06 20:56:48,269 - httpcore.http11 - DEBUG - [Dummy-2] - _trace.py:87 - receive_response_body.started request=<Request [b'GET']>
+2025-06-06 20:56:48,269 - httpcore.http11 - DEBUG - [Dummy-2] - _trace.py:87 - receive_response_body.complete
+2025-06-06 20:56:48,269 - httpcore.http11 - DEBUG - [Dummy-2] - _trace.py:87 - response_closed.started
+2025-06-06 20:56:48,269 - httpcore.http11 - DEBUG - [Dummy-2] - _trace.py:87 - response_closed.complete
+2025-06-06 20:56:48,270 - src.ultibot_ui.services.api_client - INFO - [Dummy-2] - api_client.py:58 - Cerrando httpx.AsyncClient...
+2025-06-06 20:56:48,270 - httpcore.connection - DEBUG - [Dummy-2] - _trace.py:87 - close.started
+2025-06-06 20:56:48,283 - httpcore.connection - DEBUG - [Dummy-2] - _trace.py:87 - close.complete
+2025-06-06 20:56:48,283 - src.ultibot_ui.services.api_client - INFO - [Dummy-2] - api_client.py:60 - httpx.AsyncClient cerrado.
+2025-06-06 20:56:48,567 - src.ultibot_ui.services.trading_mode_state - INFO - [MainThread] - trading_mode_state.py:68 - TradingModeStateManager initialized with mode: paper
+2025-06-06 20:56:48,568 - src.ultibot_ui.services.trading_mode_state - INFO - [MainThread] - trading_mode_state.py:226 - Created global trading mode state manager
+2025-06-06 20:56:48,568 - src.ultibot_ui.widgets.trading_mode_selector - INFO - [MainThread] - trading_mode_selector.py:55 - TradingModeSelector initialized with style: toggle
+2025-06-06 20:56:48,597 - src.ultibot_ui.widgets.portfolio_widget - INFO - [MainThread] - portfolio_widget.py:406 - Timer de actualización del portafolio iniciado.
+2025-06-06 20:56:48,612 - src.ultibot_ui.widgets.portfolio_widget - INFO - [MainThread] - portfolio_widget.py:433 - Actualizando datos del portafolio para modo: paper
+2025-06-06 20:56:48,620 - src.ultibot_ui.widgets.chart_widget - INFO - [MainThread] - chart_widget.py:99 - Solicitando datos para BTCUSDT - 1h usando ApiWorker
+2025-06-06 20:56:48,620 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: http://localhost:8000, token: absent, coroutine_factory: set
+2025-06-06 20:56:48,624 - asyncio - DEBUG - [Dummy-3] - selector_events.py:64 - Using selector: SelectSelector
+2025-06-06 20:56:48,625 - httpx - DEBUG - [Dummy-3] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-06 20:56:48,626 - httpx - DEBUG - [Dummy-3] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-06 20:56:48,635 - httpx - DEBUG - [MainThread] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-06 20:56:48,635 - httpx - DEBUG - [MainThread] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-06 20:56:48,881 - src.ultibot_ui.services.api_client - INFO - [Dummy-3] - api_client.py:694 - Obteniendo datos de velas para BTCUSDT (1h) con parámetros: {'user_id': '00000000-0000-0000-0000-000000000000', 'symbol': 'BTCUSDT', 'interval': '1h', 'limit': 200}
+2025-06-06 20:56:48,881 - src.ultibot_ui.services.api_client - DEBUG - [Dummy-3] - api_client.py:79 - APIClient: _make_request_invoked for GET /api/v1/market/klines
+2025-06-06 20:56:48,881 - httpcore.connection - DEBUG - [Dummy-3] - _trace.py:87 - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-06 20:56:48,900 - src.ultibot_ui.widgets.order_form_widget - INFO - [MainThread] - order_form_widget.py:47 - OrderFormWidget initialized
+2025-06-06 20:56:48,923 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:62 - Monitor de oportunidades de trading real iniciado.
+2025-06-06 20:56:48,951 - src.ultibot_ui.views.opportunities_view - INFO - [MainThread] - opportunities_view.py:22 - OpportunitiesView: __init__ called.
+2025-06-06 20:56:48,951 - src.ultibot_ui.views.opportunities_view - DEBUG - [MainThread] - opportunities_view.py:27 - OpportunitiesView initialized with qasync_loop: <QIOCPEventLoop running=True closed=False debug=False>
+2025-06-06 20:56:48,955 - src.ultibot_ui.views.opportunities_view - INFO - [MainThread] - opportunities_view.py:109 - OpportunitiesView: _load_initial_data called.
+2025-06-06 20:56:48,956 - src.ultibot_ui.views.opportunities_view - INFO - [MainThread] - opportunities_view.py:111 - OpportunitiesView: Setting up QTimer.singleShot for _fetch_opportunities in 0.1s.
+2025-06-06 20:56:48,956 - src.ultibot_ui.views.opportunities_view - INFO - [MainThread] - opportunities_view.py:113 - OpportunitiesView: QTimer.singleShot for _fetch_opportunities has been set.
+2025-06-06 20:56:48,962 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: <function StrategyManagementView.cargar_estrategias.<locals>.<lambda> at 0x0000018990A1D300>, token: absent, coroutine_factory: set
+2025-06-06 20:56:48,975 - httpx - DEBUG - [MainThread] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-06 20:56:48,975 - httpx - DEBUG - [MainThread] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-06 20:56:49,142 - httpcore.connection - DEBUG - [Dummy-3] - _trace.py:87 - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x00000189909F2850>
+2025-06-06 20:56:49,142 - httpcore.http11 - DEBUG - [Dummy-3] - _trace.py:87 - send_request_headers.started request=<Request [b'GET']>
+2025-06-06 20:56:49,142 - httpcore.http11 - DEBUG - [Dummy-3] - _trace.py:87 - send_request_headers.complete
+2025-06-06 20:56:49,142 - httpcore.http11 - DEBUG - [Dummy-3] - _trace.py:87 - send_request_body.started request=<Request [b'GET']>
+2025-06-06 20:56:49,142 - httpcore.http11 - DEBUG - [Dummy-3] - _trace.py:87 - send_request_body.complete
+2025-06-06 20:56:49,142 - httpcore.http11 - DEBUG - [Dummy-3] - _trace.py:87 - receive_response_headers.started request=<Request [b'GET']>
+2025-06-06 20:56:49,163 - asyncio - DEBUG - [Dummy-4] - selector_events.py:64 - Using selector: SelectSelector
+2025-06-06 20:56:49,163 - asyncio - DEBUG - [Dummy-5] - selector_events.py:64 - Using selector: SelectSelector
+2025-06-06 20:56:49,164 - src.ultibot_ui.services.api_client - INFO - [Dummy-4] - api_client.py:187 - Obteniendo métricas de rendimiento de paper trading con filtros: {'start_date': '2025-05-07T00:00:00', 'end_date': '2025-06-06T23:59:59.999999'}
+2025-06-06 20:56:49,164 - src.ultibot_ui.services.api_client - DEBUG - [Dummy-4] - api_client.py:79 - APIClient: _make_request_invoked for GET /api/v1/portfolio/paper/performance_summary
+2025-06-06 20:56:49,165 - httpcore.connection - DEBUG - [Dummy-4] - _trace.py:87 - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-06 20:56:49,165 - src.ultibot_ui.services.api_client - INFO - [Dummy-5] - api_client.py:152 - Obteniendo historial de paper trading con filtros: {'trading_mode': 'paper', 'limit': 500, 'offset': 0, 'date_from': '2025-05-07', 'date_to': '2025-06-06'}
+2025-06-06 20:56:49,165 - src.ultibot_ui.services.api_client - DEBUG - [Dummy-5] - api_client.py:79 - APIClient: _make_request_invoked for GET /api/v1/trades/
+2025-06-06 20:56:49,165 - httpcore.connection - DEBUG - [Dummy-5] - _trace.py:87 - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-06 20:56:49,177 - src.ultibot_ui.windows.history_view - INFO - [MainThread] - history_view.py:32 - HistoryView inicializada para usuario 00000000-0000-0000-0000-000000000000
+2025-06-06 20:56:49,185 - src.ultibot_ui.windows.main_window - INFO - [MainThread] - main_window.py:408 - Central widget y vistas configuradas.
+2025-06-06 20:56:49,185 - src.ultibot_ui.windows.main_window - INFO - [MainThread] - main_window.py:408 - MainWindow inicializada y visible.
+2025-06-06 20:56:49,356 - src.ultibot_ui.views.portfolio_view - INFO - [MainThread] - portfolio_view.py:129 - PortfolioView: Fetching portfolio snapshot.
+2025-06-06 20:56:49,357 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: <function PortfolioView._fetch_portfolio_data.<locals>.<lambda> at 0x0000018990A1EA20>, token: absent, coroutine_factory: set
+2025-06-06 20:56:49,357 - src.ultibot_ui.views.opportunities_view - INFO - [MainThread] - opportunities_view.py:134 - [TRACE] OpportunitiesView: _fetch_opportunities called. Fetching Gemini IA opportunities.
+2025-06-06 20:56:49,357 - src.ultibot_ui.views.opportunities_view - DEBUG - [MainThread] - opportunities_view.py:139 - [TRACE] OpportunitiesView: Attempting to get get_gemini_opportunities coroutine.
+2025-06-06 20:56:49,357 - src.ultibot_ui.views.opportunities_view - DEBUG - [MainThread] - opportunities_view.py:147 - OpportunitiesView._start_api_worker: Creating ApiWorker for coroutine_factory.
+2025-06-06 20:56:49,357 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: <function OpportunitiesView._fetch_opportunities.<locals>.<lambda> at 0x0000018990A1EA20>, token: absent, coroutine_factory: set
+2025-06-06 20:56:49,357 - src.ultibot_ui.views.opportunities_view - DEBUG - [MainThread] - opportunities_view.py:155 - OpportunitiesView._start_api_worker: ApiWorker instance created: <src.ultibot_ui.workers.ApiWorker object at 0x00000189909857F0> with loop <QIOCPEventLoop running=True closed=False debug=False>
+2025-06-06 20:56:49,357 - src.ultibot_ui.views.opportunities_view - DEBUG - [MainThread] - opportunities_view.py:157 - OpportunitiesView._start_api_worker: QThread instance created: <PyQt5.QtCore.QThread object at 0x0000018990A590A0>
+2025-06-06 20:56:49,357 - src.ultibot_ui.views.opportunities_view - DEBUG - [MainThread] - opportunities_view.py:160 - OpportunitiesView._start_api_worker: Worker <src.ultibot_ui.workers.ApiWorker object at 0x00000189909857F0> moved to thread <PyQt5.QtCore.QThread object at 0x0000018990A590A0>. Connecting signals...
+2025-06-06 20:56:49,358 - src.ultibot_ui.views.opportunities_view - DEBUG - [MainThread] - opportunities_view.py:186 - OpportunitiesView._start_api_worker: Signals connected. Starting thread for worker: <src.ultibot_ui.workers.ApiWorker object at 0x00000189909857F0> on thread: <PyQt5.QtCore.QThread object at 0x0000018990A590A0>
+2025-06-06 20:56:49,358 - src.ultibot_ui.views.opportunities_view - DEBUG - [MainThread] - opportunities_view.py:188 - OpportunitiesView._start_api_worker: thread.start() called for worker: <src.ultibot_ui.workers.ApiWorker object at 0x00000189909857F0>. IsRunning: True, IsFinished: False
+2025-06-06 20:56:49,358 - src.ultibot_ui.windows.settings_view - INFO - [MainThread] - settings_view.py:92 - SettingsView: Iniciando carga de datos iniciales (_load_initial_data).
+2025-06-06 20:56:49,358 - src.ultibot_ui.windows.settings_view - INFO - [MainThread] - settings_view.py:97 - SettingsView: Solicitando configuración de usuario general.
+2025-06-06 20:56:49,359 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: http://localhost:8000, token: absent, coroutine_factory: set
+2025-06-06 20:56:49,359 - src.ultibot_ui.windows.settings_view - INFO - [MainThread] - settings_view.py:132 - SettingsView: Solicitando estado de operativa real.
+2025-06-06 20:56:49,359 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: http://localhost:8000, token: absent, coroutine_factory: set
+2025-06-06 20:56:49,359 - root - INFO - [MainThread] - main_window.py:153 - Programando carga inicial de estados de trading con ApiWorker.
+2025-06-06 20:56:49,359 - root - INFO - [MainThread] - main_window.py:233 - Iniciando ApiWorker para _load_initial_paper_trading_status.
+2025-06-06 20:56:49,359 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: http://localhost:8000, token: present, coroutine_factory: set
+2025-06-06 20:56:49,359 - root - INFO - [MainThread] - main_window.py:299 - Iniciando ApiWorker para _load_initial_real_trading_status.
+2025-06-06 20:56:49,359 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: http://localhost:8000, token: present, coroutine_factory: set
+2025-06-06 20:56:49,360 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:113 - DashboardView: _initialize_async_components INVOCADO (v5 - Paralelizado)
+2025-06-06 20:56:49,360 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:114 - Iniciando carga de componentes asíncronos...
+2025-06-06 20:56:49,360 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:122 - DashboardView: Programando carga de notificaciones...
+2025-06-06 20:56:49,360 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: http://localhost:8000, token: absent, coroutine_factory: set
+2025-06-06 20:56:49,360 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:130 - DashboardView: Programando carga de desempeño de estrategias...
+2025-06-06 20:56:49,360 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: http://localhost:8000, token: absent, coroutine_factory: set
+2025-06-06 20:56:49,360 - asyncio - DEBUG - [Dummy-6] - selector_events.py:64 - Using selector: SelectSelector
+2025-06-06 20:56:49,360 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:147 - DashboardView: Ejecutando 2 tareas en paralelo...
+2025-06-06 20:56:49,361 - asyncio - DEBUG - [Dummy-7] - selector_events.py:64 - Using selector: SelectSelector
+2025-06-06 20:56:49,361 - httpx - DEBUG - [Dummy-7] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-06 20:56:49,362 - httpx - DEBUG - [Dummy-6] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-06 20:56:49,362 - httpx - DEBUG - [Dummy-7] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-06 20:56:49,362 - httpx - DEBUG - [Dummy-6] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-06 20:56:49,423 - httpcore.connection - DEBUG - [Dummy-5] - _trace.py:87 - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000018990A60E10>
+2025-06-06 20:56:49,423 - httpcore.http11 - DEBUG - [Dummy-5] - _trace.py:87 - send_request_headers.started request=<Request [b'GET']>
+2025-06-06 20:56:49,424 - httpcore.http11 - DEBUG - [Dummy-5] - _trace.py:87 - send_request_headers.complete
+2025-06-06 20:56:49,424 - httpcore.http11 - DEBUG - [Dummy-5] - _trace.py:87 - send_request_body.started request=<Request [b'GET']>
+2025-06-06 20:56:49,424 - httpcore.connection - DEBUG - [Dummy-4] - _trace.py:87 - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000018990A74770>
+2025-06-06 20:56:49,424 - httpcore.http11 - DEBUG - [Dummy-5] - _trace.py:87 - send_request_body.complete
+2025-06-06 20:56:49,425 - httpcore.http11 - DEBUG - [Dummy-5] - _trace.py:87 - receive_response_headers.started request=<Request [b'GET']>
+2025-06-06 20:56:49,425 - httpcore.http11 - DEBUG - [Dummy-4] - _trace.py:87 - send_request_headers.started request=<Request [b'GET']>
+2025-06-06 20:56:49,425 - httpcore.http11 - DEBUG - [Dummy-4] - _trace.py:87 - send_request_headers.complete
+2025-06-06 20:56:49,425 - httpcore.http11 - DEBUG - [Dummy-4] - _trace.py:87 - send_request_body.started request=<Request [b'GET']>
+2025-06-06 20:56:49,425 - httpcore.http11 - DEBUG - [Dummy-4] - _trace.py:87 - send_request_body.complete
+2025-06-06 20:56:49,425 - httpcore.http11 - DEBUG - [Dummy-4] - _trace.py:87 - receive_response_headers.started request=<Request [b'GET']>
+2025-06-06 20:56:49,425 - httpcore.http11 - DEBUG - [Dummy-5] - _trace.py:87 - receive_response_headers.complete return_value=(b'HTTP/1.1', 404, b'Not Found', [(b'date', b'Sat, 07 Jun 2025 00:56:49 GMT'), (b'server', b'uvicorn'), (b'content-length', b'22'), (b'content-type', b'application/json')])
+2025-06-06 20:56:49,426 - httpx - INFO - [Dummy-5] - _client.py:1786 - HTTP Request: GET http://localhost:8000/api/v1/trades/?trading_mode=paper&limit=500&offset=0&date_from=2025-05-07&date_to=2025-06-06 "HTTP/1.1 404 Not Found"
+2025-06-06 20:56:49,426 - httpcore.http11 - DEBUG - [Dummy-5] - _trace.py:87 - receive_response_body.started request=<Request [b'GET']>
+2025-06-06 20:56:49,426 - httpcore.http11 - DEBUG - [Dummy-5] - _trace.py:87 - receive_response_body.complete
+2025-06-06 20:56:49,426 - httpcore.http11 - DEBUG - [Dummy-5] - _trace.py:87 - response_closed.started
+2025-06-06 20:56:49,426 - httpcore.http11 - DEBUG - [Dummy-5] - _trace.py:87 - response_closed.complete
+2025-06-06 20:56:49,426 - src.ultibot_ui.services.api_client - ERROR - [Dummy-5] - api_client.py:98 - HTTP error 404 for GET http://localhost:8000/api/v1/trades/: {"detail":"Not Found"}
+2025-06-06 20:56:49,426 - src.ultibot_ui.widgets.paper_trading_report_widget - ERROR - [Dummy-5] - paper_trading_report_widget.py:61 - Error loading trades: APIError(status_code=404, message='API request failed with status 404: {"detail":"Not Found"}', response_json={'detail': 'Not Found'})
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 91, in _make_request
+    response.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '404 Not Found' for url 'http://localhost:8000/api/v1/trades/?trading_mode=paper&limit=500&offset=0&date_from=2025-05-07&date_to=2025-06-06'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\paper_trading_report_widget.py", line 47, in run
+    result = loop.run_until_complete(
+        self.api_client.get_paper_trading_history(user_id=self.user_id, **self.kwargs)
+    )
+  File "C:\Users\zamor\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 155, in get_paper_trading_history
+    return await self._make_request(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 104, in _make_request
+    raise APIError(
+    ...<3 lines>...
+    )
+src.ultibot_ui.services.api_client.APIError: APIError(status_code=404, message='API request failed with status 404: {"detail":"Not Found"}', response_json={'detail': 'Not Found'})
+2025-06-06 20:56:49,625 - src.ultibot_ui.services.api_client - INFO - [Dummy-7] - api_client.py:631 - Obteniendo desempeño de estrategias (usuario implícito por backend) con modo: todos
+2025-06-06 20:56:49,625 - src.ultibot_ui.services.api_client - DEBUG - [Dummy-7] - api_client.py:79 - APIClient: _make_request_invoked for GET /api/v1/performance/strategies
+2025-06-06 20:56:49,626 - httpcore.connection - DEBUG - [Dummy-7] - _trace.py:87 - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-06 20:56:49,627 - src.ultibot_ui.services.api_client - INFO - [Dummy-6] - api_client.py:724 - Obteniendo historial de notificaciones para usuario 00000000-0000-0000-0000-000000000000 con paginación: limit=20, offset=0
+2025-06-06 20:56:49,627 - src.ultibot_ui.services.api_client - DEBUG - [Dummy-6] - api_client.py:79 - APIClient: _make_request_invoked for GET /api/v1/notifications/history
+2025-06-06 20:56:49,628 - httpcore.connection - DEBUG - [Dummy-6] - _trace.py:87 - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-06 20:56:49,765 - httpcore.http11 - DEBUG - [Dummy-3] - _trace.py:87 - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Sat, 07 Jun 2025 00:56:48 GMT'), (b'server', b'uvicorn'), (b'content-length', b'58520'), (b'content-type', b'application/json')])
+2025-06-06 20:56:49,765 - httpx - INFO - [Dummy-3] - _client.py:1786 - HTTP Request: GET http://localhost:8000/api/v1/market/klines?user_id=00000000-0000-0000-0000-000000000000&symbol=BTCUSDT&interval=1h&limit=200 "HTTP/1.1 200 OK"
+2025-06-06 20:56:49,765 - httpcore.http11 - DEBUG - [Dummy-3] - _trace.py:87 - receive_response_body.started request=<Request [b'GET']>
+2025-06-06 20:56:49,765 - httpcore.http11 - DEBUG - [Dummy-3] - _trace.py:87 - receive_response_body.complete
+2025-06-06 20:56:49,765 - httpcore.http11 - DEBUG - [Dummy-3] - _trace.py:87 - response_closed.started
+2025-06-06 20:56:49,766 - httpcore.http11 - DEBUG - [Dummy-3] - _trace.py:87 - response_closed.complete
+2025-06-06 20:56:49,766 - src.ultibot_ui.services.api_client - INFO - [Dummy-3] - api_client.py:58 - Cerrando httpx.AsyncClient...
+2025-06-06 20:56:49,766 - httpcore.connection - DEBUG - [Dummy-3] - _trace.py:87 - close.started
+2025-06-06 20:56:49,773 - httpcore.connection - DEBUG - [Dummy-3] - _trace.py:87 - close.complete
+2025-06-06 20:56:49,773 - src.ultibot_ui.services.api_client - INFO - [Dummy-3] - api_client.py:60 - httpx.AsyncClient cerrado.
+2025-06-06 20:56:49,952 - httpcore.connection - DEBUG - [Dummy-6] - _trace.py:87 - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x00000189909FAEA0>
+2025-06-06 20:56:49,952 - httpcore.http11 - DEBUG - [Dummy-6] - _trace.py:87 - send_request_headers.started request=<Request [b'GET']>
+2025-06-06 20:56:49,953 - httpcore.http11 - DEBUG - [Dummy-6] - _trace.py:87 - send_request_headers.complete
+2025-06-06 20:56:49,953 - httpcore.http11 - DEBUG - [Dummy-6] - _trace.py:87 - send_request_body.started request=<Request [b'GET']>
+2025-06-06 20:56:49,953 - httpcore.http11 - DEBUG - [Dummy-6] - _trace.py:87 - send_request_body.complete
+2025-06-06 20:56:49,953 - httpcore.http11 - DEBUG - [Dummy-6] - _trace.py:87 - receive_response_headers.started request=<Request [b'GET']>
+2025-06-06 20:56:49,953 - httpcore.connection - DEBUG - [Dummy-7] - _trace.py:87 - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000018990A04B90>
+2025-06-06 20:56:49,953 - httpcore.http11 - DEBUG - [Dummy-7] - _trace.py:87 - send_request_headers.started request=<Request [b'GET']>
+2025-06-06 20:56:49,954 - httpcore.http11 - DEBUG - [Dummy-7] - _trace.py:87 - send_request_headers.complete
+2025-06-06 20:56:49,954 - httpcore.http11 - DEBUG - [Dummy-6] - _trace.py:87 - receive_response_headers.complete return_value=(b'HTTP/1.1', 404, b'Not Found', [(b'date', b'Sat, 07 Jun 2025 00:56:49 GMT'), (b'server', b'uvicorn'), (b'content-length', b'22'), (b'content-type', b'application/json')])
+2025-06-06 20:56:49,954 - httpcore.http11 - DEBUG - [Dummy-7] - _trace.py:87 - send_request_body.started request=<Request [b'GET']>
+2025-06-06 20:56:49,955 - httpx - INFO - [Dummy-6] - _client.py:1786 - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?user_id=00000000-0000-0000-0000-000000000000&limit=20&offset=0 "HTTP/1.1 404 Not Found"
+2025-06-06 20:56:49,955 - httpcore.http11 - DEBUG - [Dummy-7] - _trace.py:87 - send_request_body.complete
+2025-06-06 20:56:49,955 - httpcore.http11 - DEBUG - [Dummy-6] - _trace.py:87 - receive_response_body.started request=<Request [b'GET']>
+2025-06-06 20:56:49,955 - httpcore.http11 - DEBUG - [Dummy-7] - _trace.py:87 - receive_response_headers.started request=<Request [b'GET']>
+2025-06-06 20:56:49,955 - httpcore.http11 - DEBUG - [Dummy-6] - _trace.py:87 - receive_response_body.complete
+2025-06-06 20:56:49,956 - httpcore.http11 - DEBUG - [Dummy-6] - _trace.py:87 - response_closed.started
+2025-06-06 20:56:49,956 - httpcore.http11 - DEBUG - [Dummy-7] - _trace.py:87 - receive_response_headers.complete return_value=(b'HTTP/1.1', 404, b'Not Found', [(b'date', b'Sat, 07 Jun 2025 00:56:49 GMT'), (b'server', b'uvicorn'), (b'content-length', b'22'), (b'content-type', b'application/json')])
+2025-06-06 20:56:49,956 - httpcore.http11 - DEBUG - [Dummy-6] - _trace.py:87 - response_closed.complete
+2025-06-06 20:56:49,956 - src.ultibot_ui.services.api_client - ERROR - [Dummy-6] - api_client.py:98 - HTTP error 404 for GET http://localhost:8000/api/v1/notifications/history: {"detail":"Not Found"}
+2025-06-06 20:56:49,956 - httpx - INFO - [Dummy-7] - _client.py:1786 - HTTP Request: GET http://localhost:8000/api/v1/performance/strategies "HTTP/1.1 404 Not Found"
+2025-06-06 20:56:49,956 - src.ultibot_ui.workers - ERROR - [Dummy-6] - workers.py:52 - ApiWorker: APIError: APIError(status_code=404, message='API request failed with status 404: {"detail":"Not Found"}', response_json={'detail': 'Not Found'})
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 91, in _make_request
+    response.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '404 Not Found' for url 'http://localhost:8000/api/v1/notifications/history?user_id=00000000-0000-0000-0000-000000000000&limit=20&offset=0'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\workers.py", line 49, in run
+    result = loop.run_until_complete(coroutine)
+  File "C:\Users\zamor\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 725, in get_notification_history
+    return await self._make_request("GET", "/api/v1/notifications/history", params=params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 104, in _make_request
+    raise APIError(
+    ...<3 lines>...
+    )
+src.ultibot_ui.services.api_client.APIError: APIError(status_code=404, message='API request failed with status 404: {"detail":"Not Found"}', response_json={'detail': 'Not Found'})
+2025-06-06 20:56:49,958 - httpcore.http11 - DEBUG - [Dummy-7] - _trace.py:87 - receive_response_body.started request=<Request [b'GET']>
+2025-06-06 20:56:49,972 - httpcore.http11 - DEBUG - [Dummy-7] - _trace.py:87 - receive_response_body.complete
+2025-06-06 20:56:49,972 - src.ultibot_ui.services.api_client - INFO - [Dummy-6] - api_client.py:58 - Cerrando httpx.AsyncClient...
+2025-06-06 20:56:49,973 - httpcore.http11 - DEBUG - [Dummy-7] - _trace.py:87 - response_closed.started
+2025-06-06 20:56:49,973 - httpcore.connection - DEBUG - [Dummy-6] - _trace.py:87 - close.started
+2025-06-06 20:56:49,973 - httpcore.http11 - DEBUG - [Dummy-7] - _trace.py:87 - response_closed.complete
+2025-06-06 20:56:49,973 - httpcore.connection - DEBUG - [Dummy-6] - _trace.py:87 - close.complete
+2025-06-06 20:56:49,973 - src.ultibot_ui.services.api_client - INFO - [Dummy-6] - api_client.py:60 - httpx.AsyncClient cerrado.
+2025-06-06 20:56:49,974 - src.ultibot_ui.services.api_client - ERROR - [Dummy-7] - api_client.py:98 - HTTP error 404 for GET http://localhost:8000/api/v1/performance/strategies: {"detail":"Not Found"}
+2025-06-06 20:56:49,974 - src.ultibot_ui.workers - ERROR - [Dummy-7] - workers.py:52 - ApiWorker: APIError: APIError(status_code=404, message='API request failed with status 404: {"detail":"Not Found"}', response_json={'detail': 'Not Found'})
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 91, in _make_request
+    response.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '404 Not Found' for url 'http://localhost:8000/api/v1/performance/strategies'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\workers.py", line 49, in run
+    result = loop.run_until_complete(coroutine)
+  File "C:\Users\zamor\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 632, in get_strategy_performance
+    return await self._make_request("GET", endpoint, params=params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 104, in _make_request
+    raise APIError(
+    ...<3 lines>...
+    )
+src.ultibot_ui.services.api_client.APIError: APIError(status_code=404, message='API request failed with status 404: {"detail":"Not Found"}', response_json={'detail': 'Not Found'})
+2025-06-06 20:56:49,975 - src.ultibot_ui.services.api_client - INFO - [Dummy-7] - api_client.py:58 - Cerrando httpx.AsyncClient...
+2025-06-06 20:56:49,975 - httpcore.connection - DEBUG - [Dummy-7] - _trace.py:87 - close.started
+2025-06-06 20:56:49,976 - httpcore.connection - DEBUG - [Dummy-7] - _trace.py:87 - close.complete
+2025-06-06 20:56:49,976 - src.ultibot_ui.services.api_client - INFO - [Dummy-7] - api_client.py:60 - httpx.AsyncClient cerrado.
+2025-06-06 20:56:50,042 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:150 - DashboardView: Tareas en paralelo completadas.
+2025-06-06 20:56:50,042 - src.ultibot_ui.windows.dashboard_view - ERROR - [MainThread] - dashboard_view.py:156 - DashboardView: Error al cargar notificaciones: Error de API (404): API request failed with status 404: {"detail":"Not Found"}
+Exception: Error de API (404): API request failed with status 404: {"detail":"Not Found"}
+2025-06-06 20:56:50,042 - src.ultibot_ui.windows.dashboard_view - ERROR - [MainThread] - dashboard_view.py:682 - DashboardView: Error de API general: Error al cargar notificaciones: Error de API (404): API request failed with status 404: {"detail":"Not Found"}
+2025-06-06 20:56:50,889 - httpcore.http11 - DEBUG - [Dummy-4] - _trace.py:87 - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Sat, 07 Jun 2025 00:56:49 GMT'), (b'server', b'uvicorn'), (b'content-length', b'309'), (b'content-type', b'application/json')])
+2025-06-06 20:56:50,890 - httpx - INFO - [Dummy-4] - _client.py:1786 - HTTP Request: GET http://localhost:8000/api/v1/portfolio/paper/performance_summary?start_date=2025-05-07T00%3A00%3A00&end_date=2025-06-06T23%3A59%3A59.999999 "HTTP/1.1 200 OK"
+2025-06-06 20:56:50,890 - httpcore.http11 - DEBUG - [Dummy-4] - _trace.py:87 - receive_response_body.started request=<Request [b'GET']>
+2025-06-06 20:56:50,890 - httpcore.http11 - DEBUG - [Dummy-4] - _trace.py:87 - receive_response_body.complete
+2025-06-06 20:56:50,890 - httpcore.http11 - DEBUG - [Dummy-4] - _trace.py:87 - response_closed.started
+2025-06-06 20:56:50,890 - httpcore.http11 - DEBUG - [Dummy-4] - _trace.py:87 - response_closed.complete
+2025-06-06 20:56:50,892 - src.ultibot_ui.widgets.paper_trading_report_widget - INFO - [MainThread] - paper_trading_report_widget.py:336 - Métricas de rendimiento cargadas exitosamente
+2025-06-06 20:56:53,898 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: <coroutine object UltiBotAPIClient.get_notification_history at 0x0000018990A3C6A0>, token: absent, coroutine_factory: set
+2025-06-06 20:56:58,917 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:608 - DashboardView._check_pending_real_opportunities: INICIO (refactorizado)
+2025-06-06 20:56:58,917 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: http://localhost:8000, token: absent, coroutine_factory: set
+2025-06-06 20:56:58,918 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:615 - DashboardView._check_pending_real_opportunities: Llamada a api_client.get_real_trading_candidates programada.
+2025-06-06 20:56:58,918 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:620 - DashboardView._check_pending_real_opportunities: FIN (programación)
+2025-06-06 20:56:58,918 - asyncio - DEBUG - [Dummy-8] - selector_events.py:64 - Using selector: SelectSelector
+2025-06-06 20:56:58,919 - httpx - DEBUG - [Dummy-8] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-06 20:56:58,919 - httpx - DEBUG - [Dummy-8] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-06 20:56:59,108 - src.ultibot_ui.services.api_client - INFO - [Dummy-8] - api_client.py:313 - Obteniendo oportunidades de trading real pendientes de confirmación.
+2025-06-06 20:56:59,108 - src.ultibot_ui.services.api_client - DEBUG - [Dummy-8] - api_client.py:79 - APIClient: _make_request_invoked for GET /api/v1/opportunities/real-trading-candidates
+2025-06-06 20:56:59,109 - httpcore.connection - DEBUG - [Dummy-8] - _trace.py:87 - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-06 20:56:59,375 - httpcore.connection - DEBUG - [Dummy-8] - _trace.py:87 - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x00000189957469C0>
+2025-06-06 20:56:59,375 - httpcore.http11 - DEBUG - [Dummy-8] - _trace.py:87 - send_request_headers.started request=<Request [b'GET']>
+2025-06-06 20:56:59,375 - httpcore.http11 - DEBUG - [Dummy-8] - _trace.py:87 - send_request_headers.complete
+2025-06-06 20:56:59,376 - httpcore.http11 - DEBUG - [Dummy-8] - _trace.py:87 - send_request_body.started request=<Request [b'GET']>
+2025-06-06 20:56:59,376 - httpcore.http11 - DEBUG - [Dummy-8] - _trace.py:87 - send_request_body.complete
+2025-06-06 20:56:59,376 - httpcore.http11 - DEBUG - [Dummy-8] - _trace.py:87 - receive_response_headers.started request=<Request [b'GET']>
+2025-06-06 20:57:03,636 - src.ultibot_ui.widgets.portfolio_widget - INFO - [MainThread] - portfolio_widget.py:433 - Actualizando datos del portafolio para modo: paper
+2025-06-06 20:57:03,637 - qasync._QEventLoop - ERROR - [MainThread] - __init__.py:736 - Exception in callback <_asyncio.TaskStepMethWrapper object at 0x0000018990A53D90>()
+handle: <Handle <_asyncio.TaskStepMethWrapper object at 0x0000018990A53D90>()>
+Traceback (most recent call last):
+  File "C:\Users\zamor\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: Cannot enter into task <Task pending name='Task-15' coro=<PortfolioWidget._start_update_worker.<locals>._get_empty_data() running at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\portfolio_widget.py:445> cb=[PortfolioWidget._start_update_worker.<locals>.<lambda>() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\portfolio_widget.py:456]> while another task <Task pending name='Task-8' coro=<DashboardView._initialize_async_components() running at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\windows\dashboard_view.py:157>> is being executed.
+2025-06-06 20:57:06,941 - httpcore.http11 - DEBUG - [Dummy-8] - _trace.py:87 - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Sat, 07 Jun 2025 00:56:59 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
+2025-06-06 20:57:06,941 - httpx - INFO - [Dummy-8] - _client.py:1786 - HTTP Request: GET http://localhost:8000/api/v1/opportunities/real-trading-candidates "HTTP/1.1 200 OK"
+2025-06-06 20:57:06,941 - httpcore.http11 - DEBUG - [Dummy-8] - _trace.py:87 - receive_response_body.started request=<Request [b'GET']>
+2025-06-06 20:57:06,941 - httpcore.http11 - DEBUG - [Dummy-8] - _trace.py:87 - receive_response_body.complete
+2025-06-06 20:57:06,941 - httpcore.http11 - DEBUG - [Dummy-8] - _trace.py:87 - response_closed.started
+2025-06-06 20:57:06,941 - httpcore.http11 - DEBUG - [Dummy-8] - _trace.py:87 - response_closed.complete
+2025-06-06 20:57:06,942 - src.ultibot_ui.services.api_client - INFO - [Dummy-8] - api_client.py:58 - Cerrando httpx.AsyncClient...
+2025-06-06 20:57:06,942 - httpcore.connection - DEBUG - [Dummy-8] - _trace.py:87 - close.started
+2025-06-06 20:57:06,942 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:589 - DashboardView._handle_real_opportunities_result: INICIO
+2025-06-06 20:57:06,942 - src.ultibot_ui.windows.dashboard_view - DEBUG - [MainThread] - dashboard_view.py:604 - No hay oportunidades de trading real pendientes de confirmación.
+2025-06-06 20:57:06,942 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:605 - DashboardView._handle_real_opportunities_result: FIN
+2025-06-06 20:57:06,942 - httpcore.connection - DEBUG - [Dummy-8] - _trace.py:87 - close.complete
+2025-06-06 20:57:06,942 - src.ultibot_ui.services.api_client - INFO - [Dummy-8] - api_client.py:60 - httpx.AsyncClient cerrado.
+2025-06-06 20:57:08,918 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:608 - DashboardView._check_pending_real_opportunities: INICIO (refactorizado)
+2025-06-06 20:57:08,919 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: http://localhost:8000, token: absent, coroutine_factory: set
+2025-06-06 20:57:08,919 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:615 - DashboardView._check_pending_real_opportunities: Llamada a api_client.get_real_trading_candidates programada.
+2025-06-06 20:57:08,919 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:620 - DashboardView._check_pending_real_opportunities: FIN (programación)
+2025-06-06 20:57:08,919 - asyncio - DEBUG - [Dummy-9] - selector_events.py:64 - Using selector: SelectSelector
+2025-06-06 20:57:08,920 - httpx - DEBUG - [Dummy-9] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-06 20:57:08,921 - httpx - DEBUG - [Dummy-9] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-06 20:57:09,107 - src.ultibot_ui.services.api_client - INFO - [Dummy-9] - api_client.py:313 - Obteniendo oportunidades de trading real pendientes de confirmación.
+2025-06-06 20:57:09,108 - src.ultibot_ui.services.api_client - DEBUG - [Dummy-9] - api_client.py:79 - APIClient: _make_request_invoked for GET /api/v1/opportunities/real-trading-candidates
+2025-06-06 20:57:09,108 - httpcore.connection - DEBUG - [Dummy-9] - _trace.py:87 - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-06 20:57:09,375 - httpcore.connection - DEBUG - [Dummy-9] - _trace.py:87 - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000018999170380>
+2025-06-06 20:57:09,376 - httpcore.http11 - DEBUG - [Dummy-9] - _trace.py:87 - send_request_headers.started request=<Request [b'GET']>
+2025-06-06 20:57:09,376 - httpcore.http11 - DEBUG - [Dummy-9] - _trace.py:87 - send_request_headers.complete
+2025-06-06 20:57:09,376 - httpcore.http11 - DEBUG - [Dummy-9] - _trace.py:87 - send_request_body.started request=<Request [b'GET']>
+2025-06-06 20:57:09,376 - httpcore.http11 - DEBUG - [Dummy-9] - _trace.py:87 - send_request_body.complete
+2025-06-06 20:57:09,376 - httpcore.http11 - DEBUG - [Dummy-9] - _trace.py:87 - receive_response_headers.started request=<Request [b'GET']>
+2025-06-06 20:57:14,737 - httpcore.http11 - DEBUG - [Dummy-9] - _trace.py:87 - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Sat, 07 Jun 2025 00:57:08 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
+2025-06-06 20:57:14,737 - httpx - INFO - [Dummy-9] - _client.py:1786 - HTTP Request: GET http://localhost:8000/api/v1/opportunities/real-trading-candidates "HTTP/1.1 200 OK"
+2025-06-06 20:57:14,737 - httpcore.http11 - DEBUG - [Dummy-9] - _trace.py:87 - receive_response_body.started request=<Request [b'GET']>
+2025-06-06 20:57:14,738 - httpcore.http11 - DEBUG - [Dummy-9] - _trace.py:87 - receive_response_body.complete
+2025-06-06 20:57:14,738 - httpcore.http11 - DEBUG - [Dummy-9] - _trace.py:87 - response_closed.started
+2025-06-06 20:57:14,738 - httpcore.http11 - DEBUG - [Dummy-9] - _trace.py:87 - response_closed.complete
+2025-06-06 20:57:14,738 - src.ultibot_ui.services.api_client - INFO - [Dummy-9] - api_client.py:58 - Cerrando httpx.AsyncClient...
+2025-06-06 20:57:14,738 - httpcore.connection - DEBUG - [Dummy-9] - _trace.py:87 - close.started
+2025-06-06 20:57:14,738 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:589 - DashboardView._handle_real_opportunities_result: INICIO
+2025-06-06 20:57:14,739 - src.ultibot_ui.windows.dashboard_view - DEBUG - [MainThread] - dashboard_view.py:604 - No hay oportunidades de trading real pendientes de confirmación.
+2025-06-06 20:57:14,739 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:605 - DashboardView._handle_real_opportunities_result: FIN
+2025-06-06 20:57:14,739 - httpcore.connection - DEBUG - [Dummy-9] - _trace.py:87 - close.complete
+2025-06-06 20:57:14,739 - src.ultibot_ui.services.api_client - INFO - [Dummy-9] - api_client.py:60 - httpx.AsyncClient cerrado.
+2025-06-06 20:57:18,643 - src.ultibot_ui.widgets.portfolio_widget - INFO - [MainThread] - portfolio_widget.py:433 - Actualizando datos del portafolio para modo: paper
+2025-06-06 20:57:18,643 - qasync._QEventLoop - ERROR - [MainThread] - __init__.py:736 - Exception in callback <_asyncio.TaskStepMethWrapper object at 0x000001899571EC50>()
+handle: <Handle <_asyncio.TaskStepMethWrapper object at 0x000001899571EC50>()>
+Traceback (most recent call last):
+  File "C:\Users\zamor\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: Cannot enter into task <Task pending name='Task-19' coro=<PortfolioWidget._start_update_worker.<locals>._get_empty_data() running at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\portfolio_widget.py:445> cb=[PortfolioWidget._start_update_worker.<locals>.<lambda>() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\portfolio_widget.py:456]> while another task <Task pending name='Task-8' coro=<DashboardView._initialize_async_components() running at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\windows\dashboard_view.py:157>> is being executed.
+2025-06-06 20:57:18,925 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:608 - DashboardView._check_pending_real_opportunities: INICIO (refactorizado)
+2025-06-06 20:57:18,925 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: http://localhost:8000, token: absent, coroutine_factory: set
+2025-06-06 20:57:18,925 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:615 - DashboardView._check_pending_real_opportunities: Llamada a api_client.get_real_trading_candidates programada.
+2025-06-06 20:57:18,925 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:620 - DashboardView._check_pending_real_opportunities: FIN (programación)
+2025-06-06 20:57:18,926 - asyncio - DEBUG - [Dummy-10] - selector_events.py:64 - Using selector: SelectSelector
+2025-06-06 20:57:18,927 - httpx - DEBUG - [Dummy-10] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-06 20:57:18,928 - httpx - DEBUG - [Dummy-10] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-06 20:57:18,971 - src.ultibot_ui.views.opportunities_view - INFO - [MainThread] - opportunities_view.py:134 - [TRACE] OpportunitiesView: _fetch_opportunities called. Fetching Gemini IA opportunities.
+2025-06-06 20:57:18,971 - src.ultibot_ui.views.opportunities_view - DEBUG - [MainThread] - opportunities_view.py:139 - [TRACE] OpportunitiesView: Attempting to get get_gemini_opportunities coroutine.
+2025-06-06 20:57:18,972 - src.ultibot_ui.views.opportunities_view - DEBUG - [MainThread] - opportunities_view.py:147 - OpportunitiesView._start_api_worker: Creating ApiWorker for coroutine_factory.
+2025-06-06 20:57:18,972 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: <function OpportunitiesView._fetch_opportunities.<locals>.<lambda> at 0x00000189991591C0>, token: absent, coroutine_factory: set
+2025-06-06 20:57:18,972 - src.ultibot_ui.views.opportunities_view - DEBUG - [MainThread] - opportunities_view.py:155 - OpportunitiesView._start_api_worker: ApiWorker instance created: <src.ultibot_ui.workers.ApiWorker object at 0x000001899913D9A0> with loop <QIOCPEventLoop running=True closed=False debug=False>
+2025-06-06 20:57:18,972 - src.ultibot_ui.views.opportunities_view - DEBUG - [MainThread] - opportunities_view.py:157 - OpportunitiesView._start_api_worker: QThread instance created: <PyQt5.QtCore.QThread object at 0x000001899913D880>
+2025-06-06 20:57:18,972 - src.ultibot_ui.views.opportunities_view - DEBUG - [MainThread] - opportunities_view.py:160 - OpportunitiesView._start_api_worker: Worker <src.ultibot_ui.workers.ApiWorker object at 0x000001899913D9A0> moved to thread <PyQt5.QtCore.QThread object at 0x000001899913D880>. Connecting signals...
+2025-06-06 20:57:18,972 - src.ultibot_ui.views.opportunities_view - DEBUG - [MainThread] - opportunities_view.py:186 - OpportunitiesView._start_api_worker: Signals connected. Starting thread for worker: <src.ultibot_ui.workers.ApiWorker object at 0x000001899913D9A0> on thread: <PyQt5.QtCore.QThread object at 0x000001899913D880>
+2025-06-06 20:57:18,972 - src.ultibot_ui.views.opportunities_view - DEBUG - [MainThread] - opportunities_view.py:188 - OpportunitiesView._start_api_worker: thread.start() called for worker: <src.ultibot_ui.workers.ApiWorker object at 0x000001899913D9A0>. IsRunning: True, IsFinished: False
+2025-06-06 20:57:19,124 - src.ultibot_ui.services.api_client - INFO - [Dummy-10] - api_client.py:313 - Obteniendo oportunidades de trading real pendientes de confirmación.
+2025-06-06 20:57:19,124 - src.ultibot_ui.services.api_client - DEBUG - [Dummy-10] - api_client.py:79 - APIClient: _make_request_invoked for GET /api/v1/opportunities/real-trading-candidates
+2025-06-06 20:57:19,125 - httpcore.connection - DEBUG - [Dummy-10] - _trace.py:87 - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-06 20:57:19,380 - httpcore.connection - DEBUG - [Dummy-10] - _trace.py:87 - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000018999178D50>
+2025-06-06 20:57:19,381 - httpcore.http11 - DEBUG - [Dummy-10] - _trace.py:87 - send_request_headers.started request=<Request [b'GET']>
+2025-06-06 20:57:19,381 - httpcore.http11 - DEBUG - [Dummy-10] - _trace.py:87 - send_request_headers.complete
+2025-06-06 20:57:19,381 - httpcore.http11 - DEBUG - [Dummy-10] - _trace.py:87 - send_request_body.started request=<Request [b'GET']>
+2025-06-06 20:57:19,381 - httpcore.http11 - DEBUG - [Dummy-10] - _trace.py:87 - send_request_body.complete
+2025-06-06 20:57:19,381 - httpcore.http11 - DEBUG - [Dummy-10] - _trace.py:87 - receive_response_headers.started request=<Request [b'GET']>
+2025-06-06 20:57:25,314 - httpcore.http11 - DEBUG - [Dummy-10] - _trace.py:87 - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Sat, 07 Jun 2025 00:57:18 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
+2025-06-06 20:57:25,315 - httpx - INFO - [Dummy-10] - _client.py:1786 - HTTP Request: GET http://localhost:8000/api/v1/opportunities/real-trading-candidates "HTTP/1.1 200 OK"
+2025-06-06 20:57:25,315 - httpcore.http11 - DEBUG - [Dummy-10] - _trace.py:87 - receive_response_body.started request=<Request [b'GET']>
+2025-06-06 20:57:25,315 - httpcore.http11 - DEBUG - [Dummy-10] - _trace.py:87 - receive_response_body.complete
+2025-06-06 20:57:25,315 - httpcore.http11 - DEBUG - [Dummy-10] - _trace.py:87 - response_closed.started
+2025-06-06 20:57:25,315 - httpcore.http11 - DEBUG - [Dummy-10] - _trace.py:87 - response_closed.complete
+2025-06-06 20:57:25,315 - src.ultibot_ui.services.api_client - INFO - [Dummy-10] - api_client.py:58 - Cerrando httpx.AsyncClient...
+2025-06-06 20:57:25,315 - httpcore.connection - DEBUG - [Dummy-10] - _trace.py:87 - close.started
+2025-06-06 20:57:25,315 - httpcore.connection - DEBUG - [Dummy-10] - _trace.py:87 - close.complete
+2025-06-06 20:57:25,316 - src.ultibot_ui.services.api_client - INFO - [Dummy-10] - api_client.py:60 - httpx.AsyncClient cerrado.
+2025-06-06 20:57:25,316 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:589 - DashboardView._handle_real_opportunities_result: INICIO
+2025-06-06 20:57:25,316 - src.ultibot_ui.windows.dashboard_view - DEBUG - [MainThread] - dashboard_view.py:604 - No hay oportunidades de trading real pendientes de confirmación.
+2025-06-06 20:57:25,316 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:605 - DashboardView._handle_real_opportunities_result: FIN
+2025-06-06 20:57:28,932 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:608 - DashboardView._check_pending_real_opportunities: INICIO (refactorizado)
+2025-06-06 20:57:28,932 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: http://localhost:8000, token: absent, coroutine_factory: set
+2025-06-06 20:57:28,932 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:615 - DashboardView._check_pending_real_opportunities: Llamada a api_client.get_real_trading_candidates programada.
+2025-06-06 20:57:28,932 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:620 - DashboardView._check_pending_real_opportunities: FIN (programación)
+2025-06-06 20:57:28,933 - asyncio - DEBUG - [Dummy-11] - selector_events.py:64 - Using selector: SelectSelector
+2025-06-06 20:57:28,933 - httpx - DEBUG - [Dummy-11] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-06 20:57:28,934 - httpx - DEBUG - [Dummy-11] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-06 20:57:29,175 - src.ultibot_ui.services.api_client - INFO - [Dummy-11] - api_client.py:313 - Obteniendo oportunidades de trading real pendientes de confirmación.
+2025-06-06 20:57:29,175 - src.ultibot_ui.services.api_client - DEBUG - [Dummy-11] - api_client.py:79 - APIClient: _make_request_invoked for GET /api/v1/opportunities/real-trading-candidates
+2025-06-06 20:57:29,176 - httpcore.connection - DEBUG - [Dummy-11] - _trace.py:87 - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-06 20:57:29,432 - httpcore.connection - DEBUG - [Dummy-11] - _trace.py:87 - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001899917A550>
+2025-06-06 20:57:29,432 - httpcore.http11 - DEBUG - [Dummy-11] - _trace.py:87 - send_request_headers.started request=<Request [b'GET']>
+2025-06-06 20:57:29,433 - httpcore.http11 - DEBUG - [Dummy-11] - _trace.py:87 - send_request_headers.complete
+2025-06-06 20:57:29,433 - httpcore.http11 - DEBUG - [Dummy-11] - _trace.py:87 - send_request_body.started request=<Request [b'GET']>
+2025-06-06 20:57:29,433 - httpcore.http11 - DEBUG - [Dummy-11] - _trace.py:87 - send_request_body.complete
+2025-06-06 20:57:29,433 - httpcore.http11 - DEBUG - [Dummy-11] - _trace.py:87 - receive_response_headers.started request=<Request [b'GET']>
+2025-06-06 20:57:33,655 - src.ultibot_ui.widgets.portfolio_widget - INFO - [MainThread] - portfolio_widget.py:433 - Actualizando datos del portafolio para modo: paper
+2025-06-06 20:57:33,667 - qasync._QEventLoop - ERROR - [MainThread] - __init__.py:736 - Task was destroyed but it is pending!
+task: <Task pending name='Task-15' coro=<PortfolioWidget._start_update_worker.<locals>._get_empty_data() running at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\portfolio_widget.py:445> cb=[PortfolioWidget._start_update_worker.<locals>.<lambda>() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\portfolio_widget.py:456]>
+2025-06-06 20:57:33,667 - qasync._QEventLoop - ERROR - [MainThread] - __init__.py:736 - Task was destroyed but it is pending!
+task: <Task pending name='Task-19' coro=<PortfolioWidget._start_update_worker.<locals>._get_empty_data() running at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\portfolio_widget.py:445> cb=[PortfolioWidget._start_update_worker.<locals>.<lambda>() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\portfolio_widget.py:456]>
+2025-06-06 20:57:33,655 - qasync._QEventLoop - ERROR - [MainThread] - __init__.py:736 - Exception in callback <_asyncio.TaskStepMethWrapper object at 0x0000018999156140>()
+handle: <Handle <_asyncio.TaskStepMethWrapper object at 0x0000018999156140>()>
+Traceback (most recent call last):
+  File "C:\Users\zamor\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: Cannot enter into task <Task pending name='Task-23' coro=<PortfolioWidget._start_update_worker.<locals>._get_empty_data() running at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\portfolio_widget.py:445> cb=[PortfolioWidget._start_update_worker.<locals>.<lambda>() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\portfolio_widget.py:456]> while another task <Task pending name='Task-8' coro=<DashboardView._initialize_async_components() running at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\windows\dashboard_view.py:157>> is being executed.
+2025-06-06 20:57:34,080 - httpcore.http11 - DEBUG - [Dummy-11] - _trace.py:87 - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Sat, 07 Jun 2025 00:57:28 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
+2025-06-06 20:57:34,080 - httpx - INFO - [Dummy-11] - _client.py:1786 - HTTP Request: GET http://localhost:8000/api/v1/opportunities/real-trading-candidates "HTTP/1.1 200 OK"
+2025-06-06 20:57:34,080 - httpcore.http11 - DEBUG - [Dummy-11] - _trace.py:87 - receive_response_body.started request=<Request [b'GET']>
+2025-06-06 20:57:34,081 - httpcore.http11 - DEBUG - [Dummy-11] - _trace.py:87 - receive_response_body.complete
+2025-06-06 20:57:34,081 - httpcore.http11 - DEBUG - [Dummy-11] - _trace.py:87 - response_closed.started
+2025-06-06 20:57:34,081 - httpcore.http11 - DEBUG - [Dummy-11] - _trace.py:87 - response_closed.complete
+2025-06-06 20:57:34,081 - src.ultibot_ui.services.api_client - INFO - [Dummy-11] - api_client.py:58 - Cerrando httpx.AsyncClient...
+2025-06-06 20:57:34,081 - httpcore.connection - DEBUG - [Dummy-11] - _trace.py:87 - close.started
+2025-06-06 20:57:34,082 - httpcore.connection - DEBUG - [Dummy-11] - _trace.py:87 - close.complete
+2025-06-06 20:57:34,082 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:589 - DashboardView._handle_real_opportunities_result: INICIO
+2025-06-06 20:57:34,082 - src.ultibot_ui.services.api_client - INFO - [Dummy-11] - api_client.py:60 - httpx.AsyncClient cerrado.
+2025-06-06 20:57:34,082 - src.ultibot_ui.windows.dashboard_view - DEBUG - [MainThread] - dashboard_view.py:604 - No hay oportunidades de trading real pendientes de confirmación.
+2025-06-06 20:57:34,082 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:605 - DashboardView._handle_real_opportunities_result: FIN
+2025-06-06 20:57:38,951 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:608 - DashboardView._check_pending_real_opportunities: INICIO (refactorizado)
+2025-06-06 20:57:38,951 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: http://localhost:8000, token: absent, coroutine_factory: set
+2025-06-06 20:57:38,952 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:615 - DashboardView._check_pending_real_opportunities: Llamada a api_client.get_real_trading_candidates programada.
+2025-06-06 20:57:38,952 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:620 - DashboardView._check_pending_real_opportunities: FIN (programación)
+2025-06-06 20:57:38,952 - asyncio - DEBUG - [Dummy-12] - selector_events.py:64 - Using selector: SelectSelector
+2025-06-06 20:57:38,953 - httpx - DEBUG - [Dummy-12] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-06 20:57:38,954 - httpx - DEBUG - [Dummy-12] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-06 20:57:39,215 - src.ultibot_ui.services.api_client - INFO - [Dummy-12] - api_client.py:313 - Obteniendo oportunidades de trading real pendientes de confirmación.
+2025-06-06 20:57:39,215 - src.ultibot_ui.services.api_client - DEBUG - [Dummy-12] - api_client.py:79 - APIClient: _make_request_invoked for GET /api/v1/opportunities/real-trading-candidates
+2025-06-06 20:57:39,215 - httpcore.connection - DEBUG - [Dummy-12] - _trace.py:87 - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-06 20:57:39,470 - httpcore.connection - DEBUG - [Dummy-12] - _trace.py:87 - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000018999175310>
+2025-06-06 20:57:39,471 - httpcore.http11 - DEBUG - [Dummy-12] - _trace.py:87 - send_request_headers.started request=<Request [b'GET']>
+2025-06-06 20:57:39,471 - httpcore.http11 - DEBUG - [Dummy-12] - _trace.py:87 - send_request_headers.complete
+2025-06-06 20:57:39,471 - httpcore.http11 - DEBUG - [Dummy-12] - _trace.py:87 - send_request_body.started request=<Request [b'GET']>
+2025-06-06 20:57:39,471 - httpcore.http11 - DEBUG - [Dummy-12] - _trace.py:87 - send_request_body.complete
+2025-06-06 20:57:39,472 - httpcore.http11 - DEBUG - [Dummy-12] - _trace.py:87 - receive_response_headers.started request=<Request [b'GET']>
+2025-06-06 20:57:43,096 - httpcore.http11 - DEBUG - [Dummy-12] - _trace.py:87 - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Sat, 07 Jun 2025 00:57:38 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
+2025-06-06 20:57:43,096 - httpx - INFO - [Dummy-12] - _client.py:1786 - HTTP Request: GET http://localhost:8000/api/v1/opportunities/real-trading-candidates "HTTP/1.1 200 OK"
+2025-06-06 20:57:43,096 - httpcore.http11 - DEBUG - [Dummy-12] - _trace.py:87 - receive_response_body.started request=<Request [b'GET']>
+2025-06-06 20:57:43,096 - httpcore.http11 - DEBUG - [Dummy-12] - _trace.py:87 - receive_response_body.complete
+2025-06-06 20:57:43,096 - httpcore.http11 - DEBUG - [Dummy-12] - _trace.py:87 - response_closed.started
+2025-06-06 20:57:43,097 - httpcore.http11 - DEBUG - [Dummy-12] - _trace.py:87 - response_closed.complete
+2025-06-06 20:57:43,097 - src.ultibot_ui.services.api_client - INFO - [Dummy-12] - api_client.py:58 - Cerrando httpx.AsyncClient...
+2025-06-06 20:57:43,097 - httpcore.connection - DEBUG - [Dummy-12] - _trace.py:87 - close.started
+2025-06-06 20:57:43,097 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:589 - DashboardView._handle_real_opportunities_result: INICIO
+2025-06-06 20:57:43,097 - httpcore.connection - DEBUG - [Dummy-12] - _trace.py:87 - close.complete
+2025-06-06 20:57:43,097 - src.ultibot_ui.windows.dashboard_view - DEBUG - [MainThread] - dashboard_view.py:604 - No hay oportunidades de trading real pendientes de confirmación.
+2025-06-06 20:57:43,097 - src.ultibot_ui.services.api_client - INFO - [Dummy-12] - api_client.py:60 - httpx.AsyncClient cerrado.
+2025-06-06 20:57:43,098 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:605 - DashboardView._handle_real_opportunities_result: FIN
+2025-06-06 20:57:48,645 - src.ultibot_ui.widgets.portfolio_widget - INFO - [MainThread] - portfolio_widget.py:433 - Actualizando datos del portafolio para modo: paper
+2025-06-06 20:57:48,646 - qasync._QEventLoop - ERROR - [MainThread] - __init__.py:736 - Exception in callback <_asyncio.TaskStepMethWrapper object at 0x000001899571C250>()
+handle: <Handle <_asyncio.TaskStepMethWrapper object at 0x000001899571C250>()>
+Traceback (most recent call last):
+  File "C:\Users\zamor\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: Cannot enter into task <Task pending name='Task-27' coro=<PortfolioWidget._start_update_worker.<locals>._get_empty_data() running at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\portfolio_widget.py:445> cb=[PortfolioWidget._start_update_worker.<locals>.<lambda>() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\portfolio_widget.py:456]> while another task <Task pending name='Task-8' coro=<DashboardView._initialize_async_components() running at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\windows\dashboard_view.py:157>> is being executed.
+2025-06-06 20:57:48,943 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:608 - DashboardView._check_pending_real_opportunities: INICIO (refactorizado)
+2025-06-06 20:57:48,943 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: http://localhost:8000, token: absent, coroutine_factory: set
+2025-06-06 20:57:48,943 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:615 - DashboardView._check_pending_real_opportunities: Llamada a api_client.get_real_trading_candidates programada.
+2025-06-06 20:57:48,944 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:620 - DashboardView._check_pending_real_opportunities: FIN (programación)
+2025-06-06 20:57:48,944 - asyncio - DEBUG - [Dummy-13] - selector_events.py:64 - Using selector: SelectSelector
+2025-06-06 20:57:48,946 - httpx - DEBUG - [Dummy-13] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-06 20:57:48,947 - httpx - DEBUG - [Dummy-13] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-06 20:57:48,974 - src.ultibot_ui.views.opportunities_view - INFO - [MainThread] - opportunities_view.py:134 - [TRACE] OpportunitiesView: _fetch_opportunities called. Fetching Gemini IA opportunities.
+2025-06-06 20:57:48,975 - src.ultibot_ui.views.opportunities_view - DEBUG - [MainThread] - opportunities_view.py:139 - [TRACE] OpportunitiesView: Attempting to get get_gemini_opportunities coroutine.
+2025-06-06 20:57:48,975 - src.ultibot_ui.views.opportunities_view - DEBUG - [MainThread] - opportunities_view.py:147 - OpportunitiesView._start_api_worker: Creating ApiWorker for coroutine_factory.
+2025-06-06 20:57:48,975 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: <function OpportunitiesView._fetch_opportunities.<locals>.<lambda> at 0x0000018999159C60>, token: absent, coroutine_factory: set
+2025-06-06 20:57:48,975 - src.ultibot_ui.views.opportunities_view - DEBUG - [MainThread] - opportunities_view.py:155 - OpportunitiesView._start_api_worker: ApiWorker instance created: <src.ultibot_ui.workers.ApiWorker object at 0x000001899913DB50> with loop <QIOCPEventLoop running=True closed=False debug=False>
+2025-06-06 20:57:48,975 - src.ultibot_ui.views.opportunities_view - DEBUG - [MainThread] - opportunities_view.py:157 - OpportunitiesView._start_api_worker: QThread instance created: <PyQt5.QtCore.QThread object at 0x000001899913CCB0>
+2025-06-06 20:57:48,975 - src.ultibot_ui.views.opportunities_view - DEBUG - [MainThread] - opportunities_view.py:160 - OpportunitiesView._start_api_worker: Worker <src.ultibot_ui.workers.ApiWorker object at 0x000001899913DB50> moved to thread <PyQt5.QtCore.QThread object at 0x000001899913CCB0>. Connecting signals...
+2025-06-06 20:57:48,975 - src.ultibot_ui.views.opportunities_view - DEBUG - [MainThread] - opportunities_view.py:186 - OpportunitiesView._start_api_worker: Signals connected. Starting thread for worker: <src.ultibot_ui.workers.ApiWorker object at 0x000001899913DB50> on thread: <PyQt5.QtCore.QThread object at 0x000001899913CCB0>
+2025-06-06 20:57:48,975 - src.ultibot_ui.views.opportunities_view - DEBUG - [MainThread] - opportunities_view.py:188 - OpportunitiesView._start_api_worker: thread.start() called for worker: <src.ultibot_ui.workers.ApiWorker object at 0x000001899913DB50>. IsRunning: True, IsFinished: False
+2025-06-06 20:57:49,184 - src.ultibot_ui.services.api_client - INFO - [Dummy-13] - api_client.py:313 - Obteniendo oportunidades de trading real pendientes de confirmación.
+2025-06-06 20:57:49,184 - src.ultibot_ui.services.api_client - DEBUG - [Dummy-13] - api_client.py:79 - APIClient: _make_request_invoked for GET /api/v1/opportunities/real-trading-candidates
+2025-06-06 20:57:49,184 - httpcore.connection - DEBUG - [Dummy-13] - _trace.py:87 - connect_tcp.started host='localhost' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-06 20:57:49,444 - httpcore.connection - DEBUG - [Dummy-13] - _trace.py:87 - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x0000018999177020>
+2025-06-06 20:57:49,445 - httpcore.http11 - DEBUG - [Dummy-13] - _trace.py:87 - send_request_headers.started request=<Request [b'GET']>
+2025-06-06 20:57:49,445 - httpcore.http11 - DEBUG - [Dummy-13] - _trace.py:87 - send_request_headers.complete
+2025-06-06 20:57:49,445 - httpcore.http11 - DEBUG - [Dummy-13] - _trace.py:87 - send_request_body.started request=<Request [b'GET']>
+2025-06-06 20:57:49,446 - httpcore.http11 - DEBUG - [Dummy-13] - _trace.py:87 - send_request_body.complete
+2025-06-06 20:57:49,446 - httpcore.http11 - DEBUG - [Dummy-13] - _trace.py:87 - receive_response_headers.started request=<Request [b'GET']>
+2025-06-06 20:57:54,340 - src.ultibot_ui.windows.dashboard_view - ERROR - [MainThread] - dashboard_view.py:170 - DashboardView: Error al cargar desempeño de estrategias: Error de API (404): API request failed with status 404: {"detail":"Not Found"}
+Exception: Error de API (404): API request failed with status 404: {"detail":"Not Found"}
+2025-06-06 20:57:54,341 - src.ultibot_ui.windows.dashboard_view - ERROR - [MainThread] - dashboard_view.py:682 - DashboardView: Error de API general: Error al cargar desempeño de estrategias: Error de API (404): API request failed with status 404: {"detail":"Not Found"}
+2025-06-06 20:57:54,717 - httpcore.http11 - DEBUG - [Dummy-13] - _trace.py:87 - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Sat, 07 Jun 2025 00:57:48 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
+2025-06-06 20:57:54,718 - httpx - INFO - [Dummy-13] - _client.py:1786 - HTTP Request: GET http://localhost:8000/api/v1/opportunities/real-trading-candidates "HTTP/1.1 200 OK"
+2025-06-06 20:57:54,718 - httpcore.http11 - DEBUG - [Dummy-13] - _trace.py:87 - receive_response_body.started request=<Request [b'GET']>
+2025-06-06 20:57:54,718 - httpcore.http11 - DEBUG - [Dummy-13] - _trace.py:87 - receive_response_body.complete
+2025-06-06 20:57:54,718 - httpcore.http11 - DEBUG - [Dummy-13] - _trace.py:87 - response_closed.started
+2025-06-06 20:57:54,718 - httpcore.http11 - DEBUG - [Dummy-13] - _trace.py:87 - response_closed.complete
+2025-06-06 20:57:54,719 - src.ultibot_ui.services.api_client - INFO - [Dummy-13] - api_client.py:58 - Cerrando httpx.AsyncClient...
+2025-06-06 20:57:54,719 - httpcore.connection - DEBUG - [Dummy-13] - _trace.py:87 - close.started
+2025-06-06 20:57:54,719 - httpcore.connection - DEBUG - [Dummy-13] - _trace.py:87 - close.complete
+2025-06-06 20:57:54,719 - src.ultibot_ui.services.api_client - INFO - [Dummy-13] - api_client.py:60 - httpx.AsyncClient cerrado.
+2025-06-06 20:57:54,719 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:589 - DashboardView._handle_real_opportunities_result: INICIO
+2025-06-06 20:57:54,719 - src.ultibot_ui.windows.dashboard_view - DEBUG - [MainThread] - dashboard_view.py:604 - No hay oportunidades de trading real pendientes de confirmación.
+2025-06-06 20:57:54,719 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:605 - DashboardView._handle_real_opportunities_result: FIN
+2025-06-06 20:57:55,316 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:183 - DashboardView: Iniciando market_data_widget.load_initial_configuration (no-bloqueante)...
+2025-06-06 20:57:55,316 - src.ultibot_ui.widgets.market_data_widget - INFO - [MainThread] - market_data_widget.py:179 - Cargando configuración inicial para MarketDataWidget...
+2025-06-06 20:57:55,316 - src.ultibot_ui.workers - DEBUG - [MainThread] - workers.py:31 - ApiWorker initialized with base_url: http://localhost:8000, token: absent, coroutine_factory: set
+2025-06-06 20:57:55,316 - src.ultibot_ui.widgets.market_data_widget - INFO - [MainThread] - market_data_widget.py:186 - load_initial_configuration: Llamada a get_user_configuration programada.
+2025-06-06 20:57:55,317 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:186 - DashboardView: market_data_widget.load_initial_configuration INICIADO.

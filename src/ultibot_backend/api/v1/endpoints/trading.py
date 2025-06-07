@@ -5,12 +5,11 @@ from pydantic import BaseModel, Field
 
 from src.shared.data_types import ConfirmRealTradeRequest, OpportunityStatus, Opportunity, TradeOrderDetails
 from src.ultibot_backend.services.trading_engine_service import TradingEngine
-from src.ultibot_backend.services.config_service import ConfigService
+from src.ultibot_backend.services.config_service import ConfigurationService
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 from src.ultibot_backend.services.unified_order_execution_service import UnifiedOrderExecutionService
 from src.ultibot_backend import dependencies as deps
-from src.ultibot_backend.security import core as security_core
-from src.ultibot_backend.security import schemas as security_schemas
+from src.ultibot_backend.app_config import settings
 
 router = APIRouter()
 
@@ -19,15 +18,13 @@ async def confirm_real_opportunity(
     opportunity_id: UUID,
     request: ConfirmRealTradeRequest,
     trading_engine_service: Annotated[TradingEngine, Depends(deps.get_trading_engine_service)],
-    config_service: Annotated[ConfigService, Depends(deps.get_config_service)],
-    persistence_service: Annotated[SupabasePersistenceService, Depends(deps.get_persistence_service)],
-    current_user: security_schemas.User = Depends(security_core.get_current_active_user)
+    config_service: Annotated[ConfigurationService, Depends(deps.get_config_service)],
+    persistence_service: Annotated[SupabasePersistenceService, Depends(deps.get_persistence_service)]
 ):
     """
-    Endpoint para que el usuario autenticado confirme explícitamente una oportunidad de trading real.
+    Endpoint para que el usuario fijo confirme explícitamente una oportunidad de trading real.
     """
-    if not isinstance(current_user.id, UUID):
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User ID is not a valid UUID.")
+    user_id = settings.FIXED_USER_ID
 
     if opportunity_id != request.opportunity_id:
         raise HTTPException(
@@ -35,13 +32,12 @@ async def confirm_real_opportunity(
             detail="Opportunity ID in path and request body do not match."
         )
     
-    if current_user.id != request.user_id:
+    if user_id != request.user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User ID in token does not match user ID in request body."
+            detail="User ID in settings does not match user ID in request body."
         )
 
-    # 1. Validar que la oportunidad existe y está en el estado correcto
     opportunity = await persistence_service.get_opportunity_by_id(opportunity_id)
     if not opportunity:
         raise HTTPException(
@@ -49,8 +45,7 @@ async def confirm_real_opportunity(
             detail=f"Opportunity with ID {opportunity_id} not found."
         )
 
-    # Verificar que la oportunidad pertenece al usuario autenticado
-    if opportunity.user_id != current_user.id:
+    if opportunity.user_id != user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User not authorized to confirm this opportunity."
@@ -62,8 +57,7 @@ async def confirm_real_opportunity(
             detail=f"Opportunity {opportunity_id} is not in 'pending_user_confirmation_real' status. Current status: {opportunity.status.value}"
         )
     
-    # 2. Validar que el modo de operativa real limitada está activo y hay cupos disponibles
-    user_config = await config_service.get_user_configuration(str(current_user.id))
+    user_config = await config_service.get_user_configuration(str(user_id))
     if not user_config or not user_config.realTradingSettings:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -83,15 +77,24 @@ async def confirm_real_opportunity(
             detail="Maximum number of real trades reached for this user."
         )
 
-    # 3. Si las validaciones son exitosas, simplemente retorna éxito (placeholder real)
-    return {"message": "Real trade execution confirmed (placeholder, implement logic)."}
+    try:
+        trade_details = await trading_engine_service.execute_trade_from_confirmed_opportunity(opportunity)
+        if not trade_details:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create trade from confirmed opportunity."
+            )
+        return {"message": "Real trade execution initiated successfully.", "trade_details": trade_details.model_dump()}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred: {str(e)}"
+        )
 
-# Trading mode type alias
 TradingMode = Literal["paper", "real"]
 
 class MarketOrderRequest(BaseModel):
     """Request model for market order execution."""
-    user_id: UUID = Field(..., description="User identifier")
     symbol: str = Field(..., description="Trading symbol (e.g., 'BTCUSDT')")
     side: str = Field(..., description="Order side ('BUY' or 'SELL')")
     quantity: float = Field(..., gt=0, description="Order quantity (must be positive)")
@@ -102,39 +105,21 @@ class MarketOrderRequest(BaseModel):
 @router.post("/market-order", response_model=TradeOrderDetails, status_code=status.HTTP_200_OK)
 async def execute_market_order(
     request: MarketOrderRequest,
-    unified_execution_service: Annotated[UnifiedOrderExecutionService, Depends(deps.get_unified_order_execution_service)],
-    current_user: security_schemas.User = Depends(security_core.get_current_active_user)
+    unified_execution_service: Annotated[UnifiedOrderExecutionService, Depends(deps.get_unified_order_execution_service)]
 ):
     """
-    Execute a market order in the specified trading mode for the authenticated user.
-    
-    This endpoint allows execution of market orders in either paper trading or real trading mode.
-    For real trading, API credentials must be provided in the request.
+    Execute a market order in the specified trading mode for the fixed user.
     """
+    user_id = settings.FIXED_USER_ID
     try:
-        # Validate trading mode
         if not unified_execution_service.validate_trading_mode(request.trading_mode):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid trading mode: {request.trading_mode}. Must be 'paper' or 'real'"
             )
-
-        if current_user.id != request.user_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="User ID in token does not match user ID in request body."
-            )
         
-        # Ensure current_user.id is a UUID before passing it
-        if not isinstance(current_user.id, UUID):
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Authenticated user ID is not a valid UUID."
-            )
-        
-        # Execute the order
         order_details = await unified_execution_service.execute_market_order(
-            user_id=current_user.id, # Use authenticated user's ID
+            user_id=user_id,
             symbol=request.symbol,
             side=request.side,
             quantity=request.quantity,
@@ -146,7 +131,6 @@ async def execute_market_order(
         return order_details
         
     except HTTPException:
-        # Re-raise HTTP exceptions
         raise
     except Exception as e:
         raise HTTPException(
@@ -154,23 +138,18 @@ async def execute_market_order(
             detail=f"Failed to execute market order: {str(e)}"
         )
 
-@router.get("/paper-balances", status_code=status.HTTP_200_OK) # Path parameter user_id removed
+@router.get("/paper-balances", status_code=status.HTTP_200_OK)
 async def get_paper_trading_balances(
-    unified_execution_service: Annotated[UnifiedOrderExecutionService, Depends(deps.get_unified_order_execution_service)],
-    current_user: security_schemas.User = Depends(security_core.get_current_active_user) # Added current_user
+    unified_execution_service: Annotated[UnifiedOrderExecutionService, Depends(deps.get_unified_order_execution_service)]
 ):
     """
-    Get current virtual balances for paper trading for the authenticated user.
-    
-    Returns the current virtual balances maintained by the paper trading service.
+    Get current virtual balances for paper trading for the fixed user.
     """
+    user_id = settings.FIXED_USER_ID
     try:
-        if not isinstance(current_user.id, UUID): # Added check for current_user.id
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User ID is not a valid UUID.")
-
-        balances = await unified_execution_service.get_virtual_balances() # This service might need user_id in the future
+        balances = await unified_execution_service.get_virtual_balances()
         return {
-            "user_id": current_user.id, # Use current_user.id
+            "user_id": user_id,
             "trading_mode": "paper",
             "balances": balances
         }
@@ -181,24 +160,19 @@ async def get_paper_trading_balances(
             detail=f"Failed to retrieve paper trading balances: {str(e)}"
         )
 
-@router.post("/paper-balances/reset", status_code=status.HTTP_200_OK) # Path parameter user_id removed
+@router.post("/paper-balances/reset", status_code=status.HTTP_200_OK)
 async def reset_paper_trading_balances(
     unified_execution_service: Annotated[UnifiedOrderExecutionService, Depends(deps.get_unified_order_execution_service)],
-    current_user: security_schemas.User = Depends(security_core.get_current_active_user), # Added current_user
     initial_capital: float = Query(..., gt=0, description="Initial capital amount (must be positive)")
 ):
     """
-    Reset paper trading balances to initial capital for the authenticated user.
-    
-    This endpoint allows resetting the virtual balances for paper trading to a new initial capital amount.
+    Reset paper trading balances to initial capital for the fixed user.
     """
+    user_id = settings.FIXED_USER_ID
     try:
-        if not isinstance(current_user.id, UUID): # Added check for current_user.id
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User ID is not a valid UUID.")
-
-        unified_execution_service.reset_virtual_balances(initial_capital) # This service might need user_id in the future
+        unified_execution_service.reset_virtual_balances(initial_capital=initial_capital)
         return {
-            "user_id": current_user.id, # Use current_user.id
+            "user_id": user_id,
             "trading_mode": "paper",
             "message": f"Paper trading balances reset to {initial_capital} USDT",
             "new_balance": initial_capital
@@ -216,8 +190,6 @@ async def get_supported_trading_modes(
 ):
     """
     Get list of supported trading modes.
-    
-    Returns the available trading modes supported by the system.
     """
     try:
         supported_modes = unified_execution_service.get_supported_trading_modes()

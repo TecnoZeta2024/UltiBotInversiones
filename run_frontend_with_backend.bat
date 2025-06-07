@@ -6,22 +6,17 @@ echo Limpiando directorios __pycache__...
 powershell -Command "Get-ChildItem -Path src -Recurse -Directory -Filter '__pycache__' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
 echo Limpieza de __pycache__ completada.
 
-REM 1. Lanzar el backend ejecutando el módulo main directamente
-start "UltiBot Backend" cmd /k "poetry run python -m src.ultibot_backend.main"
+REM 1. Lanzar el backend con Uvicorn y redirigir su salida a un archivo de log
+echo Lanzando el backend con Uvicorn y capturando su salida en logs/backend_stdout.log...
+REM Se usa cmd /c para asegurar que la salida se redirige correctamente.
+start "UltiBot Backend" cmd /c "poetry run uvicorn src.ultibot_backend.main:app --host 0.0.0.0 --port 8000 > logs/backend_stdout.log 2>&1"
 
-REM 2. Esperar a que el backend esté listo (bucle de verificación de salud)
-echo Esperando a que el backend inicie en http://127.0.0.1:8000 (o el puerto configurado en .env)...
-:wait_for_backend
-    powershell -Command "try { Invoke-WebRequest -Uri http://127.0.0.1:8000/health -UseBasicParsing -TimeoutSec 5 | Out-Null; exit 0 } catch { exit 1 }"
-    if %errorlevel% equ 0 (
-        echo Backend listo.
-    ) else (
-        echo Backend no disponible, reintentando en 2 segundos...
-        ping 127.0.0.1 -n 3 > nul
-        goto wait_for_backend
-    )
+REM 2. Pausa extendida para dar tiempo al backend a inicializarse completamente.
+echo Dando 15 segundos al backend para que se inicie...
+ping 127.0.0.1 -n 16 > nul
 
 REM 3. Lanzar el frontend
+echo Lanzando el frontend...
 start "UltiBot Frontend" cmd /k "poetry run python -m src.ultibot_ui.main & PAUSE"
 
 REM 4. Mensaje final

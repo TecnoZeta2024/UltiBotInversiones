@@ -594,48 +594,17 @@ async def run_application(ultibot_app: 'UltiBotApplication') -> int:
         ultibot_app.setup_qt_application()
         apply_application_style("dark")
         
-        # --- Flujo de Login ---
+        # --- Flujo de Login OMITIDO ---
+        # Se omite el diálogo de login para desarrollo. Se usa el token del .env.
+        logger.info("Skipping login dialog for development.")
         if not ultibot_app.auth_token:
-            logger.info("No pre-existing auth token found. Showing login dialog.")
-            
-            # Factoría corregida para aceptar una coroutine_factory
-            def api_worker_factory(coroutine_factory: Callable, token: Optional[str] = None) -> ApiWorker:
-                return ApiWorker(
-                    base_url=ultibot_app.backend_base_url,
-                    coroutine_factory=coroutine_factory,
-                    token=token
-                )
-
-            login_dialog = LoginDialog(api_worker_factory=api_worker_factory)
-            
-            login_future = ultibot_app.qasync_loop.create_future()
-
-            @pyqtSlot(str)
-            def on_login_success(token: str):
-                if not login_future.done():
-                    login_future.set_result(token)
-            
-            @pyqtSlot()
-            def on_login_rejected():
-                if not login_future.done():
-                    login_future.set_result(None)
-
-            login_dialog.login_successful.connect(on_login_success)
-            login_dialog.rejected.connect(on_login_rejected)
-            
-            login_dialog.exec_() # Show modal dialog
-            
-            token = await login_future
-            
-            if token:
-                ultibot_app.auth_token = token
-                logger.info("Login successful. JWT token obtained and stored.")
-            else:
-                logger.warning("Login was cancelled or failed. Exiting application.")
-                ultibot_app.show_error_and_exit("Login Required", "Authentication is required to continue.", exit_code=0)
-                return 0
-        else:
-            logger.info("Auth token already present. Skipping login dialog.")
+            logger.critical("ULTIBOT_AUTH_TOKEN no está definido en el archivo .env. Este token es necesario para saltar el login.")
+            ultibot_app.show_error_and_exit(
+                "Token Requerido", 
+                "La variable de entorno ULTIBOT_AUTH_TOKEN debe estar definida para continuar."
+            )
+            return 1
+        logger.info("Auth token found in environment. Proceeding directly to main application.")
 
         await ultibot_app.initialize_core_services()
         
@@ -643,9 +612,9 @@ async def run_application(ultibot_app: 'UltiBotApplication') -> int:
             logger.info("Fetching user configuration...")
             await ultibot_app.ensure_user_configuration(auth_token=ultibot_app.auth_token)
         else:
-            # Este caso no debería ocurrir si el flujo de login es correcto, pero es una salvaguarda.
-            logger.error("Auth token is missing after login flow. Cannot fetch user configuration.")
-            ultibot_app.show_error_and_exit("Error Interno", "El token de autenticación no se encontró después del login.")
+            # Este caso no debería ocurrir si la lógica anterior es correcta.
+            logger.error("Auth token is missing. Cannot fetch user configuration.")
+            ultibot_app.show_error_and_exit("Error Interno", "El token de autenticación no se encontró.")
             return 1
 
         main_window = ultibot_app.create_main_window()

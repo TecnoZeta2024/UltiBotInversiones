@@ -12,20 +12,14 @@ from pydantic import BaseModel
 
 from src.shared.data_types import Trade, PerformanceMetrics
 from src.ultibot_backend.services.trading_report_service import TradingReportService
-from src.ultibot_backend.security import core as security_core # Importar security_core
-from src.ultibot_backend.security import schemas as security_schemas # Importar security_schemas
-# SupabasePersistenceService ya no se importa directamente aquí si TradingReportService se obtiene de deps
-# from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend import dependencies as deps # Importar deps
+from src.ultibot_backend import dependencies as deps
+from src.ultibot_backend.app_config import settings
 
 # Configurar logging
 logger = logging.getLogger(__name__)
 
 # Crear el router
 router = APIRouter()
-
-# Las funciones de dependencia locales get_persistence_service y get_trading_report_service ya no son necesarias
-# si usamos deps.get_trading_report_service directamente.
 
 # Modelos para los parámetros de consulta
 class TradeFilters(BaseModel):
@@ -44,7 +38,6 @@ class TradeHistoryResponse(BaseModel):
 
 @router.get("/trades/history/paper", response_model=TradeHistoryResponse, tags=["reports"])
 async def get_paper_trading_history(
-    current_user: security_schemas.User = Depends(security_core.get_current_active_user),
     symbol: Optional[str] = Query(None, description="Filtrar por par de trading (ej. BTCUSDT)"),
     start_date: Optional[datetime] = Query(None, description="Fecha de inicio para filtrar"),
     end_date: Optional[datetime] = Query(None, description="Fecha de fin para filtrar"),
@@ -53,20 +46,12 @@ async def get_paper_trading_history(
     report_service: TradingReportService = Depends(deps.get_trading_report_service)
 ) -> TradeHistoryResponse:
     """
-    Obtiene el historial de operaciones de Paper Trading cerradas para el usuario autenticado.
-    
-    Permite filtrar por par de trading y rango de fechas. Soporta paginación.
+    Obtiene el historial de operaciones de Paper Trading cerradas para el usuario fijo.
     """
+    user_id = settings.FIXED_USER_ID
     try:
-        if not isinstance(current_user.id, UUID):
-            raise HTTPException(status_code=500, detail="User ID is not a valid UUID.")
-
-        logger.info(f"Obteniendo historial de paper trading para usuario {current_user.id}")
-        logger.info(f"Filtros: symbol={symbol}, start_date={start_date}, end_date={end_date}, limit={limit}, offset={offset}")
-        
-        # Obtener los trades usando el servicio
         trades = await report_service.get_closed_trades(
-            user_id=current_user.id,
+            user_id=user_id,
             mode='paper',
             symbol=symbol,
             start_date=start_date,
@@ -75,12 +60,10 @@ async def get_paper_trading_history(
             offset=offset
         )
         
-        # Para determinar si hay más resultados, intentamos obtener uno más
         has_more = False
         if len(trades) == limit:
-            # Comprobar si hay más trades
             check_trades = await report_service.get_closed_trades(
-                user_id=current_user.id,
+                user_id=user_id,
                 mode='paper',
                 symbol=symbol,
                 start_date=start_date,
@@ -90,13 +73,9 @@ async def get_paper_trading_history(
             )
             has_more = len(check_trades) > 0
         
-        # Calcular el total aproximado (esto es costoso de hacer exacto cada vez)
-        # Para v1.0, usamos una aproximación basada en los resultados obtenidos
         total_count = offset + len(trades)
         if has_more:
-            total_count += 1  # Sabemos que hay al menos uno más
-        
-        logger.info(f"Devolviendo {len(trades)} trades de paper trading")
+            total_count += 1
         
         return TradeHistoryResponse(
             trades=trades,
@@ -113,35 +92,23 @@ async def get_paper_trading_history(
 
 @router.get("/portfolio/paper/performance_summary", response_model=PerformanceMetrics, tags=["reports"])
 async def get_paper_trading_performance(
-    current_user: security_schemas.User = Depends(security_core.get_current_active_user),
     symbol: Optional[str] = Query(None, description="Filtrar por par de trading (ej. BTCUSDT)"),
     start_date: Optional[datetime] = Query(None, description="Fecha de inicio para filtrar"),
     end_date: Optional[datetime] = Query(None, description="Fecha de fin para filtrar"),
     report_service: TradingReportService = Depends(deps.get_trading_report_service)
 ) -> PerformanceMetrics:
     """
-    Obtiene las métricas de rendimiento consolidadas para Paper Trading del usuario autenticado.
-    
-    Calcula P&L total, Win Rate, número total de operaciones y P&L promedio por operación.
+    Obtiene las métricas de rendimiento consolidadas para Paper Trading del usuario fijo.
     """
+    user_id = settings.FIXED_USER_ID
     try:
-        if not isinstance(current_user.id, UUID):
-            raise HTTPException(status_code=500, detail="User ID is not a valid UUID.")
-        
-        logger.info(f"Calculando métricas de rendimiento de paper trading para usuario {current_user.id}")
-        logger.info(f"Filtros: symbol={symbol}, start_date={start_date}, end_date={end_date}")
-        
-        # Calcular las métricas usando el servicio
         metrics = await report_service.calculate_performance_metrics(
-            user_id=current_user.id,
+            user_id=user_id,
             mode='paper',
             symbol=symbol,
             start_date=start_date,
             end_date=end_date
         )
-        
-        logger.info(f"Métricas calculadas: {metrics.total_trades} trades, Win Rate: {metrics.win_rate:.2f}%, P&L Total: {metrics.total_pnl:.2f}")
-        
         return metrics
         
     except Exception as e:
@@ -153,7 +120,6 @@ async def get_paper_trading_performance(
 
 @router.get("/trades/history/real", response_model=TradeHistoryResponse, tags=["reports"])
 async def get_real_trading_history(
-    current_user: security_schemas.User = Depends(security_core.get_current_active_user),
     symbol: Optional[str] = Query(None, description="Filtrar por par de trading (ej. BTCUSDT)"),
     start_date: Optional[datetime] = Query(None, description="Fecha de inicio para filtrar"),
     end_date: Optional[datetime] = Query(None, description="Fecha de fin para filtrar"),
@@ -162,19 +128,12 @@ async def get_real_trading_history(
     report_service: TradingReportService = Depends(deps.get_trading_report_service)
 ) -> TradeHistoryResponse:
     """
-    Obtiene el historial de operaciones de Trading Real cerradas para el usuario autenticado.
-    
-    Similar al endpoint de paper trading pero para operaciones reales.
+    Obtiene el historial de operaciones de Trading Real cerradas para el usuario fijo.
     """
+    user_id = settings.FIXED_USER_ID
     try:
-        if not isinstance(current_user.id, UUID):
-            raise HTTPException(status_code=500, detail="User ID is not a valid UUID.")
-        
-        logger.info(f"Obteniendo historial de trading real para usuario {current_user.id}")
-        
-        # Obtener los trades usando el servicio
         trades = await report_service.get_closed_trades(
-            user_id=current_user.id,
+            user_id=user_id,
             mode='real',
             symbol=symbol,
             start_date=start_date,
@@ -183,11 +142,10 @@ async def get_real_trading_history(
             offset=offset
         )
         
-        # Determinar si hay más resultados
         has_more = False
         if len(trades) == limit:
             check_trades = await report_service.get_closed_trades(
-                user_id=current_user.id,
+                user_id=user_id,
                 mode='real',
                 symbol=symbol,
                 start_date=start_date,
@@ -200,8 +158,6 @@ async def get_real_trading_history(
         total_count = offset + len(trades)
         if has_more:
             total_count += 1
-        
-        logger.info(f"Devolviendo {len(trades)} trades de trading real")
         
         return TradeHistoryResponse(
             trades=trades,
@@ -218,32 +174,23 @@ async def get_real_trading_history(
 
 @router.get("/portfolio/real/performance_summary", response_model=PerformanceMetrics, tags=["reports"])
 async def get_real_trading_performance(
-    current_user: security_schemas.User = Depends(security_core.get_current_active_user),
     symbol: Optional[str] = Query(None, description="Filtrar por par de trading (ej. BTCUSDT)"),
     start_date: Optional[datetime] = Query(None, description="Fecha de inicio para filtrar"),
     end_date: Optional[datetime] = Query(None, description="Fecha de fin para filtrar"),
     report_service: TradingReportService = Depends(deps.get_trading_report_service)
 ) -> PerformanceMetrics:
     """
-    Obtiene las métricas de rendimiento consolidadas para Trading Real del usuario autenticado.
+    Obtiene las métricas de rendimiento consolidadas para Trading Real del usuario fijo.
     """
+    user_id = settings.FIXED_USER_ID
     try:
-        if not isinstance(current_user.id, UUID):
-            raise HTTPException(status_code=500, detail="User ID is not a valid UUID.")
-        
-        logger.info(f"Calculando métricas de rendimiento de trading real para usuario {current_user.id}")
-        
-        # Calcular las métricas usando el servicio
         metrics = await report_service.calculate_performance_metrics(
-            user_id=current_user.id,
+            user_id=user_id,
             mode='real',
             symbol=symbol,
             start_date=start_date,
             end_date=end_date
         )
-        
-        logger.info(f"Métricas de trading real calculadas: {metrics.total_trades} trades, Win Rate: {metrics.win_rate:.2f}%, P&L Total: {metrics.total_pnl:.2f}")
-        
         return metrics
         
     except Exception as e:
