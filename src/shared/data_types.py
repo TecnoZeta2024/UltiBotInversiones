@@ -31,6 +31,23 @@ class Kline(BaseModel):
     taker_buy_base_asset_volume: float
     taker_buy_quote_asset_volume: float
 
+class MarketData(BaseModel):
+    id: Optional[int] = None
+    symbol: str
+    timestamp: datetime
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: float
+    created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True,
+        arbitrary_types_allowed=True
+    )
+
 class Ticker(BaseModel):
     symbol: str
     price: float
@@ -358,12 +375,20 @@ class ConfirmRealTradeRequest(BaseModel):
     opportunity_id: UUID = Field(..., description="ID de la oportunidad de trading a confirmar.")
     user_id: UUID = Field(..., description="ID del usuario que confirma la operación.")
 
+class CapitalManagementStatus(BaseModel):
+    total_capital_usd: float = Field(0.0, description="Capital total gestionado en USD.")
+    available_for_new_trades_usd: float = Field(0.0, description="Capital disponible para nuevas operaciones.")
+    daily_capital_committed_usd: float = Field(0.0, description="Capital ya comprometido en el día actual.")
+    daily_capital_limit_usd: float = Field(0.0, description="Límite de capital diario que se puede arriesgar.")
+    high_risk_positions_count: int = Field(0, description="Número de posiciones consideradas de alto riesgo.")
+
 # Exportar los modelos de dominio para que otros módulos puedan usarlos
 __all__ = [
     "Trade",
     "TradeOrderDetails",
     "OrderCategory",
     "Kline",
+    "MarketData",
     "Ticker",
     "ServiceName",
     "APICredential",
@@ -392,4 +417,5 @@ __all__ = [
     "Opportunity",
     "PerformanceMetrics",
     "ConfirmRealTradeRequest",
+    "CapitalManagementStatus",
 ]

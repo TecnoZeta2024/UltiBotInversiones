@@ -11,20 +11,20 @@ from PyQt5.QtCore import Qt, QThread, QTimer, QDateTime
 from PyQt5.QtGui import QColor
 
 from src.shared.data_types import Opportunity
+from src.ultibot_ui.models import BaseMainWindow
 from src.ultibot_ui.services.api_client import UltiBotAPIClient
 from src.ultibot_ui.workers import ApiWorker
 
 logger = logging.getLogger(__name__)
 
 class OpportunitiesView(QWidget):
-    def __init__(self, user_id: UUID, backend_base_url: str, qasync_loop: asyncio.AbstractEventLoop, parent=None):
+    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent=None):
         super().__init__(parent)
         logger.info("OpportunitiesView: __init__ called.")
         self.user_id = user_id
-        self.backend_base_url = backend_base_url
-        self.qasync_loop = qasync_loop
-        self.active_threads: List[QThread] = []
-        logger.debug(f"OpportunitiesView initialized with qasync_loop: {self.qasync_loop}")
+        self.api_client = api_client
+        self.main_window = main_window
+        logger.debug("OpportunitiesView initialized.")
 
         self._setup_ui()
         self._load_initial_data()
@@ -117,14 +117,10 @@ class OpportunitiesView(QWidget):
 
     def _start_api_worker(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine]):
         logger.debug("Creating ApiWorker.")
-        if not self.qasync_loop:
-            logger.error("qasync_loop not available for _start_api_worker.")
-            self._handle_opportunities_error("Internal Error: Event loop not configured.")
-            return
         
-        worker = ApiWorker(coroutine_factory=coroutine_factory, base_url=self.backend_base_url)
+        worker = ApiWorker(coroutine_factory=coroutine_factory, api_client=self.api_client)
         thread = QThread()
-        self.active_threads.append(thread)
+        self.main_window.add_thread(thread)
         worker.moveToThread(thread)
 
         worker.result_ready.connect(self._handle_opportunities_result)
@@ -133,14 +129,7 @@ class OpportunitiesView(QWidget):
         worker.result_ready.connect(thread.quit)
         worker.error_occurred.connect(thread.quit)
         thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
         
-        def on_thread_finished():
-            logger.debug(f"Thread {thread} finished.")
-            if thread in self.active_threads:
-                self.active_threads.remove(thread)
-
-        thread.finished.connect(on_thread_finished)
         thread.start()
 
     def _handle_opportunities_result(self, opportunities: List[Opportunity]):
@@ -212,30 +201,12 @@ class OpportunitiesView(QWidget):
         logger.info("Cleaning up OpportunitiesView...")
         if self._auto_refresh_timer.isActive():
             self._auto_refresh_timer.stop()
-        
-        for thread in self.active_threads[:]:
-            if thread.isRunning():
-                thread.quit()
-                thread.wait(1000)
-        self.active_threads.clear()
         logger.info("OpportunitiesView cleanup finished.")
 
 if __name__ == '__main__':
-    # This block is for basic testing and should not contain complex mocks.
-    # To run, ensure you have a running backend instance.
     from PyQt5.QtWidgets import QApplication
     import sys
 
     app = QApplication(sys.argv)
     
-    # Example usage:
-    # loop = asyncio.get_event_loop()
-    # view = OpportunitiesView(
-    #     user_id=UUID("00000000-0000-0000-0000-000000000001"),
-    #     backend_base_url="http://localhost:8000",
-    #     qasync_loop=loop
-    # )
-    # view.show()
-    
-    # sys.exit(app.exec_())
     print("To test this view, please run it as part of the main application.")

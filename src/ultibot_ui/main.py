@@ -1,20 +1,31 @@
-import asyncio
-import logging
 import sys
-from typing import Optional, Any, cast
+import os
+import logging
+
+# --- Añadir el directorio raíz del proyecto a sys.path ---
+# Esto asegura que las importaciones como 'from src.shared...' funcionen
+# cuando el script se ejecuta directamente.
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+import asyncio
+from typing import Optional, cast
 from uuid import UUID
 
-from PyQt5.QtCore import QObject, pyqtSignal, QTimer
+from PyQt5.QtCore import QObject, pyqtSignal, QThread, pyqtSlot
 from PyQt5.QtWidgets import QApplication, QMessageBox
 
-import qdarkstyle
-from qasync import QEventLoop
+try:
+    import qdarkstyle
+except ImportError:
+    qdarkstyle = None
 
 from src.shared.data_types import UserConfiguration
 from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
 from src.ultibot_ui.windows.main_window import MainWindow
 
-# Configuración del logging
+os.makedirs("logs", exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - [%(threadName)s] - %(filename)s:%(lineno)d - %(message)s",
@@ -25,96 +36,109 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-class UltiBotApplication(QObject):
+class InitializationWorker(QObject):
     """
-    Clase principal que gestiona la aplicación UI, incluyendo la inicialización,
-    la configuración del usuario y la ventana principal.
+    Worker que se ejecuta en un hilo separado para realizar la inicialización asíncrona.
     """
-    initialization_failed = pyqtSignal(str)
+    finished = pyqtSignal()
+    error = pyqtSignal(str, str)
+    user_config_ready = pyqtSignal(UserConfiguration)
 
-    def __init__(self, app: QApplication, loop: QEventLoop):
+    def __init__(self, api_client: UltiBotAPIClient):
         super().__init__()
-        self.app = app
-        self.loop = loop
-        self.main_window: Optional[MainWindow] = None
-        self.api_client: Optional[UltiBotAPIClient] = None
-        self.user_config: Optional[UserConfiguration] = None
-        self.fixed_user_id = UUID("00000000-0000-0000-0000-000000000001")
+        self.api_client = api_client
 
-    async def initialize_api_client(self):
-        """Inicializa el cliente de la API de forma segura."""
-        if self.api_client:
-            await self.api_client.aclose()
-        
-        self.api_client = UltiBotAPIClient(base_url="http://localhost:8000")
-        logger.info("Cliente API inicializado.")
+    @pyqtSlot()
+    def run(self):
+        """Ejecuta las tareas de inicialización."""
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        try:
+            config = loop.run_until_complete(self.fetch_user_configuration())
+            if config:
+                self.user_config_ready.emit(config)
+        finally:
+            self.finished.emit()
+            loop.close()
 
     async def fetch_user_configuration(self) -> Optional[UserConfiguration]:
         """Obtiene la configuración del usuario desde el backend."""
-        if not self.api_client:
-            await self.initialize_api_client()
-
-        logger.info(f"Obteniendo configuración para el usuario: {self.fixed_user_id}...")
+        logger.info("Worker: Obteniendo configuración de usuario...")
         try:
-            if self.api_client:
-                config = await self.api_client.get_user_configuration()
-                logger.info("Configuración de usuario obtenida con éxito.")
-                return config
-            else:
-                raise Exception("El cliente API no está inicializado.")
+            config = await self.api_client.get_user_configuration()
+            logger.info("Worker: Configuración de usuario obtenida con éxito.")
+            return config
         except APIError as e:
-            logger.error(f"Error de API al obtener la configuración: {e.status_code} - {e.message}")
-            self.show_error_message("Error de Configuración", f"No se pudo obtener la configuración del servidor ({e.status_code}).\nDetalles: {e.message}")
+            logger.error(f"Worker: Error de API - {e.status_code} - {e.message}")
+            self.error.emit("Error de Configuración", f"No se pudo obtener la configuración del servidor ({e.status_code}).\nDetalles: {e.message}")
             return None
         except Exception as e:
-            logger.critical(f"Error inesperado al obtener la configuración: {e}", exc_info=True)
-            self.show_error_message("Error Crítico", f"Ocurrió un error inesperado:\n{e}")
+            logger.critical(f"Worker: Error inesperado - {e}", exc_info=True)
+            self.error.emit("Error Crítico", f"Ocurrió un error inesperado:\n{e}")
             return None
 
-    def show_error_message(self, title: str, message: str):
-        """Muestra un cuadro de diálogo de error de forma segura."""
-        def _show_msg():
-            msg_box = QMessageBox()
-            msg_box.setIcon(QMessageBox.Critical)
-            msg_box.setText(title)
-            msg_box.setInformativeText(message)
-            msg_box.setWindowTitle("Error")
-            msg_box.exec_()
+class UltiBotApplication(QObject):
+    """
+    Clase principal que gestiona la aplicación UI.
+    """
+    def __init__(self, app: QApplication):
+        super().__init__()
+        self.app = app
+        self.main_window: Optional[MainWindow] = None
+        self.api_client = UltiBotAPIClient(base_url="http://localhost:8000")
+        self.user_config: Optional[UserConfiguration] = None
+        self.fixed_user_id = UUID("00000000-0000-0000-0000-000000000001")
         
-        if isinstance(QApplication.instance(), QApplication):
-             QTimer.singleShot(0, _show_msg)
+        self.initialization_thread = QThread()
+        self.worker = InitializationWorker(self.api_client)
+        self.worker.moveToThread(self.initialization_thread)
 
-    async def start(self):
-        """Inicia el flujo de la aplicación de forma asíncrona."""
-        self.user_config = await self.fetch_user_configuration()
+        self.worker.user_config_ready.connect(self.on_user_config_ready)
+        self.worker.error.connect(self.show_error_message)
+        self.worker.finished.connect(self.on_worker_finished)
+        
+        self.initialization_thread.started.connect(self.worker.run)
+        self.initialization_thread.start()
 
-        if self.user_config is None:
-            self.initialization_failed.emit("No se pudo obtener la configuración del usuario.")
-            self.app.quit()
-            return
+    @pyqtSlot(UserConfiguration)
+    def on_user_config_ready(self, config: UserConfiguration):
+        """Maneja la configuración de usuario recibida y muestra la ventana principal."""
+        logger.info("Configuración de usuario recibida. Mostrando ventana principal.")
+        self.user_config = config
+        self.main_window = MainWindow(
+            user_id=self.user_config.id,
+            api_client=self.api_client
+        )
+        self.main_window.show()
+        logger.info("Ventana principal (MainWindow) mostrada.")
 
-        if not self.api_client:
-            await self.initialize_api_client()
+    @pyqtSlot(str, str)
+    def show_error_message(self, title: str, message: str):
+        """Muestra un cuadro de diálogo de error."""
+        QMessageBox.critical(None, title, message)
+        self.app.quit()
 
-        if self.api_client:
-            self.main_window = MainWindow(
-                user_id=self.user_config.id,
-                api_client=self.api_client,
-                qasync_loop=self.loop
-            )
-            self.main_window.show()
-            logger.info("Ventana principal (MainWindow) mostrada.")
-        else:
-            self.show_error_message("Error Crítico", "El cliente API no pudo ser inicializado.")
-            self.app.quit()
+    @pyqtSlot()
+    def on_worker_finished(self):
+        """Limpia el hilo cuando el worker ha terminado."""
+        logger.info("El worker de inicialización ha terminado.")
+        self.initialization_thread.quit()
+        self.initialization_thread.wait()
+        if not self.user_config:
+             logger.error("No se pudo obtener la configuración del usuario. La aplicación se cerrará.")
+             self.app.quit()
 
-    async def cleanup(self):
+
+    def cleanup(self):
         """Limpia los recursos de la aplicación antes de cerrar."""
         logger.info("Iniciando limpieza de la aplicación...")
         if self.main_window:
             self.main_window.close()
-        if self.api_client:
-            await self.api_client.aclose()
+        # El cliente httpx se cierra en el destructor de UltiBotAPIClient
         logger.info("Limpieza completada.")
 
 def main():
@@ -123,40 +147,25 @@ def main():
     if not app:
         app = QApplication(sys.argv)
     
-    try:
-        app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5'))
-        logger.info("Estilo oscuro aplicado.")
-    except Exception as e:
-        logger.error(f"Fallo al aplicar el estilo oscuro: {e}")
+    if qdarkstyle:
+        try:
+            app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5'))
+            logger.info("Estilo oscuro aplicado.")
+        except Exception as e:
+            logger.error(f"Fallo al aplicar el estilo oscuro: {e}")
+    else:
+        logger.warning("qdarkstyle no está instalado.")
 
-    loop = QEventLoop(app)
-    asyncio.set_event_loop(loop)
-
-    ultibot_app = UltiBotApplication(app, loop)
-
-    async def on_quit_async():
-        await ultibot_app.cleanup()
-
-    def quit_slot():
-        """Slot que no devuelve valor para conectar a la señal de PyQt."""
-        loop.create_task(on_quit_async())
-
-    app.aboutToQuit.connect(quit_slot)
-
-    try:
-        with loop:
-            loop.create_task(ultibot_app.start())
-            loop.run_forever()
-    except Exception as e:
-        logger.critical(f"El bucle de eventos principal ha fallado: {e}", exc_info=True)
-    finally:
-        if not loop.is_closed():
-            loop.close()
-        logger.info("Bucle de eventos de la aplicación cerrado.")
+    ultibot_app = UltiBotApplication(app)
+    app.aboutToQuit.connect(ultibot_app.cleanup)
+    
+    sys.exit(app.exec_())
 
 if __name__ == "__main__":
+    logger.info("Iniciando el punto de entrada de la aplicación frontend.")
+    
     def excepthook(exc_type, exc_value, exc_tb):
-        logger.critical("Excepción no controlada en el hilo de la UI:", exc_info=(exc_type, exc_value, exc_tb))
+        logger.critical("Excepción no controlada:", exc_info=(exc_type, exc_value, exc_tb))
         QMessageBox.critical(None, "Error Inesperado", f"Ha ocurrido un error crítico.\nRevise 'logs/frontend.log'.\n\nError: {exc_value}")
         QApplication.quit()
 

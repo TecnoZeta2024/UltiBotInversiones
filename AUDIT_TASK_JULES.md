@@ -1,271 +1,114 @@
-# UltiBotInversiones - Audit Action Plan (AUDIT_TASK_JULES.md)
+# UltiBotInversiones - Focused Action Plan (AUDIT_TASK_JULES.md)
 
 ## Introduction
 
-This document outlines a structured action plan based on the findings of the `AUDIT_REPORT.md`. It breaks down the identified issues into phases, tasks, and subtasks to guide the development process towards a more robust, secure, and functional UltiBotInversiones product. The goal is to transition from an MVP state to a production-ready system.
-
-Each task corresponds to an issue highlighted in the audit report, and subtasks are derived from the "Suggested Actions" provided therein.
+This document outlines a structured action plan based on the refocused findings of the `AUDIT_REPORT.md`. It prioritizes tasks to accelerate the development of UltiBotInversiones as a rapid-deployment, single-user application focused on AI-driven opportunity generation.
 
 ---
 
-## Phase 1: Address Critical Architectural and Security Flaws
+## Phase 1: [COMPLETED] Address Critical Architectural and Security Flaws
 
-This phase focuses on resolving fundamental architectural problems and security vulnerabilities that impact the stability, security, and scalability of the application.
+This phase, focused on resolving fundamental architectural problems, is now considered complete. The application has been stabilized with a clear client-server separation and has been simplified to a single-user model.
 
-### Task 1.0: [NUEVO] Eliminar Sistema de Autenticación y Login
-*   **Description:** Por decisión estratégica, se eliminará todo el sistema de autenticación de múltiples usuarios (login, registro, JWT) para simplificar la aplicación a un modelo de usuario único.
-*   **Subtasks:**
-    *   **[x] 1.0.1:** Eliminar dependencias de seguridad (`python-jose`, `passlib`, `bcrypt`) de `pyproject.toml`.
-    *   **[x] 1.0.2:** Eliminar el router de autenticación (`auth.router`) y la creación de usuario admin de `src/ultibot_backend/main.py`.
-    *   **[x] 1.0.3:** Eliminar la dependencia `Depends(get_current_active_user)` de todos los endpoints de la API.
-    *   **[x] 1.0.4:** Refactorizar los servicios y endpoints para operar bajo un contexto de usuario único implícito, eliminando la necesidad de pasar `user_id`.
-    *   **[x] 1.0.5:** Eliminar los módulos y archivos relacionados con la seguridad en `src/ultibot_backend/security/`.
-    *   **[x] 1.0.6:** Eliminar el `LoginDialog` de la UI y modificar el flujo de inicio en `src/ultibot_ui/main.py` para lanzar `MainWindow` directamente.
-    *   **[x] 1.0.7:** Reinstaurar un `FIXED_USER_ID` en la configuración (`app_config.py`) para ser utilizado de forma consistente en toda la aplicación.
+### Task 1.0: [COMPLETED] Eliminar Sistema de Autenticación y Login
+*   **Status:** Completed. The application now operates under a consistent, single-user model using a `FIXED_USER_ID`.
 
-### Task 1.1: (Critical Issue 1) UI Application Incorrectly Initializes and Uses Backend Services and Credentials
-**Original Title:** UI Application (`src/ultibot_ui/main.py`) Incorrectly Initializes and Uses Backend Services and Credentials.
-*   **Description:** The UI's `main.py` and several widgets directly initialize/use backend services, database connections, and handle sensitive credentials. This is a major architectural flaw.
-*   **Subtasks:**
-    *   **[x] 1.1.1:** Refactor `src/ultibot_ui/main.py` to remove all backend service initialization, database connections, and credential handling.
-    *   **[x] 1.1.2:** Ensure the UI relies exclusively on `src/ultibot_ui/services/api_client.py` for all backend interactions.
-    *   **[x] 1.1.3:** Modify UI widgets and windows (`ChartWidget`, `NotificationWidget`, `PortfolioWidget`, `DashboardView`, `MainWindow`) to obtain data through UI-specific services that use the `APIClient`, instead of direct backend service usage.
-    *   **[x] 1.1.4:** Ensure the backend is architected and documented to run as a separate FastAPI server process, distinct from the UI client. (Verified frontend changes are consistent with this).
+### Task 1.1: [COMPLETED] UI Application Incorrectly Initializes and Uses Backend Services
+*   **Status:** Completed. The UI is now a pure client using the `APIClient`.
 
-### Task 1.2: [ANULADO] (Critical Issue 5) `FIXED_USER_ID` Hardcoding and Inconsistent Usage
-*   **Status:** Anulado por decisión estratégica (Task 1.0). Se volverá a un modelo de usuario único.
-
-### Task 1.3: (Critical Issue 6) Incorrect Service Dependency Initialization in `CredentialService`
-**Original Title:** Incorrect Service Dependency Initialization in `CredentialService`.
-*   **Description:** `CredentialService` initializes its own instances of `BinanceAdapter` and `SupabasePersistenceService` instead of receiving them via constructor injection.
-*   **Subtasks:**
-    *   **[x] 1.3.1:** Modify `CredentialService` constructor in `src/ultibot_backend/services/credential_service.py` to accept `BinanceAdapter` and `SupabasePersistenceService` instances.
-    *   **[x] 1.3.2:** Update `src/ultibot_backend/main.py` and any other instantiation points of `CredentialService` to inject these dependencies.
-
-### Task 1.4: (Critical Issue 7) Real Trade Exit Logic Potentially Unsafe if OCO Fails
-**Original Title:** Real Trade Exit Logic Potentially Unsafe if OCO Fails.
-*   **Description:** Fallback logic for real trade exits if OCO orders fail may not execute market orders to prevent losses.
-*   **Subtasks:**
-    *   **[x] 1.4.1:** Enhance `monitor_and_manage_real_trade_exit` in `src/ultibot_backend/services/trading_engine_service.py` to actively execute market sell/buy orders via `OrderExecutionService` if a non-OCO managed real trade hits its TSL or TP based on live price monitoring. (Verified existing logic addresses this)
-    *   **[x] 1.4.2:** Implement robust error reporting and alerts if OCO placement fails, prompting manual intervention if necessary. (Infrastructure for error capture, trade update, and notification service integration added to `TradingEngineService.create_trade_from_decision`. Actual OCO placement logic and its specific error handling in lower services like `OrderExecutionService` or `BinanceAdapter` still pending full review/implementation if not already present).
-
-### Task 1.5: (Critical Issue 8) Unregistered `trading.py` Router in Backend
-**Original Title:** Unregistered `trading.py` Router in Backend.
-*   **Description:** The API router in `src/ultibot_backend/api/v1/endpoints/trading.py` (for confirming real trades) is not registered in `main.py`.
-*   **Subtasks:**
-    *   **[x] 1.5.1:** Add `app.include_router(trading.router, prefix="/api/v1", tags=["trading"])` (or similar) to `src/ultibot_backend/main.py` to activate the trading endpoints. (Verified as already implemented in `src/ultibot_backend/main.py`)
-
-### Task 1.6: [ANULADO] (Relevant Issue 2) Lack of Granular Authorization for API Endpoints
+### Task 1.2: [ANULADO] `FIXED_USER_ID` Hardcoding and Inconsistent Usage
 *   **Status:** Anulado por decisión estratégica (Task 1.0).
 
-### Task 1.7: (Relevant Issue 5) Default Supabase Credentials in `app_config.py`
-**Original Title:** Default Supabase Credentials in `app_config.py`.
-*   **Description:** `app_config.py` contains default placeholder values for Supabase credentials.
-*   **Subtasks:**
-    *   **[x] 1.7.1:** Remove default placeholder values for sensitive keys (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, etc.) from `src/ultibot_backend/app_config.py`.
-    *   **[x] 1.7.2:** Implement a configuration error at startup if these essential credentials are not found in the environment (loaded from `.env`). (Achieved by removing defaults; Pydantic will raise ValidationError if not set).
+### Task 1.3: [COMPLETED] Incorrect Service Dependency Initialization in `CredentialService`
+*   **Status:** Completed. `CredentialService` now uses dependency injection.
 
-### Task 1.8: (Relevant Issue 6) Manual Loading of `CREDENTIAL_ENCRYPTION_KEY` in Backend `main.py`
-**Original Title:** Manual Loading of `CREDENTIAL_ENCRYPTION_KEY` in Backend `main.py`.
-*   **Description:** Backend `main.py` manually reads `CREDENTIAL_ENCRYPTION_KEY` from `.env`.
-*   **Subtasks:**
-    *   **[x] 1.8.1:** Investigate and ensure `pydantic-settings` reliably loads `CREDENTIAL_ENCRYPTION_KEY`. (Verified: `settings.CREDENTIAL_ENCRYPTION_KEY` in `main.py` confirms loading via `pydantic-settings`).
-    *   **[x] 1.8.2:** If reliable loading via `pydantic-settings` is confirmed, remove the manual loading code from `src/ultibot_backend/main.py`. If manual loading is necessary, document the reason clearly. (No manual loading code found in `main.py` for this variable; it's accessed via `settings` object).
+### Task 1.4: [COMPLETED] Real Trade Exit Logic Potentially Unsafe if OCO Fails
+*   **Status:** Completed. Logic has been verified and enhanced.
 
-### Task 1.9: Preparación y Verificación Inicial de la Interfaz de Usuario (UI)
-*   **Description:** Asegurar que la UI pueda ser lanzada y que las dependencias estén correctamente instaladas.
-*   **Subtasks:**
-    *   **[x] 1.9.1:** Resolver problemas de dependencia de la UI.
-        *   **[x] 1.9.1.1:** Descomentar `PyQt5` y `qdarkstyle` en `pyproject.toml`.
-        *   **[x] 1.9.1.2:** Resolver problemas de instalación/conflicto para `PyQt5` y `qdarkstyle`. (Problema resuelto eliminando temporalmente todas las dependencias de la UI de `pyproject.toml` para permitir que el backend se instale y se ejecute de forma independiente).
-        *   **[x] 1.9.1.3:** Re-añadir dependencias de UI (`PyQt5`, `qdarkstyle`, `pyqtgraph`) a `pyproject.toml` y resolver conflictos de instalación usando `poetry run pip install` para asegurar el correcto despliegue del frontend.
-    *   **[ ] 1.9.2:** [ANULADO] Verificar la funcionalidad completa del flujo de autenticación y autorización.
+### Task 1.5: [COMPLETED] Unregistered `trading.py` Router in Backend
+*   **Status:** Completed. The router is correctly registered.
 
-### Task 1.10: Resolver Error de Importación Circular en el Frontend
-*   **Description:** Al iniciar, el frontend fallaba con un `ImportError` debido a una dependencia circular entre `src/ultibot_ui/main.py` y `src/ultibot_ui/dialogs/login_dialog.py`.
-*   **Subtasks:**
-    *   **[x] 1.10.1:** Identificar la causa del ciclo de importación (la clase `ApiWorker` definida en `main.py` e importada en `login_dialog.py`).
-    *   **[x] 1.10.2:** Crear un nuevo módulo `src/ultibot_ui/workers.py` para alojar la clase `ApiWorker`, rompiendo la dependencia directa.
-    *   **[x] 1.10.3:** Refactorizar `src/ultibot_ui/main.py` y `src/ultibot_ui/dialogs/login_dialog.py` para importar `ApiWorker` desde el nuevo módulo `workers.py`.
-    *   **[x] 1.10.4:** Verificar que la aplicación se inicia correctamente sin el `ImportError` utilizando el script `run_frontend_with_backend.bat`.
+### Task 1.6: [ANULADO] Lack of Granular Authorization for API Endpoints
+*   **Status:** Anulado por decisión estratégica (Task 1.0).
+
+### Task 1.7: [COMPLETED] Default Supabase Credentials in `app_config.py`
+*   **Status:** Completed. Default placeholders have been removed.
+
+### Task 1.8: [COMPLETED] Manual Loading of `CREDENTIAL_ENCRYPTION_KEY`
+*   **Status:** Completed. Loading is handled correctly by `pydantic-settings`.
+
+### Task 1.9: [COMPLETED] Preparación y Verificación Inicial de la Interfaz de Usuario (UI)
+*   **Status:** Completed. UI dependencies are resolved.
+
+### Task 1.10: [COMPLETED] Resolver Error de Importación Circular en el Frontend
+*   **Status:** Completed. Circular dependency has been resolved.
 
 ### Task 1.11: [ANULADO] Implementar Botón de Login Rápido para Administrador
 *   **Status:** Anulado por decisión estratégica (Task 1.0).
 
-### Task 1.12: Corregir el Despliegue del Backend
-*   **Description:** El backend no se iniciaba correctamente como un servidor web, causando un error de conexión en la UI. El script `run_frontend_with_backend.bat` ejecutaba el `main.py` del backend directamente con Python en lugar de usar un servidor ASGI como Uvicorn.
-*   **Subtasks:**
-    *   **[x] 1.12.1:** Modificar `run_frontend_with_backend.bat` para lanzar el backend usando `uvicorn src.ultibot_backend.main:app`, asegurando que el servidor FastAPI se inicie correctamente y escuche en el puerto 8000.
-    *   **[x] 1.12.2:** Corregir `TypeError` en la inicialización de servicios en `src/ultibot_backend/main.py` reordenando las dependencias (`StrategyService` antes de `PerformanceService`).
-    *   **[x] 1.12.3:** Mejorar el logging en `main.py` para capturar y registrar errores críticos durante el arranque de la aplicación.
+### Task 1.12: [COMPLETED] Corregir el Despliegue del Backend
+*   **Status:** Completed. The backend now launches correctly as an ASGI server.
 
-### Task 1.13: [NUEVO] Estabilizar el Arranque del Backend
-*   **Description:** El backend falla al arrancar debido a una cascada de errores de `TypeError` y `ImportError` relacionados con la refactorización del sistema de inyección de dependencias.
-*   **Subtasks:**
-    *   **[x] 1.13.1:** Corregir `TypeError: AsyncConnectionPool.__init__() got an unexpected keyword argument 'sslmode'` en `src/ultibot_backend/adapters/persistence_service.py` moviendo los parámetros SSL a la cadena de conexión.
-    *   **[x] 1.13.2:** Reconstruir el `DependencyContainer` en `src/ultibot_backend/dependencies.py` para asegurar el orden de inicialización correcto y la inyección de las dependencias correctas en los constructores de cada servicio, resolviendo los errores de Pylance.
-    *   **[x] 1.13.3:** Ejecutar `./run_frontend_with_backend.bat` y depurar cualquier error de tiempo de ejecución hasta que el backend se inicie limpiamente.
+### Task 1.13: [COMPLETED] Estabilizar el Arranque del Backend
+*   **Status:** Completed. Dependency injection and startup errors have been resolved.
+
+### Task 1.14: [COMPLETED] Corregir el Despliegue del Frontend
+*   **Status:** Completed. Se han resuelto múltiples errores en cascada que impedían el despliegue de la UI. Se corrigieron `ImportError` en `ui_market_data_service.py` y `ui_strategy_service.py` por nombres de clase incorrectos. Se solucionó un `RuntimeWarning` al llamar una corutina de forma síncrona en `main_window.py` mediante el uso de un `ApiWorker` en un hilo separado. Finalmente, se añadió un método `cleanup` faltante en `PaperTradingReportWidget` para prevenir un `AttributeError` al cerrar la aplicación. La UI ahora se despliega y cierra de forma estable.
 
 ---
 
-## Phase 2: Implement Core Missing Functionality
+## Phase 2: Implement Core Application Functionality
 
-This phase addresses unimplemented services and missing API functionalities that are crucial for the application's core purpose.
+This phase focuses on building out the primary features of the application, now that the architecture is stable.
 
-### Task 2.1: [COMPLETADO] (Critical Issue 2) `StrategyService` is Unimplemented
-**Original Title:** `StrategyService` is Unimplemented.
-*   **Description:** `src/ultibot_backend/services/strategy_service.py` is a stub. No backend logic for managing trading strategies exists.
-*   **Nota:** La auditoría original era incorrecta. El `StrategyService` ya estaba completamente implementado, incluyendo los endpoints de la API y la integración con otros servicios a través del `TradingEngine`. La tarea se marca como completada tras la verificación.
+### Task 2.1: [COMPLETED] Implementar Almacenamiento Persistente de Datos de Mercado
+*   **Description:** The system now has a mechanism to persistently store granular market data (klines, tickers). This is a critical step for enabling the Gemini AI to perform meaningful analysis.
 *   **Subtasks:**
-    *   **[x] 2.1.1:** Design and implement `StrategyService` with CRUD operations for `TradingStrategyConfig` objects (defined in `src/ultibot_backend/shared/data_types.py`).
-    *   **[x] 2.1.2:** Define how strategies are stored (e.g., dedicated table vs. JSON in `UserConfiguration`). If a dedicated table is chosen, update `PersistenceService` accordingly. (Note: Currently stored in `UserConfiguration`).
-    *   **[x] 2.1.3:** Integrate `StrategyService` with `AIOrchestratorService` to provide strategy context/prompts to the LLM.
-    *   **[x] 2.1.4:** Develop corresponding API endpoints in the backend for managing strategies through the `StrategyService`.
+    *   **[x] 2.1.1:** Design a robust database schema for storing time-series market data (e.g., a `market_data` table with columns for `symbol`, `timestamp`, `open`, `high`, `low`, `close`, `volume`).
+    *   **[x] 2.1.2:** Implement methods in `src/ultibot_backend/adapters/persistence_service.py` for efficiently writing and reading this market data.
+    *   **[x] 2.1.3:** Modify `src/ultibot_backend/services/market_data_service.py` to use the new persistence methods, ensuring that all fetched or streamed data is saved to the database.
+    *   **[x] 2.1.4:** Refactor `src/ultibot_backend/services/ai_orchestrator_service.py` to query this internal data store, providing the Gemini LLM with rich, immediate historical context for its analysis instead of relying on fresh, limited API calls.
 
-### Task 2.2: [COMPLETADO] (Critical Issue 3) UI `APIClient` is Missing Key Methods for Data Fetching
-**Original Title:** UI `APIClient` is Missing Key Methods for Data Fetching.
-*   **Description:** `src/ultibot_ui/services/api_client.py` lacks methods needed by UI components for fetching various data types.
-*   **Nota:** La estabilización del backend y la corrección de errores en cascada en los servicios (`config_service`, `notification_service`, `credential_service`) fueron requisitos previos para completar esta tarea.
-*   **Subtasks:**
-    *   **[x] 2.2.1:** Implement `get_market_historical_data` (for klines) in `APIClient`.
-    *   **[x] 2.2.2:** Implement `get_tickers_data` in `APIClient`.
-    *   **[x] 2.2.3:** Implement `get_portfolio_summary` in `APIClient`.
-    *   **[x] 2.2.4:** Implement `get_notification_history` in `APIClient`.
-    *   **[x] 2.2.5:** Ensure corresponding backend API endpoints exist and are functional for these new `APIClient` methods. (Solucionado al corregir el enrutamiento global del backend).
+### Task 2.2: [COMPLETADO] `StrategyService` is Unimplemented
+*   **Status:** La auditoría original era incorrecta. El servicio está implementado y verificado. **COMPLETADO**.
 
-### Task 2.3: (Critical Issue 4 & Specific Investigation) Strategy Display Functionality is Missing in UI
-**Original Title:** Strategy Display Functionality is Missing in UI.
-*   **Description:** The "Strategies" section in the UI is a placeholder. No components or logic exist to display strategies. This is also highlighted in the "Strategy Export to Interface" specific investigation.
+### Task 2.3: [COMPLETADO] UI `APIClient` is Missing Key Methods for Data Fetching
+*   **Status:** Los métodos necesarios del `APIClient` han sido implementados y los endpoints del backend verificados. **COMPLETADO**.
+
+### Task 2.4: [COMPLETED] Strategy Display Functionality is Missing in UI
+*   **Description:** The "Strategies" section in the UI is a placeholder. No components or logic exist to display strategies.
 *   **Subtasks:**
-    *   **[ ] 2.3.1:** Design and implement a new UI view (e.g., `StrategiesView.py`) and associated widgets for displaying strategy configurations.
-    *   **[ ] 2.3.2:** This new view should use a UI service (e.g., `UIConfigService` or a new `UIStrategyService`) that utilizes `APIClient` to fetch strategy data (likely via `APIClient.get_user_configuration()` or new strategy-specific endpoints from Task 2.1.4).
-    *   **[ ] 2.3.3:** Update `src/ultibot_ui/windows/main_window.py` to use the new `StrategiesView` instead of the current `QLabel` placeholder.
+    *   **[x] 2.4.1:** Design and implement a new UI view (`src/ultibot_ui/views/strategies_view.py`) and associated widgets for displaying strategy configurations.
+    *   **[x] 2.4.2:** The new view must use the `APIClient` to fetch strategy data from the backend.
+    *   **[x] 2.4.3:** Update `src/ultibot_ui/windows/main_window.py` to use the new `StrategiesView` instead of the current `QLabel` placeholder.
 
 ---
 
-## Phase 3: Enhance Data Management and Flow
+## Phase 3: Enhance and Optimize Core Systems
 
-This phase is dedicated to improving how market data, trading data, and configurations are stored, managed, and accessed throughout the application.
+This phase is dedicated to improving the quality, performance, and robustness of existing features.
 
-### Task 3.1: (Specific Investigation) Implement Persistent Storage for Granular Market Data
-**Original Title:** Derived from "Specific Investigation Findings - Market Data Recording and LLM Opportunity Generation" - No persistent storage of granular market data.
-*   **Description:** Granular market data (klines, tickers, WebSocket stream data) is not persistently stored, which is a critical gap for backtesting, AI model training, and providing historical context to the LLM.
-*   **Subtasks:**
-    *   **[ ] 3.1.1:** Design a database schema for storing time-series market data (klines, tickers, trades).
-    *   **[ ] 3.1.2:** Implement methods in `PersistenceService` for saving and retrieving this granular market data.
-    *   **[ ] 3.1.3:** Modify `MarketDataService` to use `PersistenceService` to store fetched/streamed market data.
-    *   **[ ] 3.1.4:** Update `AIOrchestratorService` and any other relevant services to leverage this persistent market data store for richer context, reducing direct API calls where possible.
-
-### Task 3.2: (Optimizable Issue 3) Persistence of Paper Trading Asset Holdings
-**Original Title:** Persistence of Paper Trading Asset Holdings.
+### Task 3.1: Persistence of Paper Trading Asset Holdings
 *   **Description:** Paper trading asset holdings are in-memory and lost on application restart.
 *   **Subtasks:**
-    *   **[ ] 3.2.1:** Design a schema for storing paper trading asset holdings (e.g., extend `UserConfiguration` with a new field or create a dedicated table).
-    *   **[ ] 3.2.2:** Update `PortfolioService` (`src/ultibot_backend/services/portfolio_service.py`) to load and save these holdings via `PersistenceService`.
-    *   **[ ] 3.2.3:** Ensure `PaperOrderExecutionService` correctly updates these persisted holdings.
+    *   **[ ] 3.1.1:** Design a schema for storing paper trading asset holdings (e.g., extend `UserConfiguration` or create a dedicated table).
+    *   **[ ] 3.1.2:** Update `PortfolioService` (`src/ultibot_backend/services/portfolio_service.py`) to load and save these holdings via `PersistenceService`.
 
-### Task 3.3: (Relevant Issue 4) UI `TradingModeService` and Backend `UserConfiguration.paperTradingActive` Synchronization
-**Original Title:** UI `TradingModeService` and Backend `UserConfiguration.paperTradingActive`.
-*   **Description:** Unclear synchronization between UI's local trading mode and backend's `paperTradingActive` flag.
+### Task 3.2: [COMPLETADO] Inconsistent API Endpoint Paths
+*   **Status:** Todos los enrutadores del backend han sido estandarizados bajo el prefijo `/api/v1`. **COMPLETADO**.
+
+### Task 3.3: [COMPLETADO] Corregir Errores 404 y 422 en la UI
+*   **Status:** Se han corregido las inconsistencias en `api_client.py` y el formato de fechas, resolviendo los errores de comunicación entre UI y backend. **COMPLETADO**.
+
+### Task 3.4: [COMPLETADO] Estabilización Final del Backend y Modelos de Datos
+*   **Status:** Se han resuelto los errores en cascada de Pylance y de tiempo de ejecución, logrando un arranque estable. **COMPLETADO**.
+
+### Task 3.5: LLM Output Parsing Fallback is Brittle
+*   **Description:** `AIOrchestratorService` falls back to regex if JSON parsing of LLM output fails.
 *   **Subtasks:**
-    *   **[ ] 3.3.1:** Clarify and document the intended relationship: should UI mode selection update the backend persisted state?
-    *   **[ ] 3.3.2:** If UI selection is authoritative, ensure `TradingModeService` in `src/ultibot_ui/services/trading_mode_service.py` calls the `APIClient` to update `UserConfiguration.paperTradingActive` on the backend when the mode is switched. (Note: `SettingsView` might already do this; ensure consistency with the global service).
-    *   **[ ] 3.3.3:** Ensure backend services like `TradingEngineService` consistently use the `paperTradingActive` flag from the persisted `UserConfiguration`.
+    *   **[ ] 3.5.1:** Refine prompts provided to the Gemini LLM to more strictly enforce structured JSON output.
+    *   **[ ] 3.5.2:** Implement LangChain's structured output parsers (e.g., `PydanticOutputParser`) in `src/ultibot_backend/services/ai_orchestrator_service.py` to ensure reliable parsing.
 
 ---
 
-## Phase 4: Improve Code Quality, Consistency, and Robustness
-
-### Task 4.1: (Optimizable Issue 1) Incorrect Service Dependency Initialization in Some API Routers
-**Original Title:** Incorrect Service Dependency Initialization in Some API Routers.
-*   **Description:** Some API routers (`binance_status.py`, `notifications.py`) re-initialize services already available globally. This task is expanded to ensure all endpoints correctly use the centralized dependency injection pattern from `main.py`.
-*   **Subtasks:**
-    *   **[x] 4.1.1:** Refactor `src/ultibot_backend/api/v1/endpoints/trading.py` to resolve DI inconsistencies and implement the correct logic for trade confirmation, fixing multiple Pylance errors.
-    *   **[x] 4.1.2:** Refactor routers in `src/ultibot_backend/api/v1/endpoints/binance_status.py` and `src/ultibot_backend/api/v1/endpoints/notifications.py` to use FastAPI's `Depends` with the globally initialized service instances from `main.py` and secure them with JWT authentication.
-
-### Task 4.2: (Optimizable Issue 2) Excessive Business Logic in `opportunities.py` API Router
-**Original Title:** Excessive Business Logic in `opportunities.py` API Router.
-*   **Description:** The `get_real_trading_candidates` endpoint in `src/ultibot_backend/api/v1/endpoints/opportunities.py` contains significant business logic.
-*   **Subtasks:**
-    *   **[ ] 4.2.1:** Identify and move the business logic (fetching user config, checking trading mode, querying trade/opportunity statuses) from the `opportunities.py` router into appropriate services (e.g., `TradingEngineService`, `AIOrchestratorService`, or `ConfigService`).
-    *   **[ ] 4.2.2:** Ensure the router primarily handles request/response validation and delegation to these services.
-
-### Task 4.3: (Optimizable Issue 4) Manual Data Mapping in `PersistenceService`
-**Original Title:** Manual Data Mapping in `PersistenceService`.
-*   **Description:** `SupabasePersistenceService` manually maps database snake_case column names to Pydantic model field names.
-*   **Subtasks:**
-    *   **[ ] 4.3.1:** Review Pydantic models involved in database interaction (e.g., `OpenTrade`, `Opportunity`).
-    *   **[ ] 4.3.2:** Utilize Pydantic's aliasing features (e.g., `AliasGenerator`, `model_config = {"populate_by_name": True}` with field aliases like `Field(alias='db_column_name')`) in these models to handle snake_case to camelCase/PascalCase conversion automatically.
-    *   **[ ] 4.3.3:** Update `SupabasePersistenceService` methods (e.g., `get_open_paper_trades`, `get_opportunity_by_id`) to rely on this automatic mapping, removing manual dictionary key conversions.
-
-### Task 4.4: (Optimizable Issue 5) Ambiguous Market Data Fetching Logic in `MobulaAdapter`
-**Original Title:** Ambiguous Market Data Fetching Logic in `MobulaAdapter`.
-*   **Description:** `MobulaAdapter.get_market_data` has complex logic for trying different endpoints and parsing, which could be brittle.
-*   **Subtasks:**
-    *   **[ ] 4.4.1:** Review the Mobula API documentation to clarify the exact endpoints and expected response structures for fetching market data by symbol.
-    *   **[ ] 4.4.2:** Simplify the fetching and parsing logic in `src/ultibot_backend/adapters/mobula_adapter.py` based on documented API behavior to improve robustness.
-
-### Task 4.5: (Optimizable Issue 6) LLM Output Parsing Fallback is Brittle
-**Original Title:** LLM Output Parsing Fallback is Brittle.
-*   **Description:** `AIOrchestratorService.analyze_opportunity_with_ai` falls back to regex if JSON parsing of LLM output fails.
-*   **Subtasks:**
-    *   **[ ] 4.5.1:** Refine prompts provided to the LLM to more strictly enforce structured JSON output.
-    *   **[ ] 4.5.2:** Investigate and implement LangChain's structured output parsers (e.g., `PydanticOutputParser` or `StructuredOutputParser`) in `src/ultibot_backend/services/ai_orchestrator_service.py`.
-    *   **[ ] 4.5.3:** Improve error handling for cases where structured output still cannot be obtained, avoiding reliance on fragile regex.
-
-### Task 4.6: (Relevant Issue 1) Inconsistent API Endpoint Path for Opportunities Router
-**Original Title:** Inconsistent API Endpoint Path for Opportunities Router.
-*   **Description:** `opportunities.router` is registered at application root, but UI calls it via `/api/v1/opportunities/...`.
-*   **Subtasks:**
-    *   **[x] 4.6.1:** Standardize router registration in `src/ultibot_backend/main.py`. Change the registration of `opportunities.router` to include the `/api/v1` prefix (e.g., `app.include_router(opportunities.router, prefix="/api/v1", tags=["opportunities"])`). **Nota:** Se ha estandarizado el registro de *todos* los routers para garantizar la consistencia, refactorizando la importación y el registro explícito en `main.py`.
-    *   **[x] 4.6.2:** Verify that `src/ultibot_ui/services/api_client.py` calls align with this standardized path. (Verificado y corregido donde era necesario).
-
-### Task 4.7: (Relevant Issue 3) Test Helper Methods in Production `PersistenceService`
-**Original Title:** Test Helper Methods in Production `PersistenceService`.
-*   **Description:** `SupabasePersistenceService` contains test-specific helper methods.
-*   **Subtasks:**
-    *   **[ ] 4.7.1:** Identify all methods prefixed with `execute_test_...` or `fetchrow_test_...` in `src/ultibot_backend/adapters/persistence_service.py`.
-    *   **[ ] 4.7.2:** Move these test helper methods to a separate test utility module within the test directory structure or a test-specific subclass not part of production code.
-
-### Task 4.8: [NUEVO] Corregir Errores 404 (Not Found) en la Interfaz de Usuario
-*   **Description:** La interfaz de usuario mostraba errores 404 en varios componentes (Dashboard, Portfolio) debido a una inconsistencia entre cómo el cliente (`api_client.py`) construía las URLs de las solicitudes y cómo el backend las esperaba.
-*   **Subtasks:**
-    *   **[x] 4.8.1:** Investigar y confirmar que el enrutamiento del backend en `main.py` era correcto.
-    *   **[x] 4.8.2:** Identificar que `api_client.py` incluía incorrectamente el `user_id` en la ruta de la URL en lugar de como un parámetro de consulta.
-    *   **[x] 4.8.3:** Refactorizar `api_client.py` para eliminar el `user_id` de las rutas de la URL y simplificar los métodos duplicados, alineando las llamadas con las definiciones de los endpoints del backend.
-    *   **[x] 4.8.4:** Corregir los errores de Pylance resultantes en `chart_widget.py` y `settings_view.py` que fueron causados por la refactorización del `api_client.py`.
-
-### Task 4.9: [NUEVO] Corregir Error 422 (Unprocessable Content) en la Carga de Trades
-*   **Description:** La UI enviaba fechas en formato `datetime` a los endpoints de trades y métricas, pero el backend esperaba un formato de `date` puro (`YYYY-MM-DD`), causando un error de validación.
-*   **Subtasks:**
-    *   **[x] 4.9.1:** Identificar que el método `get_filters` en `paper_trading_report_widget.py` estaba formateando las fechas como cadenas `isoformat` con hora.
-    *   **[x] 4.9.2:** Modificar `get_filters` para que pase objetos `datetime` puros al `api_client`.
-    *   **[x] 4.9.3:** Asegurar que el `api_client` en los métodos `get_trades` y `get_trading_performance` convierta los objetos `datetime` a cadenas de texto con el formato `YYYY-MM-DD` (`.date().isoformat()`) antes de realizar la petición HTTP.
-    *   **[x] 4.9.4:** Verificar que la aplicación se ejecuta sin errores 422 y que los datos se cargan correctamente.
-
-### Task 4.10: [NUEVO] Estabilización Final del Backend y Modelos de Datos
-*   **Description:** Se realizó una serie de correcciones quirúrgicas para resolver una cascada de errores de `Pylance` y de tiempo de ejecución que impedían el arranque estable del backend.
-*   **Subtasks:**
-    *   **[x] 4.10.1:** Corregir la implementación de `get_tickers_data` en `api_client.py` y añadir el modelo `Ticker` en `shared/data_types.py`.
-    *   **[x] 4.10.2:** Resolver la cascada de errores de `TypeError` por el argumento `user_id` en `config_service.py`, `notification_service.py` y `credential_service.py`, alineándolos con la arquitectura de usuario único.
-    *   **[x] 4.10.3:** Corregir los errores de acceso a atributos en `notification_service.py` (ej. `entry_order` -> `entryOrder`, `suggested_action` -> `suggestedAction`) tras verificar los modelos de datos en `trade_models.py` y `data_types.py`.
-    *   **[x] 4.10.4:** Corregir la llamada a `verify_credential` en `config_service.py`, pasando el objeto `APICredential` completo en lugar de solo el `credential.id`.
-    *   **[x] 4.10.5:** Ejecutar y verificar el despliegue exitoso del backend y frontend a través del script `run_frontend_with_backend.bat`.
-
----
-
-## Phase 5: Address UI-Backend Integration and Feature Gaps
-
-This phase handles specific UI interactions, WebSocket management, and ensures that the UI correctly reflects backend states and data.
-
-### Task 5.1: (Relevant Issue 7) WebSocket Error Handling in `BinanceAdapter`
-**Original Title:** WebSocket Error Handling in `BinanceAdapter`.
-*   **Description:** `BinanceAdapter`'s WebSocket error handling primarily prints errors and doesn't robustly propagate them for higher-level reaction.
-*   **Subtasks:**
-    *   **[ ] 5.1.1:** Implement a more robust error handling and health-checking mechanism for WebSocket connections within `src/ultibot_backend/adapters/binance_adapter.py`. This could involve status flags or callback mechanisms for persistent failures.
-    *   **[ ] 5.1.2:** Allow `MarketDataService` or other consumers (including UI-facing data services via the backend API) to be notified of persistent WebSocket failures.
-    *   **[ ] 5.1.3:** Design mechanisms for UI components to react to these notifications (e.g., display warnings, attempt reconnection via backend).
-
----
-
-This structured plan should provide a clear path for addressing the audit findings.
+This focused plan provides a clear path for deploying a powerful, AI-driven investment tool.

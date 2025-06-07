@@ -1,0 +1,4 @@
+2025-06-07 16:12:41,498 - INFO - Iniciando prueba de PyQt5...
+2025-06-07 16:12:41,536 - INFO - Importación de QApplication y QLabel exitosa.
+2025-06-07 16:12:41,548 - INFO - Instancia de QApplication creada exitosamente.
+2025-06-07 16:12:41,926 - INFO - QLabel mostrada. Entrando al bucle de eventos.

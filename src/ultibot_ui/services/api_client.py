@@ -15,6 +15,7 @@ from src.shared.data_types import (
     RealTradingSettings,
     PortfolioSnapshot,
     Ticker,
+    CapitalManagementStatus,
 )
 
 logger = logging.getLogger(__name__)
@@ -168,8 +169,6 @@ class UltiBotAPIClient:
         data = await self._make_request("GET", "/api/v1/opportunities/candidates")
         return [Opportunity(**item) for item in data]
 
-
-
     async def get_real_trading_mode_status(self) -> RealTradingSettings:
         logger.info("Obteniendo estado del modo de trading real.")
         data = await self._make_request("GET", "/api/v1/config/real-trading-mode/status")
@@ -185,3 +184,9 @@ class UltiBotAPIClient:
         params = {"user_id": str(user_id), "trading_mode": trading_mode}
         data = await self._make_request("GET", "/api/v1/portfolio/snapshot", params=params)
         return PortfolioSnapshot(**data)
+
+    async def get_capital_management_status(self) -> CapitalManagementStatus:
+        """Devuelve el estado de gestión de capital para el usuario fijo."""
+        logger.info("Obteniendo estado de gestión de capital.")
+        data = await self._make_request("GET", "/api/v1/capital-management/status")
+        return CapitalManagementStatus(**data)

@@ -6,7 +6,7 @@ including dynamic prompt generation based on trading strategies and opportunitie
 
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException
@@ -19,6 +19,7 @@ from src.ultibot_backend.core.domain_models.user_configuration_models import (
     AIStrategyConfiguration,
     ConfidenceThresholds,
 )
+from src.ultibot_backend.services.market_data_service import MarketDataService
 
 logger = logging.getLogger(__name__)
 
@@ -118,46 +119,9 @@ class OpportunityData:
 class AIOrchestrator:
     """Service for orchestrating AI analysis using Google Gemini."""
     
-    def __init__(self):
+    def __init__(self, market_data_service: MarketDataService):
         """Initialize the AI Orchestrator service."""
-        # TODO: Initialize Gemini client and LangChain components.
-        #
-        # --- Google Cloud Authentication for Gemini ---
-        # To connect to Google Cloud services, including Gemini (Vertex AI),
-        # the client libraries need to authenticate. There are two main ways:
-        #
-        # 1. Service Account Key File (GOOGLE_APPLICATION_CREDENTIALS):
-        #    - Set the `GOOGLE_APPLICATION_CREDENTIALS` environment variable
-        #      to the absolute path of the JSON file containing your service account key.
-        #      This key file provides the identity and permissions for your application.
-        #    - The service account associated with this key must have appropriate
-        #      IAM permissions to use Gemini (e.g., roles like "Vertex AI User"
-        #      or "AI Platform Model User" on the project or relevant resources).
-        #    - Example (Python code, typically set outside the app in the environment):
-        #      # import os
-        #      # os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/path/to/your/service-account-key.json"
-        #
-        # 2. Application Default Credentials (ADC):
-        #    - If your application is running in a Google Cloud environment
-        #      (e.g., Google Kubernetes Engine (GKE), Cloud Run, Compute Engine, App Engine),
-        #      ADC can often be used.
-        #    - ADC automatically finds credentials from the environment, typically by using
-        #      the service account associated with the GCE instance or GKE node pool,
-        #      or the runtime service account for Cloud Run/App Engine.
-        #    - Ensure this implicitly used service account also has the necessary
-        #      IAM permissions for Gemini (e.g., "Vertex AI User").
-        #    - No need to set `GOOGLE_APPLICATION_CREDENTIALS` if ADC is correctly configured
-        #      and the environment's service account has permissions.
-        #
-        # Choose the method appropriate for your deployment environment.
-        # For local development, `GOOGLE_APPLICATION_CREDENTIALS` is common.
-        # For GCP deployments, using ADC with the runtime's service account is often preferred.
-        #
-        # After setting up authentication, initialize the Gemini client
-        # (e.g., using `google.generativeai` or `vertexai` SDKs).
-
-        # For now, this is a placeholder implementation using a mock,
-        # which prevents credential errors in the current development phase.
+        self.market_data_service = market_data_service
         self.gemini_client = None # Placeholder for the actual client
         logger.info("AIOrchestrator initialized (using MOCK implementation for Gemini).")
     
@@ -185,22 +149,23 @@ class AIOrchestrator:
         start_time = time.time()
         
         try:
-            # Generate analysis ID
             analysis_id = f"ai_analysis_{opportunity.opportunity_id}_{int(start_time)}"
             
-            # Build dynamic prompt
-            prompt = self._build_dynamic_prompt(opportunity, strategy, ai_config)
+            historical_data = await self.market_data_service.get_candlestick_data(
+                symbol=opportunity.symbol,
+                interval='1h', # Or make this configurable
+                limit=200
+            )
+
+            prompt = self._build_dynamic_prompt(opportunity, strategy, ai_config, historical_data)
             
             logger.info(
                 f"Starting AI analysis {analysis_id} for opportunity {opportunity.opportunity_id} "
                 f"with strategy {strategy.config_name} using AI profile {ai_config.id}"
             )
             
-            # Log prompt summary for auditing
             self.log_prompt_summary(prompt, analysis_id)
             
-            # TODO: Integrate with actual Gemini API
-            # For now, return mock analysis
             analysis_result = await self._mock_gemini_analysis(
                 analysis_id, prompt, opportunity, strategy, ai_config
             )
@@ -208,7 +173,6 @@ class AIOrchestrator:
             processing_time = int((time.time() - start_time) * 1000)
             analysis_result.processing_time_ms = processing_time
             
-            # Log detailed AI analysis results
             self._log_ai_analysis_results(analysis_result, ai_config)
             
             logger.info(
@@ -235,6 +199,7 @@ class AIOrchestrator:
         opportunity: OpportunityData,
         strategy: TradingStrategyConfig,
         ai_config: AIStrategyConfiguration,
+        historical_data: List[Dict[str, Any]]
     ) -> str:
         """Build a dynamic prompt based on opportunity, strategy, and AI configuration.
         
@@ -242,29 +207,26 @@ class AIOrchestrator:
             opportunity: The opportunity data.
             strategy: The trading strategy configuration.
             ai_config: The AI configuration.
+            historical_data: Historical market data.
             
         Returns:
             The generated prompt string.
         """
-        # Get base template or use default
         template = ai_config.gemini_prompt_template or self._get_default_prompt_template()
         
-        # Prepare strategy parameters for prompt
         strategy_params = self._format_strategy_parameters(strategy)
-        
-        # Prepare opportunity details for prompt
         opportunity_details = self._format_opportunity_details(opportunity)
+        historical_data_details = self._format_historical_data(historical_data)
         
-        # Get available tools
         available_tools = ai_config.tools_available_to_gemini or []
         tools_description = self._format_tools_description(available_tools)
         
-        # Replace placeholders in template
         prompt = template.format(
             strategy_type=strategy.base_strategy_type.value,
             strategy_name=strategy.config_name,
             strategy_params=strategy_params,
             opportunity_details=opportunity_details,
+            historical_data=historical_data_details,
             symbol=opportunity.symbol,
             tools_available=tools_description,
             confidence_threshold_paper=self._get_confidence_threshold(ai_config, "paper"),
@@ -272,7 +234,20 @@ class AIOrchestrator:
         )
         
         return prompt
-    
+
+    def _format_historical_data(self, historical_data: List[Dict[str, Any]]) -> str:
+        """Formats historical data for prompt inclusion."""
+        if not historical_data:
+            return "No historical data available."
+        
+        formatted_lines = ["Timestamp, Open, High, Low, Close, Volume"]
+        for kline in historical_data[-20:]: # Limit to last 20 records for prompt brevity
+            dt_object = datetime.fromtimestamp(kline['open_time'] / 1000)
+            formatted_lines.append(
+                f"{dt_object.strftime('%Y-%m-%d %H:%M')}, {kline['open']}, {kline['high']}, {kline['low']}, {kline['close']}, {kline['volume']}"
+            )
+        return "\n".join(formatted_lines)
+
     def _get_default_prompt_template(self) -> str:
         """Get the default prompt template for AI analysis.
         
@@ -288,13 +263,16 @@ Strategy Configuration:
 Opportunity Details:
 {opportunity_details}
 
+Recent Market Data (last 20 hours):
+{historical_data}
+
 Available Analysis Tools:
 {tools_available}
 
 Please provide:
 1. Your confidence level (0.0 to 1.0) for this opportunity
 2. Recommended action (strong_buy, buy, hold_neutral, sell, strong_sell, further_investigation_needed)
-3. Detailed reasoning for your recommendation
+3. Detailed reasoning for your recommendation based on the provided historical data and strategy.
 4. Suggested trade parameters if applicable
 5. Any warnings or risk factors to consider
 

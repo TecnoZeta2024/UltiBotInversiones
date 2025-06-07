@@ -1,13 +1,13 @@
 @echo off
 chcp 65001 > nul
 
-set "PYTHON_EXE=poetry run python"
-set "UVICORN_EXE=poetry run uvicorn"
+set "PYTHON_EXE=.venv\Scripts\python.exe"
+set "UVICORN_EXE=.venv\Scripts\uvicorn.exe"
 set "BACKEND_MAIN=src.ultibot_backend.main:app"
-set "FRONTEND_MAIN=src.ultibot_ui.main"
+set "FRONTEND_SCRIPT=src/ultibot_ui/main.py"
 set "LOG_DIR=logs"
-set "BACKEND_LOG_STDOUT=%LOG_DIR%/backend_stdout.log"
-set "FRONTEND_LOG=%LOG_DIR%/frontend.log"
+set "FRONTEND_LOG_STDOUT=%LOG_DIR%/frontend_stdout.log"
+set "FRONTEND_LOG_STDERR=%LOG_DIR%/frontend_stderr.log"
 
 REM --- Limpieza y Preparación ---
 echo Intentando detener cualquier proceso anterior en el puerto 8000...
@@ -31,9 +31,9 @@ start "UltiBot Backend" cmd /c "%UVICORN_EXE% %BACKEND_MAIN% --host 0.0.0.0 --po
 echo Dando 15 segundos al backend para que se inicie...
 timeout /t 15 /nobreak > nul
 
-REM --- Lanzamiento del Frontend ---
+REM --- Lanzamiento del Frontend con redirección de errores ---
 echo Lanzando el frontend...
-start "UltiBot Frontend" cmd /c "%PYTHON_EXE% -m %FRONTEND_MAIN%"
+start "UltiBot Frontend" cmd /c "%PYTHON_EXE% %FRONTEND_SCRIPT% > %FRONTEND_LOG_STDOUT% 2> %FRONTEND_LOG_STDERR%"
 
 echo.
 echo UltiBotInversiones: Backend y Frontend lanzados en ventanas separadas.

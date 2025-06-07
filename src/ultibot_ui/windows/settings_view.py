@@ -18,11 +18,10 @@ class SettingsView(QWidget):
     config_changed = pyqtSignal(UserConfiguration)
     real_trading_mode_status_changed = pyqtSignal(bool, int, int)
 
-    def __init__(self, user_id: str, backend_base_url: str, qasync_loop, parent=None):
+    def __init__(self, user_id: str, api_client: UltiBotAPIClient, parent=None):
         super().__init__(parent)
         self.user_id = user_id
-        self.backend_base_url = backend_base_url
-        self.qasync_loop = qasync_loop
+        self.api_client = api_client
         self.current_config: Optional[UserConfiguration] = None
         self.real_trading_status: Dict[str, Any] = {"isActive": False, "executedCount": 0, "limit": 5}
         self.active_threads: List[QThread] = []
@@ -93,25 +92,25 @@ class SettingsView(QWidget):
         self._load_config_into_ui()
         self._load_real_trading_status()
 
-    def _load_config_into_ui(self):
-        logger.info("SettingsView: Solicitando configuración de usuario general.")
-        worker = ApiWorker(
-            base_url=self.backend_base_url,
-            coroutine_factory=lambda api_client: api_client.get_user_configuration()
-        )
+    def _start_api_worker(self, coroutine_factory, on_success, on_error):
+        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory)
         thread = QThread()
         self.active_threads.append(thread)
         worker.moveToThread(thread)
 
-        worker.result_ready.connect(self._handle_load_config_result)
-        worker.error_occurred.connect(self._handle_load_config_error)
+        worker.result_ready.connect(on_success)
+        worker.error_occurred.connect(on_error)
         thread.started.connect(worker.run)
         worker.result_ready.connect(thread.quit)
         worker.error_occurred.connect(thread.quit)
         thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
         thread.finished.connect(lambda t=thread: self.active_threads.remove(t) if t in self.active_threads else None)
         thread.start()
+
+    def _load_config_into_ui(self):
+        logger.info("SettingsView: Solicitando configuración de usuario general.")
+        coro_factory = lambda api_client: api_client.get_user_configuration()
+        self._start_api_worker(coro_factory, self._handle_load_config_result, self._handle_load_config_error)
 
     def _handle_load_config_result(self, config_data: Dict[str, Any]):
         try:
@@ -130,23 +129,8 @@ class SettingsView(QWidget):
 
     def _load_real_trading_status(self):
         logger.info("SettingsView: Solicitando estado de operativa real.")
-        worker = ApiWorker(
-            base_url=self.backend_base_url,
-            coroutine_factory=lambda api_client: api_client.get_real_trading_mode_status()
-        )
-        thread = QThread()
-        self.active_threads.append(thread)
-        worker.moveToThread(thread)
-
-        worker.result_ready.connect(self._handle_load_real_trading_status_result)
-        worker.error_occurred.connect(self._handle_load_real_trading_status_error)
-        thread.started.connect(worker.run)
-        worker.result_ready.connect(thread.quit)
-        worker.error_occurred.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        thread.finished.connect(lambda t=thread: self.active_threads.remove(t) if t in self.active_threads else None)
-        thread.start()
+        coro_factory = lambda api_client: api_client.get_real_trading_mode_status()
+        self._start_api_worker(coro_factory, self._handle_load_real_trading_status_result, self._handle_load_real_trading_status_error)
 
     def _handle_load_real_trading_status_result(self, status_data: Dict[str, Any]):
         try:
@@ -195,23 +179,8 @@ class SettingsView(QWidget):
             updated_config_model = self.current_config.model_copy(update=updated_config_data)
             
             logger.info("SettingsView: Solicitando guardar configuración de usuario general.")
-            worker = ApiWorker(
-                base_url=self.backend_base_url,
-                coroutine_factory=lambda api_client: api_client.update_user_configuration(updated_config_model.model_dump(mode='json', by_alias=True, exclude_none=True))
-            )
-            thread = QThread()
-            self.active_threads.append(thread)
-            worker.moveToThread(thread)
-
-            worker.result_ready.connect(lambda result, model=updated_config_model: self._handle_save_config_result(result, model))
-            worker.error_occurred.connect(self._handle_save_config_error)
-            thread.started.connect(worker.run)
-            worker.result_ready.connect(thread.quit)
-            worker.error_occurred.connect(thread.quit)
-            thread.finished.connect(worker.deleteLater)
-            thread.finished.connect(thread.deleteLater)
-            thread.finished.connect(lambda t=thread: self.active_threads.remove(t) if t in self.active_threads else None)
-            thread.start()
+            coro_factory = lambda api_client: api_client.update_user_configuration(updated_config_model.model_dump(mode='json', by_alias=True, exclude_none=True))
+            self._start_api_worker(coro_factory, lambda result: self._handle_save_config_result(result, updated_config_model), self._handle_save_config_error)
 
         except Exception as e:
             logger.error(f"Error al preparar los datos para guardar la configuración: {e}", exc_info=True)
@@ -251,23 +220,8 @@ class SettingsView(QWidget):
 
         if reply == QMessageBox.Yes:
             logger.info("SettingsView: Solicitando activar modo de operativa real.")
-            worker = ApiWorker(
-                base_url=self.backend_base_url,
-                coroutine_factory=lambda api_client: api_client.activate_real_trading_mode()
-            )
-            thread = QThread()
-            self.active_threads.append(thread)
-            worker.moveToThread(thread)
-
-            worker.result_ready.connect(self._handle_activate_real_trading_result)
-            worker.error_occurred.connect(self._handle_activate_real_trading_error)
-            thread.started.connect(worker.run)
-            worker.result_ready.connect(thread.quit)
-            worker.error_occurred.connect(thread.quit)
-            thread.finished.connect(worker.deleteLater)
-            thread.finished.connect(thread.deleteLater)
-            thread.finished.connect(lambda t=thread: self.active_threads.remove(t) if t in self.active_threads else None)
-            thread.start()
+            coro_factory = lambda api_client: api_client.activate_real_trading_mode()
+            self._start_api_worker(coro_factory, self._handle_activate_real_trading_result, self._handle_activate_real_trading_error)
         else:
             self.real_trading_checkbox.setChecked(False)
             logger.info("SettingsView: Activación del modo real cancelada por el usuario.")
@@ -284,23 +238,8 @@ class SettingsView(QWidget):
 
     def _deactivate_real_trading_mode(self):
         logger.info("SettingsView: Solicitando desactivar modo de operativa real.")
-        worker = ApiWorker(
-            base_url=self.backend_base_url,
-            coroutine_factory=lambda api_client: api_client.deactivate_real_trading_mode()
-        )
-        thread = QThread()
-        self.active_threads.append(thread)
-        worker.moveToThread(thread)
-
-        worker.result_ready.connect(self._handle_deactivate_real_trading_result)
-        worker.error_occurred.connect(self._handle_deactivate_real_trading_error)
-        thread.started.connect(worker.run)
-        worker.result_ready.connect(thread.quit)
-        worker.error_occurred.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        thread.finished.connect(lambda t=thread: self.active_threads.remove(t) if t in self.active_threads else None)
-        thread.start()
+        coro_factory = lambda api_client: api_client.deactivate_real_trading_mode()
+        self._start_api_worker(coro_factory, self._handle_deactivate_real_trading_result, self._handle_deactivate_real_trading_error)
 
     def _handle_deactivate_real_trading_result(self, result: Any):
         QMessageBox.information(self, "Éxito", "Modo de Operativa Real Limitada desactivado.")
