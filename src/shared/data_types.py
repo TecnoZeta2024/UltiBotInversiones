@@ -31,6 +31,16 @@ class Kline(BaseModel):
     taker_buy_base_asset_volume: float
     taker_buy_quote_asset_volume: float
 
+class Ticker(BaseModel):
+    symbol: str
+    price: float
+    price_change_percent_24h: Optional[float] = None
+    high_24h: Optional[float] = None
+    low_24h: Optional[float] = None
+    volume_24h: Optional[float] = None
+    quote_volume_24h: Optional[float] = None
+    last_updated: datetime = Field(default_factory=datetime.utcnow)
+
 class ServiceName(str, Enum):
     BINANCE_SPOT = "BINANCE_SPOT"
     BINANCE_FUTURES = "BINANCE_FUTURES"
@@ -354,6 +364,7 @@ __all__ = [
     "TradeOrderDetails",
     "OrderCategory",
     "Kline",
+    "Ticker",
     "ServiceName",
     "APICredential",
     "TelegramConnectionStatus",

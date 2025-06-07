@@ -92,28 +92,13 @@ class CredentialService:
             decrypted_other_details_str = self.decrypt_data(encrypted_credential.encrypted_other_details) if encrypted_credential.encrypted_other_details else None
             decrypted_other_details = json.loads(decrypted_other_details_str) if decrypted_other_details_str else None
             
-            return APICredential(
-                id=encrypted_credential.id,
-                user_id=encrypted_credential.user_id,
-                service_name=encrypted_credential.service_name,
-                credential_label=encrypted_credential.credential_label,
-                encrypted_api_key=decrypted_api_key,
-                encrypted_api_secret=decrypted_api_secret,
-                encrypted_other_details=json.dumps(decrypted_other_details) if decrypted_other_details else None,
-                status=encrypted_credential.status,
-                last_verified_at=encrypted_credential.last_verified_at,
-                permissions=encrypted_credential.permissions,
-                permissions_checked_at=encrypted_credential.permissions_checked_at,
-                expires_at=encrypted_credential.expires_at,
-                rotation_reminder_policy_days=encrypted_credential.rotation_reminder_policy_days,
-                usage_count=encrypted_credential.usage_count,
-                last_used_at=encrypted_credential.last_used_at,
-                purpose_description=encrypted_credential.purpose_description,
-                tags=encrypted_credential.tags,
-                notes=encrypted_credential.notes,
-                created_at=encrypted_credential.created_at,
-                updated_at=encrypted_credential.updated_at
-            )
+            # Reconstruimos el objeto con los datos desencriptados para el retorno
+            decrypted_credential = encrypted_credential.model_copy(deep=True)
+            decrypted_credential.encrypted_api_key = decrypted_api_key
+            decrypted_credential.encrypted_api_secret = decrypted_api_secret
+            decrypted_credential.encrypted_other_details = json.dumps(decrypted_other_details) if decrypted_other_details else None
+            
+            return decrypted_credential
         return None
 
     async def update_credential(self, credential_id: UUID, api_key: Optional[str] = None, api_secret: Optional[str] = None, other_details: Optional[Dict[str, Any]] = None, status: Optional[str] = None) -> Optional[APICredential]:
@@ -121,42 +106,22 @@ class CredentialService:
         if not existing_credential:
             return None
 
-        updated_encrypted_api_key = existing_credential.encrypted_api_key
+        update_data = existing_credential.model_dump()
+
         if api_key is not None:
-            updated_encrypted_api_key = self.encrypt_data(api_key)
-
-        updated_encrypted_api_secret = existing_credential.encrypted_api_secret
+            update_data['encrypted_api_key'] = self.encrypt_data(api_key)
         if api_secret is not None:
-            updated_encrypted_api_secret = self.encrypt_data(api_secret)
-
-        updated_encrypted_other_details = existing_credential.encrypted_other_details
+            update_data['encrypted_api_secret'] = self.encrypt_data(api_secret)
         if other_details is not None:
-            updated_encrypted_other_details = self.encrypt_data(json.dumps(other_details))
-
-        updated_credential_data = APICredential(
-            id=credential_id,
-            user_id=existing_credential.user_id,
-            service_name=existing_credential.service_name,
-            credential_label=existing_credential.credential_label,
-            encrypted_api_key=updated_encrypted_api_key,
-            encrypted_api_secret=updated_encrypted_api_secret,
-            encrypted_other_details=updated_encrypted_other_details,
-            status=status if status else existing_credential.status,
-            last_verified_at=existing_credential.last_verified_at,
-            permissions=existing_credential.permissions,
-            permissions_checked_at=existing_credential.permissions_checked_at,
-            expires_at=existing_credential.expires_at,
-            rotation_reminder_policy_days=existing_credential.rotation_reminder_policy_days,
-            usage_count=existing_credential.usage_count,
-            last_used_at=existing_credential.last_used_at,
-            purpose_description=existing_credential.purpose_description,
-            tags=existing_credential.tags,
-            notes=existing_credential.notes,
-            created_at=existing_credential.created_at,
-            updated_at=datetime.utcnow()
-        )
+            update_data['encrypted_other_details'] = self.encrypt_data(json.dumps(other_details))
+        if status is not None:
+            update_data['status'] = status
         
-        saved_credential = await self.persistence_service.save_credential(updated_credential_data)
+        update_data['updated_at'] = datetime.utcnow()
+
+        updated_credential_model = APICredential(**update_data)
+        
+        saved_credential = await self.persistence_service.save_credential(updated_credential_model)
         return saved_credential
 
     async def delete_credential(self, credential_id: UUID) -> bool:
@@ -178,28 +143,12 @@ class CredentialService:
             decrypted_other_details_str = self.decrypt_data(encrypted_credential.encrypted_other_details) if encrypted_credential.encrypted_other_details else None
             decrypted_other_details = json.loads(decrypted_other_details_str) if decrypted_other_details_str else None
             
-            return APICredential(
-                id=encrypted_credential.id,
-                user_id=encrypted_credential.user_id,
-                service_name=encrypted_credential.service_name,
-                credential_label=encrypted_credential.credential_label,
-                encrypted_api_key=decrypted_api_key,
-                encrypted_api_secret=decrypted_api_secret,
-                encrypted_other_details=json.dumps(decrypted_other_details) if decrypted_other_details else None,
-                status=encrypted_credential.status,
-                last_verified_at=encrypted_credential.last_verified_at,
-                permissions=encrypted_credential.permissions,
-                permissions_checked_at=encrypted_credential.permissions_checked_at,
-                expires_at=encrypted_credential.expires_at,
-                rotation_reminder_policy_days=encrypted_credential.rotation_reminder_policy_days,
-                usage_count=encrypted_credential.usage_count,
-                last_used_at=encrypted_credential.last_used_at,
-                purpose_description=encrypted_credential.purpose_description,
-                tags=encrypted_credential.tags,
-                notes=encrypted_credential.notes,
-                created_at=encrypted_credential.created_at,
-                updated_at=encrypted_credential.updated_at
-            )
+            decrypted_credential = encrypted_credential.model_copy(deep=True)
+            decrypted_credential.encrypted_api_key = decrypted_api_key
+            decrypted_credential.encrypted_api_secret = decrypted_api_secret
+            decrypted_credential.encrypted_other_details = json.dumps(decrypted_other_details) if decrypted_other_details else None
+
+            return decrypted_credential
         return None
 
     async def get_first_decrypted_credential_by_service(self, service_name: ServiceName) -> Optional[APICredential]:
@@ -223,79 +172,51 @@ class CredentialService:
         decrypted_other_details_str = self.decrypt_data(encrypted_credential.encrypted_other_details) if encrypted_credential.encrypted_other_details else None
         decrypted_other_details = json.loads(decrypted_other_details_str) if decrypted_other_details_str else None
         
-        return APICredential(
-            id=encrypted_credential.id,
-            user_id=encrypted_credential.user_id,
-            service_name=encrypted_credential.service_name,
-            credential_label=encrypted_credential.credential_label,
-            encrypted_api_key=decrypted_api_key,
-            encrypted_api_secret=decrypted_api_secret,
-            encrypted_other_details=json.dumps(decrypted_other_details) if decrypted_other_details else None,
-            status=encrypted_credential.status,
-            last_verified_at=encrypted_credential.last_verified_at,
-            permissions=encrypted_credential.permissions,
-            permissions_checked_at=encrypted_credential.permissions_checked_at,
-            expires_at=encrypted_credential.expires_at,
-            rotation_reminder_policy_days=encrypted_credential.rotation_reminder_policy_days,
-            usage_count=encrypted_credential.usage_count,
-            last_used_at=encrypted_credential.last_used_at,
-            purpose_description=encrypted_credential.purpose_description,
-            tags=encrypted_credential.tags,
-            notes=encrypted_credential.notes,
-            created_at=encrypted_credential.created_at,
-            updated_at=encrypted_credential.updated_at
-        )
+        decrypted_credential = encrypted_credential.model_copy(deep=True)
+        decrypted_credential.encrypted_api_key = decrypted_api_key
+        decrypted_credential.encrypted_api_secret = decrypted_api_secret
+        decrypted_credential.encrypted_other_details = json.dumps(decrypted_other_details) if decrypted_other_details else None
+        
+        return decrypted_credential
 
     async def verify_credential(self, credential: APICredential, notification_service: Optional[Any] = None) -> bool:
         is_valid = False
-        decrypted_api_key = self.decrypt_data(credential.encrypted_api_key)
-        if decrypted_api_key is None:
-            logger.error(f"Error de verificación para {credential.service_name}: API Key no pudo ser desencriptada.")
-            await self.persistence_service.update_credential_status(credential.id, "verification_failed", datetime.utcnow())
-            raise CredentialError(f"API Key para {credential.service_name} no pudo ser desencriptada.")
-
-        decrypted_api_secret = None
-        if credential.encrypted_api_secret:
-            decrypted_api_secret = self.decrypt_data(credential.encrypted_api_secret)
-            if decrypted_api_secret is None:
-                logger.error(f"Error de verificación para {credential.service_name}: API Secret no pudo ser desencriptado.")
-                await self.persistence_service.update_credential_status(credential.id, "verification_failed", datetime.utcnow())
-                raise CredentialError(f"API Secret para {credential.service_name} no pudo ser desencriptado.")
+        
+        # Usamos los datos ya desencriptados del objeto que recibimos
+        decrypted_api_key = credential.encrypted_api_key
+        decrypted_api_secret = credential.encrypted_api_secret
 
         try:
             if credential.service_name == ServiceName.TELEGRAM_BOT:
                 if notification_service:
-                    is_valid = await notification_service.send_test_telegram_notification(credential.user_id)
+                    is_valid = await notification_service.send_test_telegram_notification()
                     if is_valid:
-                        logger.info(f"Verificación de Telegram exitosa para el usuario {credential.user_id}.")
+                        logger.info(f"Verificación de Telegram exitosa.")
                     else:
-                        logger.warning(f"Verificación de Telegram fallida para el usuario {credential.user_id}.")
+                        logger.warning(f"Verificación de Telegram fallida.")
                 else:
                     logger.warning(f"NotificationService no proporcionado para verificar Telegram. No se puede verificar.")
                     is_valid = False
             elif credential.service_name in [ServiceName.BINANCE_SPOT, ServiceName.BINANCE_FUTURES]:
-                if decrypted_api_secret is None:
-                    logger.error(f"Error de verificación para Binance: API Secret no pudo ser desencriptado o es nulo.")
-                    await self.persistence_service.update_credential_status(credential.id, "verification_failed", datetime.utcnow())
-                    raise CredentialError(f"API Secret para Binance no pudo ser desencriptado o es nulo.")
+                if decrypted_api_key is None or decrypted_api_secret is None:
+                    raise CredentialError(f"API Key o Secret para Binance son nulos.")
                 
                 try:
                     account_info = await self.binance_adapter.get_account_info(decrypted_api_key, decrypted_api_secret)
-                    can_trade = account_info.get("canTrade", False)
+                    is_valid = account_info.get("canTrade", False)
                     
-                    is_valid = True
-                    logger.info(f"Verificación de Binance {credential.service_name} exitosa para el usuario {credential.user_id}.")
-                    permissions = []
-                    if account_info.get("canTrade"): permissions.append("SPOT_TRADING")
-                    if account_info.get("canDeposit"): permissions.append("DEPOSIT")
-                    if account_info.get("canWithdraw"): permissions.append("WITHDRAWAL")
-                    await self.persistence_service.update_credential_permissions(credential.id, permissions, datetime.utcnow())
+                    if is_valid:
+                        logger.info(f"Verificación de Binance {credential.service_name} exitosa.")
+                        permissions = []
+                        if account_info.get("canTrade"): permissions.append("SPOT_TRADING")
+                        if account_info.get("canDeposit"): permissions.append("DEPOSIT")
+                        if account_info.get("canWithdraw"): permissions.append("WITHDRAWAL")
+                        await self.persistence_service.update_credential_permissions(credential.id, permissions, datetime.utcnow())
+                    else:
+                        logger.warning(f"Verificación de Binance {credential.service_name} fallida: canTrade es False.")
 
                 except BinanceAPIError as e:
                     logger.error(f"Error de Binance API durante la verificación: {str(e)}")
-                    is_valid = False
-                except Exception as e:
-                    logger.error(f"Error inesperado durante la verificación de Binance: {str(e)}")
                     is_valid = False
             else:
                 logger.info(f"No hay lógica de verificación implementada para el servicio: {credential.service_name}. Asumiendo válido.")
@@ -320,8 +241,8 @@ class CredentialService:
             raise CredentialError(f"No se encontró credencial de Binance para el usuario {self.fixed_user_id}.")
 
         try:
-            if binance_credential.encrypted_api_secret is None:
-                raise CredentialError("El API Secret de Binance es requerido pero no se encontró en la credencial.")
+            if binance_credential.encrypted_api_key is None or binance_credential.encrypted_api_secret is None:
+                raise CredentialError("El API Key o Secret de Binance es requerido pero no se encontró en la credencial.")
 
             account_info = await self.binance_adapter.get_account_info(
                 api_key=binance_credential.encrypted_api_key,

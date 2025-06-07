@@ -1,39 +1,39 @@
-2025-06-07 13:38:07,526 - qdarkstyle - INFO - [MainThread] - __init__.py:270 - QSS file successfully loaded.
-2025-06-07 13:38:07,554 - qdarkstyle - INFO - [MainThread] - __init__.py:173 - Found version patches to be applied.
-2025-06-07 13:38:07,554 - qdarkstyle - INFO - [MainThread] - __init__.py:193 - Found application patches to be applied.
-2025-06-07 13:38:07,555 - __main__ - INFO - [MainThread] - main.py:128 - Estilo oscuro aplicado.
-2025-06-07 13:38:07,732 - __main__ - INFO - [MainThread] - main.py:50 - Cliente API inicializado.
-2025-06-07 13:38:07,733 - __main__ - INFO - [MainThread] - main.py:57 - Obteniendo configuración para el usuario: 00000000-0000-0000-0000-000000000001...
-2025-06-07 13:38:07,733 - src.ultibot_ui.services.api_client - INFO - [MainThread] - api_client.py:66 - Obteniendo configuración de usuario.
-2025-06-07 13:38:08,630 - httpx - INFO - [MainThread] - _client.py:1786 - HTTP Request: GET http://localhost:8000/api/v1/config "HTTP/1.1 200 OK"
-2025-06-07 13:38:08,631 - __main__ - INFO - [MainThread] - main.py:61 - Configuración de usuario obtenida con éxito.
-2025-06-07 13:38:08,651 - src.ultibot_ui.services.trading_mode_state - INFO - [MainThread] - trading_mode_state.py:68 - TradingModeStateManager initialized with mode: paper
-2025-06-07 13:38:08,651 - src.ultibot_ui.services.trading_mode_state - INFO - [MainThread] - trading_mode_state.py:226 - Created global trading mode state manager
-2025-06-07 13:38:08,974 - src.ultibot_ui.widgets.portfolio_widget - INFO - [MainThread] - portfolio_widget.py:406 - Timer de actualización del portafolio iniciado.
-2025-06-07 13:38:08,977 - src.ultibot_ui.widgets.chart_widget - INFO - [MainThread] - chart_widget.py:99 - Solicitando datos para BTCUSDT - 1h usando ApiWorker
-2025-06-07 13:38:08,978 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:93 - DashboardView: _initialize_async_components INVOCADO
-2025-06-07 13:38:09,000 - src.ultibot_ui.views.opportunities_view - INFO - [MainThread] - opportunities_view.py:22 - OpportunitiesView: __init__ called.
-2025-06-07 13:38:09,005 - src.ultibot_ui.views.opportunities_view - INFO - [MainThread] - opportunities_view.py:99 - OpportunitiesView: _load_initial_data called.
-2025-06-07 13:38:09,249 - src.ultibot_ui.services.api_client - INFO - [Dummy-1] - api_client.py:132 - Obteniendo datos de velas para BTCUSDT (1h) con parámetros: {'symbol': 'BTCUSDT', 'interval': '1h', 'limit': 200}
-2025-06-07 13:38:09,284 - src.ultibot_ui.services.api_client - INFO - [Dummy-2] - api_client.py:115 - Obteniendo métricas de desempeño, modo: paper con filtros: {'trading_mode': 'paper', 'date_from': '2025-05-08', 'date_to': '2025-06-07'}
-2025-06-07 13:38:09,284 - src.ultibot_ui.services.api_client - INFO - [Dummy-3] - api_client.py:102 - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'limit': 500, 'offset': 0, 'date_from': '2025-05-08', 'date_to': '2025-06-07'}
-2025-06-07 13:38:09,298 - src.ultibot_ui.windows.history_view - INFO - [MainThread] - history_view.py:32 - HistoryView inicializada para usuario 86e5f6c7-02a0-475b-b277-1fccbf23aa56
-2025-06-07 13:38:09,309 - src.ultibot_ui.windows.main_window - INFO - [MainThread] - main_window.py:122 - Central widget y vistas configuradas.
-2025-06-07 13:38:09,309 - src.ultibot_ui.windows.main_window - INFO - [MainThread] - main_window.py:122 - MainWindow inicializada y visible.
-2025-06-07 13:38:09,444 - __main__ - INFO - [MainThread] - main.py:106 - Ventana principal (MainWindow) mostrada.
-2025-06-07 13:38:09,496 - src.ultibot_ui.views.portfolio_view - INFO - [MainThread] - portfolio_view.py:121 - PortfolioView: Fetching portfolio snapshot.
-2025-06-07 13:38:09,496 - src.ultibot_ui.views.opportunities_view - INFO - [MainThread] - opportunities_view.py:110 - Fetching Gemini IA opportunities.
-2025-06-07 13:38:09,497 - src.ultibot_ui.windows.settings_view - INFO - [MainThread] - settings_view.py:92 - SettingsView: Iniciando carga de datos iniciales (_load_initial_data).
-2025-06-07 13:38:09,497 - src.ultibot_ui.windows.settings_view - INFO - [MainThread] - settings_view.py:97 - SettingsView: Solicitando configuración de usuario general.
-2025-06-07 13:38:09,497 - src.ultibot_ui.windows.settings_view - INFO - [MainThread] - settings_view.py:132 - SettingsView: Solicitando estado de operativa real.
-2025-06-07 13:38:10,007 - httpx - INFO - [Dummy-2] - _client.py:1786 - HTTP Request: GET http://localhost:8000/api/v1/performance/metrics?trading_mode=paper&date_from=2025-05-08&date_to=2025-06-07 "HTTP/1.1 200 OK"
-2025-06-07 13:38:10,008 - src.ultibot_ui.widgets.paper_trading_report_widget - INFO - [MainThread] - paper_trading_report_widget.py:273 - Métricas de rendimiento cargadas exitosamente
-2025-06-07 13:38:10,262 - httpx - INFO - [Dummy-3] - _client.py:1786 - HTTP Request: GET http://localhost:8000/api/v1/trades?trading_mode=paper&limit=500&offset=0&date_from=2025-05-08&date_to=2025-06-07 "HTTP/1.1 200 OK"
-2025-06-07 13:38:10,263 - src.ultibot_ui.widgets.paper_trading_report_widget - INFO - [MainThread] - paper_trading_report_widget.py:291 - Trades cargados exitosamente: 0 trades
-2025-06-07 13:38:10,781 - httpx - INFO - [Dummy-1] - _client.py:1786 - HTTP Request: GET http://localhost:8000/api/v1/market/klines?symbol=BTCUSDT&interval=1h&limit=200 "HTTP/1.1 200 OK"
-2025-06-07 13:38:10,782 - src.ultibot_ui.services.api_client - INFO - [Dummy-1] - api_client.py:38 - Cerrando httpx.AsyncClient...
-2025-06-07 13:38:10,790 - src.ultibot_ui.services.api_client - INFO - [Dummy-1] - api_client.py:40 - httpx.AsyncClient cerrado.
-2025-06-07 13:38:23,966 - src.ultibot_ui.widgets.portfolio_widget - INFO - [MainThread] - portfolio_widget.py:433 - Actualizando datos del portafolio para modo: paper
-2025-06-07 13:38:38,977 - src.ultibot_ui.widgets.portfolio_widget - INFO - [MainThread] - portfolio_widget.py:433 - Actualizando datos del portafolio para modo: paper
-2025-06-07 13:38:38,993 - src.ultibot_ui.views.opportunities_view - INFO - [MainThread] - opportunities_view.py:110 - Fetching Gemini IA opportunities.
-2025-06-07 13:38:53,979 - src.ultibot_ui.widgets.portfolio_widget - INFO - [MainThread] - portfolio_widget.py:433 - Actualizando datos del portafolio para modo: paper
+2025-06-07 14:01:04,529 - qdarkstyle - INFO - [MainThread] - __init__.py:270 - QSS file successfully loaded.
+2025-06-07 14:01:04,563 - qdarkstyle - INFO - [MainThread] - __init__.py:173 - Found version patches to be applied.
+2025-06-07 14:01:04,563 - qdarkstyle - INFO - [MainThread] - __init__.py:193 - Found application patches to be applied.
+2025-06-07 14:01:04,564 - __main__ - INFO - [MainThread] - main.py:128 - Estilo oscuro aplicado.
+2025-06-07 14:01:04,746 - __main__ - INFO - [MainThread] - main.py:50 - Cliente API inicializado.
+2025-06-07 14:01:04,747 - __main__ - INFO - [MainThread] - main.py:57 - Obteniendo configuración para el usuario: 00000000-0000-0000-0000-000000000001...
+2025-06-07 14:01:04,747 - src.ultibot_ui.services.api_client - INFO - [MainThread] - api_client.py:67 - Obteniendo configuración de usuario.
+2025-06-07 14:01:05,718 - httpx - INFO - [MainThread] - _client.py:1786 - HTTP Request: GET http://localhost:8000/api/v1/config "HTTP/1.1 200 OK"
+2025-06-07 14:01:05,718 - __main__ - INFO - [MainThread] - main.py:61 - Configuración de usuario obtenida con éxito.
+2025-06-07 14:01:05,736 - src.ultibot_ui.services.trading_mode_state - INFO - [MainThread] - trading_mode_state.py:68 - TradingModeStateManager initialized with mode: paper
+2025-06-07 14:01:05,736 - src.ultibot_ui.services.trading_mode_state - INFO - [MainThread] - trading_mode_state.py:226 - Created global trading mode state manager
+2025-06-07 14:01:06,064 - src.ultibot_ui.widgets.portfolio_widget - INFO - [MainThread] - portfolio_widget.py:406 - Timer de actualización del portafolio iniciado.
+2025-06-07 14:01:06,068 - src.ultibot_ui.widgets.chart_widget - INFO - [MainThread] - chart_widget.py:99 - Solicitando datos para BTCUSDT - 1h usando ApiWorker
+2025-06-07 14:01:06,070 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:93 - DashboardView: _initialize_async_components INVOCADO
+2025-06-07 14:01:06,092 - src.ultibot_ui.views.opportunities_view - INFO - [MainThread] - opportunities_view.py:22 - OpportunitiesView: __init__ called.
+2025-06-07 14:01:06,098 - src.ultibot_ui.views.opportunities_view - INFO - [MainThread] - opportunities_view.py:99 - OpportunitiesView: _load_initial_data called.
+2025-06-07 14:01:06,343 - src.ultibot_ui.services.api_client - INFO - [Dummy-1] - api_client.py:138 - Obteniendo datos de velas para BTCUSDT (1h) con parámetros: {'symbol': 'BTCUSDT', 'interval': '1h', 'limit': 200}
+2025-06-07 14:01:06,376 - src.ultibot_ui.services.api_client - INFO - [Dummy-2] - api_client.py:116 - Obteniendo métricas de desempeño, modo: paper con filtros: {'trading_mode': 'paper', 'date_from': '2025-05-08', 'date_to': '2025-06-07'}
+2025-06-07 14:01:06,376 - src.ultibot_ui.services.api_client - INFO - [Dummy-3] - api_client.py:103 - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'limit': 500, 'offset': 0, 'date_from': '2025-05-08', 'date_to': '2025-06-07'}
+2025-06-07 14:01:06,389 - src.ultibot_ui.windows.history_view - INFO - [MainThread] - history_view.py:32 - HistoryView inicializada para usuario 86e5f6c7-02a0-475b-b277-1fccbf23aa56
+2025-06-07 14:01:06,399 - src.ultibot_ui.windows.main_window - INFO - [MainThread] - main_window.py:122 - Central widget y vistas configuradas.
+2025-06-07 14:01:06,400 - src.ultibot_ui.windows.main_window - INFO - [MainThread] - main_window.py:122 - MainWindow inicializada y visible.
+2025-06-07 14:01:06,531 - __main__ - INFO - [MainThread] - main.py:106 - Ventana principal (MainWindow) mostrada.
+2025-06-07 14:01:06,577 - src.ultibot_ui.views.portfolio_view - INFO - [MainThread] - portfolio_view.py:121 - PortfolioView: Fetching portfolio snapshot.
+2025-06-07 14:01:06,577 - src.ultibot_ui.views.opportunities_view - INFO - [MainThread] - opportunities_view.py:110 - Fetching Gemini IA opportunities.
+2025-06-07 14:01:06,579 - src.ultibot_ui.windows.settings_view - INFO - [MainThread] - settings_view.py:92 - SettingsView: Iniciando carga de datos iniciales (_load_initial_data).
+2025-06-07 14:01:06,579 - src.ultibot_ui.windows.settings_view - INFO - [MainThread] - settings_view.py:97 - SettingsView: Solicitando configuración de usuario general.
+2025-06-07 14:01:06,579 - src.ultibot_ui.windows.settings_view - INFO - [MainThread] - settings_view.py:132 - SettingsView: Solicitando estado de operativa real.
+2025-06-07 14:01:07,262 - httpx - INFO - [Dummy-2] - _client.py:1786 - HTTP Request: GET http://localhost:8000/api/v1/performance/metrics?trading_mode=paper&date_from=2025-05-08&date_to=2025-06-07 "HTTP/1.1 200 OK"
+2025-06-07 14:01:07,263 - src.ultibot_ui.widgets.paper_trading_report_widget - INFO - [MainThread] - paper_trading_report_widget.py:273 - Métricas de rendimiento cargadas exitosamente
+2025-06-07 14:01:07,485 - httpx - INFO - [Dummy-1] - _client.py:1786 - HTTP Request: GET http://localhost:8000/api/v1/market/klines?symbol=BTCUSDT&interval=1h&limit=200 "HTTP/1.1 200 OK"
+2025-06-07 14:01:07,486 - src.ultibot_ui.services.api_client - INFO - [Dummy-1] - api_client.py:39 - Cerrando httpx.AsyncClient...
+2025-06-07 14:01:07,491 - src.ultibot_ui.services.api_client - INFO - [Dummy-1] - api_client.py:41 - httpx.AsyncClient cerrado.
+2025-06-07 14:01:07,850 - httpx - INFO - [Dummy-3] - _client.py:1786 - HTTP Request: GET http://localhost:8000/api/v1/trades?trading_mode=paper&limit=500&offset=0&date_from=2025-05-08&date_to=2025-06-07 "HTTP/1.1 200 OK"
+2025-06-07 14:01:07,851 - src.ultibot_ui.widgets.paper_trading_report_widget - INFO - [MainThread] - paper_trading_report_widget.py:291 - Trades cargados exitosamente: 0 trades
+2025-06-07 14:01:21,072 - src.ultibot_ui.widgets.portfolio_widget - INFO - [MainThread] - portfolio_widget.py:433 - Actualizando datos del portafolio para modo: paper
+2025-06-07 14:01:36,072 - src.ultibot_ui.widgets.portfolio_widget - INFO - [MainThread] - portfolio_widget.py:433 - Actualizando datos del portafolio para modo: paper
+2025-06-07 14:01:36,087 - src.ultibot_ui.views.opportunities_view - INFO - [MainThread] - opportunities_view.py:110 - Fetching Gemini IA opportunities.
+2025-06-07 14:01:51,083 - src.ultibot_ui.widgets.portfolio_widget - INFO - [MainThread] - portfolio_widget.py:433 - Actualizando datos del portafolio para modo: paper
