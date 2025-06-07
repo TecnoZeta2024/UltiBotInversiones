@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-class ConfigService:
+class ConfigurationService:
     def __init__(self, 
                  persistence_service: SupabasePersistenceService, 
                  credential_service: CredentialService,

@@ -2,6 +2,9 @@
 
 Aplica estricta y sistemáticamente las siguientes prácticas técnicas en cada tarea:
 
+#### Comandos básicos
+* **No uses el comando "replace_in_file" en su lugar utiliza "write_to_file"** 
+
 #### 🧩 Principios Arquitectónicos
 
 * **Separation of Concerns**: Claridad y modularidad extrema, responsabilidades delimitadas por módulos y capas.

@@ -1,5 +1,5 @@
 from fastapi import Request
-from src.ultibot_backend.services.configuration_service import ConfigurationService
+from src.ultibot_backend.services.config_service import ConfigurationService
 from src.ultibot_backend.services.credential_service import CredentialService
 from src.ultibot_backend.services.market_data_service import MarketDataService
 from src.ultibot_backend.services.notification_service import NotificationService
