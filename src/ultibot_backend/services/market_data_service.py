@@ -3,12 +3,13 @@ from typing import List, Optional, Dict, Set, Callable, Any
 from uuid import UUID
 from fastapi import Depends
 
-from src.shared.data_types import AssetBalance, ServiceName, BinanceConnectionStatus
+from src.shared.data_types import AssetBalance, ServiceName, BinanceConnectionStatus, MarketData
 from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
 from src.ultibot_backend.services.credential_service import CredentialService
+from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 from src.ultibot_backend.core.exceptions import BinanceAPIError, CredentialError, UltiBotError, ExternalAPIError, MarketDataError
 from src.ultibot_backend.app_config import settings
-from datetime import datetime
+from datetime import datetime, timezone
 import asyncio
 
 logger = logging.getLogger(__name__)
@@ -19,10 +20,12 @@ class MarketDataService:
     """
     def __init__(self, 
                  credential_service: CredentialService, 
-                 binance_adapter: BinanceAdapter
+                 binance_adapter: BinanceAdapter,
+                 persistence_service: SupabasePersistenceService
                  ):
         self.credential_service = credential_service
         self.binance_adapter = binance_adapter
+        self.persistence_service = persistence_service
         self._active_websocket_tasks: Dict[str, asyncio.Task] = {}
         self._closed = False
         self._invalid_symbols_cache: Set[str] = set()
@@ -233,7 +236,7 @@ class MarketDataService:
 
     async def get_candlestick_data(self, symbol: str, interval: str, limit: int = 200, start_time: Optional[int] = None, end_time: Optional[int] = None) -> List[Dict[str, Any]]:
         """
-        Obtiene datos históricos de velas (OHLCV) para un par y temporalidad dados.
+        Obtiene datos históricos de velas (OHLCV) y los persiste en la base de datos.
         """
         if self._closed:
             logger.warning(f"MarketDataService está cerrado. No se pueden obtener datos de velas para {symbol}-{interval}.")
@@ -247,9 +250,10 @@ class MarketDataService:
                 limit=limit
             )
 
+            market_data_to_save = []
             processed_data = []
             for kline in klines_data:
-                processed_data.append({
+                kline_dict = {
                     "open_time": kline[0],
                     "open": float(kline[1]),
                     "high": float(kline[2]),
@@ -261,7 +265,23 @@ class MarketDataService:
                     "number_of_trades": kline[8],
                     "taker_buy_base_asset_volume": float(kline[9]),
                     "taker_buy_quote_asset_volume": float(kline[10])
-                })
+                }
+                processed_data.append(kline_dict)
+                
+                market_data_to_save.append(MarketData(
+                    symbol=symbol,
+                    timestamp=datetime.fromtimestamp(kline[0] / 1000, tz=timezone.utc),
+                    open=float(kline[1]),
+                    high=float(kline[2]),
+                    low=float(kline[3]),
+                    close=float(kline[4]),
+                    volume=float(kline[5])
+                ))
+
+            if market_data_to_save:
+                await self.persistence_service.save_market_data(market_data_to_save)
+                logger.info(f"{len(market_data_to_save)} registros de velas para {symbol}-{interval} guardados en la base de datos.")
+
             logger.info(f"Datos de velas para {symbol}-{interval} obtenidos y procesados.")
             return processed_data
         except BinanceAPIError as e:

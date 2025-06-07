@@ -22,7 +22,7 @@ from src.ultibot_backend.app_config import settings
 from src.ultibot_backend.core.domain_models.opportunity_models import Opportunity, OpportunityStatus
 from src.ultibot_backend.core.domain_models.trade_models import Trade, TradeOrderDetails
 from src.ultibot_backend.core.domain_models.trading_strategy_models import TradingStrategyConfig
-from src.shared.data_types import APICredential, ServiceName, Notification
+from src.shared.data_types import APICredential, ServiceName, Notification, MarketData
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +95,42 @@ class SupabasePersistenceService:
             await self.connect()
             assert self.pool is not None, "Fallo crítico al reconectar el pool después de un check fallido."
 
+    async def save_market_data(self, market_data_list: List[MarketData]):
+        await self._check_pool()
+        assert self.pool is not None
+
+        query = SQL("COPY market_data (symbol, timestamp, open, high, low, close, volume) FROM STDIN")
+
+        async def data_generator():
+            for data in market_data_list:
+                yield f"{data.symbol}\t{data.timestamp.isoformat()}\t{data.open}\t{data.high}\t{data.low}\t{data.close}\t{data.volume}\n".encode('utf-8')
+
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor() as cur:
+                    async with cur.copy(query) as copy:
+                        async for chunk in data_generator():
+                            await copy.write(chunk)
+            logger.info(f"Se guardaron {len(market_data_list)} registros de datos de mercado.")
+        except Exception as e:
+            logger.error(f"Error al guardar datos de mercado con COPY: {e}", exc_info=True)
+            raise
+
+    async def get_market_data(self, symbol: str, start_date: datetime, end_date: datetime) -> List[MarketData]:
+        await self._check_pool()
+        assert self.pool is not None
+
+        query = SQL("SELECT * FROM market_data WHERE symbol = %s AND timestamp >= %s AND timestamp <= %s ORDER BY timestamp ASC;")
+
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, (symbol, start_date, end_date))
+                    records = await cur.fetchall()
+                    return [MarketData(**record) for record in records]
+        except Exception as e:
+            logger.error(f"Error al obtener datos de mercado para {symbol}: {e}", exc_info=True)
+            raise
 
     async def get_opportunity_by_id(self, opportunity_id: UUID) -> Optional[Opportunity]:
         await self._check_pool()

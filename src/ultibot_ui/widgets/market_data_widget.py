@@ -82,11 +82,10 @@ class MarketDataWidget(QWidget):
     config_saved = pyqtSignal(UserConfiguration)
     market_data_api_error = pyqtSignal(str)
     
-    def __init__(self, user_id: UUID, backend_base_url: str, parent: Optional[QWidget] = None):
+    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.user_id = user_id
-        self.backend_base_url = backend_base_url
-        self.api_client = UltiBotAPIClient(base_url=backend_base_url)
+        self.api_client = api_client
         self.selected_pairs: List[str] = [] 
         self.all_available_pairs: List[str] = [] 
         self.active_api_workers: List[Any] = []
@@ -104,7 +103,7 @@ class MarketDataWidget(QWidget):
         qasync_loop = asyncio.get_event_loop()
         future = qasync_loop.create_future()
 
-        worker = ApiWorker(coroutine_factory=coroutine_factory, base_url=self.backend_base_url)
+        worker = ApiWorker(coroutine_factory=coroutine_factory, api_client=self.api_client)
         thread = QThread()
         self.active_api_workers.append((worker, thread))
 
@@ -304,22 +303,15 @@ if __name__ == '__main__':
         asyncio.set_event_loop(loop)
 
         test_user_id = UUID("123e4567-e89b-12d3-a456-426614174000")
-        widget = MarketDataWidget(user_id=test_user_id, backend_base_url="http://mock")
-        
-        # Use a real instance for testing the flow, but with mocked methods
-        widget.api_client = MockAPIClient(base_url="http://mock")
+        mock_api_client = MockAPIClient(base_url="http://mock")
+        widget = MarketDataWidget(user_id=test_user_id, api_client=mock_api_client)
         
         widget.load_initial_configuration()
         widget.show()
-
-        # This is the correct way to run the Qt event loop with qasync
-        # We don't await anything here, just let the loop run.
-        # The loop will exit when the application quits.
         pass
 
     if __name__ == "__main__":
         try:
-            # qasync.run expects a coroutine function, not its result.
             qasync.run(main_async)
         except KeyboardInterrupt:
             logger.info("Aplicación de prueba cerrada.")

@@ -1,16 +1,16 @@
-2025-06-07 16:38:51,587 - __main__ - INFO - [MainThread] - main.py:165 - Iniciando el punto de entrada de la aplicaci贸n frontend.
+2025-06-07 16:38:51,587 - __main__ - INFO - [MainThread] - main.py:165 - Iniciando el punto de entrada de la aplicaci髇 frontend.
 2025-06-07 16:38:51,620 - qdarkstyle - INFO - [MainThread] - __init__.py:270 - QSS file successfully loaded.
 2025-06-07 16:38:51,659 - qdarkstyle - INFO - [MainThread] - __init__.py:173 - Found version patches to be applied.
 2025-06-07 16:38:51,659 - qdarkstyle - INFO - [MainThread] - __init__.py:193 - Found application patches to be applied.
 2025-06-07 16:38:51,660 - __main__ - INFO - [MainThread] - main.py:153 - Estilo oscuro aplicado.
-2025-06-07 16:38:51,838 - __main__ - INFO - [Dummy-1] - main.py:70 - Worker: Obteniendo configuraci贸n de usuario...
-2025-06-07 16:38:51,838 - src.ultibot_ui.services.api_client - INFO - [Dummy-1] - api_client.py:68 - Obteniendo configuraci贸n de usuario.
+2025-06-07 16:38:51,838 - __main__ - INFO - [Dummy-1] - main.py:70 - Worker: Obteniendo configuraci髇 de usuario...
+2025-06-07 16:38:51,838 - src.ultibot_ui.services.api_client - INFO - [Dummy-1] - api_client.py:68 - Obteniendo configuraci髇 de usuario.
 2025-06-07 16:38:52,777 - httpx - INFO - [Dummy-1] - _client.py:1786 - HTTP Request: GET http://localhost:8000/api/v1/config "HTTP/1.1 200 OK"
-2025-06-07 16:38:52,777 - __main__ - INFO - [Dummy-1] - main.py:73 - Worker: Configuraci贸n de usuario obtenida con 茅xito.
-2025-06-07 16:38:52,778 - __main__ - INFO - [MainThread] - main.py:110 - Configuraci贸n de usuario recibida. Mostrando ventana principal.
+2025-06-07 16:38:52,777 - __main__ - INFO - [Dummy-1] - main.py:73 - Worker: Configuraci髇 de usuario obtenida con 閤ito.
+2025-06-07 16:38:52,778 - __main__ - INFO - [MainThread] - main.py:110 - Configuraci髇 de usuario recibida. Mostrando ventana principal.
 2025-06-07 16:38:52,796 - src.ultibot_ui.services.trading_mode_state - INFO - [MainThread] - trading_mode_state.py:68 - TradingModeStateManager initialized with mode: paper
 2025-06-07 16:38:52,796 - src.ultibot_ui.services.trading_mode_state - INFO - [MainThread] - trading_mode_state.py:226 - Created global trading mode state manager
-2025-06-07 16:38:53,103 - src.ultibot_ui.widgets.portfolio_widget - INFO - [MainThread] - portfolio_widget.py:277 - Timer de actualizaci贸n del portafolio iniciado.
+2025-06-07 16:38:53,103 - src.ultibot_ui.widgets.portfolio_widget - INFO - [MainThread] - portfolio_widget.py:277 - Timer de actualizaci髇 del portafolio iniciado.
 2025-06-07 16:38:53,106 - src.ultibot_ui.widgets.chart_widget - INFO - [MainThread] - chart_widget.py:100 - Solicitando datos para BTCUSDT - 1h usando ApiWorker
 2025-06-07 16:38:53,108 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:81 - DashboardView: _initialize_async_components INVOCADO
 2025-06-07 16:38:53,129 - src.ultibot_ui.views.opportunities_view - INFO - [MainThread] - opportunities_view.py:23 - OpportunitiesView: __init__ called.
@@ -19,17 +19,17 @@
 2025-06-07 16:38:53,177 - src.ultibot_ui.windows.main_window - INFO - [MainThread] - main_window.py:131 - Central widget y vistas configuradas.
 2025-06-07 16:38:53,177 - src.ultibot_ui.windows.main_window - INFO - [MainThread] - main_window.py:131 - MainWindow inicializada y visible.
 2025-06-07 16:38:53,316 - __main__ - INFO - [MainThread] - main.py:117 - Ventana principal (MainWindow) mostrada.
-2025-06-07 16:38:53,317 - __main__ - INFO - [MainThread] - main.py:128 - El worker de inicializaci贸n ha terminado.
+2025-06-07 16:38:53,317 - __main__ - INFO - [MainThread] - main.py:128 - El worker de inicializaci髇 ha terminado.
 2025-06-07 16:38:53,365 - src.ultibot_ui.views.portfolio_view - INFO - [MainThread] - portfolio_view.py:120 - PortfolioView: Fetching portfolio snapshot.
 2025-06-07 16:38:53,366 - src.ultibot_ui.windows.settings_view - INFO - [MainThread] - settings_view.py:91 - SettingsView: Iniciando carga de datos iniciales (_load_initial_data).
-2025-06-07 16:38:53,366 - src.ultibot_ui.windows.settings_view - INFO - [MainThread] - settings_view.py:111 - SettingsView: Solicitando configuraci贸n de usuario general.
+2025-06-07 16:38:53,366 - src.ultibot_ui.windows.settings_view - INFO - [MainThread] - settings_view.py:111 - SettingsView: Solicitando configuraci髇 de usuario general.
 2025-06-07 16:38:53,366 - src.ultibot_ui.windows.settings_view - INFO - [MainThread] - settings_view.py:131 - SettingsView: Solicitando estado de operativa real.
 2025-06-07 16:38:53,366 - src.ultibot_ui.views.opportunities_view - INFO - [MainThread] - opportunities_view.py:110 - Fetching Gemini IA opportunities.
 2025-06-07 16:39:08,098 - src.ultibot_ui.widgets.portfolio_widget - INFO - [MainThread] - portfolio_widget.py:289 - Actualizando datos del portafolio para modo: paper
 2025-06-07 16:39:23,094 - src.ultibot_ui.widgets.portfolio_widget - INFO - [MainThread] - portfolio_widget.py:289 - Actualizando datos del portafolio para modo: paper
 2025-06-07 16:39:23,130 - src.ultibot_ui.views.opportunities_view - INFO - [MainThread] - opportunities_view.py:110 - Fetching Gemini IA opportunities.
 2025-06-07 16:39:38,099 - src.ultibot_ui.widgets.portfolio_widget - INFO - [MainThread] - portfolio_widget.py:289 - Actualizando datos del portafolio para modo: paper
-2025-06-07 16:39:39,938 - src.ultibot_ui.windows.settings_view - ERROR - [MainThread] - settings_view.py:170 - SettingsView: No hay configuraci贸n actual para guardar. Operaci贸n cancelada.
+2025-06-07 16:39:39,938 - src.ultibot_ui.windows.settings_view - ERROR - [MainThread] - settings_view.py:170 - SettingsView: No hay configuraci髇 actual para guardar. Operaci髇 cancelada.
 2025-06-07 16:39:43,471 - src.ultibot_ui.windows.main_window - INFO - [MainThread] - main_window.py:131 - Cleaning up MainWindow resources. Stopping 13 active threads...
 2025-06-07 16:39:43,471 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:113 - DashboardView: Iniciando limpieza de tareas.
 2025-06-07 16:39:43,471 - src.ultibot_ui.widgets.portfolio_widget - INFO - [MainThread] - portfolio_widget.py:522 - Actualizaciones del portafolio detenidas.
@@ -43,7 +43,7 @@
 2025-06-07 16:39:43,471 - src.ultibot_ui.views.portfolio_view - INFO - [MainThread] - portfolio_view.py:259 - PortfolioView: Cleaning up...
 2025-06-07 16:39:43,472 - src.ultibot_ui.views.portfolio_view - INFO - [MainThread] - portfolio_view.py:270 - PortfolioView: Cleanup finished.
 2025-06-07 16:39:43,476 - src.ultibot_ui.windows.main_window - INFO - [MainThread] - main_window.py:131 - MainWindow cleanup finished.
-2025-06-07 16:39:43,502 - __main__ - INFO - [MainThread] - main.py:138 - Iniciando limpieza de la aplicaci贸n...
+2025-06-07 16:39:43,502 - __main__ - INFO - [MainThread] - main.py:138 - Iniciando limpieza de la aplicaci髇...
 2025-06-07 16:39:43,502 - src.ultibot_ui.windows.main_window - INFO - [MainThread] - main_window.py:131 - Cleaning up MainWindow resources. Stopping 0 active threads...
 2025-06-07 16:39:43,502 - src.ultibot_ui.windows.dashboard_view - INFO - [MainThread] - dashboard_view.py:113 - DashboardView: Iniciando limpieza de tareas.
 2025-06-07 16:39:43,502 - src.ultibot_ui.widgets.portfolio_widget - INFO - [MainThread] - portfolio_widget.py:522 - Actualizaciones del portafolio detenidas.

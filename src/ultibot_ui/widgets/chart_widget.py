@@ -7,6 +7,7 @@ from typing import List, Dict, Any, Optional
 from uuid import UUID
 import asyncio
 
+from src.ultibot_ui.models import BaseMainWindow
 from src.ultibot_ui.workers import ApiWorker
 from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
 from src.shared.data_types import Kline
@@ -25,13 +26,13 @@ class ChartWidget(QWidget):
     candlestick_data_fetched = pyqtSignal(list)
     api_error_occurred = pyqtSignal(str)
     
-    def __init__(self, backend_base_url: str, parent: Optional[QWidget] = None):
+    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent: Optional[QWidget] = None):
         super().__init__(parent)
-        self.backend_base_url = backend_base_url
+        self.api_client = api_client
+        self.main_window = main_window
         self.current_symbol: Optional[str] = None
         self.current_interval: Optional[str] = "1h"
         self.candlestick_data: List[Kline] = []
-        self.active_api_workers = []
 
         self.init_ui()
         self.candlestick_data_fetched.connect(self.set_candlestick_data)
@@ -98,10 +99,6 @@ class ChartWidget(QWidget):
             self.chart_area.setText(f"Cargando datos para {self.current_symbol} ({self.current_interval})...")
             logger.info(f"Solicitando datos para {self.current_symbol} - {self.current_interval} usando ApiWorker")
             
-            import qasync
-
-            qasync_loop = asyncio.get_event_loop()
-
             current_symbol = self.current_symbol
             current_interval = self.current_interval
 
@@ -111,7 +108,7 @@ class ChartWidget(QWidget):
                 return
 
             worker = ApiWorker(
-                base_url=self.backend_base_url,
+                api_client=self.api_client,
                 coroutine_factory=lambda api_client: api_client.get_candlestick_data(
                     symbol=current_symbol,
                     interval=current_interval,
@@ -119,7 +116,7 @@ class ChartWidget(QWidget):
                 )
             )
             thread = QThread()
-            self.active_api_workers.append((worker, thread))
+            self.main_window.add_thread(thread)
 
             worker.moveToThread(thread)
 
@@ -129,8 +126,6 @@ class ChartWidget(QWidget):
             worker.result_ready.connect(thread.quit)
             worker.error_occurred.connect(thread.quit)
             thread.finished.connect(worker.deleteLater)
-            thread.finished.connect(thread.deleteLater)
-            thread.finished.connect(lambda: self.active_api_workers.remove((worker, thread)) if (worker, thread) in self.active_api_workers else None)
 
             thread.started.connect(worker.run)
             thread.start()
@@ -219,20 +214,7 @@ class ChartWidget(QWidget):
 
 
     def cleanup(self):
-        logger.info("ChartWidget: Iniciando limpieza de ApiWorkers activos.")
-        for worker, thread in list(self.active_api_workers):
-            if thread.isRunning():
-                logger.info(f"ChartWidget: Deteniendo ApiWorker en thread {thread.objectName()}...")
-                thread.quit()
-                if not thread.wait(2000):
-                    logger.warning(f"ChartWidget: Thread {thread.objectName()} no terminó a tiempo. Forzando terminación.")
-                    thread.terminate()
-                    thread.wait()
-            if (worker, thread) in self.active_api_workers:
-                self.active_api_workers.remove((worker, thread))
-                worker.deleteLater()
-                thread.deleteLater()
-        logger.info("ChartWidget: Limpieza de ApiWorkers completada.")
+        logger.info("ChartWidget: Limpieza completada.")
 
 if __name__ == '__main__':
     from PyQt5.QtWidgets import QApplication, QMainWindow
@@ -244,32 +226,35 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
 
     app = QApplication(sys.argv)
-    main_window = QMainWindow()
-    main_window.setWindowTitle("Chart Widget Test")
-    main_window.setGeometry(100, 100, 800, 600)
+    
+    class MockMainWindow(BaseMainWindow):
+        def add_thread(self, thread: QThread):
+            logger.info(f"MockMainWindow: Thread '{thread.objectName()}' added for tracking.")
 
-    class MockAPIClient:
-        async def get_candlestick_data(self, symbol: str, interval: str, limit: int, start_time: Optional[Any]=None, end_time: Optional[Any]=None) -> List[Dict[str, Any]]:
+    mock_main_window = MockMainWindow()
+    main_window_widget = QMainWindow()
+    main_window_widget.setWindowTitle("Chart Widget Test")
+    main_window_widget.setGeometry(100, 100, 800, 600)
+
+    class MockAPIClient(UltiBotAPIClient):
+        def __init__(self, base_url: str, token: Optional[str] = None):
+            super().__init__(base_url, token)
+
+        async def get_candlestick_data(self, symbol: str, interval: str, limit: int = 200) -> List[Kline]:
             logger.info(f"MockAPIClient: Obteniendo datos de velas para {symbol}-{interval}")
             sample_data = [
-                {"open_time": 1678886400000, "open": "20000.0", "high": "20100.0", "low": "19900.0", "close": "20050.0", "volume": "1000.0"},
-                {"open_time": 1678890000000, "open": "20050.0", "high": "20200.0", "low": "20000.0", "close": "20150.0", "volume": "1200.0"},
-                {"open_time": 1678893600000, "open": "20150.0", "high": "20300.0", "low": "20100.0", "close": "20250.0", "volume": "1100.0"},
-                {"open_time": 1678897200000, "open": "20250.0", "high": "20400.0", "low": "20200.0", "close": "20350.0", "volume": "1300.0"},
-                {"open_time": 1678900800000, "open": "20350.0", "high": "20500.0", "low": "20300.0", "close": "20450.0", "volume": "1400.0"},
+                {"open_time": 1678886400000, "open": 20000.0, "high": 20100.0, "low": 19900.0, "close": 20050.0, "volume": 1000.0, "close_time": 1678886459999, "quote_asset_volume": "20050000", "number_of_trades": 100, "taker_buy_base_asset_volume": "500", "taker_buy_quote_asset_volume": "10025000"},
+                {"open_time": 1678890000000, "open": 20050.0, "high": 20200.0, "low": 20000.0, "close": 20150.0, "volume": 1200.0, "close_time": 1678890059999, "quote_asset_volume": "24180000", "number_of_trades": 120, "taker_buy_base_asset_volume": "600", "taker_buy_quote_asset_volume": "12090000"},
+                {"open_time": 1678893600000, "open": 20150.0, "high": 20300.0, "low": 20100.0, "close": 20250.0, "volume": 1100.0, "close_time": 1678893659999, "quote_asset_volume": "22275000", "number_of_trades": 110, "taker_buy_base_asset_volume": "550", "taker_buy_quote_asset_volume": "11137500"},
+                {"open_time": 1678897200000, "open": 20250.0, "high": 20400.0, "low": 20200.0, "close": 20350.0, "volume": 1300.0, "close_time": 1678897259999, "quote_asset_volume": "26455000", "number_of_trades": 130, "taker_buy_base_asset_volume": "650", "taker_buy_quote_asset_volume": "13227500"},
+                {"open_time": 1678900800000, "open": 20350.0, "high": 20500.0, "low": 20300.0, "close": 20450.0, "volume": 1400.0, "close_time": 1678900859999, "quote_asset_volume": "28630000", "number_of_trades": 140, "taker_buy_base_asset_volume": "700", "taker_buy_quote_asset_volume": "14315000"},
             ]
-            for row in sample_data:
-                row["open"] = float(row["open"])
-                row["high"] = float(row["high"])
-                row["low"] = float(row["low"])
-                row["close"] = float(row["close"])
-                row["volume"] = float(row["volume"])
-            return sample_data
+            return [Kline(**d) for d in sample_data]
 
-    mock_backend_base_url = "http://localhost:8000"
-    chart_widget = ChartWidget(backend_base_url=mock_backend_base_url)
-    main_window.setCentralWidget(chart_widget)
-    main_window.show()
+    mock_api_client = MockAPIClient(base_url="http://mock-api")
+    chart_widget = ChartWidget(api_client=mock_api_client, main_window=mock_main_window)
+    main_window_widget.setCentralWidget(chart_widget)
+    main_window_widget.show()
 
     event_loop = qasync.QEventLoop(app)
     asyncio.set_event_loop(event_loop)

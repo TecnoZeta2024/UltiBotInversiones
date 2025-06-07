@@ -7,7 +7,7 @@ intercambiables para diferentes funcionalidades del bot de trading.
 
 import asyncio
 import logging
-from typing import Optional
+from typing import Optional, List, Callable, Coroutine
 from uuid import UUID
 
 from PyQt5.QtCore import Qt, QTimer, QThread
@@ -25,36 +25,37 @@ from PyQt5.QtWidgets import (
     QMenuBar
 )
 
-from src.shared.data_types import UserConfiguration
+from src.shared.data_types import UserConfiguration, AiStrategyConfiguration
+from src.ultibot_ui.models import BaseMainWindow
 from src.ultibot_ui.widgets.sidebar_navigation_widget import SidebarNavigationWidget
 from src.ultibot_ui.windows.dashboard_view import DashboardView
 from src.ultibot_ui.windows.history_view import HistoryView
 from src.ultibot_ui.windows.settings_view import SettingsView
 from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
-from src.ultibot_ui.views.strategy_management_view import StrategyManagementView
+from src.ultibot_ui.services.ui_strategy_service import UIStrategyService
+from src.ultibot_ui.views.strategies_view import StrategiesView
 from src.ultibot_ui.views.opportunities_view import OpportunitiesView
 from src.ultibot_ui.views.portfolio_view import PortfolioView
+from src.ultibot_ui.workers import ApiWorker
 
 logger = logging.getLogger(__name__)
 
-class MainWindow(QMainWindow):
+class MainWindow(QMainWindow, BaseMainWindow):
     """Ventana principal de la aplicación UltiBotInversiones."""
 
     def __init__(
         self,
         user_id: UUID,
         api_client: UltiBotAPIClient,
-        qasync_loop: asyncio.AbstractEventLoop,
         parent: Optional[QWidget] = None,
     ):
         """Inicializa la ventana principal."""
         super().__init__(parent)
         self.user_id = user_id
         self.api_client = api_client
-        self.qasync_loop = qasync_loop
         
         self._initialization_complete = False
-        self.active_threads: list[QThread] = []
+        self.active_threads: List[QThread] = []
 
         self.setWindowTitle("UltiBotInversiones")
         self.setGeometry(100, 100, 1200, 800)
@@ -68,7 +69,6 @@ class MainWindow(QMainWindow):
         self.banner_label = QLabel("🟢 UltiBotInversiones UI cargada correctamente")
         self.banner_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #00FF8C; padding: 8px; background: #1E1E1E; border-radius: 6px;")
 
-        # Crear y asignar la barra de menú y estado de forma segura
         self.setMenuBar(self._create_menu_bar())
         status_bar = QStatusBar(self)
         self.setStatusBar(status_bar)
@@ -94,6 +94,16 @@ class MainWindow(QMainWindow):
         if current_statusbar:
             current_statusbar.showMessage("Ventana principal desplegada correctamente.")
 
+    def add_thread(self, thread: QThread):
+        """Añade un hilo a la lista de hilos activos para su seguimiento."""
+        self.active_threads.append(thread)
+        thread.finished.connect(lambda: self.remove_thread(thread))
+
+    def remove_thread(self, thread: QThread):
+        """Elimina un hilo de la lista de hilos activos."""
+        if thread in self.active_threads:
+            self.active_threads.remove(thread)
+
     def _create_menu_bar(self) -> QMenuBar:
         """Crea y devuelve la barra de menú principal."""
         menu_bar = QMenuBar(self)
@@ -114,7 +124,6 @@ class MainWindow(QMainWindow):
     def _apply_theme_selection(self, theme_name: str):
         """Aplica el tema seleccionado."""
         logger.info(f"MainWindow: User selected {theme_name} theme.")
-        # La lógica para aplicar el tema se manejará en main.py
 
     def _log_debug(self, msg: str):
         """Agrega un mensaje al panel de logs y al logger."""
@@ -140,23 +149,34 @@ class MainWindow(QMainWindow):
         self.dashboard_view = DashboardView(
             user_id=self.user_id,
             api_client=self.api_client,
-            qasync_loop=self.qasync_loop
+            main_window=self
         )
         self.stacked_widget.addWidget(self.dashboard_view)
 
-        self.opportunities_view = OpportunitiesView(self.user_id, self.api_client.base_url, self.qasync_loop)
+        self.opportunities_view = OpportunitiesView(
+            user_id=self.user_id, 
+            api_client=self.api_client, 
+            main_window=self
+        )
         self.stacked_widget.addWidget(self.opportunities_view)
 
-        self.strategy_management_view = StrategyManagementView(backend_base_url=self.api_client.base_url, parent=self)
-        self.stacked_widget.addWidget(self.strategy_management_view)
+        self.strategies_view = StrategiesView(parent=self)
+        self.stacked_widget.addWidget(self.strategies_view)
 
-        self.portfolio_view = PortfolioView(self.user_id, self.api_client.base_url, self.qasync_loop)
+        self.portfolio_view = PortfolioView(
+            user_id=self.user_id, 
+            api_client=self.api_client
+        )
         self.stacked_widget.addWidget(self.portfolio_view)
 
-        self.history_view = HistoryView(user_id=self.user_id, backend_base_url=self.api_client.base_url)
+        self.history_view = HistoryView(
+            user_id=self.user_id, 
+            api_client=self.api_client, 
+            main_window=self
+        )
         self.stacked_widget.addWidget(self.history_view)
 
-        self.settings_view = SettingsView(str(self.user_id), self.api_client.base_url, self.qasync_loop)
+        self.settings_view = SettingsView(str(self.user_id), self.api_client)
         self.stacked_widget.addWidget(self.settings_view)
 
         self.view_map = {
@@ -164,31 +184,68 @@ class MainWindow(QMainWindow):
             "portfolio": 3, "history": 4, "settings": 5,
         }
 
+        # Setup strategy service
+        self.strategy_service = UIStrategyService(api_client=self.api_client)
+        self.strategy_service.strategies_updated.connect(self.strategies_view.update_strategies)
+        self.strategy_service.error_occurred.connect(lambda msg: self._log_debug(f"[STRATEGY_SVC_ERR] {msg}"))
+        
+        self._fetch_strategies_async()
+
         dashboard_button = self.sidebar.findChild(QPushButton, "navButton_dashboard")
         if dashboard_button:
             dashboard_button.setChecked(True)
         self.stacked_widget.setCurrentIndex(self.view_map["dashboard"])
         self._log_debug("Central widget y vistas configuradas.")
 
+    def _fetch_strategies_async(self):
+        """Ejecuta la obtención de estrategias en un hilo de trabajo."""
+        coro_factory = lambda client: self.strategy_service.fetch_strategies()
+        
+        # El ApiWorker se encargará de emitir la señal strategies_updated del servicio
+        # ya que el servicio y la vista están conectados. No necesitamos conectar aquí.
+        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coro_factory)
+        thread = QThread()
+        worker.moveToThread(thread)
+
+        # Conectar señales del worker para manejar el resultado
+        worker.error_occurred.connect(lambda msg: self._log_debug(f"[WORKER_ERR] {msg}"))
+        thread.started.connect(worker.run)
+        
+        # Limpieza del worker y el hilo
+        worker.result_ready.connect(thread.quit)
+        worker.error_occurred.connect(thread.quit)
+        thread.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        
+        self.add_thread(thread)
+        thread.start()
+
     def _switch_view(self, view_name: str):
         """Cambia a la vista especificada."""
         index = self.view_map.get(view_name)
         if index is not None:
             self.stacked_widget.setCurrentIndex(index)
+            if view_name == "strategies":
+                self._fetch_strategies_async() # Refresh strategies when view is shown
 
     def cleanup(self):
         """Limpia los recursos de la ventana."""
-        self._log_debug("Cleaning up MainWindow resources...")
-        if hasattr(self.dashboard_view, "cleanup"): self.dashboard_view.cleanup()
-        if hasattr(self.history_view, "cleanup"): self.history_view.cleanup()
-        if hasattr(self.opportunities_view, "cleanup"): self.opportunities_view.cleanup()
-        if hasattr(self.portfolio_view, "cleanup"): self.portfolio_view.cleanup()
+        self._log_debug(f"Cleaning up MainWindow resources. Stopping {len(self.active_threads)} active threads...")
+        
+        for view_widget in [self.dashboard_view, self.history_view, self.opportunities_view, self.portfolio_view, self.settings_view]:
+            if hasattr(view_widget, "cleanup"):
+                view_widget.cleanup()
         
         for thread in self.active_threads[:]:
-            if thread.isRunning():
-                thread.quit()
-                thread.wait(1000)
+            try:
+                if thread.isRunning():
+                    thread.quit()
+                    thread.wait(1000) 
+            except RuntimeError:
+                logger.warning(f"Thread {thread} was already deleted.")
+        
         self.active_threads.clear()
+        self._log_debug("MainWindow cleanup finished.")
 
     def closeEvent(self, event):
         """Maneja el evento de cierre de la ventana."""

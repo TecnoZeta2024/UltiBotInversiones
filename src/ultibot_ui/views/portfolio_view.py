@@ -18,11 +18,10 @@ from src.ultibot_ui.workers import ApiWorker
 logger = logging.getLogger(__name__)
 
 class PortfolioView(QWidget):
-    def __init__(self, user_id: UUID, backend_base_url: str, qasync_loop, parent: Optional[QWidget] = None):
+    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.user_id = user_id
-        self.backend_base_url = backend_base_url
-        self.qasync_loop = qasync_loop
+        self.api_client = api_client
         self.active_threads: List[QThread] = []
         self.current_portfolio_data: Optional[PortfolioSnapshot] = None
 
@@ -124,7 +123,7 @@ class PortfolioView(QWidget):
         self.assets_table.setRowCount(0)
 
         worker = ApiWorker(
-            base_url=self.backend_base_url,
+            api_client=self.api_client,
             coroutine_factory=lambda api_client: api_client.get_portfolio_snapshot(
                 user_id=self.user_id, trading_mode=self.trading_mode_manager.current_mode
             )
@@ -277,9 +276,10 @@ if __name__ == '__main__':
     class MockApiWorker(QObject):
         result_ready = pyqtSignal(object)
         error_occurred = pyqtSignal(str)
-        def __init__(self, coroutine_factory, base_url):
+        def __init__(self, coroutine_factory, api_client):
             super().__init__()
             self.coro_factory = coroutine_factory
+            self.api_client = api_client
         def run(self):
             try:
                 mock_data = _mock_get_portfolio_snapshot("paper")
@@ -298,10 +298,7 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     
-    class MockQAsyncLoop:
-        def create_task(self, coro): pass
-
-    view = PortfolioView(user_id=UUID("00000000-0000-0000-0000-000000000000"), backend_base_url="http://localhost:8000", qasync_loop=MockQAsyncLoop())
+    view = PortfolioView(user_id=UUID("00000000-0000-0000-0000-000000000000"), api_client=UltiBotAPIClient("http://localhost:8000"))
     view.setWindowTitle("Portfolio View - Test")
     view.setGeometry(100, 100, 1000, 700)
     view.show()

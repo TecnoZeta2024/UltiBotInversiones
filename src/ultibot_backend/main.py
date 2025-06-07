@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 from contextlib import asynccontextmanager
-from logging.handlers import RotatingFileHandler
+from logging.config import dictConfig
 from typing import Any
 
 # Solución para Windows ProactorEventLoop con psycopg/asyncio
@@ -21,26 +21,50 @@ from src.ultibot_backend.api.v1.endpoints import (
 from src.ultibot_backend.dependencies import get_container
 from src.ultibot_backend.core.exceptions import UltiBotError
 
-# Configuración del logging
-log_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-log_file = 'logs/backend.log'
-os.makedirs(os.path.dirname(log_file), exist_ok=True)
-# Redirigir stdout y stderr a un archivo de log separado para Uvicorn
-uvicorn_log_file = 'logs/backend_stdout.log'
-try:
-    uvicorn_log_stream = open(uvicorn_log_file, 'a')
-    sys.stdout = uvicorn_log_stream
-    sys.stderr = uvicorn_log_stream
-except Exception as e:
-    logging.error(f"No se pudo abrir el archivo de log para stdout/stderr: {e}")
+# --- Nueva Configuración de Logging ---
+LOGS_DIR = "logs"
+os.makedirs(LOGS_DIR, exist_ok=True)
 
+LOGGING_CONFIG = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "default": {
+            "format": "%(asctime)s - %(name)s - %(levelname)s - [%(threadName)s] - %(filename)s:%(lineno)d - %(message)s",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "default",
+            "stream": "ext://sys.stdout",
+        },
+        "file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "formatter": "default",
+            "filename": os.path.join(LOGS_DIR, "backend.log"),
+            "maxBytes": 10485760,  # 10 MB
+            "backupCount": 5,
+            "encoding": "utf-8",
+        },
+    },
+    "loggers": {
+        "uvicorn": {"handlers": ["console", "file"], "level": "INFO"},
+        "uvicorn.error": {"level": "INFO"},
+        "uvicorn.access": {"handlers": ["console", "file"], "level": "INFO"},
+        "ultibot_backend": {"handlers": ["console", "file"], "level": "DEBUG", "propagate": False},
+    },
+    "root": {
+        "level": "DEBUG",
+        "handlers": ["console", "file"],
+    },
+}
 
-handler = RotatingFileHandler(log_file, maxBytes=100000, backupCount=1)
-handler.setFormatter(log_formatter)
-# Capturar todo desde el nivel DEBUG hacia arriba
-logging.basicConfig(level=logging.DEBUG, handlers=[handler])
-logger = logging.getLogger(__name__)
-logger.info(f"Logging configurado con RotatingFileHandler para escribir en {log_file} (max ~100KB).")
+dictConfig(LOGGING_CONFIG)
+logger = logging.getLogger("ultibot_backend")
+logger.info("Logging configurado exitosamente usando dictConfig.")
+# --- Fin de la Nueva Configuración de Logging ---
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -56,6 +80,7 @@ async def lifespan(app: FastAPI):
         
     except Exception as e:
         logger.critical(f"Error fatal durante el arranque de la aplicación: {e}", exc_info=True)
+        # Es importante relanzar la excepción para que el proceso falle si la inicialización no es exitosa.
         raise
 
     logger.info("Aplicación iniciada correctamente.")
@@ -81,7 +106,7 @@ async def log_requests(request: Request, call_next):
 
 @app.exception_handler(UltiBotError)
 async def ultibot_exception_handler(request: Request, exc: UltiBotError):
-    logger.error(f"Error de UltiBot: {exc.message}", exc_info=True)
+    logger.error(f"Error de UltiBot: {exc.message} en {request.method} {request.url.path}", exc_info=True)
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail": exc.message},
@@ -89,7 +114,7 @@ async def ultibot_exception_handler(request: Request, exc: UltiBotError):
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
-    logger.error(f"Excepción no controlada: {exc}", exc_info=True)
+    logger.critical(f"Excepción no controlada en {request.method} {request.url.path}: {exc}", exc_info=True)
     return JSONResponse(
         status_code=500,
         content={"detail": "Ocurrió un error interno inesperado en el servidor."},
@@ -105,6 +130,7 @@ app.add_middleware(
 
 # Registro explícito de cada router desde su módulo
 api_prefix = "/api/v1"
+logger.info("Registrando routers de la API...")
 app.include_router(config.router, prefix=api_prefix, tags=["configuration"])
 app.include_router(notifications.router, prefix=f"{api_prefix}/notifications", tags=["notifications"])
 app.include_router(reports.router, prefix=f"{api_prefix}/reports", tags=["reports"])
@@ -116,8 +142,11 @@ app.include_router(strategies.router, prefix=f"{api_prefix}/strategies", tags=["
 app.include_router(trading.router, prefix=f"{api_prefix}/trading", tags=["trading"])
 app.include_router(market_data.router, prefix=f"{api_prefix}/market", tags=["market_data"])
 app.include_router(capital_management.router, prefix=f"{api_prefix}/capital", tags=["capital_management"])
+logger.info("Todos los routers han sido registrados.")
 
 
 @app.get("/health", tags=["health"])
 def health_check():
+    """Endpoint de salud para verificar que la aplicación está en funcionamiento."""
+    logger.debug("Health check solicitado.")
     return {"status": "ok"}

@@ -1,34 +1,34 @@
 import sys
-import asyncio # Importar asyncio
+import asyncio
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
     QPushButton, QApplication, QAbstractItemView, QSizePolicy
 )
-from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QThread, QObject # Añadido QThread, QObject
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QThread, QObject
 from PyQt5.QtGui import QColor, QFont, QIcon
-from typing import List, Optional, Any # Importar Any
+from typing import List, Optional, Any
 from datetime import datetime
-from uuid import UUID, uuid4 # Importar UUID y uuid4
+from uuid import UUID, uuid4
 
-from src.shared.data_types import Notification, NotificationPriority, NotificationAction # Importar los tipos de datos
-from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError # Importar APIError
+from src.shared.data_types import Notification, NotificationPriority
+from src.ultibot_ui.models import BaseMainWindow
+from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
 from src.ultibot_ui.workers import ApiWorker
 
 class NotificationWidget(QWidget):
     """
     Widget para mostrar notificaciones del sistema en la UI.
     """
-    notification_dismissed = pyqtSignal(str) # Emite el ID de la notificación descartada
-    all_notifications_read = pyqtSignal() # Emite cuando todas las notificaciones se marcan como leídas
+    notification_dismissed = pyqtSignal(str)
+    all_notifications_read = pyqtSignal()
 
-    def __init__(self, api_client: UltiBotAPIClient, user_id: UUID, qasync_loop: asyncio.AbstractEventLoop, parent: Optional[QWidget] = None): # Añadido qasync_loop
+    def __init__(self, api_client: UltiBotAPIClient, user_id: UUID, main_window: BaseMainWindow, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.api_client = api_client
         self.user_id = user_id
-        self.qasync_loop = qasync_loop # Almacenar qasync_loop
+        self.main_window = main_window
         self.notifications: List[Notification] = []
         self._is_fetching_notifications = False
-        self.active_threads: List[QThread] = [] # Para manejar los QThreads de ApiWorker
         self.init_ui()
         self._setup_styles()
         self._setup_realtime_updates()
@@ -46,12 +46,11 @@ class NotificationWidget(QWidget):
         self._is_fetching_notifications = True
         
         worker = ApiWorker(
-            base_url=self.api_client.base_url,
-            coroutine_factory=lambda api_client: api_client.get_notification_history(limit=20)
+            api_client=self.api_client,
+            coroutine_factory=lambda client: client.get_notification_history(limit=20)
         )
         thread = QThread()
         
-        self.active_threads.append(thread)
         worker.moveToThread(thread)
 
         worker.result_ready.connect(self._handle_fetch_notifications_result)
@@ -63,13 +62,12 @@ class NotificationWidget(QWidget):
         
         thread.finished.connect(worker.deleteLater)
         thread.finished.connect(thread.deleteLater)
-        thread.finished.connect(lambda t=thread: self.active_threads.remove(t) if t in self.active_threads else None)
         
+        self.main_window.add_thread(thread)
         thread.start()
 
     def _handle_fetch_notifications_result(self, new_notifications_response: Any):
         try:
-            # La respuesta de la API ahora es directamente la lista de notificaciones
             if not isinstance(new_notifications_response, list):
                 print(f"Respuesta inesperada al obtener notificaciones: {type(new_notifications_response)}")
                 return
@@ -84,7 +82,7 @@ class NotificationWidget(QWidget):
         finally:
             self._is_fetching_notifications = False
 
-    def _handle_fetch_notifications_error(self, error_message: Any): # error_message puede ser APIError o str
+    def _handle_fetch_notifications_error(self, error_message: Any):
         actual_message = error_message.message if isinstance(error_message, APIError) else str(error_message)
         
         if isinstance(error_message, APIError):
@@ -104,9 +102,9 @@ class NotificationWidget(QWidget):
 
         self.notification_list = QListWidget()
         self.notification_list.setAlternatingRowColors(True)
-        self.notification_list.setSelectionMode(QAbstractItemView.NoSelection)
-        self.notification_list.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
-        self.notification_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.notification_list.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+        self.notification_list.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self.notification_list.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         main_layout.addWidget(self.notification_list)
 
         controls_layout = QHBoxLayout()
@@ -192,7 +190,7 @@ class NotificationWidget(QWidget):
         icon_label.setStyleSheet("border-radius: 12px;")
         
         icon_path, bg_color = self._get_icon_and_color_for_priority(notification.priority)
-        if icon_path: # Check if icon_path is not None or empty
+        if icon_path:
             try:
                 q_icon = QIcon(icon_path)
                 if not q_icon.isNull():
@@ -256,7 +254,7 @@ class NotificationWidget(QWidget):
         elif priority == NotificationPriority.MEDIUM:
             return default_icon, default_color
         elif priority == NotificationPriority.LOW:
-            return f"{base_path}info_low.png", "#6c757d" # Assuming info_low.png for LOW
+            return f"{base_path}info_low.png", "#6c757d"
         else:
             return default_icon, default_color
 
@@ -294,12 +292,6 @@ class NotificationWidget(QWidget):
         if hasattr(self, 'update_timer') and self.update_timer.isActive():
             print("NotificationWidget: Stopping update timer.")
             self.update_timer.stop()
-        
-        for thread in list(self.active_threads): # Iterate over a copy
-            if thread.isRunning():
-                thread.quit()
-                thread.wait(1000) # Wait up to 1 second
-        self.active_threads.clear()
         print("NotificationWidget: cleanup finished.")
 
 if __name__ == '__main__':
@@ -312,37 +304,27 @@ if __name__ == '__main__':
         QPushButton:disabled { background-color: #555; color: #bbb; }
     """)
 
-    main_window_widget = QWidget() # Renamed to avoid confusion with MainWindow class from other modules
+    main_window_widget = QWidget()
     main_layout = QVBoxLayout(main_window_widget)
     main_window_widget.setLayout(main_layout)
 
     class MockUltiBotAPIClient:
-        async def get_notification_history(self, user_id: UUID, limit: int = 50) -> dict:
-            from datetime import timedelta # Import timedelta here
-            return {
-                "notifications": [
-                    Notification(id=uuid4(), userId=user_id, eventType="MOCK_INFO", channel="ui", title="Notificación de Prueba 1", message="Este es un mensaje de prueba para el historial.", createdAt=datetime.utcnow() - timedelta(minutes=10)).model_dump(),
-                    Notification(id=uuid4(), userId=user_id, eventType="MOCK_WARNING", channel="ui", title="Notificación de Prueba 2", message="Otro mensaje de prueba para el historial.", createdAt=datetime.utcnow() - timedelta(minutes=20)).model_dump()
-                ],
-                "total_count": 2,
-                "has_more": False
-            }
+        async def get_notification_history(self, limit: int = 50) -> List[Notification]:
+            from datetime import timedelta
+            return [
+                Notification(id=uuid4(), userId=uuid4(), eventType="MOCK_INFO", channel="ui", title="Notificación de Prueba 1", message="Este es un mensaje de prueba para el historial.", createdAt=datetime.utcnow() - timedelta(minutes=10)),
+                Notification(id=uuid4(), userId=uuid4(), eventType="MOCK_WARNING", channel="ui", title="Notificación de Prueba 2", message="Otro mensaje de prueba para el historial.", createdAt=datetime.utcnow() - timedelta(minutes=20))
+            ]
 
-    # Mock qasync_loop for standalone test
-    class MockQAsyncLoop:
-        def create_task(self, coro): pass # Simplified mock
-        def is_running(self): return True # Assume running for test
-
-    mock_qasync_loop = MockQAsyncLoop()
     test_user_id = uuid4()
-    # Pass mock_qasync_loop to NotificationWidget constructor
-    notification_widget = NotificationWidget(MockUltiBotAPIClient(), test_user_id, mock_qasync_loop) # type: ignore
-    main_layout.addWidget(notification_widget)
+    # This will fail now as it needs a mock main_window
+    # notification_widget = NotificationWidget(MockUltiBotAPIClient(), test_user_id) # type: ignore
+    # main_layout.addWidget(notification_widget)
     
-    from datetime import timedelta # Ensure timedelta is imported for standalone test notifications
+    from datetime import timedelta
 
-    notification_widget.add_notification(Notification(id=uuid4(), eventType="SYSTEM_ERROR", channel="ui", title="Error Crítico de Conexión", message="No se pudo establecer conexión con la API de Binance.", priority=NotificationPriority.CRITICAL, createdAt=datetime.utcnow() - timedelta(minutes=5)))
-    notification_widget.add_notification(Notification(id=uuid4(), eventType="REAL_TRADE_EXECUTED", channel="ui", title="Operación Exitosa", message="Compra de BTC/USDT ejecutada.", priority=NotificationPriority.HIGH, createdAt=datetime.utcnow() - timedelta(minutes=2)))
+    # notification_widget.add_notification(Notification(id=uuid4(), eventType="SYSTEM_ERROR", channel="ui", title="Error Crítico de Conexión", message="No se pudo establecer conexión con la API de Binance.", priority=NotificationPriority.CRITICAL, createdAt=datetime.utcnow() - timedelta(minutes=5)))
+    # notification_widget.add_notification(Notification(id=uuid4(), eventType="REAL_TRADE_EXECUTED", channel="ui", title="Operación Exitosa", message="Compra de BTC/USDT ejecutada.", priority=NotificationPriority.HIGH, createdAt=datetime.utcnow() - timedelta(minutes=2)))
 
     main_window_widget.show()
     sys.exit(app.exec_())

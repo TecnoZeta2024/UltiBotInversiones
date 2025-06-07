@@ -21,14 +21,12 @@ class ApiWorker(QObject):
     error_occurred = pyqtSignal(str)
 
     def __init__(self,
-                 base_url: str,
-                 coroutine_factory: Optional[Callable[[UltiBotAPIClient], Coroutine]] = None,
-                 token: Optional[str] = None):
+                 api_client: UltiBotAPIClient,
+                 coroutine_factory: Optional[Callable[[UltiBotAPIClient], Coroutine]] = None):
         super().__init__()
+        self.api_client = api_client
         self.coroutine_factory = coroutine_factory
-        self.base_url = base_url
-        self.token = token
-        logger.debug(f"ApiWorker initialized with base_url: {self.base_url}, token: {'present' if token else 'absent'}, coroutine_factory: {'set' if coroutine_factory else 'not set'}")
+        logger.debug(f"ApiWorker initialized with api_client: {api_client}, coroutine_factory: {'set' if coroutine_factory else 'not set'}")
 
     @pyqtSlot()
     def run(self):
@@ -42,10 +40,8 @@ class ApiWorker(QObject):
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        api_client_instance = None
         try:
-            api_client_instance = UltiBotAPIClient(base_url=self.base_url, token=self.token)
-            coroutine = self.coroutine_factory(api_client_instance)
+            coroutine = self.coroutine_factory(self.api_client)
             result = loop.run_until_complete(coroutine)
             self.result_ready.emit(result)
         except APIError as e_api:
@@ -55,7 +51,6 @@ class ApiWorker(QObject):
             logger.error(f"ApiWorker: Generic Exception: {exc}", exc_info=True)
             self.error_occurred.emit(str(exc))
         finally:
-            if api_client_instance:
-                loop.run_until_complete(api_client_instance.aclose())
+            # No cerramos el cliente aquí, ya que es una instancia compartida
             loop.close()
             asyncio.set_event_loop(None)

@@ -12,7 +12,9 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 
+from src.ultibot_ui.models import BaseMainWindow
 from src.ultibot_ui.widgets.paper_trading_report_widget import PaperTradingReportWidget
+from src.ultibot_ui.services.api_client import UltiBotAPIClient
 
 logger = logging.getLogger(__name__)
 
@@ -23,10 +25,11 @@ class HistoryView(QWidget):
     Incluye tanto paper trading como trading real en pestañas separadas.
     """
     
-    def __init__(self, user_id: UUID, backend_base_url: str, parent=None): # Modificado
+    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent=None):
         super().__init__(parent)
         self.user_id = user_id
-        self.backend_base_url = backend_base_url # Nuevo
+        self.api_client = api_client
+        self.main_window = main_window
         
         self.setup_ui()
         logger.info(f"HistoryView inicializada para usuario {user_id}")
@@ -78,8 +81,9 @@ class HistoryView(QWidget):
         # Integrar el widget de paper trading report
         self.paper_trading_report_widget = PaperTradingReportWidget(
             user_id=self.user_id, 
-            backend_base_url=self.backend_base_url
-        ) # Modificado
+            api_client=self.api_client,
+            main_window=self.main_window
+        )
         layout.addWidget(self.paper_trading_report_widget)
         
         return tab
@@ -97,7 +101,7 @@ class HistoryView(QWidget):
             "de las operaciones de trading real una vez que "
             "se implementen las funcionalidades correspondientes."
         )
-        placeholder_label.setAlignment(Qt.AlignmentFlag.AlignCenter) # Modificado
+        placeholder_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         placeholder_label.setStyleSheet("""
             QLabel {
                 font-size: 14px;
@@ -122,19 +126,6 @@ class HistoryView(QWidget):
         
     def cleanup(self):
         """Limpia recursos al cerrar la vista."""
-        # Limpiar workers de threads si están corriendo
         if hasattr(self, 'paper_trading_report_widget'):
-            paper_widget = self.paper_trading_report_widget
-            
-            # Detener workers si están corriendo
-            if hasattr(paper_widget, 'metrics_worker') and paper_widget.metrics_worker:
-                if paper_widget.metrics_worker.isRunning():
-                    paper_widget.metrics_worker.terminate()
-                    paper_widget.metrics_worker.wait(1000)  # Esperar máximo 1 segundo
-                    
-            if hasattr(paper_widget, 'trades_worker') and paper_widget.trades_worker:
-                if paper_widget.trades_worker.isRunning():
-                    paper_widget.trades_worker.terminate()
-                    paper_widget.trades_worker.wait(1000)  # Esperar máximo 1 segundo
-                    
+            self.paper_trading_report_widget.cleanup()
         logger.info("HistoryView cleanup completado")

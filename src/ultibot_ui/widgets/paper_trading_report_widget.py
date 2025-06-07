@@ -3,72 +3,34 @@ Widget para visualizar resultados y rendimiento del Paper Trading.
 """
 
 import logging
-import asyncio
-from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Callable, Coroutine
+from uuid import UUID
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
     QLabel, QComboBox, QDateEdit, QPushButton, QGroupBox, QGridLayout,
     QHeaderView, QMessageBox, QProgressBar, QSplitter
 )
-from PyQt5.QtCore import Qt, QDate, pyqtSignal, QThread, pyqtSlot
+from PyQt5.QtCore import Qt, QDate, QThread
 from PyQt5.QtGui import QFont, QColor
 
-from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
+from src.ultibot_ui.services.api_client import UltiBotAPIClient
 from src.shared.data_types import Trade, PerformanceMetrics
+from src.ultibot_ui.workers import ApiWorker
+from src.ultibot_ui.models import BaseMainWindow
 
 logger = logging.getLogger(__name__)
-
-import uuid # Importar uuid para FIXED_USER_ID
-
-class DataLoadWorker(QThread):
-    """Worker thread para cargar datos de la API sin bloquear la UI."""
-    
-    data_loaded = pyqtSignal(object)
-    error_occurred = pyqtSignal(str)
-    
-    def __init__(self, api_client: UltiBotAPIClient, load_type: str, **kwargs):
-        super().__init__()
-        self.api_client = api_client
-        self.load_type = load_type
-        self.kwargs = kwargs
-        
-    def run(self):
-        """Ejecuta la carga de datos en el hilo secundario."""
-        try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            
-            if self.load_type == "trades":
-                result = loop.run_until_complete(
-                    self.api_client.get_trades(trading_mode="paper", **self.kwargs)
-                )
-            elif self.load_type == "metrics":
-                result = loop.run_until_complete(
-                    self.api_client.get_trading_performance(trading_mode="paper", **self.kwargs)
-                )
-            else:
-                raise ValueError(f"Unknown load_type: {self.load_type}")
-                
-            self.data_loaded.emit(result)
-            
-        except Exception as e:
-            logger.error(f"Error loading {self.load_type}: {e}", exc_info=True)
-            self.error_occurred.emit(str(e))
-        finally:
-            loop.close()
 
 class PaperTradingReportWidget(QWidget):
     """
     Widget principal para mostrar resultados y rendimiento del Paper Trading.
     """
     
-    def __init__(self, user_id: uuid.UUID, backend_base_url: str, parent=None):
+    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent=None):
         super().__init__(parent)
         self.user_id = user_id
-        self.backend_base_url = backend_base_url
-        self.api_client = UltiBotAPIClient(base_url=self.backend_base_url)
+        self.api_client = api_client
+        self.main_window = main_window
         self.current_trades_data: List[Trade] = []
         self.current_metrics_data: Optional[PerformanceMetrics] = None
         
@@ -201,12 +163,12 @@ class PaperTradingReportWidget(QWidget):
         self.trades_table.setColumnCount(len(columns))
         self.trades_table.setHorizontalHeaderLabels(columns)
         self.trades_table.setAlternatingRowColors(True)
-        self.trades_table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.trades_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.trades_table.setSortingEnabled(True)
         
         header = self.trades_table.horizontalHeader()
         if header:
-            header.setSectionResizeMode(QHeaderView.Stretch)
+            header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         
     def connect_signals(self):
         """Conecta las señales de la UI."""
@@ -221,28 +183,37 @@ class PaperTradingReportWidget(QWidget):
         """Carga tanto las métricas como los trades."""
         self.load_metrics()
         self.load_trades()
+
+    def _start_api_worker(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine], on_success, on_error):
+        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory)
+        thread = QThread()
+        worker.moveToThread(thread)
+
+        worker.result_ready.connect(on_success)
+        worker.error_occurred.connect(on_error)
+        thread.started.connect(worker.run)
+        worker.result_ready.connect(thread.quit)
+        worker.error_occurred.connect(thread.quit)
+        thread.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        
+        self.main_window.add_thread(thread)
+        thread.start()
         
     def load_metrics(self):
         """Carga las métricas de rendimiento."""
         self.show_loading(True)
-        
         params = self.get_filters()
-        
-        self.metrics_worker = DataLoadWorker(self.api_client, "metrics", **params)
-        self.metrics_worker.data_loaded.connect(self.on_metrics_loaded)
-        self.metrics_worker.error_occurred.connect(self.on_error)
-        self.metrics_worker.start()
+        coro_factory = lambda client: client.get_trading_performance(trading_mode="paper", **params)
+        self._start_api_worker(coro_factory, self.on_metrics_loaded, self.on_error)
         
     def load_trades(self):
         """Carga la lista de trades."""
         params = self.get_filters()
         params['limit'] = 500
         params['offset'] = 0
-        
-        self.trades_worker = DataLoadWorker(self.api_client, "trades", **params)
-        self.trades_worker.data_loaded.connect(self.on_trades_loaded)
-        self.trades_worker.error_occurred.connect(self.on_error)
-        self.trades_worker.start()
+        coro_factory = lambda client: client.get_trades(trading_mode="paper", **params)
+        self._start_api_worker(coro_factory, self.on_trades_loaded, self.on_error)
 
     def get_filters(self) -> Dict[str, Any]:
         """Recopila los filtros de la UI."""
@@ -252,14 +223,13 @@ class PaperTradingReportWidget(QWidget):
             filters['symbol_filter'] = symbol
         
         start_date = self.start_date_edit.date().toPyDate()
-        filters['date_from'] = datetime.combine(start_date, datetime.min.time())
+        filters['date_from'] = start_date.isoformat()
         
         end_date = self.end_date_edit.date().toPyDate()
-        filters['date_to'] = datetime.combine(end_date, datetime.max.time())
+        filters['date_to'] = end_date.isoformat()
         
         return filters
         
-    @pyqtSlot(object)
     def on_metrics_loaded(self, data: object):
         """Maneja la carga exitosa de métricas."""
         try:
@@ -277,7 +247,6 @@ class PaperTradingReportWidget(QWidget):
         finally:
             self.show_loading(False)
             
-    @pyqtSlot(object)
     def on_trades_loaded(self, data: object):
         """Maneja la carga exitosa de trades."""
         try:
@@ -295,7 +264,6 @@ class PaperTradingReportWidget(QWidget):
         finally:
             self.show_loading(False)
             
-    @pyqtSlot(str)
     def on_error(self, error_message: str):
         """Maneja errores en la carga de datos."""
         self.show_loading(False)
@@ -370,3 +338,8 @@ class PaperTradingReportWidget(QWidget):
         """Muestra un mensaje de error al usuario."""
         QMessageBox.critical(self, "Error", message)
         logger.error(f"Error mostrado al usuario: {message}")
+
+    def cleanup(self):
+        """Limpia los recursos del widget."""
+        logger.info("PaperTradingReportWidget cleanup: No hay acciones que tomar.")
+        pass

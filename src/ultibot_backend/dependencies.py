@@ -50,7 +50,6 @@ class DependencyContainer:
         # Level 0: No service dependencies
         self.persistence_service = PersistenceService()
         await self.persistence_service.connect()
-        self.ai_orchestrator_service = AIOrchestratorService()
         self.binance_adapter = BinanceAdapter()
         self.paper_order_execution_service = PaperOrderExecutionService()
 
@@ -75,7 +74,8 @@ class DependencyContainer:
         )
         self.market_data_service = MarketDataService(
             credential_service=self.credential_service,
-            binance_adapter=self.binance_adapter
+            binance_adapter=self.binance_adapter,
+            persistence_service=self.persistence_service
         )
         self.unified_order_execution_service = UnifiedOrderExecutionService(
             real_execution_service=self.order_execution_service,
@@ -83,6 +83,9 @@ class DependencyContainer:
         )
 
         # Level 3: Depend on Level 2
+        self.ai_orchestrator_service = AIOrchestratorService(
+            market_data_service=self.market_data_service
+        )
         self.portfolio_service = PortfolioService(
             persistence_service=self.persistence_service,
             market_data_service=self.market_data_service
