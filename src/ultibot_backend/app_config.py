@@ -37,11 +37,6 @@ class AppSettings(BaseSettings):
     # Google Gemini API Key (optional)
     GEMINI_API_KEY: Optional[str] = None
 
-    # JWT Settings
-    JWT_SECRET_KEY: str # Debe estar en .env
-    JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-
     # Uvicorn server settings (can be overridden by .env)
     BACKEND_HOST: str = "127.0.0.1"
     BACKEND_PORT: int = 8000

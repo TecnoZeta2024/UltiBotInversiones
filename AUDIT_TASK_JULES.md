@@ -15,13 +15,13 @@ This phase focuses on resolving fundamental architectural problems and security 
 ### Task 1.0: [NUEVO] Eliminar Sistema de Autenticación y Login
 *   **Description:** Por decisión estratégica, se eliminará todo el sistema de autenticación de múltiples usuarios (login, registro, JWT) para simplificar la aplicación a un modelo de usuario único.
 *   **Subtasks:**
-    *   **[ ] 1.0.1:** Eliminar dependencias de seguridad (`python-jose`, `passlib`, `bcrypt`) de `pyproject.toml`.
-    *   **[ ] 1.0.2:** Eliminar el router de autenticación (`auth.router`) y la creación de usuario admin de `src/ultibot_backend/main.py`.
-    *   **[ ] 1.0.3:** Eliminar la dependencia `Depends(get_current_active_user)` de todos los endpoints de la API.
-    *   **[ ] 1.0.4:** Refactorizar los servicios y endpoints para operar bajo un contexto de usuario único implícito, eliminando la necesidad de pasar `user_id`.
-    *   **[ ] 1.0.5:** Eliminar los módulos y archivos relacionados con la seguridad en `src/ultibot_backend/security/`.
-    *   **[ ] 1.0.6:** Eliminar el `LoginDialog` de la UI y modificar el flujo de inicio en `src/ultibot_ui/main.py` para lanzar `MainWindow` directamente.
-    *   **[ ] 1.0.7:** Reinstaurar un `FIXED_USER_ID` en la configuración (`app_config.py`) para ser utilizado de forma consistente en toda la aplicación.
+    *   **[x] 1.0.1:** Eliminar dependencias de seguridad (`python-jose`, `passlib`, `bcrypt`) de `pyproject.toml`.
+    *   **[x] 1.0.2:** Eliminar el router de autenticación (`auth.router`) y la creación de usuario admin de `src/ultibot_backend/main.py`.
+    *   **[x] 1.0.3:** Eliminar la dependencia `Depends(get_current_active_user)` de todos los endpoints de la API.
+    *   **[x] 1.0.4:** Refactorizar los servicios y endpoints para operar bajo un contexto de usuario único implícito, eliminando la necesidad de pasar `user_id`.
+    *   **[x] 1.0.5:** Eliminar los módulos y archivos relacionados con la seguridad en `src/ultibot_backend/security/`.
+    *   **[x] 1.0.6:** Eliminar el `LoginDialog` de la UI y modificar el flujo de inicio en `src/ultibot_ui/main.py` para lanzar `MainWindow` directamente.
+    *   **[x] 1.0.7:** Reinstaurar un `FIXED_USER_ID` en la configuración (`app_config.py`) para ser utilizado de forma consistente en toda la aplicación.
 
 ### Task 1.1: (Critical Issue 1) UI Application Incorrectly Initializes and Uses Backend Services and Credentials
 **Original Title:** UI Application (`src/ultibot_ui/main.py`) Incorrectly Initializes and Uses Backend Services and Credentials.
@@ -99,6 +99,13 @@ This phase focuses on resolving fundamental architectural problems and security 
     *   **[x] 1.12.2:** Corregir `TypeError` en la inicialización de servicios en `src/ultibot_backend/main.py` reordenando las dependencias (`StrategyService` antes de `PerformanceService`).
     *   **[x] 1.12.3:** Mejorar el logging en `main.py` para capturar y registrar errores críticos durante el arranque de la aplicación.
 
+### Task 1.13: [NUEVO] Estabilizar el Arranque del Backend
+*   **Description:** El backend falla al arrancar debido a una cascada de errores de `TypeError` y `ImportError` relacionados con la refactorización del sistema de inyección de dependencias.
+*   **Subtasks:**
+    *   **[x] 1.13.1:** Corregir `TypeError: AsyncConnectionPool.__init__() got an unexpected keyword argument 'sslmode'` en `src/ultibot_backend/adapters/persistence_service.py` moviendo los parámetros SSL a la cadena de conexión.
+    *   **[x] 1.13.2:** Reconstruir el `DependencyContainer` en `src/ultibot_backend/dependencies.py` para asegurar el orden de inicialización correcto y la inyección de las dependencias correctas en los constructores de cada servicio, resolviendo los errores de Pylance.
+    *   **[x] 1.13.3:** Ejecutar `./run_frontend_with_backend.bat` y depurar cualquier error de tiempo de ejecución hasta que el backend se inicie limpiamente.
+
 ---
 
 ## Phase 2: Implement Core Missing Functionality
@@ -167,8 +174,6 @@ This phase is dedicated to improving how market data, trading data, and configur
 
 ## Phase 4: Improve Code Quality, Consistency, and Robustness
 
-This phase focuses on refactoring and optimizing existing code for better clarity, maintainability, efficiency, and error handling.
-
 ### Task 4.1: (Optimizable Issue 1) Incorrect Service Dependency Initialization in Some API Routers
 **Original Title:** Incorrect Service Dependency Initialization in Some API Routers.
 *   **Description:** Some API routers (`binance_status.py`, `notifications.py`) re-initialize services already available globally. This task is expanded to ensure all endpoints correctly use the centralized dependency injection pattern from `main.py`.
@@ -227,6 +232,14 @@ This phase focuses on refactoring and optimizing existing code for better clarit
     *   **[x] 4.8.2:** Identificar que `api_client.py` incluía incorrectamente el `user_id` en la ruta de la URL en lugar de como un parámetro de consulta.
     *   **[x] 4.8.3:** Refactorizar `api_client.py` para eliminar el `user_id` de las rutas de la URL y simplificar los métodos duplicados, alineando las llamadas con las definiciones de los endpoints del backend.
     *   **[x] 4.8.4:** Corregir los errores de Pylance resultantes en `chart_widget.py` y `settings_view.py` que fueron causados por la refactorización del `api_client.py`.
+
+### Task 4.9: [NUEVO] Corregir Error 422 (Unprocessable Content) en la Carga de Trades
+*   **Description:** La UI enviaba fechas en formato `datetime` a los endpoints de trades y métricas, pero el backend esperaba un formato de `date` puro (`YYYY-MM-DD`), causando un error de validación.
+*   **Subtasks:**
+    *   **[x] 4.9.1:** Identificar que el método `get_filters` en `paper_trading_report_widget.py` estaba formateando las fechas como cadenas `isoformat` con hora.
+    *   **[x] 4.9.2:** Modificar `get_filters` para que pase objetos `datetime` puros al `api_client`.
+    *   **[x] 4.9.3:** Asegurar que el `api_client` en los métodos `get_trades` y `get_trading_performance` convierta los objetos `datetime` a cadenas de texto con el formato `YYYY-MM-DD` (`.date().isoformat()`) antes de realizar la petición HTTP.
+    *   **[x] 4.9.4:** Verificar que la aplicación se ejecuta sin errores 422 y que los datos se cargan correctamente.
 
 ---
 

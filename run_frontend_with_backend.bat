@@ -1,24 +1,42 @@
 @echo off
-REM Script para lanzar el backend y el frontend de UltiBotInversiones en Windows
+chcp 65001 > nul
 
-REM 0. Limpiar __pycache__ para asegurar que se usa el código más reciente
+set "PYTHON_EXE=poetry run python"
+set "UVICORN_EXE=poetry run uvicorn"
+set "BACKEND_MAIN=src.ultibot_backend.main:app"
+set "FRONTEND_MAIN=src.ultibot_ui.main"
+set "LOG_DIR=logs"
+set "BACKEND_LOG_STDOUT=%LOG_DIR%/backend_stdout.log"
+set "FRONTEND_LOG=%LOG_DIR%/frontend.log"
+
+REM --- Limpieza y Preparación ---
+echo Intentando detener cualquier proceso anterior en el puerto 8000...
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8000"') do (
+    taskkill /F /PID %%a 2>nul
+)
+echo Procesos anteriores (si los habia) detenidos.
+
 echo Limpiando directorios __pycache__...
-powershell -Command "Get-ChildItem -Path src -Recurse -Directory -Filter '__pycache__' | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
+for /d /r . %%d in (__pycache__) do (
+    if exist "%%d" (
+        rd /s /q "%%d"
+    )
+)
 echo Limpieza de __pycache__ completada.
 
-REM 1. Lanzar el backend con Uvicorn y redirigir su salida a un archivo de log
-echo Lanzando el backend con Uvicorn y capturando su salida en logs/backend_stdout.log...
-REM Se usa cmd /c para asegurar que la salida se redirige correctamente.
-start "UltiBot Backend" cmd /c "poetry run uvicorn src.ultibot_backend.main:app --host 0.0.0.0 --port 8000 > logs/backend_stdout.log 2>&1"
+REM --- Lanzamiento del Backend ---
+echo Lanzando el backend con Uvicorn...
+start "UltiBot Backend" cmd /c "%UVICORN_EXE% %BACKEND_MAIN% --host 0.0.0.0 --port 8000 --reload"
 
-REM 2. Pausa extendida para dar tiempo al backend a inicializarse completamente.
 echo Dando 15 segundos al backend para que se inicie...
-ping 127.0.0.1 -n 16 > nul
+timeout /t 15 /nobreak > nul
 
-REM 3. Lanzar el frontend
+REM --- Lanzamiento del Frontend ---
 echo Lanzando el frontend...
-start "UltiBot Frontend" cmd /k "poetry run python -m src.ultibot_ui.main & PAUSE"
+start "UltiBot Frontend" cmd /c "%PYTHON_EXE% -m %FRONTEND_MAIN%"
 
-REM 4. Mensaje final
-@echo UltiBotInversiones: Backend y Frontend lanzados en ventanas separadas.
-@echo Cierra estas ventanas para detener los servicios.
+echo.
+echo UltiBotInversiones: Backend y Frontend lanzados en ventanas separadas.
+echo Cierra estas ventanas para detener los servicios.
+
+pause
