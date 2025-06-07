@@ -1,200 +1,179 @@
-"""
-Servicio para interactuar con la API del backend de UltiBotInversiones.
-"""
-
 import logging
-import httpx
-from typing import List, Optional, Dict, Any
-from datetime import datetime
+from typing import Any, Dict, List, Optional, Literal
 from uuid import UUID
+import httpx
+from datetime import datetime
+
+from src.shared.data_types import (
+    UserConfiguration,
+    Notification,
+    Trade,
+    PerformanceMetrics,
+    AiStrategyConfiguration,
+    Opportunity,
+    Kline,
+    RealTradingSettings,
+    PortfolioSnapshot,
+)
 
 logger = logging.getLogger(__name__)
 
 class APIError(Exception):
-    """Excepción personalizada para errores de API."""
-    def __init__(self, message: str, status_code: Optional[int] = None, response_json: Optional[Dict[str, Any]] = None):
-        super().__init__(message)
-        self.message = message
+    def __init__(self, status_code: Optional[int], message: str, response_json: Optional[Dict] = None):
         self.status_code = status_code
+        self.message = message
         self.response_json = response_json
-
-    def __str__(self):
-        return f"APIError(status_code={self.status_code}, message='{self.message}', response_json={self.response_json})"
+        super().__init__(f"Error de API ({status_code}): {message}")
 
 class UltiBotAPIClient:
-    """
-    Cliente para interactuar con la API REST del backend de UltiBotInversiones.
-    """
-    
-    def __init__(self, base_url: str = "http://localhost:8000", token: Optional[str] = None):
-        import os
-        if os.environ.get('RUNNING_IN_DOCKER', '').lower() == 'true':
-            self.base_url = 'http://backend:8000'
-        else:
-            self.base_url = base_url
-        self.timeout = 30.0
-        self.token = token
-        
-        headers = {}
-        if self.token:
-            headers["Authorization"] = f"Bearer {self.token}"
-            
-        self.client = httpx.AsyncClient(base_url=self.base_url, timeout=self.timeout, headers=headers)
+    def __init__(self, base_url: str, token: Optional[str] = None):
+        self.base_url = base_url
+        self._client = httpx.AsyncClient(base_url=self.base_url, timeout=30.0)
+        if token:
+            self._client.headers["Authorization"] = f"Bearer {token}"
 
-    async def aclose(self) -> None:
-        if not self.client.is_closed:
+    async def aclose(self):
+        """Cierra el cliente HTTP de forma segura."""
+        if not self._client.is_closed:
             logger.info("Cerrando httpx.AsyncClient...")
-            await self.client.aclose()
+            await self._client.aclose()
             logger.info("httpx.AsyncClient cerrado.")
-        else:
-            logger.info("httpx.AsyncClient ya estaba cerrado.")
 
     async def _make_request(self, method: str, endpoint: str, **kwargs) -> Any:
-        logger.debug(f"APIClient: _make_request_invoked for {method} {endpoint}")
-        url = f"{self.base_url}{endpoint}"
-        request_headers = kwargs.pop("headers", {}) 
-        if self.token:
-            request_headers["Authorization"] = f"Bearer {self.token}"
-
+        logger.debug(f"APIClient: _make_request invocado para {method} {endpoint}")
+        if self._client.is_closed:
+            raise APIError(status_code=None, message="El cliente API está cerrado. No se pueden hacer peticiones.")
         try:
-            response = await self.client.request(method, endpoint, headers=request_headers, **kwargs)
+            request_headers = kwargs.pop("headers", {})
+            response = await self._client.request(method, endpoint, headers=request_headers, **kwargs)
             response.raise_for_status()
-
             if response.status_code == 204:
                 return None
             return response.json()
-
         except httpx.HTTPStatusError as e:
-            logger.error(f"HTTP error {e.response.status_code} for {method} {url}: {e.response.text}")
-            response_body_json = None
-            try:
-                response_body_json = e.response.json()
-            except Exception:
-                pass
+            logger.error(f"Error HTTP {e.response.status_code} para {method} {e.request.url}: {e.response.text}")
+            response_data = e.response.json() if e.response.content else {}
             raise APIError(
-                message=f"API request failed with status {e.response.status_code}: {e.response.text}",
                 status_code=e.response.status_code,
-                response_json=response_body_json
-            )
+                message=response_data.get("detail", e.response.text),
+                response_json=response_data,
+            ) from e
         except httpx.RequestError as e:
-            logger.error(f"Request error for {method} {url}: {e}")
-            raise APIError(message=f"Failed to connect to API: {str(e)}")
-        except Exception as e:
-            logger.error(f"Unexpected error for {method} {url}: {e}", exc_info=True)
-            raise APIError(message=f"Unexpected error: {str(e)}")
+            logger.error(f"Error de petición para {method} {e.request.url}: {str(e)}")
+            raise APIError(status_code=None, message=f"Fallo al conectar con la API: {str(e)}") from e
 
-    async def get_user_configuration(self) -> Dict[str, Any]:
+    async def get_user_configuration(self) -> UserConfiguration:
         logger.info("Obteniendo configuración de usuario.")
-        return await self._make_request("GET", "/api/v1/config")
+        data = await self._make_request("GET", "/api/v1/config")
+        return UserConfiguration(**data)
 
-    async def update_user_configuration(self, config_data: Dict[str, Any]) -> Dict[str, Any]:
-        logger.info(f"Actualizando configuración de usuario: {config_data}")
-        return await self._make_request("PATCH", "/api/v1/config", json=config_data)
+    async def update_user_configuration(self, config: UserConfiguration) -> UserConfiguration:
+        logger.info(f"Actualizando configuración para el usuario: {config.id}")
+        data = await self._make_request("PATCH", "/api/v1/config", json=config.model_dump(mode="json"))
+        return UserConfiguration(**data)
 
-    async def get_portfolio_snapshot(self, trading_mode: str = "both") -> Dict[str, Any]:
-        params = {"trading_mode": trading_mode}
-        logger.info(f"Obteniendo snapshot de portafolio, modo: {trading_mode}")
-        return await self._make_request("GET", "/api/v1/portfolio/snapshot", params=params)
-    
-    async def get_portfolio_summary(self, trading_mode: str = "paper") -> Dict[str, Any]:
-        params = {"trading_mode": trading_mode}
-        logger.info(f"Obteniendo resumen de portafolio, modo: {trading_mode}")
-        return await self._make_request("GET", "/api/v1/portfolio/summary", params=params)
-    
-    async def get_available_balance(self, trading_mode: str = "paper") -> Dict[str, Any]:
-        params = {"trading_mode": trading_mode}
-        logger.info(f"Obteniendo saldo disponible, modo: {trading_mode}")
-        return await self._make_request("GET", "/api/v1/portfolio/balance", params=params)
-
-    async def get_user_trades(
-        self,
-        trading_mode: str = "both",
-        status_filter: Optional[str] = None,
-        symbol_filter: Optional[str] = None,
-        date_from: Optional[datetime] = None,
-        date_to: Optional[datetime] = None,
-        limit: int = 100,
-        offset: int = 0
-    ) -> List[Dict[str, Any]]:
-        params = {
+    async def create_trade(self, symbol: str, side: str, quantity: float, trading_mode: str, api_key: Optional[str] = None, api_secret: Optional[str] = None) -> Dict[str, Any]:
+        """Crea una nueva orden de mercado (trade)."""
+        logger.info(f"Creando una nueva orden: {side} {quantity} {symbol} en modo {trading_mode}")
+        payload = {
+            "symbol": symbol,
+            "side": side,
+            "quantity": quantity,
             "trading_mode": trading_mode,
-            "limit": limit,
-            "offset": offset
         }
-        if status_filter:
-            params["status_filter"] = status_filter
-        if symbol_filter:
-            params["symbol_filter"] = symbol_filter
-        if date_from:
-            params["date_from"] = date_from.date().isoformat()
-        if date_to:
-            params["date_to"] = date_to.date().isoformat()
+        headers = {}
+        if trading_mode == 'real' and api_key and api_secret:
+            headers["X-API-Key"] = api_key
+            headers["X-API-Secret"] = api_secret
+            
+        return await self._make_request("POST", "/api/v1/trades", json=payload, headers=headers)
+
+    async def get_trades(
+        self, trading_mode: Literal["paper", "real", "both"] = "both", limit: int = 100, offset: int = 0, **kwargs
+    ) -> List[Trade]:
+        params = {"trading_mode": trading_mode, "limit": limit, "offset": offset}
+        params.update(kwargs)
+        
+        if 'date_from' in params and isinstance(params['date_from'], datetime):
+            params['date_from'] = params['date_from'].date().isoformat()
+        if 'date_to' in params and isinstance(params['date_to'], datetime):
+            params['date_to'] = params['date_to'].date().isoformat()
+
         logger.info(f"Obteniendo trades, modo: {trading_mode}, filtros: {params}")
-        return await self._make_request("GET", "/api/v1/trades/", params=params)
+        data = await self._make_request("GET", "/api/v1/trades", params=params)
+        return [Trade(**item) for item in data]
 
-    async def get_open_trades_by_mode(self, trading_mode: str = "both") -> List[Dict[str, Any]]:
+    async def get_trading_performance(self, trading_mode: Literal["paper", "real"], **kwargs) -> PerformanceMetrics:
         params = {"trading_mode": trading_mode}
-        logger.info(f"Obteniendo trades abiertos, modo: {trading_mode}")
-        return await self._make_request("GET", "/api/v1/trades/open", params=params)
+        params.update(kwargs)
 
-    async def get_notification_history(self, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+        if 'date_from' in params and isinstance(params['date_from'], datetime):
+            params['date_from'] = params['date_from'].date().isoformat()
+        if 'date_to' in params and isinstance(params['date_to'], datetime):
+            params['date_to'] = params['date_to'].date().isoformat()
+
+        logger.info(f"Obteniendo métricas de desempeño, modo: {trading_mode} con filtros: {params}")
+        data = await self._make_request("GET", "/api/v1/performance/metrics", params=params)
+        return PerformanceMetrics(**data)
+
+    async def get_notification_history(self, limit: int = 20, offset: int = 0) -> List[Notification]:
         params = {"limit": limit, "offset": offset}
-        logger.info(f"Obteniendo historial de notificaciones con paginación: limit={limit}, offset={offset}")
-        return await self._make_request("GET", "/api/v1/notifications/history", params=params)
+        logger.info(f"Obteniendo historial de notificaciones con paginación: {params}")
+        data = await self._make_request("GET", "/api/v1/notifications", params=params)
+        return [Notification(**item) for item in data]
 
-    async def get_ticker_data(self, symbols: List[str]) -> List[Dict[str, Any]]:
-        if not symbols:
-            return []
-        params = {"symbols": ",".join(symbols)}
-        logger.info(f"Obteniendo datos de ticker para símbolos: {symbols}")
-        return await self._make_request("GET", "/api/v1/market/tickers", params=params)
+    async def get_market_data(self, symbols: List[str]) -> Dict[str, Any]:
+        logger.info(f"Obteniendo datos de mercado para los símbolos: {symbols}")
+        data = await self._make_request("POST", "/api/v1/market/data", json={"symbols": symbols})
+        return data
 
-    async def get_candlestick_data(
-        self,
-        symbol: str,
-        interval: str,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-        limit: Optional[int] = None
-    ) -> List[Dict[str, Any]]:
-        params: Dict[str, Any] = {"symbol": symbol, "interval": interval}
-        if start_time is not None:
-            params["start_time"] = int(start_time.timestamp() * 1000)
-        if end_time is not None:
-            params["end_time"] = int(end_time.timestamp() * 1000)
-        if limit is not None:
-            params["limit"] = limit
+    async def get_candlestick_data(self, symbol: str, interval: str, limit: int = 200) -> List[Kline]:
+        params = {"symbol": symbol, "interval": interval, "limit": limit}
         logger.info(f"Obteniendo datos de velas para {symbol} ({interval}) con parámetros: {params}")
-        return await self._make_request("GET", "/api/v1/market/klines", params=params)
+        data = await self._make_request("GET", "/api/v1/market/klines", params=params)
+        return [Kline(**item) for item in data]
 
-    async def get_real_trading_candidates(self) -> List[Dict[str, Any]]:
-        logger.info("Obteniendo oportunidades de trading real pendientes de confirmación.")
-        return await self._make_request("GET", "/api/v1/opportunities/real-trading-candidates")
+    async def get_strategies(self) -> List[AiStrategyConfiguration]:
+        logger.info("Obteniendo estrategias de trading.")
+        data = await self._make_request("GET", "/api/v1/strategies")
+        return [AiStrategyConfiguration(**item) for item in data]
 
-    async def confirm_real_trade_opportunity(self, opportunity_id: UUID) -> Dict[str, Any]:
-        logger.info(f"Confirmando oportunidad de trading real {opportunity_id}.")
-        return await self._make_request(
-            "POST",
-            f"/api/v1/trading/real/confirm-opportunity/{opportunity_id}"
-        )
+    async def get_strategy_details(self, strategy_id: str) -> AiStrategyConfiguration:
+        logger.info(f"Obteniendo detalles para la estrategia: {strategy_id}")
+        data = await self._make_request("GET", f"/api/v1/strategies/{strategy_id}")
+        return AiStrategyConfiguration(**data)
 
-    async def get_real_trading_mode_status(self) -> Dict[str, Any]:
-        """
-        Obtiene el estado actual del modo de operativa real limitada y el contador.
-        """
-        logger.info("Obteniendo estado del modo de operativa real limitada.")
-        return await self._make_request("GET", "/api/v1/config/real-trading-mode/status")
+    async def update_strategy_activation_status(self, strategy_id: str, mode: str, active: bool) -> None:
+        logger.info(f"Actualizando estado de activación para estrategia {strategy_id}, modo {mode} a {active}")
+        payload = {"mode": mode, "active": active}
+        await self._make_request("PATCH", f"/api/v1/strategies/{strategy_id}/activation", json=payload)
 
-    async def activate_real_trading_mode(self) -> Dict[str, Any]:
-        """
-        Activa el modo de operativa real limitada.
-        """
-        logger.info("Activando modo de operativa real limitada.")
-        return await self._make_request("POST", "/api/v1/config/real-trading-mode/activate")
+    async def delete_strategy(self, strategy_id: str) -> None:
+        logger.info(f"Eliminando estrategia: {strategy_id}")
+        await self._make_request("DELETE", f"/api/v1/strategies/{strategy_id}")
 
-    async def deactivate_real_trading_mode(self) -> Dict[str, Any]:
-        """
-        Desactiva el modo de operativa real limitada.
-        """
-        logger.info("Desactivando modo de operativa real limitada.")
-        return await self._make_request("POST", "/api/v1/config/real-trading-mode/deactivate")
+    async def get_opportunities(self) -> List[Opportunity]:
+        logger.info("Obteniendo oportunidades de trading.")
+        data = await self._make_request("GET", "/api/v1/opportunities")
+        return [Opportunity(**item) for item in data]
+
+    async def get_gemini_opportunities(self) -> List[Opportunity]:
+        logger.info("Obteniendo oportunidades de trading de Gemini.")
+        data = await self._make_request("GET", "/api/v1/opportunities/candidates")
+        return [Opportunity(**item) for item in data]
+
+    async def get_real_trading_mode_status(self) -> RealTradingSettings:
+        logger.info("Obteniendo estado del modo de trading real.")
+        data = await self._make_request("GET", "/api/v1/config/real-trading-mode/status")
+        return RealTradingSettings(**data)
+
+    async def get_real_trading_candidates(self) -> List[Opportunity]:
+        logger.info("Obteniendo candidatos para trading real.")
+        data = await self._make_request("GET", "/api/v1/opportunities/candidates")
+        return [Opportunity(**item) for item in data]
+
+    async def get_portfolio_snapshot(self, user_id: UUID, trading_mode: str) -> PortfolioSnapshot:
+        logger.info(f"Obteniendo snapshot del portafolio para {user_id}, modo: {trading_mode}")
+        params = {"user_id": str(user_id), "trading_mode": trading_mode}
+        data = await self._make_request("GET", "/api/v1/portfolio/snapshot", params=params)
+        return PortfolioSnapshot(**data)

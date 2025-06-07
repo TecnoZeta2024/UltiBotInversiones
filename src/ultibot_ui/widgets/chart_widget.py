@@ -9,6 +9,7 @@ import asyncio
 
 from src.ultibot_ui.workers import ApiWorker
 from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
+from src.shared.data_types import Kline
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import logging
@@ -29,7 +30,7 @@ class ChartWidget(QWidget):
         self.backend_base_url = backend_base_url
         self.current_symbol: Optional[str] = None
         self.current_interval: Optional[str] = "1h"
-        self.candlestick_data: List[Dict[str, Any]] = []
+        self.candlestick_data: List[Kline] = []
         self.active_api_workers = []
 
         self.init_ui()
@@ -82,7 +83,7 @@ class ChartWidget(QWidget):
         self.interval_selected.emit(self.current_interval)
         self.load_chart_data()
 
-    def set_candlestick_data(self, data: List[Dict[str, Any]]):
+    def set_candlestick_data(self, data: List[Kline]):
         self.candlestick_data = data
         self.update_chart_display()
 
@@ -141,20 +142,28 @@ class ChartWidget(QWidget):
             self.chart_area.setText("No hay datos disponibles para mostrar el gráfico.")
             return
 
-        df = pd.DataFrame(self.candlestick_data)
-        df['open_time'] = pd.to_datetime(df['open_time'], unit='ms')
-        df = df.set_index('open_time')
-        df.index.name = 'Date'
-
-        df.rename(columns={
-            'open': 'Open',
-            'high': 'High',
-            'low': 'Low',
-            'close': 'Close',
-            'volume': 'Volume'
-        }, inplace=True)
-
         try:
+            # Convertir lista de objetos Kline a lista de diccionarios
+            data_for_df = [kline.model_dump() for kline in self.candlestick_data]
+            df = pd.DataFrame(data_for_df)
+
+            if 'open_time' not in df.columns:
+                logger.error("La columna 'open_time' no se encuentra en los datos del gráfico después de la conversión.")
+                self.chart_area.setText("Error: Faltan datos clave para el gráfico (open_time).")
+                return
+
+            df['open_time'] = pd.to_datetime(df['open_time'], unit='ms')
+            df = df.set_index('open_time')
+            df.index.name = 'Date'
+
+            df.rename(columns={
+                'open': 'Open',
+                'high': 'High',
+                'low': 'Low',
+                'close': 'Close',
+                'volume': 'Volume'
+            }, inplace=True)
+
             mc = mpf.make_marketcolors(up='#00ff00', down='#ff0000',
                                        edge='inherit', wick='inherit',
                                        volume='#1f77b4',
@@ -206,7 +215,8 @@ class ChartWidget(QWidget):
         except Exception as e:
             self.chart_area.show()
             self.chart_area.setText(f"Error al renderizar el gráfico: {e}")
-            print(f"Error al renderizar el gráfico: {e}")
+            logger.critical(f"Error al renderizar el gráfico: {e}", exc_info=True)
+
 
     def cleanup(self):
         logger.info("ChartWidget: Iniciando limpieza de ApiWorkers activos.")

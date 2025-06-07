@@ -23,7 +23,6 @@ from src.ultibot_backend.core.domain_models.opportunity_models import Opportunit
 from src.ultibot_backend.core.domain_models.trade_models import Trade, TradeOrderDetails
 from src.ultibot_backend.core.domain_models.trading_strategy_models import TradingStrategyConfig
 from src.shared.data_types import APICredential, ServiceName, Notification
-from src.ultibot_backend.security import schemas as security_schemas
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +40,7 @@ class SupabasePersistenceService:
         self.db_url: Optional[str] = os.getenv("DATABASE_URL")
         if not self.db_url:
             logger.error("DATABASE_URL no se encontró en las variables de entorno durante la inicialización.")
+        self.fixed_user_id = settings.FIXED_USER_ID
 
     async def connect(self):
         if self.pool and not self.pool.closed:
@@ -55,10 +55,11 @@ class SupabasePersistenceService:
             min_size = getattr(settings, "DB_POOL_MIN_SIZE", 2)
             max_size = getattr(settings, "DB_POOL_MAX_SIZE", 10)
             
-            conninfo = make_conninfo(self.db_url, sslmode='verify-full', sslrootcert='supabase/prod-ca-2021.crt')
+            # CORRECTO: Los parámetros de SSL deben ser parte de la cadena de conexión.
+            conn_str = f"{self.db_url}?sslmode=verify-full&sslrootcert=supabase/prod-ca-2021.crt"
             
             self.pool = AsyncConnectionPool(
-                conninfo=conninfo,
+                conninfo=conn_str,
                 min_size=min_size,
                 max_size=max_size,
                 name="supabase_pool"
@@ -95,23 +96,16 @@ class SupabasePersistenceService:
             assert self.pool is not None, "Fallo crítico al reconectar el pool después de un check fallido."
 
 
-    async def get_opportunity_by_id(self, opportunity_id: UUID, user_id: Optional[UUID] = None) -> Optional[Opportunity]:
+    async def get_opportunity_by_id(self, opportunity_id: UUID) -> Optional[Opportunity]:
         await self._check_pool()
         assert self.pool is not None
 
-        params: List[Any] = [opportunity_id]
-        sql_query = "SELECT * FROM opportunities WHERE id = %s"
-        if user_id:
-            sql_query += " AND user_id = %s"
-            params.append(user_id)
-        sql_query += ";"
-        
-        query = SQL(sql_query)
+        query = SQL("SELECT * FROM opportunities WHERE id = %s AND user_id = %s;")
 
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(query, tuple(params))
+                    await cur.execute(query, (opportunity_id, self.fixed_user_id))
                     record = await cur.fetchone()
                 
                 if record:
@@ -121,7 +115,7 @@ class SupabasePersistenceService:
             logger.error(f"Error al obtener oportunidad por ID {opportunity_id} (psycopg_pool): {e}", exc_info=True)
             raise
 
-    async def update_opportunity_status(self, opportunity_id: UUID, user_id: UUID, new_status: OpportunityStatus, status_reason: Optional[str] = None) -> Optional[Opportunity]:
+    async def update_opportunity_status(self, opportunity_id: UUID, new_status: OpportunityStatus, status_reason: Optional[str] = None) -> Optional[Opportunity]:
         await self._check_pool()
         assert self.pool is not None
         query_str: str = """
@@ -133,7 +127,7 @@ class SupabasePersistenceService:
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(SQL(query_str), (new_status.value, status_reason, opportunity_id, user_id))
+                    await cur.execute(SQL(query_str), (new_status.value, status_reason, opportunity_id, self.fixed_user_id))
                     record = await cur.fetchone()
                     if record:
                         return Opportunity(**record)
@@ -179,7 +173,7 @@ class SupabasePersistenceService:
                     await cur.execute(
                         SQL(query_str),
                         (
-                            credential.id, credential.user_id, credential.service_name.value, credential.credential_label,
+                            credential.id, self.fixed_user_id, credential.service_name.value, credential.credential_label,
                             credential.encrypted_api_key, credential.encrypted_api_secret, credential.encrypted_other_details,
                             credential.status, credential.last_verified_at, credential.permissions, credential.permissions_checked_at,
                             credential.expires_at, credential.rotation_reminder_policy_days, credential.usage_count, credential.last_used_at,
@@ -194,44 +188,44 @@ class SupabasePersistenceService:
             logger.error(f"Error al guardar/actualizar credencial (psycopg_pool): {e}")
             raise
 
-    async def get_credentials_by_service(self, user_id: UUID, service_name: ServiceName) -> List[APICredential]:
+    async def get_credentials_by_service(self, service_name: ServiceName) -> List[APICredential]:
         await self._check_pool()
         assert self.pool is not None
         query = SQL("SELECT * FROM api_credentials WHERE user_id = %s AND service_name = %s ORDER BY created_at ASC;")
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(query, (user_id, service_name.value))
+                    await cur.execute(query, (self.fixed_user_id, service_name.value))
                     records = await cur.fetchall()
                     return [APICredential(**record) for record in records]
         except Exception as e:
-            logger.error(f"Error al obtener credenciales por servicio para usuario {user_id} y servicio {service_name.value} (psycopg_pool): {e}")
+            logger.error(f"Error al obtener credenciales por servicio para usuario {self.fixed_user_id} y servicio {service_name.value} (psycopg_pool): {e}")
             raise
 
-    async def get_credential_by_id(self, credential_id: UUID, user_id: UUID) -> Optional[APICredential]:
+    async def get_credential_by_id(self, credential_id: UUID) -> Optional[APICredential]:
         await self._check_pool()
         assert self.pool is not None
         query = SQL("SELECT * FROM api_credentials WHERE id = %s AND user_id = %s;")
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(query, (credential_id, user_id))
+                    await cur.execute(query, (credential_id, self.fixed_user_id))
                     record = await cur.fetchone()
                     if record:
                         return APICredential(**record)
             return None
         except Exception as e:
-            logger.error(f"Error al obtener credencial por ID {credential_id} para usuario {user_id} (psycopg_pool): {e}")
+            logger.error(f"Error al obtener credencial por ID {credential_id} para usuario {self.fixed_user_id} (psycopg_pool): {e}")
             raise
 
-    async def get_credential_by_service_label(self, user_id: UUID, service_name: ServiceName, credential_label: str) -> Optional[APICredential]:
+    async def get_credential_by_service_label(self, service_name: ServiceName, credential_label: str) -> Optional[APICredential]:
         await self._check_pool()
         assert self.pool is not None
         query = SQL("SELECT * FROM api_credentials WHERE user_id = %s AND service_name = %s AND credential_label = %s;")
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(query, (user_id, service_name.value, credential_label))
+                    await cur.execute(query, (self.fixed_user_id, service_name.value, credential_label))
                     record = await cur.fetchone()
                     if record:
                         return APICredential(**record)
@@ -240,7 +234,7 @@ class SupabasePersistenceService:
             logger.error(f"Error al obtener credencial por servicio y etiqueta (psycopg_pool): {e}")
             raise
 
-    async def update_credential_status(self, credential_id: UUID, user_id: UUID, new_status: str, last_verified_at: Optional[datetime] = None) -> Optional[APICredential]:
+    async def update_credential_status(self, credential_id: UUID, new_status: str, last_verified_at: Optional[datetime] = None) -> Optional[APICredential]:
         await self._check_pool()
         assert self.pool is not None
         query = SQL("""
@@ -252,45 +246,45 @@ class SupabasePersistenceService:
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(query, (new_status, last_verified_at, credential_id, user_id))
+                    await cur.execute(query, (new_status, last_verified_at, credential_id, self.fixed_user_id))
                     record = await cur.fetchone()
                     if record:
                         return APICredential(**record)
             return None
         except Exception as e:
-            logger.error(f"Error al actualizar estado de credencial {credential_id} para usuario {user_id} (psycopg_pool): {e}")
+            logger.error(f"Error al actualizar estado de credencial {credential_id} para usuario {self.fixed_user_id} (psycopg_pool): {e}")
             raise
 
-    async def delete_credential(self, credential_id: UUID, user_id: UUID) -> bool:
+    async def delete_credential(self, credential_id: UUID) -> bool:
         await self._check_pool()
         assert self.pool is not None
         query = SQL("DELETE FROM api_credentials WHERE id = %s AND user_id = %s;")
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(query, (credential_id, user_id))
+                    await cur.execute(query, (credential_id, self.fixed_user_id))
                     return cur.rowcount > 0
         except Exception as e:
-            logger.error(f"Error al eliminar credencial {credential_id} para usuario {user_id} (psycopg_pool): {e}")
+            logger.error(f"Error al eliminar credencial {credential_id} para usuario {self.fixed_user_id} (psycopg_pool): {e}")
             raise
 
-    async def get_user_configuration(self, user_id: UUID) -> Optional[Dict[str, Any]]:
+    async def get_user_configuration(self) -> Optional[Dict[str, Any]]:
         await self._check_pool()
         assert self.pool is not None
         query = SQL("SELECT * FROM user_configurations WHERE user_id = %s;")
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(query, (user_id,))
+                    await cur.execute(query, (self.fixed_user_id,))
                     record = await cur.fetchone()
                     if record:
                         return dict(record)
             return None
         except Exception as e:
-            logger.error(f"Error al obtener configuración de usuario para {user_id} (psycopg_pool): {e}", exc_info=True)
+            logger.error(f"Error al obtener configuración de usuario para {self.fixed_user_id} (psycopg_pool): {e}", exc_info=True)
             raise
 
-    async def upsert_user_configuration(self, user_id: UUID, config_data: Dict[str, Any]):
+    async def upsert_user_configuration(self, config_data: Dict[str, Any]):
         await self._check_pool()
         assert self.pool is not None
         from psycopg import sql
@@ -321,7 +315,7 @@ class SupabasePersistenceService:
             return value
 
         insert_values_dict = {db_columns_map.get(k, k): serialize_if_needed(v) for k, v in config_to_save.items()}
-        insert_values_dict['user_id'] = user_id
+        insert_values_dict['user_id'] = self.fixed_user_id
 
         json_columns = [
             "notification_preferences", "watchlists", "favorite_pairs", "risk_profile_settings",
@@ -358,12 +352,12 @@ class SupabasePersistenceService:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
                     await cur.execute(query, values)
-            logger.info(f"Configuración de usuario para {user_id} guardada/actualizada exitosamente (psycopg_pool).")
+            logger.info(f"Configuración de usuario para {self.fixed_user_id} guardada/actualizada exitosamente (psycopg_pool).")
         except Exception as e:
-            logger.error(f"Error al guardar/actualizar configuración de usuario para {user_id} (psycopg_pool): {e}", exc_info=True)
+            logger.error(f"Error al guardar/actualizar configuración de usuario para {self.fixed_user_id} (psycopg_pool): {e}", exc_info=True)
             raise
 
-    async def update_credential_permissions(self, credential_id: UUID, user_id: UUID, permissions: List[str], permissions_checked_at: datetime) -> Optional[APICredential]:
+    async def update_credential_permissions(self, credential_id: UUID, permissions: List[str], permissions_checked_at: datetime) -> Optional[APICredential]:
         await self._check_pool()
         assert self.pool is not None
         query = SQL("""
@@ -375,13 +369,13 @@ class SupabasePersistenceService:
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(query, (permissions, permissions_checked_at, credential_id, user_id))
+                    await cur.execute(query, (permissions, permissions_checked_at, credential_id, self.fixed_user_id))
                     record = await cur.fetchone()
                     if record:
                         return APICredential(**record)
             return None
         except Exception as e:
-            logger.error(f"Error al actualizar permisos de credencial {credential_id} para usuario {user_id} (psycopg_pool): {e}")
+            logger.error(f"Error al actualizar permisos de credencial {credential_id} para usuario {self.fixed_user_id} (psycopg_pool): {e}")
             raise
 
     async def save_notification(self, notification: Notification) -> Notification:
@@ -413,7 +407,7 @@ class SupabasePersistenceService:
                     await cur.execute(
                         SQL(query),
                         (
-                            notification.id, notification.userId, notification.eventType,
+                            notification.id, self.fixed_user_id, notification.eventType,
                             notification.channel,
                             notification.titleKey, notification.messageKey, notification.messageParams,
                             notification.title, notification.message,
@@ -433,37 +427,37 @@ class SupabasePersistenceService:
             logger.error(f"Error al guardar/actualizar notificación (psycopg_pool): {e}")
             raise
 
-    async def get_notification_history(self, user_id: UUID, limit: int = 50) -> List[Notification]:
+    async def get_notification_history(self, limit: int = 50) -> List[Notification]:
         await self._check_pool()
         assert self.pool is not None
         query = SQL("SELECT * FROM notifications WHERE user_id = %s ORDER BY created_at DESC LIMIT %s;")
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(query, (user_id, limit))
+                    await cur.execute(query, (self.fixed_user_id, limit))
                     records = await cur.fetchall()
             return [Notification(**record) for record in records]
         except Exception as e:
-            logger.error(f"Error al obtener historial de notificaciones para el usuario {user_id} (psycopg_pool): {e}")
+            logger.error(f"Error al obtener historial de notificaciones para el usuario {self.fixed_user_id} (psycopg_pool): {e}")
             raise
 
-    async def mark_notification_as_read(self, notification_id: UUID, user_id: UUID) -> Optional[Notification]:
+    async def mark_notification_as_read(self, notification_id: UUID) -> Optional[Notification]:
         await self._check_pool()
         assert self.pool is not None
         query = SQL("UPDATE notifications SET status = 'read', read_at = timezone('utc'::text, now()) WHERE id = %s AND user_id = %s RETURNING *;")
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(query, (notification_id, user_id))
+                    await cur.execute(query, (notification_id, self.fixed_user_id))
                     record = await cur.fetchone()
                     if record:
                         return Notification(**record)
             return None
         except Exception as e:
-            logger.error(f"Error al marcar notificación {notification_id} como leída para el usuario {user_id} (psycopg_pool): {e}")
+            logger.error(f"Error al marcar notificación {notification_id} como leída para el usuario {self.fixed_user_id} (psycopg_pool): {e}")
             raise
 
-    async def upsert_opportunity(self, user_id: UUID, opportunity_data: Dict[str, Any]) -> Opportunity:
+    async def upsert_opportunity(self, opportunity_data: Dict[str, Any]) -> Opportunity:
         await self._check_pool()
         assert self.pool is not None
         
@@ -478,7 +472,7 @@ class SupabasePersistenceService:
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(SQL(query_str), (opportunity_data['id'], user_id, Jsonb(opportunity_data)))
+                    await cur.execute(SQL(query_str), (opportunity_data['id'], self.fixed_user_id, Jsonb(opportunity_data)))
                     record = await cur.fetchone()
                     if record:
                         return Opportunity(**record['data'])
@@ -487,13 +481,13 @@ class SupabasePersistenceService:
             logger.error(f"Error al guardar/actualizar oportunidad (psycopg_pool): {e}", exc_info=True)
             raise
 
-    async def get_open_paper_trades(self, user_id: UUID) -> List[Trade]:
-        return await self._get_trades_by_status_and_mode(user_id, 'open', 'paper')
+    async def get_open_paper_trades(self) -> List[Trade]:
+        return await self._get_trades_by_status_and_mode('open', 'paper')
 
-    async def get_open_real_trades(self, user_id: UUID) -> List[Trade]:
-        return await self._get_trades_by_status_and_mode(user_id, 'open', 'real')
+    async def get_open_real_trades(self) -> List[Trade]:
+        return await self._get_trades_by_status_and_mode('open', 'real')
 
-    async def _get_trades_by_status_and_mode(self, user_id: UUID, status: str, mode: str) -> List[Trade]:
+    async def _get_trades_by_status_and_mode(self, status: str, mode: str) -> List[Trade]:
         await self._check_pool()
         assert self.pool is not None
 
@@ -501,14 +495,14 @@ class SupabasePersistenceService:
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(query, (user_id, status, mode))
+                    await cur.execute(query, (self.fixed_user_id, status, mode))
                     records = await cur.fetchall()
                     return [Trade(**record) for record in records]
         except Exception as e:
-            logger.error(f"Error al obtener trades para usuario {user_id} con estado {status} y modo {mode}: {e}", exc_info=True)
+            logger.error(f"Error al obtener trades para usuario {self.fixed_user_id} con estado {status} y modo {mode}: {e}", exc_info=True)
             raise
 
-    async def upsert_trade(self, user_id: UUID, trade_data: Dict[str, Any]):
+    async def upsert_trade(self, trade_data: Dict[str, Any]):
         await self._check_pool()
         assert self.pool is not None
         
@@ -523,83 +517,13 @@ class SupabasePersistenceService:
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(SQL(query), (trade_data['id'], user_id, Jsonb(trade_data)))
+                    await cur.execute(SQL(query), (trade_data['id'], self.fixed_user_id, Jsonb(trade_data)))
             logger.info(f"Trade {trade_data['id']} guardado/actualizado exitosamente.")
         except Exception as e:
             logger.error(f"Error al guardar/actualizar trade {trade_data['id']}: {e}", exc_info=True)
             raise
 
-    async def get_user_by_email(self, email: str) -> Optional[security_schemas.UserInDB]:
-        await self._check_pool()
-        assert self.pool is not None
-        query = SQL("SELECT * FROM app_users WHERE email = %s;")
-        try:
-            async with self.pool.connection() as conn:
-                async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(query, (email,))
-                    record = await cur.fetchone()
-                    if record:
-                        if isinstance(record.get("id"), str):
-                            record["id"] = UUID(record["id"])
-                        return security_schemas.UserInDB(**record)
-            return None
-        except Exception as e:
-            logger.error(f"Error al obtener usuario por email {email} (psycopg_pool): {e}", exc_info=True)
-            raise
-
-    async def get_user_by_id(self, user_id: UUID) -> Optional[security_schemas.UserInDB]:
-        await self._check_pool()
-        assert self.pool is not None
-        query = SQL("SELECT * FROM app_users WHERE id = %s;")
-        try:
-            async with self.pool.connection() as conn:
-                async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(query, (user_id,))
-                    record = await cur.fetchone()
-                    if record:
-                        if isinstance(record.get("id"), str):
-                            record["id"] = UUID(record["id"])
-                        return security_schemas.UserInDB(**record)
-            return None
-        except Exception as e:
-            logger.error(f"Error al obtener usuario por ID {user_id} (psycopg_pool): {e}", exc_info=True)
-            raise
-
-    async def create_user(self, user_in: security_schemas.UserCreate, hashed_password: str) -> security_schemas.UserInDB:
-        await self._check_pool()
-        assert self.pool is not None
-        
-        query = SQL("""
-        INSERT INTO app_users (email, hashed_password, is_active, is_superuser)
-        VALUES (%s, %s, %s, %s)
-        RETURNING *;
-        """)
-        try:
-            async with self.pool.connection() as conn:
-                async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(
-                        query,
-                        (
-                            user_in.email,
-                            hashed_password,
-                            user_in.is_active if hasattr(user_in, 'is_active') else True,
-                            user_in.is_superuser if hasattr(user_in, 'is_superuser') else False
-                        )
-                    )
-                    record = await cur.fetchone()
-                    if record:
-                        if isinstance(record.get("id"), str):
-                            record["id"] = UUID(record["id"])
-                        return security_schemas.UserInDB(**record)
-            raise ValueError("No se pudo crear el usuario y obtener el registro de retorno (psycopg_pool).")
-        except psycopg.errors.UniqueViolation as e:
-            logger.warning(f"Intento de crear usuario con email duplicado {user_in.email}: {e}")
-            raise
-        except Exception as e:
-            logger.error(f"Error al crear usuario {user_in.email} (psycopg_pool): {e}", exc_info=True)
-            raise
-
-    async def get_closed_trades_count(self, user_id: UUID, is_real_trade: bool) -> int:
+    async def get_closed_trades_count(self, is_real_trade: bool) -> int:
         await self._check_pool()
         assert self.pool is not None
 
@@ -607,16 +531,16 @@ class SupabasePersistenceService:
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(query, (user_id, 'real' if is_real_trade else 'paper'))
+                    await cur.execute(query, (self.fixed_user_id, 'real' if is_real_trade else 'paper'))
                     record = await cur.fetchone()
                     if record:
                         return record['count']
                 return 0
         except Exception as e:
-            logger.error(f"Error al contar trades cerrados para user {user_id}, real_trade={is_real_trade} (psycopg_pool): {e}", exc_info=True)
+            logger.error(f"Error al contar trades cerrados para user {self.fixed_user_id}, real_trade={is_real_trade} (psycopg_pool): {e}", exc_info=True)
             raise
 
-    async def get_opportunities_by_status(self, user_id: UUID, status: OpportunityStatus) -> List[Opportunity]:
+    async def get_opportunities_by_status(self, status: OpportunityStatus) -> List[Opportunity]:
         await self._check_pool()
         assert self.pool is not None
 
@@ -624,20 +548,20 @@ class SupabasePersistenceService:
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(query, (user_id, status.value))
+                    await cur.execute(query, (self.fixed_user_id, status.value))
                     records = await cur.fetchall()
                 
                 return [Opportunity(**record) for record in records]
         except Exception as e:
-            logger.error(f"Error al obtener oportunidades por estado para user {user_id}, status={status.value} (psycopg_pool): {e}", exc_info=True)
+            logger.error(f"Error al obtener oportunidades por estado para user {self.fixed_user_id}, status={status.value} (psycopg_pool): {e}", exc_info=True)
             raise
 
-    async def get_all_trades_for_user(self, user_id: UUID, mode: Optional[str] = None) -> List[Trade]:
+    async def get_all_trades_for_user(self, mode: Optional[str] = None) -> List[Trade]:
         await self._check_pool()
         assert self.pool is not None
 
         query_base = SQL("SELECT * FROM trades WHERE user_id = %s")
-        params_list: List[Any] = [user_id]
+        params_list: List[Any] = [self.fixed_user_id]
         
         if mode:
             query_base = Composed([query_base, SQL(" AND mode = %s")])
@@ -652,14 +576,14 @@ class SupabasePersistenceService:
                     records = await cur.fetchall()
                 return [Trade(**record) for record in records]
         except Exception as e:
-            logger.error(f"Error al obtener todos los trades para el usuario {user_id} (psycopg_pool): {e}", exc_info=True)
+            logger.error(f"Error al obtener todos los trades para el usuario {self.fixed_user_id} (psycopg_pool): {e}", exc_info=True)
             raise
 
     async def get_closed_trades(self, filters: Dict[str, Any], start_date: Optional[datetime] = None, end_date: Optional[datetime] = None, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
         await self._check_pool()
         assert self.pool is not None
         
-        params: List[Any] = [UUID(filters["user_id"])]
+        params: List[Any] = [self.fixed_user_id]
         query_parts = [SQL("SELECT * FROM trades WHERE user_id = %s AND position_status = 'closed'")]
 
         if "mode" in filters:
@@ -690,7 +614,7 @@ class SupabasePersistenceService:
             logger.error(f"Error al obtener trades cerrados con filtros {filters} (psycopg_pool): {e}", exc_info=True)
             raise
 
-    async def update_opportunity_analysis(self, opportunity_id: UUID, user_id: UUID, status: OpportunityStatus, ai_analysis: Optional[str] = None, confidence_score: Optional[float] = None, suggested_action: Optional[str] = None, status_reason: Optional[str] = None) -> Optional[Opportunity]:
+    async def update_opportunity_analysis(self, opportunity_id: UUID, status: OpportunityStatus, ai_analysis: Optional[str] = None, confidence_score: Optional[float] = None, suggested_action: Optional[str] = None, status_reason: Optional[str] = None) -> Optional[Opportunity]:
         await self._check_pool()
         assert self.pool is not None
 
@@ -709,7 +633,7 @@ class SupabasePersistenceService:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
                     await cur.execute(SQL(query_str), (
-                        status.value, ai_analysis, confidence_score, suggested_action, status_reason, opportunity_id, user_id
+                        status.value, ai_analysis, confidence_score, suggested_action, status_reason, opportunity_id, self.fixed_user_id
                     ))
                     record = await cur.fetchone()
                     if record:
@@ -762,12 +686,13 @@ class SupabasePersistenceService:
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor() as cur:
+                    strategy_data['user_id'] = self.fixed_user_id
                     await cur.execute(SQL(query), strategy_data)
         except Exception as e:
             logger.error(f"Database error saving strategy: {e}")
             raise
 
-    async def get_strategy_config_by_id(self, strategy_id: UUID, user_id: UUID) -> Optional[Dict[str, Any]]:
+    async def get_strategy_config_by_id(self, strategy_id: UUID) -> Optional[Dict[str, Any]]:
         await self._check_pool()
         assert self.pool is not None
         
@@ -776,13 +701,13 @@ class SupabasePersistenceService:
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(query, (strategy_id, user_id))
+                    await cur.execute(query, (strategy_id, self.fixed_user_id))
                     return await cur.fetchone()
         except Exception as e:
             logger.error(f"Database error getting strategy {strategy_id}: {e}")
             raise
 
-    async def list_strategy_configs_by_user(self, user_id: UUID) -> List[Dict[str, Any]]:
+    async def list_strategy_configs_by_user(self) -> List[Dict[str, Any]]:
         await self._check_pool()
         assert self.pool is not None
         
@@ -791,13 +716,13 @@ class SupabasePersistenceService:
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(query, (user_id,))
+                    await cur.execute(query, (self.fixed_user_id,))
                     return await cur.fetchall()
         except Exception as e:
-            logger.error(f"Database error listing strategies for user {user_id}: {e}")
+            logger.error(f"Database error listing strategies for user {self.fixed_user_id}: {e}")
             raise
 
-    async def delete_strategy_config(self, strategy_id: UUID, user_id: UUID) -> bool:
+    async def delete_strategy_config(self, strategy_id: UUID) -> bool:
         await self._check_pool()
         assert self.pool is not None
         
@@ -806,8 +731,47 @@ class SupabasePersistenceService:
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor() as cur:
-                    await cur.execute(query, (strategy_id, user_id))
+                    await cur.execute(query, (strategy_id, self.fixed_user_id))
                     return cur.rowcount > 0
         except Exception as e:
             logger.error(f"Database error deleting strategy {strategy_id}: {e}")
+            raise
+
+    async def get_trades_with_filters(self, filters: Dict[str, Any], limit: int, offset: int) -> List[Trade]:
+        await self._check_pool()
+        assert self.pool is not None
+
+        query_parts: List[Composable] = [SQL("SELECT * FROM trades")]
+        where_clauses: List[Composable] = []
+        params: List[Any] = []
+
+        for key, value in filters.items():
+            if value is not None:
+                if key.endswith("_gte"):
+                    where_clauses.append(SQL("{} >= %s").format(Identifier(key[:-4])))
+                    params.append(value)
+                elif key.endswith("_lte"):
+                    where_clauses.append(SQL("{} <= %s").format(Identifier(key[:-4])))
+                    params.append(value)
+                else:
+                    where_clauses.append(SQL("{} = %s").format(Identifier(key)))
+                    params.append(value)
+        
+        if where_clauses:
+            query_parts.append(SQL("WHERE"))
+            query_parts.append(SQL(" AND ").join(where_clauses))
+
+        query_parts.append(SQL("ORDER BY created_at DESC LIMIT %s OFFSET %s"))
+        params.extend([limit, offset])
+
+        final_query = SQL(" ").join(query_parts)
+
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(final_query, tuple(params))
+                    records = await cur.fetchall()
+                    return [Trade(**record) for record in records]
+        except Exception as e:
+            logger.error(f"Error al obtener trades con filtros {filters}: {e}", exc_info=True)
             raise

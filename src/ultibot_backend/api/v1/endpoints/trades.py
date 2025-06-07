@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from typing import Annotated, Optional, List, Literal, Any
 from uuid import UUID
-from datetime import datetime, date
+from datetime import date
 
-from src.shared.data_types import Trade, PerformanceMetrics
+from src.shared.data_types import Trade
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 from src.ultibot_backend import dependencies as deps
 from src.ultibot_backend.app_config import settings
@@ -13,7 +13,7 @@ router = APIRouter()
 # Trading mode type alias for consistent validation
 TradingMode = Literal["paper", "real", "both"]
 
-@router.get("", response_model=List[Trade], status_code=status.HTTP_200_OK) # CORRECCIÓN: Cambiado de "/" a ""
+@router.get("", response_model=List[Trade], status_code=status.HTTP_200_OK)
 async def get_user_trades(
     persistence_service: Annotated[SupabasePersistenceService, Depends(deps.get_persistence_service)],
     trading_mode: Annotated[TradingMode, Query(description="Trading mode filter: 'paper', 'real', or 'both'")] = "both",
@@ -31,10 +31,8 @@ async def get_user_trades(
     try:
         filters: dict[str, Any] = {"user_id": user_id}
         
-        if trading_mode == "paper":
-            filters["mode"] = "paper"
-        elif trading_mode == "real":
-            filters["mode"] = "real"
+        if trading_mode != "both":
+            filters["mode"] = trading_mode
         
         if status_filter:
             filters["positionStatus"] = status_filter
@@ -45,14 +43,13 @@ async def get_user_trades(
         if date_to:
             filters["created_at_lte"] = date_to
             
-        # TODO: Implement get_trades_with_filters method in SupabasePersistenceService
-        # trades_data = await persistence_service.get_trades_with_filters(
-        #     filters=filters,
-        #     limit=limit,
-        #     offset=offset
-        # )
+        trades_data = await persistence_service.get_trades_with_filters(
+            filters=filters,
+            limit=limit,
+            offset=offset
+        )
         
-        return []
+        return trades_data
             
     except Exception as e:
         raise HTTPException(
@@ -79,47 +76,6 @@ async def get_open_trades(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve open trades: {str(e)}"
-        )
-
-@router.get("/performance", response_model=PerformanceMetrics, status_code=status.HTTP_200_OK)
-async def get_trading_performance(
-    persistence_service: Annotated[SupabasePersistenceService, Depends(deps.get_persistence_service)],
-    trading_mode: Annotated[TradingMode, Query(description="Trading mode: 'paper' or 'real'")] = "paper",
-    date_from: Annotated[Optional[date], Query(description="Start date for metrics calculation (YYYY-MM-DD)")] = None,
-    date_to: Annotated[Optional[date], Query(description="End date for metrics calculation (YYYY-MM-DD)")] = None
-):
-    """
-    Get trading performance metrics for the specified mode and period for the fixed user.
-    """
-    if trading_mode == "both":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Performance metrics cannot be calculated for 'both' modes. Use 'paper' or 'real'."
-        )
-    
-    try:
-        # TODO: Implement performance metrics calculation in persistence service
-        default_metrics = PerformanceMetrics(
-            total_trades=0,
-            winning_trades=0,
-            losing_trades=0,
-            win_rate=0.0,
-            total_pnl=0.0,
-            avg_pnl_per_trade=0.0,
-            best_trade_pnl=0.0,
-            worst_trade_pnl=0.0,
-            best_trade_symbol=None,
-            worst_trade_symbol=None,
-            period_start=datetime.combine(date_from, datetime.min.time()) if date_from else None,
-            period_end=datetime.combine(date_to, datetime.min.time()) if date_to else None,
-            total_volume_traded=0.0
-        )
-        return default_metrics
-        
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to calculate performance metrics: {str(e)}"
         )
 
 @router.get("/count", status_code=status.HTTP_200_OK)

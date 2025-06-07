@@ -11,8 +11,8 @@ from datetime import datetime
 from uuid import UUID, uuid4 # Importar UUID y uuid4
 
 from src.shared.data_types import Notification, NotificationPriority, NotificationAction # Importar los tipos de datos
-from src.ultibot_ui.services.api_client import APIError # Importar APIError
-# ApiWorker se importará localmente en los métodos para evitar ciclos de importación a nivel de módulo
+from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError # Importar APIError
+from src.ultibot_ui.workers import ApiWorker
 
 class NotificationWidget(QWidget):
     """
@@ -21,7 +21,7 @@ class NotificationWidget(QWidget):
     notification_dismissed = pyqtSignal(str) # Emite el ID de la notificación descartada
     all_notifications_read = pyqtSignal() # Emite cuando todas las notificaciones se marcan como leídas
 
-    def __init__(self, api_client: Any, user_id: UUID, qasync_loop: asyncio.AbstractEventLoop, parent: Optional[QWidget] = None): # Añadido qasync_loop
+    def __init__(self, api_client: UltiBotAPIClient, user_id: UUID, qasync_loop: asyncio.AbstractEventLoop, parent: Optional[QWidget] = None): # Añadido qasync_loop
         super().__init__(parent)
         self.api_client = api_client
         self.user_id = user_id
@@ -45,16 +45,10 @@ class NotificationWidget(QWidget):
 
         self._is_fetching_notifications = True
         
-        from src.ultibot_ui.main import ApiWorker # Importación local
-
-        coroutine = self.api_client.get_notification_history(user_id=self.user_id, limit=20)
-        
-        if not self.qasync_loop:
-            print("NotificationWidget: qasync_loop no está disponible. No se pueden obtener notificaciones.")
-            self._is_fetching_notifications = False
-            return
-
-        worker = ApiWorker(coroutine, self.qasync_loop)
+        worker = ApiWorker(
+            base_url=self.api_client.base_url,
+            coroutine_factory=lambda api_client: api_client.get_notification_history(limit=20)
+        )
         thread = QThread()
         
         self.active_threads.append(thread)
@@ -75,40 +69,13 @@ class NotificationWidget(QWidget):
 
     def _handle_fetch_notifications_result(self, new_notifications_response: Any):
         try:
-            new_notifications = new_notifications_response.get("notifications", []) if isinstance(new_notifications_response, dict) else []
+            # La respuesta de la API ahora es directamente la lista de notificaciones
+            if not isinstance(new_notifications_response, list):
+                print(f"Respuesta inesperada al obtener notificaciones: {type(new_notifications_response)}")
+                return
 
-            for notif_data in new_notifications:
-                if isinstance(notif_data, dict):
-                    try:
-                        priority_str = notif_data.get("priority")
-                        priority_enum = NotificationPriority[priority_str.upper()] if priority_str and isinstance(priority_str, str) and priority_str.upper() in NotificationPriority.__members__ else NotificationPriority.MEDIUM
-                        
-                        created_at_val = notif_data.get("createdAt", datetime.utcnow().isoformat())
-                        if isinstance(created_at_val, str):
-                            created_at_dt = datetime.fromisoformat(created_at_val.replace("Z", "+00:00"))
-                        elif isinstance(created_at_val, datetime):
-                            created_at_dt = created_at_val
-                        else:
-                            created_at_dt = datetime.utcnow()
-
-                        notif_id_str = notif_data.get("id")
-                        notif_id = UUID(notif_id_str) if notif_id_str else uuid4()
-
-                        notif = Notification(
-                            id=notif_id,
-                            userId=self.user_id,
-                            eventType=notif_data.get("eventType", "UNKNOWN"),
-                            channel=notif_data.get("channel", "ui"),
-                            title=notif_data.get("title", "Sin Título"),
-                            message=notif_data.get("message", "Sin Mensaje"),
-                            priority=priority_enum,
-                            status=notif_data.get("status", "unread"),
-                            createdAt=created_at_dt,
-                        )
-                        self.add_notification(notif)
-                    except Exception as conversion_ex:
-                        print(f"Error al convertir datos de notificación: {conversion_ex}, datos: {notif_data}")
-                elif isinstance(notif_data, Notification):
+            for notif_data in new_notifications_response:
+                if isinstance(notif_data, Notification):
                      self.add_notification(notif_data)
                 else:
                     print(f"Tipo de notificación desconocido recibido: {type(notif_data)}")
