@@ -112,23 +112,25 @@ This phase focuses on resolving fundamental architectural problems and security 
 
 This phase addresses unimplemented services and missing API functionalities that are crucial for the application's core purpose.
 
-### Task 2.1: (Critical Issue 2) `StrategyService` is Unimplemented
+### Task 2.1: [COMPLETADO] (Critical Issue 2) `StrategyService` is Unimplemented
 **Original Title:** `StrategyService` is Unimplemented.
 *   **Description:** `src/ultibot_backend/services/strategy_service.py` is a stub. No backend logic for managing trading strategies exists.
+*   **Nota:** La auditoría original era incorrecta. El `StrategyService` ya estaba completamente implementado, incluyendo los endpoints de la API y la integración con otros servicios a través del `TradingEngine`. La tarea se marca como completada tras la verificación.
 *   **Subtasks:**
-    *   **[ ] 2.1.1:** Design and implement `StrategyService` with CRUD operations for `TradingStrategyConfig` objects (defined in `src/ultibot_backend/shared/data_types.py`).
-    *   **[ ] 2.1.2:** Define how strategies are stored (e.g., dedicated table vs. JSON in `UserConfiguration`). If a dedicated table is chosen, update `PersistenceService` accordingly. (Note: Currently stored in `UserConfiguration`).
-    *   **[ ] 2.1.3:** Integrate `StrategyService` with `AIOrchestratorService` to provide strategy context/prompts to the LLM.
-    *   **[ ] 2.1.4:** Develop corresponding API endpoints in the backend for managing strategies through the `StrategyService`.
+    *   **[x] 2.1.1:** Design and implement `StrategyService` with CRUD operations for `TradingStrategyConfig` objects (defined in `src/ultibot_backend/shared/data_types.py`).
+    *   **[x] 2.1.2:** Define how strategies are stored (e.g., dedicated table vs. JSON in `UserConfiguration`). If a dedicated table is chosen, update `PersistenceService` accordingly. (Note: Currently stored in `UserConfiguration`).
+    *   **[x] 2.1.3:** Integrate `StrategyService` with `AIOrchestratorService` to provide strategy context/prompts to the LLM.
+    *   **[x] 2.1.4:** Develop corresponding API endpoints in the backend for managing strategies through the `StrategyService`.
 
-### Task 2.2: (Critical Issue 3) UI `APIClient` is Missing Key Methods for Data Fetching
+### Task 2.2: [COMPLETADO] (Critical Issue 3) UI `APIClient` is Missing Key Methods for Data Fetching
 **Original Title:** UI `APIClient` is Missing Key Methods for Data Fetching.
 *   **Description:** `src/ultibot_ui/services/api_client.py` lacks methods needed by UI components for fetching various data types.
+*   **Nota:** La estabilización del backend y la corrección de errores en cascada en los servicios (`config_service`, `notification_service`, `credential_service`) fueron requisitos previos para completar esta tarea.
 *   **Subtasks:**
-    *   **[ ] 2.2.1:** Implement `get_market_historical_data` (for klines) in `APIClient`.
-    *   **[ ] 2.2.2:** Implement `get_tickers_data` in `APIClient`.
-    *   **[ ] 2.2.3:** Implement `get_portfolio_summary` in `APIClient`.
-    *   **[ ] 2.2.4:** Implement `get_notification_history` in `APIClient`.
+    *   **[x] 2.2.1:** Implement `get_market_historical_data` (for klines) in `APIClient`.
+    *   **[x] 2.2.2:** Implement `get_tickers_data` in `APIClient`.
+    *   **[x] 2.2.3:** Implement `get_portfolio_summary` in `APIClient`.
+    *   **[x] 2.2.4:** Implement `get_notification_history` in `APIClient`.
     *   **[x] 2.2.5:** Ensure corresponding backend API endpoints exist and are functional for these new `APIClient` methods. (Solucionado al corregir el enrutamiento global del backend).
 
 ### Task 2.3: (Critical Issue 4 & Specific Investigation) Strategy Display Functionality is Missing in UI
@@ -240,6 +242,15 @@ This phase is dedicated to improving how market data, trading data, and configur
     *   **[x] 4.9.2:** Modificar `get_filters` para que pase objetos `datetime` puros al `api_client`.
     *   **[x] 4.9.3:** Asegurar que el `api_client` en los métodos `get_trades` y `get_trading_performance` convierta los objetos `datetime` a cadenas de texto con el formato `YYYY-MM-DD` (`.date().isoformat()`) antes de realizar la petición HTTP.
     *   **[x] 4.9.4:** Verificar que la aplicación se ejecuta sin errores 422 y que los datos se cargan correctamente.
+
+### Task 4.10: [NUEVO] Estabilización Final del Backend y Modelos de Datos
+*   **Description:** Se realizó una serie de correcciones quirúrgicas para resolver una cascada de errores de `Pylance` y de tiempo de ejecución que impedían el arranque estable del backend.
+*   **Subtasks:**
+    *   **[x] 4.10.1:** Corregir la implementación de `get_tickers_data` en `api_client.py` y añadir el modelo `Ticker` en `shared/data_types.py`.
+    *   **[x] 4.10.2:** Resolver la cascada de errores de `TypeError` por el argumento `user_id` en `config_service.py`, `notification_service.py` y `credential_service.py`, alineándolos con la arquitectura de usuario único.
+    *   **[x] 4.10.3:** Corregir los errores de acceso a atributos en `notification_service.py` (ej. `entry_order` -> `entryOrder`, `suggested_action` -> `suggestedAction`) tras verificar los modelos de datos en `trade_models.py` y `data_types.py`.
+    *   **[x] 4.10.4:** Corregir la llamada a `verify_credential` en `config_service.py`, pasando el objeto `APICredential` completo en lugar de solo el `credential.id`.
+    *   **[x] 4.10.5:** Ejecutar y verificar el despliegue exitoso del backend y frontend a través del script `run_frontend_with_backend.bat`.
 
 ---
 

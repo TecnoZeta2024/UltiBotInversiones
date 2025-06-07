@@ -14,6 +14,7 @@ from src.shared.data_types import (
     Kline,
     RealTradingSettings,
     PortfolioSnapshot,
+    Ticker,
 )
 
 logger = logging.getLogger(__name__)
@@ -127,6 +128,11 @@ class UltiBotAPIClient:
         data = await self._make_request("POST", "/api/v1/market/data", json={"symbols": symbols})
         return data
 
+    async def get_tickers_data(self, symbols: List[str]) -> Dict[str, Ticker]:
+        logger.info(f"Obteniendo datos de tickers para los símbolos: {symbols}")
+        data = await self._make_request("POST", "/api/v1/market/tickers", json={"symbols": symbols})
+        return {symbol: Ticker(**ticker_data) for symbol, ticker_data in data.items()}
+
     async def get_candlestick_data(self, symbol: str, interval: str, limit: int = 200) -> List[Kline]:
         params = {"symbol": symbol, "interval": interval, "limit": limit}
         logger.info(f"Obteniendo datos de velas para {symbol} ({interval}) con parámetros: {params}")
@@ -161,6 +167,8 @@ class UltiBotAPIClient:
         logger.info("Obteniendo oportunidades de trading de Gemini.")
         data = await self._make_request("GET", "/api/v1/opportunities/candidates")
         return [Opportunity(**item) for item in data]
+
+
 
     async def get_real_trading_mode_status(self) -> RealTradingSettings:
         logger.info("Obteniendo estado del modo de trading real.")

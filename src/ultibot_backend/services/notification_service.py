@@ -28,7 +28,9 @@ class NotificationService:
         if not telegram_credential:
             logger.warning("No se encontraron credenciales de Telegram.")
             raise CredentialError("No se encontraron credenciales de Telegram.", code="TELEGRAM_CREDENTIAL_NOT_FOUND")
-        bot_token = telegram_credential.encrypted_api_key
+        
+        # Asumimos que la credencial devuelta tiene los datos desencriptados
+        bot_token = telegram_credential.encrypted_api_key 
         if not bot_token:
             logger.error("Token de bot de Telegram no encontrado en las credenciales.")
             return None
@@ -41,6 +43,8 @@ class NotificationService:
 
     async def save_notification(self, notification: Notification) -> Notification:
         try:
+            # Aseguramos que la notificación tenga el user_id correcto
+            notification.userId = self._user_id
             saved_notification = await self.persistence_service.save_notification(notification)
             logger.info(f"Notificación {notification.id} guardada en la base de datos.")
             return saved_notification
@@ -50,7 +54,7 @@ class NotificationService:
 
     async def get_notification_history(self, limit: int = 50) -> List[Notification]:
         try:
-            history = await self.persistence_service.get_notification_history(self._user_id, limit)
+            history = await self.persistence_service.get_notification_history(limit)
             logger.info("Historial de notificaciones recuperado.")
             return history
         except Exception as e:
@@ -59,7 +63,7 @@ class NotificationService:
 
     async def mark_notification_as_read(self, notification_id: UUID) -> Optional[Notification]:
         try:
-            updated_notification = await self.persistence_service.mark_notification_as_read(notification_id, self._user_id)
+            updated_notification = await self.persistence_service.mark_notification_as_read(notification_id)
             if updated_notification:
                 logger.info(f"Notificación {notification_id} marcada como leída.")
             else:
@@ -78,21 +82,26 @@ class NotificationService:
         if not telegram_credential:
             logger.warning("No se encontraron credenciales de Telegram. No se puede enviar mensaje de prueba.")
             raise CredentialError("No se encontraron credenciales de Telegram.", code="TELEGRAM_CREDENTIAL_NOT_FOUND")
+        
         chat_id = None
+        # El 'other_details' viene desencriptado desde get_credential
         if telegram_credential.encrypted_other_details:
             try:
                 other_details = json.loads(telegram_credential.encrypted_other_details)
                 chat_id = other_details.get("chat_id")
-            except json.JSONDecodeError:
+            except (json.JSONDecodeError, TypeError):
                 logger.error("Error al decodificar encrypted_other_details. No se pudo obtener el chat_id.", exc_info=True)
                 raise CredentialError("Error al decodificar chat_id de Telegram.", code="TELEGRAM_CHAT_ID_DECODE_ERROR")
+
         if not chat_id:
             logger.error("Chat ID de Telegram no encontrado en las credenciales. No se puede enviar mensaje de prueba.")
             raise CredentialError("Chat ID de Telegram no encontrado.", code="TELEGRAM_CHAT_ID_MISSING")
+
         telegram_adapter = await self._get_telegram_adapter()
         if not telegram_adapter:
             logger.error("No se pudo inicializar TelegramAdapter.")
             raise TelegramNotificationError("No se pudo inicializar TelegramAdapter.", code="TELEGRAM_ADAPTER_INIT_FAILED")
+
         message = "¡Hola! UltiBotInversiones se ha conectado correctamente a este chat y está listo para enviar notificaciones."
         try:
             await telegram_adapter.send_message(chat_id, message)
@@ -190,7 +199,7 @@ class NotificationService:
 
             except (CredentialError, TelegramNotificationError, NotificationError) as e:
                 logger.error(f"Error al procesar notificación Telegram para OID {opportunity_id}: {e}")
-            except json.JSONDecodeError:
+            except (json.JSONDecodeError, TypeError):
                 logger.error("Error al decodificar 'other_details' de credencial Telegram.")
             except Exception as e:
                 logger.error(f"Error inesperado al enviar notificación Telegram para OID {opportunity_id}: {e}", exc_info=True)
@@ -203,8 +212,8 @@ class NotificationService:
     async def send_paper_trade_entry_notification(self, user_config: UserConfiguration, trade: Trade):
         symbol = trade.symbol
         side = trade.side
-        executed_price = trade.entryOrder.executedPrice
-        quantity = trade.entryOrder.executedQuantity
+        executed_price = trade.entryOrder.executedPrice if trade.entryOrder else None
+        quantity = trade.entryOrder.executedQuantity if trade.entryOrder else None
         trade_id = trade.id
         title = f"📈 Operación Simulada Abierta: {symbol}"
         message = (
@@ -300,7 +309,7 @@ class NotificationService:
     async def send_high_confidence_opportunity_notification(self, user_config: UserConfiguration, opportunity: Opportunity):
         symbol = opportunity.symbol
         suggested_action = opportunity.ai_analysis.suggestedAction if opportunity.ai_analysis else "N/A"
-        confidence = opportunity.ai_analysis.calculatedConfidence if opportunity.ai_analysis else 0.0
+        confidence = opportunity.confidence_score if opportunity.confidence_score is not None else 0.0
         reasoning = opportunity.ai_analysis.reasoning_ai if opportunity.ai_analysis else "Sin resumen."
         opportunity_id = opportunity.id
         title = f"🚨 Oportunidad Real de Alta Confianza: {symbol} ({suggested_action})"
