@@ -113,6 +113,11 @@ class DashboardView(QWidget):
             self._is_initialized = True
             self.initialization_complete.emit(True)
             logger.info("DashboardView: Inicialización de componentes asíncronos completada.")
+            
+            # Iniciar actualizaciones de widgets clave después de la inicialización
+            self.portfolio_widget.start_updates()
+            self.chart_widget.start_updates()
+            self.notification_widget.start_updates()
 
     def _on_performance_loaded(self, trades: List[Trade]):
         """Maneja la carga exitosa de datos de desempeño."""

@@ -166,4 +166,15 @@ This phase focuses on transforming the visual appearance of the application from
 
 ---
 
+## Phase 6: [IN PROGRESS] Final Integration and Data Flow
+
+This phase ensures all parts of the application are communicating correctly and the data flows from backend to frontend seamlessly.
+
+### Task 6.1: [COMPLETED] Stabilize Asynchronous UI Updates
+*   **Description:** The UI was failing to deploy due to a conflict between the `ApiWorker`'s `asyncio` event loop and the main `qasync` loop.
+*   **Solution:** The `ApiWorker` in `src/ultibot_ui/workers.py` was refactored. Instead of creating a new task in the main loop, it now creates and manages its own `asyncio` event loop within the `QThread` using `asyncio.new_event_loop()` and `loop.run_until_complete()`. This isolates the worker's asynchronous operations, resolving the conflict and allowing the UI to deploy successfully. The logging level in `main.py` was also set to `DEBUG` to confirm the fix.
+*   **Status:** Completed. The UI now launches reliably.
+
+---
+
 This focused plan provides a clear path for deploying a powerful, AI-driven investment tool.

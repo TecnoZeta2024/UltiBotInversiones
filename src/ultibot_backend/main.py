@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from src.ultibot_backend.api.v1.endpoints import (
-    capital_management, config, market_data, notifications, opportunities,
+    config, market_data, notifications, opportunities,
     performance, portfolio, reports, strategies, trades, trading
 )
 from src.ultibot_backend.dependencies import get_container
@@ -141,7 +141,7 @@ app.include_router(opportunities.router, prefix=f"{api_prefix}/opportunities", t
 app.include_router(strategies.router, prefix=f"{api_prefix}/strategies", tags=["strategies"])
 app.include_router(trading.router, prefix=f"{api_prefix}/trading", tags=["trading"])
 app.include_router(market_data.router, prefix=f"{api_prefix}/market", tags=["market_data"])
-app.include_router(capital_management.router, prefix=f"{api_prefix}/capital", tags=["capital_management"])
+# app.include_router(capital_management.router, prefix=f"{api_prefix}/capital-management", tags=["capital_management"])
 logger.info("Todos los routers han sido registrados.")
 
 

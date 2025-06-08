@@ -33,9 +33,14 @@ class PortfolioService:
             return
 
         try:
-            config_data = await self.persistence_service.get_user_configuration(user_id)
+            config_data = await self.persistence_service.get_user_configuration()
             if not config_data:
                 raise ConfigurationError(f"No se encontró configuración para el usuario {user_id}.")
+
+            if 'id' in config_data and isinstance(config_data['id'], UUID):
+                config_data['id'] = str(config_data['id'])
+            if 'user_id' in config_data and isinstance(config_data['user_id'], UUID):
+                config_data['user_id'] = str(config_data['user_id'])
 
             user_config = UserConfiguration(**config_data)
             
@@ -50,7 +55,6 @@ class PortfolioService:
             user_config.paper_trading_assets = persistent_assets
             
             await self.persistence_service.upsert_user_configuration(
-                user_id, 
                 user_config.model_dump(mode='json', by_alias=True, exclude_none=True)
             )
             logger.info(f"Activos de paper trading persistidos para el usuario {user_id}.")
@@ -61,8 +65,16 @@ class PortfolioService:
         self.user_id = user_id
         self.paper_trading_assets = {}
         try:
-            config_data = await self.persistence_service.get_user_configuration(user_id)
-            user_config = UserConfiguration(**config_data) if config_data else None
+            config_data = await self.persistence_service.get_user_configuration()
+            if config_data:
+                if 'id' in config_data and isinstance(config_data['id'], UUID):
+                    config_data['id'] = str(config_data['id'])
+                if 'user_id' in config_data and isinstance(config_data['user_id'], UUID):
+                    config_data['user_id'] = str(config_data['user_id'])
+                
+                user_config = UserConfiguration(**config_data)
+            else:
+                user_config = None
             
             if user_config:
                 self.paper_trading_balance = user_config.default_paper_trading_capital or 10000.0
@@ -71,7 +83,11 @@ class PortfolioService:
                         self.paper_trading_assets[asset_data.asset] = PortfolioAsset(
                             symbol=asset_data.asset,
                             quantity=asset_data.quantity,
-                            entry_price=asset_data.entry_price
+                            entry_price=asset_data.entry_price,
+                            current_price=None,
+                            current_value_usd=None,
+                            unrealized_pnl_usd=None,
+                            unrealized_pnl_percentage=None
                         )
                     logger.info(f"{len(self.paper_trading_assets)} activos de paper trading cargados para {user_id}.")
             else:
@@ -104,12 +120,12 @@ class PortfolioService:
         market_data = {}
 
         try:
-            binance_balances: List[AssetBalance] = await self.market_data_service.get_binance_spot_balances(user_id)
+            binance_balances: List[AssetBalance] = await self.market_data_service.get_binance_spot_balances()
             assets_to_value = [f"{b.asset.upper()}USDT" for b in binance_balances if b.total > 0 and b.asset != "USDT"]
             
             if assets_to_value:
                 unique_assets_to_value = sorted(list(set(assets_to_value)))
-                market_data = await self.market_data_service.get_market_data_rest(user_id, unique_assets_to_value)
+                market_data = await self.market_data_service.get_market_data_rest(unique_assets_to_value)
 
             for balance in binance_balances:
                 if balance.asset == "USDT":
@@ -149,7 +165,7 @@ class PortfolioService:
             assets_to_value = [f"{asset.symbol}USDT" for asset in self.paper_trading_assets.values()]
             if assets_to_value:
                 effective_user_id = self.user_id or UUID("00000000-0000-0000-0000-000000000001")
-                market_data = await self.market_data_service.get_market_data_rest(effective_user_id, assets_to_value)
+                market_data = await self.market_data_service.get_market_data_rest(assets_to_value)
                 for symbol, asset in self.paper_trading_assets.items():
                     symbol_pair = f"{symbol}USDT"
                     price_info = market_data.get(symbol_pair)
@@ -160,8 +176,13 @@ class PortfolioService:
                         asset.current_price = current_price
                         asset.current_value_usd = current_value
                         if asset.entry_price and asset.quantity > 0 and asset.entry_price > 0:
-                            asset.unrealized_pnl_usd = (current_price - asset.entry_price) * asset.quantity
-                            asset.unrealized_pnl_percentage = (asset.unrealized_pnl_usd / (asset.entry_price * asset.quantity)) * 100
+                            pnl_usd = (current_price - asset.entry_price) * asset.quantity
+                            asset.unrealized_pnl_usd = pnl_usd
+                            denominator = asset.entry_price * asset.quantity
+                            if denominator > 0:
+                                asset.unrealized_pnl_percentage = (pnl_usd / denominator) * 100
+                            else:
+                                asset.unrealized_pnl_percentage = 0.0
                     else:
                         logger.warning(f"No se pudo obtener precio para {symbol_pair} en paper trading.")
                     paper_assets.append(asset)
@@ -180,12 +201,19 @@ class PortfolioService:
 
         self.paper_trading_balance += amount
         try:
-            config_data = await self.persistence_service.get_user_configuration(user_id)
-            user_config = UserConfiguration(**config_data) if config_data else None
+            config_data = await self.persistence_service.get_user_configuration()
+            if config_data:
+                if 'id' in config_data and isinstance(config_data['id'], UUID):
+                    config_data['id'] = str(config_data['id'])
+                if 'user_id' in config_data and isinstance(config_data['user_id'], UUID):
+                    config_data['user_id'] = str(config_data['user_id'])
+                user_config = UserConfiguration(**config_data)
+            else:
+                user_config = None
 
             if user_config:
                 user_config.default_paper_trading_capital = self.paper_trading_balance
-                await self.persistence_service.upsert_user_configuration(user_id, user_config.model_dump(mode='json', by_alias=True, exclude_none=True))
+                await self.persistence_service.upsert_user_configuration(user_config.model_dump(mode='json', by_alias=True, exclude_none=True))
             else:
                 raise ConfigurationError(f"No se encontró config para {user_id}.")
         except Exception as e:
@@ -218,7 +246,15 @@ class PortfolioService:
                 existing_asset.quantity -= quantity
         else:
             initial_quantity = quantity if side == 'BUY' else -quantity
-            self.paper_trading_assets[symbol] = PortfolioAsset(symbol=symbol, quantity=initial_quantity, entry_price=executed_price)
+            self.paper_trading_assets[symbol] = PortfolioAsset(
+                symbol=symbol, 
+                quantity=initial_quantity, 
+                entry_price=executed_price,
+                current_price=None,
+                current_value_usd=None,
+                unrealized_pnl_usd=None,
+                unrealized_pnl_percentage=None
+            )
 
         await self._persist_paper_trading_assets(user_id)
         logger.info(f"Portafolio de paper (entrada) actualizado para {user_id}. Balance: {self.paper_trading_balance}")
@@ -256,7 +292,7 @@ class PortfolioService:
 
     async def get_real_usdt_balance(self, user_id: UUID) -> float:
         try:
-            binance_balances: List[AssetBalance] = await self.market_data_service.get_binance_spot_balances(user_id)
+            binance_balances: List[AssetBalance] = await self.market_data_service.get_binance_spot_balances()
             usdt_balance = next((b.free for b in binance_balances if b.asset == "USDT"), 0.0)
             return usdt_balance
         except ExternalAPIError as e:
