@@ -541,3 +541,27 @@ user_id
 2025-06-08 19:24:11,182 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
 2025-06-08 19:24:11,182 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:55677 - "GET /api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open HTTP/1.1" 200
 2025-06-08 19:24:25,221 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-08 19:24:26,172 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
+2025-06-08 19:24:26,173 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:55697 - "GET /api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open HTTP/1.1" 200
+2025-06-08 19:24:40,223 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-08 19:24:41,566 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
+2025-06-08 19:24:41,566 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:55738 - "GET /api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open HTTP/1.1" 200
+2025-06-08 19:24:55,244 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-08 19:24:56,228 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
+2025-06-08 19:24:56,229 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:55750 - "GET /api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open HTTP/1.1" 200
+2025-06-08 19:25:10,256 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-08 19:25:11,206 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
+2025-06-08 19:25:11,206 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:55754 - "GET /api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open HTTP/1.1" 200
+2025-06-08 19:25:25,265 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-08 19:25:26,204 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
+2025-06-08 19:25:26,205 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:55757 - "GET /api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open HTTP/1.1" 200
+2025-06-08 19:25:40,281 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-08 19:25:41,290 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
+2025-06-08 19:25:41,290 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:55767 - "GET /api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open HTTP/1.1" 200
+2025-06-08 19:25:55,279 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-08 19:25:56,326 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
+2025-06-08 19:25:56,327 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:55772 - "GET /api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open HTTP/1.1" 200
+2025-06-08 19:26:10,297 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-08 19:26:11,404 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
+2025-06-08 19:26:11,405 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:55775 - "GET /api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open HTTP/1.1" 200
+2025-06-08 19:26:25,306 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/trades
