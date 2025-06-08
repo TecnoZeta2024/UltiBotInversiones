@@ -29,7 +29,7 @@ from src.ultibot_backend.core.domain_models.user_configuration_models import (
     ConfidenceThresholds,
 )
 from src.ultibot_backend.services.market_data_service import MarketDataService
-from src.ultibot_backend.app_config import get_app_config
+from src.ultibot_backend.app_config import settings as app_settings
 
 logger = logging.getLogger(__name__)
 
@@ -126,12 +126,15 @@ class AIOrchestrator:
     
     def __init__(self, market_data_service: MarketDataService):
         self.market_data_service = market_data_service
-        app_config = get_app_config()
         self.model_name = "gemini-1.5-pro-latest"
         
+        gemini_api_key = app_settings.GEMINI_API_KEY
+        if not gemini_api_key:
+            raise ValueError("GEMINI_API_KEY no está configurada en las variables de entorno.")
+
         self.llm = ChatGoogleGenerativeAI(
             model=self.model_name,
-            google_api_key=app_config.google_gemini_api_key.get_secret_value(),
+            google_api_key=gemini_api_key,
             temperature=0.2,
             convert_system_message_to_human=True
         )
@@ -184,11 +187,12 @@ class AIOrchestrator:
                 "confidence_threshold_real": self._get_confidence_threshold(ai_config, "real"),
             })
 
+            llm_content_str = str(llm_response.content)
             try:
-                parsed_response: AIResponse = self.output_parser.parse(llm_response.content)
+                parsed_response: AIResponse = self.output_parser.parse(llm_content_str)
             except Exception:
                 logger.warning(f"PydanticOutputParser failed for analysis {analysis_id}. Attempting to fix with OutputFixingParser.")
-                parsed_response: AIResponse = self.robust_parser.parse(str(llm_response.content))
+                parsed_response: AIResponse = self.robust_parser.parse(llm_content_str)
 
             analysis_result = self._create_analysis_result(analysis_id, parsed_response, self.model_name)
             
@@ -264,8 +268,10 @@ You MUST respond ONLY with a valid JSON object that conforms to the schema provi
     
     def _format_strategy_parameters(self, strategy: TradingStrategyConfig) -> str:
         params_dict = {}
-        if hasattr(strategy.parameters, 'model_dump'):
+        # Explicitly check if it's a Pydantic model instance
+        if isinstance(strategy.parameters, BaseModel):
             params_dict = strategy.parameters.model_dump()
+        # Else, if it's a dictionary, use it directly
         elif isinstance(strategy.parameters, dict):
             params_dict = strategy.parameters
 

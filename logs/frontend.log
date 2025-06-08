@@ -1,13 +1,37 @@
-2025-06-07 17:00:58,256 - __main__ - INFO - [MainThread] - main.py:165 - Iniciando el punto de entrada de la aplicaci贸n frontend.
-2025-06-07 17:00:58,288 - qdarkstyle - INFO - [MainThread] - __init__.py:270 - QSS file successfully loaded.
-2025-06-07 17:00:58,321 - qdarkstyle - INFO - [MainThread] - __init__.py:173 - Found version patches to be applied.
-2025-06-07 17:00:58,321 - qdarkstyle - INFO - [MainThread] - __init__.py:193 - Found application patches to be applied.
-2025-06-07 17:00:58,321 - __main__ - INFO - [MainThread] - main.py:153 - Estilo oscuro aplicado.
-2025-06-07 17:00:58,505 - __main__ - INFO - [Dummy-1] - main.py:70 - Worker: Obteniendo configuraci贸n de usuario...
-2025-06-07 17:00:58,506 - src.ultibot_ui.services.api_client - INFO - [Dummy-1] - api_client.py:68 - Obteniendo configuraci贸n de usuario.
-2025-06-07 17:01:00,800 - src.ultibot_ui.services.api_client - ERROR - [Dummy-1] - api_client.py:64 - Error de petici贸n para GET http://localhost:8000/api/v1/config: All connection attempts failed
-2025-06-07 17:01:00,801 - __main__ - ERROR - [Dummy-1] - main.py:76 - Worker: Error de API - None - Fallo al conectar con la API: All connection attempts failed
-2025-06-07 17:01:01,206 - __main__ - INFO - [MainThread] - main.py:128 - El worker de inicializaci贸n ha terminado.
-2025-06-07 17:01:01,207 - __main__ - ERROR - [MainThread] - main.py:132 - No se pudo obtener la configuraci贸n del usuario. La aplicaci贸n se cerrar谩.
-2025-06-07 17:01:01,217 - __main__ - INFO - [MainThread] - main.py:138 - Iniciando limpieza de la aplicaci贸n...
-2025-06-07 17:01:01,217 - __main__ - INFO - [MainThread] - main.py:142 - Limpieza completada.
+2025-06-08 16:15:49,255 - __main__ - INFO - Initializing application...
+2025-06-08 16:15:49,447 - __main__ - INFO - Controller: Starting initialization worker.
+2025-06-08 16:15:49,449 - src.ultibot_ui.services.api_client - INFO - Obteniendo configuraci髇 de usuario.
+2025-06-08 16:15:49,883 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/config "HTTP/1.1 200 OK"
+2025-06-08 16:15:49,885 - __main__ - INFO - Controller: Initialization complete. User ID: 86e5f6c7-02a0-475b-b277-1fccbf23aa56
+2025-06-08 16:15:49,922 - src.ultibot_ui.services.trading_mode_state - INFO - TradingModeStateManager initialized with mode: paper
+2025-06-08 16:15:49,923 - src.ultibot_ui.services.trading_mode_state - INFO - Created global trading mode state manager
+2025-06-08 16:15:50,230 - src.ultibot_ui.widgets.portfolio_widget - INFO - Timer de actualizaci髇 del portafolio iniciado.
+2025-06-08 16:15:50,233 - src.ultibot_ui.widgets.chart_widget - INFO - Solicitando datos para BTCUSDT - 1h usando ApiWorker
+2025-06-08 16:15:50,236 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: _initialize_async_components INVOCADO
+2025-06-08 16:15:50,255 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: __init__ called.
+2025-06-08 16:15:50,257 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: _load_initial_data called.
+2025-06-08 16:15:50,277 - src.ultibot_ui.windows.history_view - INFO - HistoryView inicializada para usuario 86e5f6c7-02a0-475b-b277-1fccbf23aa56
+2025-06-08 16:15:50,281 - src.ultibot_ui.windows.main_window - INFO - Central widget y vistas configuradas.
+2025-06-08 16:15:50,282 - src.ultibot_ui.windows.main_window - INFO - MainWindow inicializada y visible.
+2025-06-08 16:15:50,421 - __main__ - INFO - Main window shown.
+2025-06-08 16:15:50,461 - src.ultibot_ui.views.portfolio_view - INFO - PortfolioView: Fetching portfolio snapshot.
+2025-06-08 16:15:50,463 - src.ultibot_ui.windows.settings_view - INFO - SettingsView: Iniciando carga de datos iniciales (_load_initial_data).
+2025-06-08 16:15:50,463 - src.ultibot_ui.windows.settings_view - INFO - SettingsView: Solicitando configuraci髇 de usuario general.
+2025-06-08 16:15:50,463 - src.ultibot_ui.windows.settings_view - INFO - SettingsView: Solicitando estado de operativa real.
+2025-06-08 16:15:50,463 - src.ultibot_ui.views.opportunities_view - INFO - Fetching Gemini IA opportunities.
+2025-06-08 16:16:05,234 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
+2025-06-08 16:16:20,246 - src.ultibot_ui.views.opportunities_view - INFO - Fetching Gemini IA opportunities.
+2025-06-08 16:16:20,246 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
+2025-06-08 16:16:25,252 - src.ultibot_ui.windows.main_window - INFO - Cleaning up MainWindow resources. Stopping 11 active threads...
+2025-06-08 16:16:25,252 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: Iniciando limpieza de tareas.
+2025-06-08 16:16:25,253 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizaciones del portafolio detenidas.
+2025-06-08 16:16:25,253 - src.ultibot_ui.widgets.portfolio_widget - INFO - PortfolioWidget: Limpieza completada.
+2025-06-08 16:16:25,253 - src.ultibot_ui.widgets.chart_widget - INFO - ChartWidget: Limpieza completada.
+2025-06-08 16:16:25,254 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: Limpieza completada.
+2025-06-08 16:16:25,254 - src.ultibot_ui.widgets.paper_trading_report_widget - INFO - PaperTradingReportWidget cleanup: No hay acciones que tomar.
+2025-06-08 16:16:25,254 - src.ultibot_ui.windows.history_view - INFO - HistoryView cleanup completado
+2025-06-08 16:16:25,255 - src.ultibot_ui.views.opportunities_view - INFO - Cleaning up OpportunitiesView...
+2025-06-08 16:16:25,255 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView cleanup finished.
+2025-06-08 16:16:25,255 - src.ultibot_ui.views.portfolio_view - INFO - PortfolioView: Cleaning up...
+2025-06-08 16:16:25,256 - src.ultibot_ui.views.portfolio_view - INFO - PortfolioView: Cleanup finished.
+2025-06-08 16:16:25,260 - src.ultibot_ui.windows.main_window - INFO - MainWindow cleanup finished.

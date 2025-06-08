@@ -18,11 +18,11 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QStackedWidget,
     QStatusBar,
-    QWidget,
     QAction,
     QTextEdit,
     QVBoxLayout,
-    QMenuBar
+    QMenuBar,
+    QWidget  # Importación corregida
 )
 
 from src.shared.data_types import UserConfiguration, AiStrategyConfiguration
@@ -58,7 +58,8 @@ class MainWindow(QMainWindow, BaseMainWindow):
         self.active_threads: List[QThread] = []
 
         self.setWindowTitle("UltiBotInversiones")
-        self.setGeometry(100, 100, 1200, 800)
+        self.setGeometry(100, 100, 1280, 720) # Geometría por defecto
+        self.setMinimumSize(1024, 600) # Establecer un tamaño mínimo
 
         self.debug_log_widget = QTextEdit()
         self.debug_log_widget.setReadOnly(True)
@@ -77,16 +78,21 @@ class MainWindow(QMainWindow, BaseMainWindow):
         self._main_vbox = QVBoxLayout()
         self._main_vbox.setContentsMargins(0, 0, 0, 0)
         self._main_vbox.setSpacing(0)
-        self._main_vbox.addWidget(self.banner_label)
-        self._main_vbox.addWidget(self.debug_log_widget)
+        
+        # No añadir el banner y el log directamente al layout principal
+        # se manejarán dentro del widget central si es necesario.
 
         self._central_content_widget = QWidget()
-        self._main_vbox.addWidget(self._central_content_widget, 1)
-        central_widget = QWidget()
-        central_widget.setLayout(self._main_vbox)
-        self.setCentralWidget(central_widget)
-
+        # El layout principal ahora solo contiene el widget de contenido central
+        main_layout = QHBoxLayout()
+        main_layout.setContentsMargins(0,0,0,0)
+        main_layout.setSpacing(0)
         self._setup_central_widget(parent_widget=self._central_content_widget)
+        main_layout.addWidget(self._central_content_widget)
+
+        central_widget = QWidget()
+        central_widget.setLayout(main_layout)
+        self.setCentralWidget(central_widget)
 
         self._log_debug("MainWindow inicializada y visible.")
         
@@ -127,13 +133,11 @@ class MainWindow(QMainWindow, BaseMainWindow):
 
     def _log_debug(self, msg: str):
         """Agrega un mensaje al panel de logs y al logger."""
-        self.debug_log_widget.append(msg)
+        # self.debug_log_widget.append(msg) # Desactivado temporalmente
         logger.info(msg)
 
-    def _setup_central_widget(self, parent_widget: Optional[QWidget] = None):
+    def _setup_central_widget(self, parent_widget: QWidget): # Firma corregida
         """Configura el widget central con navegación y vistas."""
-        if parent_widget is None:
-            parent_widget = QWidget()
         main_layout = QHBoxLayout(parent_widget)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)

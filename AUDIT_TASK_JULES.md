@@ -111,7 +111,7 @@ This phase is dedicated to improving the quality, performance, and robustness of
 
 ---
 
-## Phase 4: [NEW] Deployment and Stability Fixes
+## Phase 4: [COMPLETED] Deployment and Stability Fixes
 
 This phase addresses issues discovered during final deployment and testing, ensuring the application runs like a "reloj atómico óptico".
 
@@ -119,9 +119,35 @@ This phase addresses issues discovered during final deployment and testing, ensu
 *   **Description:** The backend failed to start due to an `ImportError` for `OutputFixingParser`, which was incorrectly imported from `langchain_core`.
 *   **Solution:** The import path was corrected from `langchain_core.output_parsers` to `langchain.output_parsers`. This resolved the startup failure.
 
-### Task 4.2: [COMPLETED] Frontend Fails to Connect to Backend on Initial Launch
-*   **Description:** The frontend UI would sometimes fail to launch, showing a connection error (`All connection attempts failed`). This was caused by a race condition where the UI tried to connect to the backend API before it was fully initialized and ready to accept connections.
-*   **Solution:** The startup delay in the `run_frontend_with_backend.bat` script was increased from 15 to 25 seconds. This provides a sufficient buffer for the backend to initialize, ensuring the frontend can connect reliably upon launch.
+### Task 4.2: [COMPLETED] Frontend Fails to Connect to Backend (`All connection attempts failed`)
+*   **Description:** The frontend UI failed to launch, showing a connection error. The initial hypothesis was a race condition.
+*   **Attempt 1 (Failed):** The startup delay in `run_frontend_with_backend.bat` was increased from 15 to 25 seconds. The error persisted.
+*   **Solution:** The root cause was not timing but a likely name resolution issue. The API client in `src/ultibot_ui/main.py` was changed to connect to `127.0.0.1` instead of `localhost`, which resolved the connection error.
+
+### Task 4.3: [COMPLETED] Backend `ImportError` on `get_app_config`
+*   **Description:** The backend failed to start due to an `ImportError` for `get_app_config` in `ai_orchestrator_service.py`.
+*   **Solution:** The import was corrected to use the global `settings` instance from `app_config`. Subsequent Pylance errors were also resolved, stabilizing the service.
+
+### Task 4.4: [COMPLETED] Frontend Renders an Empty Window
+*   **Description:** After fixing the connection and backend startup issues, the frontend launches but displays an empty window. The logs show a clean startup and shutdown sequence, suggesting a layout or rendering issue rather than a crash.
+*   **Solution:** The issue was hypothesized to be related to Qt layout management. `MainWindow` in `src/ultibot_ui/windows/main_window.py` was refactored to ensure the central widget and its layout are correctly configured and have a minimum size.
+
+### Task 4.5: [COMPLETED] Verify UI Rendering
+*   **Description:** Despite the layout fixes, the UI still appeared empty. The logs are clean, which points to a subtle rendering or event loop issue. A visual confirmation is needed.
+*   **Solution:** A screenshot confirmed the UI was rendering correctly, but the application was closing immediately due to leftover debugging code. The `QTimer` and `app.quit()` call in `src/ultibot_ui/main.py` were removed, allowing the application to run normally.
+*   **Subtasks:**
+    *   **[x] 4.5.1:** Modify `src/ultibot_ui/main.py` to programmatically take a screenshot of the main window after a short delay (e.g., 5 seconds) and save it to a file (e.g., `logs/ui_screenshot.png`).
+    *   **[x] 4.5.2:** Execute `run_frontend_with_backend.bat`.
+    *   **[x] 4.5.3:** Analyze the resulting screenshot to determine the true state of the UI.
+
+### Task 4.6: [COMPLETED] Restore and Stabilize `main.py`
+*   **Description:** The main entry point of the UI, `src/ultibot_ui/main.py`, was restored to its functional version after a deep debugging session. The restoration introduced several Pylance errors due to outdated references.
+*   **Solution:** The file was systematically refactored to align with the current architecture. This involved:
+    *   Correcting the `APIClient` import to `UltiBotAPIClient`.
+    *   Replacing the obsolete `InitializationWorker` with the generic `ApiWorker`.
+    *   Implementing a new `AppController` class to manage the asynchronous initialization flow, ensuring the `user_id` is fetched *before* the `MainWindow` is created.
+    *   Fixing all subsequent Pylance errors related to missing arguments and incorrect method calls.
+*   **Status:** The `main.py` file is now stable, free of static errors, and correctly handles the application's startup sequence.
 
 ---
 
