@@ -1,0 +1,153 @@
+/*
+ * UltiBotInversiones - Modern Dark Theme
+ */
+
+QWidget {
+    background-color: #1A1C2E; /* Azul marino oscuro casi negro */
+    color: #E0E0E0; /* Texto principal - blanco roto */
+    font-family: "Segoe UI", "Arial", sans-serif;
+    font-size: 14px;
+}
+
+/* ---- Ventana Principal y Frames ---- */
+QMainWindow, QFrame#mainFrame {
+    background-color: #1A1C2E;
+    border: none;
+}
+
+/* ---- Tarjetas (Cards) ---- */
+QFrame.card {
+    background-color: #282A40; /* Un tono más claro de azul/gris */
+    border-radius: 8px;
+    border: 1px solid #3A3C54;
+}
+
+/* ---- Botones ---- */
+QPushButton {
+    background-color: #4A4D7D; /* Púrpura/azul para botones estándar */
+    color: #FFFFFF;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-weight: bold;
+}
+
+QPushButton:hover {
+    background-color: #5A5D9A;
+}
+
+QPushButton:pressed {
+    background-color: #3A3C54;
+}
+
+QPushButton.primary {
+    background-color: #00BFFF; /* Azul brillante para acciones primarias */
+}
+
+QPushButton.primary:hover {
+    background-color: #33CCFF;
+}
+
+QPushButton.success {
+    background-color: #28A745; /* Verde para éxito */
+}
+
+QPushButton.success:hover {
+    background-color: #2EBF4F;
+}
+
+/* ---- Pestañas (Tabs) ---- */
+QTabWidget::pane {
+    border: none;
+    background-color: #282A40;
+}
+
+QTabBar::tab {
+    background-color: #282A40;
+    color: #A0A0A0;
+    padding: 10px;
+    border: none;
+    border-bottom: 2px solid #282A40;
+    margin-right: 2px;
+}
+
+QTabBar::tab:selected {
+    background-color: #282A40;
+    color: #FFFFFF;
+    border-bottom: 2px solid #00BFFF; /* Acento azul en la pestaña activa */
+}
+
+QTabBar::tab:hover {
+    color: #FFFFFF;
+    background-color: #3A3C54;
+}
+
+/* ---- Tablas ---- */
+QTableView {
+    background-color: #282A40;
+    border: 1px solid #3A3C54;
+    gridline-color: #3A3C54;
+    border-radius: 5px;
+}
+
+QHeaderView::section {
+    background-color: #3A3C54;
+    color: #FFFFFF;
+    padding: 5px;
+    border: none;
+}
+
+/* ---- Labels ---- */
+QLabel {
+    color: #E0E0E0;
+    background-color: transparent;
+}
+
+QLabel#titleLabel {
+    font-size: 24px;
+    font-weight: bold;
+    color: #FFFFFF;
+}
+
+QLabel#subtitleLabel {
+    font-size: 16px;
+    color: #A0A0A0;
+}
+
+/* ---- Inputs ---- */
+QLineEdit, QComboBox {
+    background-color: #3A3C54;
+    border: 1px solid #5A5D9A;
+    border-radius: 4px;
+    padding: 5px;
+    color: #E0E0E0;
+}
+
+QComboBox::drop-down {
+    border: none;
+}
+
+QComboBox::down-arrow {
+    image: url(none); /* Opcional: para un look más limpio, se puede añadir un icono personalizado */
+}
+
+/* ---- Menú de Navegación Izquierdo ---- */
+QListWidget {
+    background-color: #282A40;
+    border: none;
+}
+
+QListWidget::item {
+    padding: 15px;
+    color: #A0A0A0;
+}
+
+QListWidget::item:hover {
+    background-color: #3A3C54;
+}
+
+QListWidget::item:selected {
+    background-color: #007BFF; /* Azul brillante para el item seleccionado */
+    color: #FFFFFF;
+    border-left: 3px solid #00BFFF;
+}

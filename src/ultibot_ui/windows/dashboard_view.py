@@ -4,7 +4,7 @@ from uuid import UUID
 import asyncio
 
 from PyQt5.QtCore import pyqtSignal, QObject, QThread
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QFrame
 
 from src.shared.data_types import Trade
 from src.ultibot_ui.models import BaseMainWindow
@@ -32,22 +32,40 @@ class DashboardView(QWidget):
         self._pending_tasks = 0
 
         self.main_layout = QVBoxLayout(self)
-        self.main_layout.setContentsMargins(10, 10, 10, 10)
-        self.main_layout.setSpacing(10)
+        self.main_layout.setContentsMargins(20, 20, 20, 20) # Aumentar márgenes para que las tarjetas respiren
+        self.main_layout.setSpacing(20) # Aumentar espaciado entre tarjetas
         self.setLayout(self.main_layout)
 
         self._setup_ui()
         self._initialize_async_components()
 
     def _setup_ui(self):
-        """Configura la interfaz de usuario básica del dashboard."""
+        """Configura la interfaz de usuario básica del dashboard usando tarjetas."""
+        # Crear widgets
         self.portfolio_widget = PortfolioWidget(self.user_id, self.api_client, self.main_window, self)
         self.chart_widget = ChartWidget(self.api_client, self.main_window, self)
         self.notification_widget = NotificationWidget(self.api_client, self.user_id, self.main_window, self)
 
-        self.main_layout.addWidget(self.portfolio_widget)
-        self.main_layout.addWidget(self.chart_widget)
-        self.main_layout.addWidget(self.notification_widget)
+        # Crear tarjeta para el Portfolio
+        portfolio_card = QFrame()
+        portfolio_card.setProperty("class", "card")
+        portfolio_layout = QVBoxLayout(portfolio_card)
+        portfolio_layout.addWidget(self.portfolio_widget)
+        self.main_layout.addWidget(portfolio_card)
+
+        # Crear tarjeta para el Gráfico
+        chart_card = QFrame()
+        chart_card.setProperty("class", "card")
+        chart_layout = QVBoxLayout(chart_card)
+        chart_layout.addWidget(self.chart_widget)
+        self.main_layout.addWidget(chart_card)
+
+        # Crear tarjeta para las Notificaciones
+        notification_card = QFrame()
+        notification_card.setProperty("class", "card")
+        notification_layout = QVBoxLayout(notification_card)
+        notification_layout.addWidget(self.notification_widget)
+        self.main_layout.addWidget(notification_card)
 
     def _start_api_worker(
         self,
