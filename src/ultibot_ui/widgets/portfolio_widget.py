@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from typing import Optional, List, Dict, Any, Callable, Coroutine
+from typing import Optional, List, Dict, Any, Callable, Coroutine, Tuple
 from uuid import UUID
 from datetime import datetime
 from PyQt5.QtWidgets import (
@@ -33,8 +33,8 @@ class PortfolioWidget(QWidget):
         self.user_id = user_id
         self.api_client = api_client
         self.main_window = main_window
+        self.active_workers: List[Tuple[QThread, ApiWorker]] = []
         self.current_snapshot: Optional[Dict[str, Any]] = None
-        self.current_capital_status: Optional[Dict[str, Any]] = None
         self.open_trades: List[Dict[str, Any]] = []
 
         self.trading_mode_manager: TradingModeStateManager = get_trading_mode_manager()
@@ -44,76 +44,80 @@ class PortfolioWidget(QWidget):
         self.setup_update_timer()
 
     def _start_api_worker(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine], on_success, on_error):
-        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory)
         thread = QThread()
-        self.main_window.add_thread(thread)
+        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory)
         worker.moveToThread(thread)
 
+        # Conexiones de señales y slots
         worker.result_ready.connect(on_success)
         worker.error_occurred.connect(on_error)
         thread.started.connect(worker.run)
-        worker.result_ready.connect(thread.quit)
-        worker.error_occurred.connect(thread.quit)
+        
+        # Limpieza automática del hilo y del worker
+        def cleanup_worker():
+            # Encuentra y elimina el par (thread, worker) de la lista activa
+            for i, (t, w) in enumerate(self.active_workers):
+                if t is thread:
+                    self.active_workers.pop(i)
+                    break
+            thread.quit()
+
+        worker.result_ready.connect(cleanup_worker)
+        worker.error_occurred.connect(cleanup_worker)
         thread.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+
+        self.active_workers.append((thread, worker))
         thread.start()
 
     def init_ui(self):
         """Inicializa la interfaz de usuario con un layout basado en pestañas."""
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0) # Sin márgenes, la tarjeta contenedora los gestiona
+        main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(15)
 
-        # Header
         self._create_mode_header(main_layout)
 
-        # Pestañas
         self.tab_widget = QTabWidget()
         main_layout.addWidget(self.tab_widget)
 
-        # Pestaña de Portafolio
         self.portfolio_tab = QWidget()
         self.init_portfolio_tab()
         self.tab_widget.addTab(self.portfolio_tab, "Portafolio")
 
-        # Pestaña de Operaciones Abiertas
         self.trades_tab = QWidget()
         self.init_trades_tab()
         self.tab_widget.addTab(self.trades_tab, "Operaciones Abiertas")
 
-        # Pestaña de Gestión de Capital
         self.capital_tab = QWidget()
         self.init_capital_tab()
         self.tab_widget.addTab(self.capital_tab, "Gestión de Capital")
+        self.tab_widget.setTabEnabled(2, False) # Deshabilitar la pestaña de capital
 
-        # Barra de estado
         self._create_status_bar(main_layout)
 
     def _create_mode_header(self, layout: QVBoxLayout):
-        """Crea el encabezado que muestra el título y el modo de trading."""
         header_layout = QHBoxLayout()
         header_layout.setContentsMargins(10, 5, 10, 5)
         
         title_label = QLabel("Estado del Portafolio")
-        title_label.setObjectName("titleLabel") # Para aplicar estilo desde QSS
+        title_label.setObjectName("titleLabel")
         header_layout.addWidget(title_label)
         
         header_layout.addStretch()
         
         self.mode_indicator = QLabel()
-        self._update_mode_indicator() # Estilo se aplica aquí
+        self._update_mode_indicator()
         header_layout.addWidget(self.mode_indicator)
         
         layout.addLayout(header_layout)
 
     def _update_mode_indicator(self):
-        """Actualiza el indicador de modo de trading con estilos desde QSS."""
         mode_info = self.trading_mode_manager.get_mode_display_info()
         self.mode_indicator.setText(f"{mode_info['icon']} {mode_info['display_name']}")
-        # El estilo se delega al QSS global, pero podemos añadir propiedades dinámicas si es necesario
         self.mode_indicator.setProperty("tradingMode", self.trading_mode_manager.current_mode)
 
     def init_portfolio_tab(self):
-        """Inicializa la pestaña de Portafolio."""
         layout = QVBoxLayout(self.portfolio_tab)
         layout.setSpacing(15)
         
@@ -121,7 +125,6 @@ class PortfolioWidget(QWidget):
         self.total_assets_label = QLabel("Valor Total Activos: N/A")
         self.portfolio_value_label = QLabel("Valor Total Portafolio: N/A")
         
-        # Agrupar labels de resumen
         summary_layout = QHBoxLayout()
         summary_layout.addWidget(self.balance_label)
         summary_layout.addStretch()
@@ -139,7 +142,6 @@ class PortfolioWidget(QWidget):
         layout.addWidget(self.comparison_info)
 
     def init_trades_tab(self):
-        """Inicializa la pestaña de Operaciones Abiertas."""
         layout = QVBoxLayout(self.trades_tab)
         layout.setSpacing(15)
         
@@ -162,41 +164,14 @@ class PortfolioWidget(QWidget):
         self.trades_title.setText(f"Operaciones {mode_info['display_name']} con TSL/TP Activos")
 
     def init_capital_tab(self):
-        """Inicializa la pestaña de Gestión de Capital."""
         layout = QVBoxLayout(self.capital_tab)
         layout.setSpacing(15)
         
-        form_layout = QFormLayout()
-        self.total_capital_label = QLabel("Capital Total: N/A")
-        self.available_capital_label = QLabel("Disponible para Nuevas Operaciones: N/A")
-        self.committed_capital_label = QLabel("Capital Comprometido Hoy: N/A")
-        self.daily_limit_label = QLabel("Límite Diario (50%): N/A")
-        
-        form_layout.addRow("Capital Total:", self.total_capital_label)
-        form_layout.addRow("Disponible para Nuevas Operaciones:", self.available_capital_label)
-        form_layout.addRow("Capital Comprometido Hoy:", self.committed_capital_label)
-        form_layout.addRow("Límite Diario (50%):", self.daily_limit_label)
-        
-        self.daily_usage_progress = QProgressBar()
-        self.daily_usage_progress.setRange(0, 100)
-        self.daily_usage_progress.setValue(0)
-        form_layout.addRow("Uso del Límite Diario:", self.daily_usage_progress)
-        
-        layout.addLayout(form_layout)
-        
-        self.capital_alerts_frame = QFrame()
-        self.capital_alerts_frame.setProperty("class", "card alert") # Clase para alertas
-        self.capital_alerts_frame.setVisible(False)
-        alerts_layout = QVBoxLayout(self.capital_alerts_frame)
-        self.capital_alert_label = QLabel("")
-        self.capital_alert_label.setWordWrap(True)
-        alerts_layout.addWidget(self.capital_alert_label)
-        layout.addWidget(self.capital_alerts_frame)
-        
-        layout.addStretch()
+        info_label = QLabel("La funcionalidad de Gestión de Capital está en desarrollo.")
+        info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(info_label)
 
     def _create_status_bar(self, layout: QVBoxLayout):
-        """Crea la barra de estado inferior."""
         status_layout = QHBoxLayout()
         self.last_updated_label = QLabel("Última actualización: N/A")
         self.last_updated_label.setObjectName("subtitleLabel")
@@ -215,7 +190,6 @@ class PortfolioWidget(QWidget):
         layout.addWidget(self.error_label)
 
     def _create_assets_table(self) -> QTableWidget:
-        """Crea y devuelve la tabla de activos."""
         table = QTableWidget()
         table.setColumnCount(6)
         table.setHorizontalHeaderLabels(["Símbolo", "Cantidad", "Precio Entrada", "Precio Actual", "Valor USD", "PnL (%)"])
@@ -223,17 +197,14 @@ class PortfolioWidget(QWidget):
         h_header = table.horizontalHeader()
         if h_header:
             h_header.setSectionResizeMode(QHeaderView.Stretch)
-            
         v_header = table.verticalHeader()
         if v_header:
             v_header.setVisible(False)
-            
         table.setEditTriggers(QTableWidget.NoEditTriggers)
-        table.setAlternatingRowColors(True) # El QSS se encargará de los colores
+        table.setAlternatingRowColors(True)
         return table
 
     def _create_open_trades_table(self) -> QTableWidget:
-        """Crea y devuelve la tabla de operaciones abiertas."""
         table = QTableWidget()
         table.setColumnCount(9)
         table.setHorizontalHeaderLabels([
@@ -244,11 +215,9 @@ class PortfolioWidget(QWidget):
         h_header = table.horizontalHeader()
         if h_header:
             h_header.setSectionResizeMode(QHeaderView.Stretch)
-            
         v_header = table.verticalHeader()
         if v_header:
             v_header.setVisible(False)
-            
         table.setEditTriggers(QTableWidget.NoEditTriggers)
         table.setAlternatingRowColors(True)
         return table
@@ -268,43 +237,62 @@ class PortfolioWidget(QWidget):
 
     def _start_update_worker(self):
         current_mode = self.trading_mode_manager.current_mode
+        user_id = self.user_id
         logger.info(f"Actualizando datos del portafolio para modo: {current_mode}")
         self.last_updated_label.setText(f"Actualizando portafolio ({current_mode.title()})...")
         if hasattr(self, 'refresh_button'): self.refresh_button.setEnabled(False)
         
-        async def fetch_all_data():
-            snapshot_task = self.api_client.get_portfolio_snapshot(self.user_id, current_mode)
-            open_trades_task = self.api_client.get_trades(trading_mode=current_mode, status="open")
-            capital_status_task = self.api_client.get_capital_management_status()
-            results = await asyncio.gather(snapshot_task, open_trades_task, capital_status_task, return_exceptions=True)
+        async def fetch_data_coroutine(api_client: UltiBotAPIClient) -> Dict[str, Any]:
+            logger.debug(f"PortfolioWidget: Iniciando fetch_data_coroutine para modo {current_mode}.")
+            
+            snapshot_task = api_client.get_portfolio_snapshot(user_id, current_mode)
+            open_trades_task = api_client.get_trades(trading_mode=current_mode, status="open")
+            
+            results = await asyncio.gather(
+                snapshot_task, 
+                open_trades_task,
+                return_exceptions=True
+            )
+            
             return {
-                "portfolio_snapshot": results[0] if not isinstance(results[0], Exception) else {"error_message": str(results[0])},
-                "open_trades": results[1] if not isinstance(results[1], Exception) else [],
-                "capital_status": results[2] if not isinstance(results[2], Exception) else None,
+                "portfolio_snapshot": results[0],
+                "open_trades": results[1],
                 "trading_mode": current_mode
             }
 
-        self._start_api_worker(lambda _: fetch_all_data(), self._handle_update_result, self._handle_worker_error)
+        self._start_api_worker(fetch_data_coroutine, self._handle_update_result, self._handle_worker_error)
 
     def _handle_update_result(self, result_data: Dict[str, Any]):
+        logger.info(f"DATOS COMPLETOS RECIBIDOS EN HANDLER: {result_data}")
+        has_error = False
         try:
             current_mode = self.trading_mode_manager.current_mode
             if result_data.get("trading_mode", current_mode) != current_mode:
+                logger.warning(f"Datos para modo incorrecto. Esperado: {current_mode}, Recibido: {result_data.get('trading_mode')}")
                 return
 
             self.current_snapshot = result_data.get("portfolio_snapshot")
-            if self.current_snapshot: self._update_portfolio_ui(self.current_snapshot, current_mode)
+            if isinstance(self.current_snapshot, Exception):
+                logger.error(f"Error al obtener snapshot de portafolio: {self.current_snapshot}", exc_info=self.current_snapshot)
+                self.error_label.setText("Error al obtener snapshot.")
+                has_error = True
+            elif self.current_snapshot:
+                self._update_portfolio_ui(self.current_snapshot, current_mode)
 
             self.open_trades = result_data.get("open_trades", [])
-            self._update_open_trades_ui(self.open_trades)
-
-            self.current_capital_status = result_data.get("capital_status")
-            if self.current_capital_status: self._update_capital_management_ui(self.current_capital_status)
+            if isinstance(self.open_trades, Exception):
+                logger.error(f"Error al obtener trades abiertos: {self.open_trades}", exc_info=self.open_trades)
+                self.error_label.setText("Error al obtener trades.")
+                has_error = True
+            else:
+                self._update_open_trades_ui(self.open_trades)
 
             self.last_updated_label.setText(f"Última actualización: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-            self.error_label.setText("")
+            if not has_error:
+                self.error_label.setText("")
+
         except Exception as e:
-            logger.error(f"Error procesando datos actualizados: {e}", exc_info=True)
+            logger.error(f"Error fatal procesando datos actualizados: {e}", exc_info=True)
             self.error_label.setText("Error al procesar datos.")
         finally:
             if hasattr(self, 'refresh_button'): self.refresh_button.setEnabled(True)
@@ -324,18 +312,23 @@ class PortfolioWidget(QWidget):
         self.trades_info_label.setVisible(not trades)
         self.open_trades_table.setRowCount(len(trades))
         for row, trade in enumerate(trades):
-            # ... (la lógica de llenado de tabla se mantiene similar)
-            pass # Placeholder for brevity
+            self._set_item(self.open_trades_table, row, 0, str(trade.get('symbol')))
+            self._set_item(self.open_trades_table, row, 1, str(trade.get('trade_type')))
+            self._set_item(self.open_trades_table, row, 2, f"{trade.get('quantity', 0):.6f}")
+            self._set_item(self.open_trades_table, row, 3, f"{trade.get('entry_price', 0):.4f}")
+            self._set_item(self.open_trades_table, row, 4, f"{trade.get('current_price', 0):.4f}")
+            self._set_item(self.open_trades_table, row, 5, f"{trade.get('take_profit_price', 0):.4f}")
+            self._set_item(self.open_trades_table, row, 6, f"{trade.get('stop_loss_price', 0):.4f}")
+            self._set_item(self.open_trades_table, row, 7, str(trade.get('tsl_status')))
+            
+            pnl = trade.get('pnl_percentage', 0) * 100
+            pnl_item = QTableWidgetItem(f"{pnl:.2f}%")
+            pnl_item.setForeground(QColor('green') if pnl >= 0 else QColor('red'))
+            self.open_trades_table.setItem(row, 8, pnl_item)
 
-    def _update_capital_management_ui(self, capital_status: Dict[str, Any]):
-        # ... (la lógica de actualización de capital se mantiene similar)
-        pass # Placeholder for brevity
-
-    def _populate_assets_table(self, table: QTableWidget, assets: List[Dict[str, Any]]):
-        table.setRowCount(len(assets))
-        for row, asset in enumerate(assets):
-            # ... (la lógica de llenado de tabla se mantiene similar)
-            pass # Placeholder for brevity
+    def _set_item(self, table: QTableWidget, row: int, col: int, text: Optional[str]):
+        item = QTableWidgetItem(str(text) if text is not None else "")
+        table.setItem(row, col, item)
 
     def _handle_worker_error(self, error_msg: str):
         logger.error(f"PortfolioWidget: Error en DataUpdateWorker: {error_msg}")
@@ -353,4 +346,11 @@ class PortfolioWidget(QWidget):
         self.update_timer.stop()
 
     def cleanup(self):
+        logger.info("PortfolioWidget: Limpiando hilos y workers activos.")
         self.stop_updates()
+        for thread, worker in list(self.active_workers):
+            if thread.isRunning():
+                thread.quit()
+                thread.wait(5000)
+        self.active_workers.clear()
+        logger.info("PortfolioWidget: Limpieza completada.")
