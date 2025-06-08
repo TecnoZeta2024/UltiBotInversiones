@@ -22,3 +22,141 @@
 2025-06-08 16:15:49,480 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/config
 2025-06-08 16:15:49,880 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/config - Status: 200
 2025-06-08 16:15:49,882 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:52500 - "GET /api/v1/config HTTP/1.1" 200
+2025-06-08 16:23:29,966 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
+2025-06-08 16:23:29,966 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
+2025-06-08 16:23:29,983 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
+2025-06-08 16:23:29,983 - uvicorn.error - INFO - [MainThread] - server.py:82 - Started server process [17964]
+2025-06-08 16:23:29,984 - uvicorn.error - INFO - [MainThread] - on.py:48 - Waiting for application startup.
+2025-06-08 16:23:29,984 - ultibot_backend - INFO - [MainThread] - main.py:74 - Iniciando UltiBot Backend...
+2025-06-08 16:23:29,984 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:47 - Initializing dependency container...
+2025-06-08 16:23:29,984 - httpx - DEBUG - [MainThread] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-08 16:23:29,985 - httpx - DEBUG - [MainThread] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-08 16:23:30,159 - src.ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:68 - Pool de conexiones a Supabase (psycopg_pool) establecido exitosamente. Min: 2, Max: 10
+2025-06-08 16:23:30,159 - httpx - DEBUG - [MainThread] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-08 16:23:30,160 - httpx - DEBUG - [MainThread] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-08 16:23:30,335 - src.ultibot_backend.services.order_execution_service - INFO - [MainThread] - order_execution_service.py:110 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-08 16:23:30,335 - src.ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:28 - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
+2025-06-08 16:23:30,335 - src.ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:34 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-08 16:23:30,336 - src.ultibot_backend.services.unified_order_execution_service - INFO - [MainThread] - unified_order_execution_service.py:27 - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-08 16:23:30,364 - src.ultibot_backend.services.ai_orchestrator_service - INFO - [MainThread] - ai_orchestrator_service.py:143 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
+2025-06-08 16:23:30,364 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:126 - Dependency container initialized successfully.
+2025-06-08 16:23:30,364 - ultibot_backend - INFO - [MainThread] - main.py:79 - Contenedor de dependencias inicializado.
+2025-06-08 16:23:30,364 - ultibot_backend - INFO - [MainThread] - main.py:86 - Aplicación iniciada correctamente.
+2025-06-08 16:23:30,367 - uvicorn.error - INFO - [MainThread] - on.py:62 - Application startup complete.
+2025-06-08 16:23:38,423 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/config
+2025-06-08 16:23:38,808 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/config - Status: 200
+2025-06-08 16:23:38,809 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:52646 - "GET /api/v1/config HTTP/1.1" 200
+2025-06-08 16:23:49,376 - uvicorn.error - INFO - [MainThread] - server.py:258 - Shutting down
+2025-06-08 16:23:49,485 - uvicorn.error - INFO - [MainThread] - on.py:67 - Waiting for application shutdown.
+2025-06-08 16:23:49,485 - ultibot_backend - INFO - [MainThread] - main.py:89 - Apagando UltiBot Backend...
+2025-06-08 16:23:49,485 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:129 - Shutting down dependency container...
+2025-06-08 16:23:49,486 - src.ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:79 - Pool de conexiones a Supabase (psycopg_pool) cerrado.
+2025-06-08 16:23:49,486 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:136 - Dependency container shut down.
+2025-06-08 16:23:49,486 - ultibot_backend - INFO - [MainThread] - main.py:91 - Recursos liberados y aplicación apagada.
+2025-06-08 16:23:49,486 - uvicorn.error - INFO - [MainThread] - on.py:76 - Application shutdown complete.
+2025-06-08 16:23:49,486 - uvicorn.error - INFO - [MainThread] - server.py:92 - Finished server process [17964]
+2025-06-08 16:35:05,910 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
+2025-06-08 16:35:05,910 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
+2025-06-08 16:35:05,927 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
+2025-06-08 16:35:05,928 - uvicorn.error - INFO - [MainThread] - server.py:82 - Started server process [29096]
+2025-06-08 16:35:05,928 - uvicorn.error - INFO - [MainThread] - on.py:48 - Waiting for application startup.
+2025-06-08 16:35:05,928 - ultibot_backend - INFO - [MainThread] - main.py:74 - Iniciando UltiBot Backend...
+2025-06-08 16:35:05,928 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:47 - Initializing dependency container...
+2025-06-08 16:35:05,929 - httpx - DEBUG - [MainThread] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-08 16:35:05,929 - httpx - DEBUG - [MainThread] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-08 16:35:06,109 - src.ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:68 - Pool de conexiones a Supabase (psycopg_pool) establecido exitosamente. Min: 2, Max: 10
+2025-06-08 16:35:06,110 - httpx - DEBUG - [MainThread] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-08 16:35:06,110 - httpx - DEBUG - [MainThread] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-08 16:35:06,295 - src.ultibot_backend.services.order_execution_service - INFO - [MainThread] - order_execution_service.py:110 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-08 16:35:06,295 - src.ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:28 - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
+2025-06-08 16:35:06,295 - src.ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:34 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-08 16:35:06,295 - src.ultibot_backend.services.unified_order_execution_service - INFO - [MainThread] - unified_order_execution_service.py:27 - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-08 16:35:06,323 - src.ultibot_backend.services.ai_orchestrator_service - INFO - [MainThread] - ai_orchestrator_service.py:143 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
+2025-06-08 16:35:06,323 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:126 - Dependency container initialized successfully.
+2025-06-08 16:35:06,323 - ultibot_backend - INFO - [MainThread] - main.py:79 - Contenedor de dependencias inicializado.
+2025-06-08 16:35:06,324 - ultibot_backend - INFO - [MainThread] - main.py:86 - Aplicación iniciada correctamente.
+2025-06-08 16:35:06,325 - uvicorn.error - INFO - [MainThread] - on.py:62 - Application startup complete.
+2025-06-08 16:35:13,438 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/config
+2025-06-08 16:35:13,831 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/config - Status: 200
+2025-06-08 16:35:13,831 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:52921 - "GET /api/v1/config HTTP/1.1" 200
+2025-06-08 16:35:34,279 - uvicorn.error - INFO - [MainThread] - server.py:258 - Shutting down
+2025-06-08 16:35:34,389 - uvicorn.error - INFO - [MainThread] - on.py:67 - Waiting for application shutdown.
+2025-06-08 16:35:34,390 - ultibot_backend - INFO - [MainThread] - main.py:89 - Apagando UltiBot Backend...
+2025-06-08 16:35:34,390 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:129 - Shutting down dependency container...
+2025-06-08 16:35:34,391 - src.ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:79 - Pool de conexiones a Supabase (psycopg_pool) cerrado.
+2025-06-08 16:35:34,392 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:136 - Dependency container shut down.
+2025-06-08 16:35:34,392 - ultibot_backend - INFO - [MainThread] - main.py:91 - Recursos liberados y aplicación apagada.
+2025-06-08 16:35:34,392 - uvicorn.error - INFO - [MainThread] - on.py:76 - Application shutdown complete.
+2025-06-08 16:35:34,392 - uvicorn.error - INFO - [MainThread] - server.py:92 - Finished server process [29096]
+2025-06-08 16:37:13,757 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
+2025-06-08 16:37:13,758 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
+2025-06-08 16:37:13,774 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
+2025-06-08 16:37:13,774 - uvicorn.error - INFO - [MainThread] - server.py:82 - Started server process [27040]
+2025-06-08 16:37:13,775 - uvicorn.error - INFO - [MainThread] - on.py:48 - Waiting for application startup.
+2025-06-08 16:37:13,775 - ultibot_backend - INFO - [MainThread] - main.py:74 - Iniciando UltiBot Backend...
+2025-06-08 16:37:13,775 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:47 - Initializing dependency container...
+2025-06-08 16:37:13,776 - httpx - DEBUG - [MainThread] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-08 16:37:13,777 - httpx - DEBUG - [MainThread] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-08 16:37:13,955 - src.ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:68 - Pool de conexiones a Supabase (psycopg_pool) establecido exitosamente. Min: 2, Max: 10
+2025-06-08 16:37:13,956 - httpx - DEBUG - [MainThread] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-08 16:37:13,956 - httpx - DEBUG - [MainThread] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-08 16:37:14,132 - src.ultibot_backend.services.order_execution_service - INFO - [MainThread] - order_execution_service.py:110 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-08 16:37:14,132 - src.ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:28 - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
+2025-06-08 16:37:14,132 - src.ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:34 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-08 16:37:14,132 - src.ultibot_backend.services.unified_order_execution_service - INFO - [MainThread] - unified_order_execution_service.py:27 - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-08 16:37:14,160 - src.ultibot_backend.services.ai_orchestrator_service - INFO - [MainThread] - ai_orchestrator_service.py:143 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
+2025-06-08 16:37:14,160 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:126 - Dependency container initialized successfully.
+2025-06-08 16:37:14,160 - ultibot_backend - INFO - [MainThread] - main.py:79 - Contenedor de dependencias inicializado.
+2025-06-08 16:37:14,160 - ultibot_backend - INFO - [MainThread] - main.py:86 - Aplicación iniciada correctamente.
+2025-06-08 16:37:14,163 - uvicorn.error - INFO - [MainThread] - on.py:62 - Application startup complete.
+2025-06-08 16:37:21,239 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/config
+2025-06-08 16:37:21,604 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/config - Status: 200
+2025-06-08 16:37:21,604 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:52976 - "GET /api/v1/config HTTP/1.1" 200
+2025-06-08 16:43:05,871 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
+2025-06-08 16:43:05,871 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
+2025-06-08 16:43:05,887 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
+2025-06-08 16:43:05,887 - uvicorn.error - INFO - [MainThread] - server.py:82 - Started server process [27108]
+2025-06-08 16:43:05,887 - uvicorn.error - INFO - [MainThread] - on.py:48 - Waiting for application startup.
+2025-06-08 16:43:05,888 - ultibot_backend - INFO - [MainThread] - main.py:74 - Iniciando UltiBot Backend...
+2025-06-08 16:43:05,888 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:47 - Initializing dependency container...
+2025-06-08 16:43:05,888 - httpx - DEBUG - [MainThread] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-08 16:43:05,888 - httpx - DEBUG - [MainThread] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-08 16:43:06,066 - src.ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:68 - Pool de conexiones a Supabase (psycopg_pool) establecido exitosamente. Min: 2, Max: 10
+2025-06-08 16:43:06,066 - httpx - DEBUG - [MainThread] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-08 16:43:06,067 - httpx - DEBUG - [MainThread] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-08 16:43:06,233 - src.ultibot_backend.services.order_execution_service - INFO - [MainThread] - order_execution_service.py:110 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-08 16:43:06,234 - src.ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:28 - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
+2025-06-08 16:43:06,234 - src.ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:34 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-08 16:43:06,234 - src.ultibot_backend.services.unified_order_execution_service - INFO - [MainThread] - unified_order_execution_service.py:27 - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-08 16:43:06,262 - src.ultibot_backend.services.ai_orchestrator_service - INFO - [MainThread] - ai_orchestrator_service.py:143 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
+2025-06-08 16:43:06,262 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:126 - Dependency container initialized successfully.
+2025-06-08 16:43:06,262 - ultibot_backend - INFO - [MainThread] - main.py:79 - Contenedor de dependencias inicializado.
+2025-06-08 16:43:06,262 - ultibot_backend - INFO - [MainThread] - main.py:86 - Aplicación iniciada correctamente.
+2025-06-08 16:43:06,264 - uvicorn.error - INFO - [MainThread] - on.py:62 - Application startup complete.
+2025-06-08 16:43:13,287 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/config
+2025-06-08 16:43:13,682 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/config - Status: 200
+2025-06-08 16:43:13,683 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:53078 - "GET /api/v1/config HTTP/1.1" 200
+2025-06-08 16:45:40,527 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
+2025-06-08 16:45:40,527 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
+2025-06-08 16:45:40,544 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
+2025-06-08 16:45:40,544 - uvicorn.error - INFO - [MainThread] - server.py:82 - Started server process [15040]
+2025-06-08 16:45:40,544 - uvicorn.error - INFO - [MainThread] - on.py:48 - Waiting for application startup.
+2025-06-08 16:45:40,544 - ultibot_backend - INFO - [MainThread] - main.py:74 - Iniciando UltiBot Backend...
+2025-06-08 16:45:40,544 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:47 - Initializing dependency container...
+2025-06-08 16:45:40,545 - httpx - DEBUG - [MainThread] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-08 16:45:40,545 - httpx - DEBUG - [MainThread] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-08 16:45:40,723 - src.ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:68 - Pool de conexiones a Supabase (psycopg_pool) establecido exitosamente. Min: 2, Max: 10
+2025-06-08 16:45:40,723 - httpx - DEBUG - [MainThread] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-08 16:45:40,724 - httpx - DEBUG - [MainThread] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-08 16:45:40,900 - src.ultibot_backend.services.order_execution_service - INFO - [MainThread] - order_execution_service.py:110 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-08 16:45:40,900 - src.ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:28 - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
+2025-06-08 16:45:40,900 - src.ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:34 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-08 16:45:40,900 - src.ultibot_backend.services.unified_order_execution_service - INFO - [MainThread] - unified_order_execution_service.py:27 - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-08 16:45:40,926 - src.ultibot_backend.services.ai_orchestrator_service - INFO - [MainThread] - ai_orchestrator_service.py:143 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
+2025-06-08 16:45:40,926 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:126 - Dependency container initialized successfully.
+2025-06-08 16:45:40,926 - ultibot_backend - INFO - [MainThread] - main.py:79 - Contenedor de dependencias inicializado.
+2025-06-08 16:45:40,927 - ultibot_backend - INFO - [MainThread] - main.py:86 - Aplicación iniciada correctamente.
+2025-06-08 16:45:40,929 - uvicorn.error - INFO - [MainThread] - on.py:62 - Application startup complete.
+2025-06-08 16:45:48,322 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/config
+2025-06-08 16:45:48,710 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/config - Status: 200
+2025-06-08 16:45:48,711 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:53128 - "GET /api/v1/config HTTP/1.1" 200

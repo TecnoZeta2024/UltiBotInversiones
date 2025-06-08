@@ -83,6 +83,15 @@ def main():
     log.info("Initializing application...")
     app = QApplication(sys.argv)
 
+    # Load stylesheet
+    try:
+        with open("src/ultibot_ui/assets/style.qss", "r") as f:
+            style = f.read()
+            app.setStyleSheet(style)
+            log.info("Stylesheet loaded successfully.")
+    except FileNotFoundError:
+        log.warning("Stylesheet not found. Running with default styles.")
+
     api_base_url = "http://127.0.0.1:8000"
     api_client = UltiBotAPIClient(base_url=api_base_url)
 

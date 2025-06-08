@@ -151,4 +151,19 @@ This phase addresses issues discovered during final deployment and testing, ensu
 
 ---
 
+## Phase 5: [COMPLETED] UI/UX Overhaul
+
+This phase focuses on transforming the visual appearance of the application from a standard desktop look to a modern, professional financial dashboard, based on `UI_ejemplos/Ejemplo_3.png`.
+
+### Task 5.1: [COMPLETED] Implement a Modern UI Theme
+*   **Description:** The current UI uses default Qt widgets. A complete visual overhaul is needed to match the target design.
+*   **Subtasks:**
+    *   **[x] 5.1.1:** Create a global stylesheet (`src/ultibot_ui/assets/style.qss`) that defines the dark theme, color palette (dark blues, grays, accent colors), fonts, and base widget styles (buttons, labels, etc.).
+    *   **[x] 5.1.2:** Load and apply this stylesheet in `src/ultibot_ui/main.py` to ensure a consistent look and feel across the entire application.
+    *   **[x] 5.1.3:** Refactor existing views and widgets to use `QFrame`s with rounded corners and shadows to create the "card" effect seen in the target design.
+    *   **[x] 5.1.4:** Replace default widgets with custom-styled versions where necessary (e.g., custom buttons, styled tables).
+    *   **[x] 5.1.5:** Integrate a modern icon set (e.g., Font Awesome, Material Design Icons) to replace text-based navigation and actions where appropriate.
+
+---
+
 This focused plan provides a clear path for deploying a powerful, AI-driven investment tool.
