@@ -57,7 +57,7 @@ This phase, focused on resolving fundamental architectural problems, is now cons
 
 ---
 
-## Phase 2: Implement Core Application Functionality
+## Phase 2: [COMPLETED] Implement Core Application Functionality
 
 This phase focuses on building out the primary features of the application, now that the architecture is stable.
 
@@ -84,15 +84,15 @@ This phase focuses on building out the primary features of the application, now 
 
 ---
 
-## Phase 3: Enhance and Optimize Core Systems
+## Phase 3: [COMPLETED] Enhance and Optimize Core Systems
 
 This phase is dedicated to improving the quality, performance, and robustness of existing features.
 
-### Task 3.1: Persistence of Paper Trading Asset Holdings
-*   **Description:** Paper trading asset holdings are in-memory and lost on application restart.
+### Task 3.1: [COMPLETED] Persistence of Paper Trading Asset Holdings
+*   **Description:** Paper trading asset holdings are in-memory and lost on application restart. The logic for loading and saving holdings via `PortfolioService` and `PersistenceService` has been implemented.
 *   **Subtasks:**
-    *   **[ ] 3.1.1:** Design a schema for storing paper trading asset holdings (e.g., extend `UserConfiguration` or create a dedicated table).
-    *   **[ ] 3.1.2:** Update `PortfolioService` (`src/ultibot_backend/services/portfolio_service.py`) to load and save these holdings via `PersistenceService`.
+    *   **[x] 3.1.1:** Design a schema for storing paper trading asset holdings (e.g., extend `UserConfiguration` or create a dedicated table).
+    *   **[x] 3.1.2:** Update `PortfolioService` (`src/ultibot_backend/services/portfolio_service.py`) to load and save these holdings via `PersistenceService`.
 
 ### Task 3.2: [COMPLETADO] Inconsistent API Endpoint Paths
 *   **Status:** Todos los enrutadores del backend han sido estandarizados bajo el prefijo `/api/v1`. **COMPLETADO**.
@@ -103,11 +103,25 @@ This phase is dedicated to improving the quality, performance, and robustness of
 ### Task 3.4: [COMPLETADO] Estabilización Final del Backend y Modelos de Datos
 *   **Status:** Se han resuelto los errores en cascada de Pylance y de tiempo de ejecución, logrando un arranque estable. **COMPLETADO**.
 
-### Task 3.5: LLM Output Parsing Fallback is Brittle
-*   **Description:** `AIOrchestratorService` falls back to regex if JSON parsing of LLM output fails.
+### Task 3.5: [COMPLETED] LLM Output Parsing Fallback is Brittle
+*   **Description:** `AIOrchestratorService` falls back to regex if JSON parsing of LLM output fails. This has been replaced with a robust, structured output mechanism using LangChain.
 *   **Subtasks:**
-    *   **[ ] 3.5.1:** Refine prompts provided to the Gemini LLM to more strictly enforce structured JSON output.
-    *   **[ ] 3.5.2:** Implement LangChain's structured output parsers (e.g., `PydanticOutputParser`) in `src/ultibot_backend/services/ai_orchestrator_service.py` to ensure reliable parsing.
+    *   **[x] 3.5.1:** Refine prompts provided to the Gemini LLM to more strictly enforce structured JSON output.
+    *   **[x] 3.5.2:** Implement LangChain's structured output parsers (e.g., `PydanticOutputParser` and `OutputFixingParser`) in `src/ultibot_backend/services/ai_orchestrator_service.py` to ensure reliable parsing.
+
+---
+
+## Phase 4: [NEW] Deployment and Stability Fixes
+
+This phase addresses issues discovered during final deployment and testing, ensuring the application runs like a "reloj atómico óptico".
+
+### Task 4.1: [COMPLETED] Backend `ImportError` on `OutputFixingParser`
+*   **Description:** The backend failed to start due to an `ImportError` for `OutputFixingParser`, which was incorrectly imported from `langchain_core`.
+*   **Solution:** The import path was corrected from `langchain_core.output_parsers` to `langchain.output_parsers`. This resolved the startup failure.
+
+### Task 4.2: [COMPLETED] Frontend Fails to Connect to Backend on Initial Launch
+*   **Description:** The frontend UI would sometimes fail to launch, showing a connection error (`All connection attempts failed`). This was caused by a race condition where the UI tried to connect to the backend API before it was fully initialized and ready to accept connections.
+*   **Solution:** The startup delay in the `run_frontend_with_backend.bat` script was increased from 15 to 25 seconds. This provides a sufficient buffer for the backend to initialize, ensuring the frontend can connect reliably upon launch.
 
 ---
 

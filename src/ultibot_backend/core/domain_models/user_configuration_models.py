@@ -272,6 +272,13 @@ class CloudSyncPreferences(BaseModel):
     last_successful_sync: Optional[datetime] = Field(None, description="Last successful sync timestamp")
 
 
+class PaperTradingAsset(BaseModel):
+    """Represents a single asset holding in paper trading for persistence."""
+    asset: str = Field(..., description="The asset symbol (e.g., 'BTC')")
+    quantity: float = Field(..., description="The quantity of the asset held")
+    entry_price: float = Field(..., description="The average entry price for this holding")
+
+
 class UserConfiguration(BaseModel):
     """Main user configuration model."""
     
@@ -301,6 +308,10 @@ class UserConfiguration(BaseModel):
     paper_trading_active: Optional[bool] = Field(
         False, 
         description="Whether paper trading is active"
+    )
+    paper_trading_assets: Optional[List[PaperTradingAsset]] = Field(
+        None,
+        description="List of asset holdings for paper trading."
     )
     
     watchlists: Optional[List[Watchlist]] = Field(

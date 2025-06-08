@@ -6,10 +6,19 @@ including dynamic prompt generation based on trading strategies and opportunitie
 
 import logging
 import time
+import json
+import re
 from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException
+from pydantic import BaseModel, Field
+
+# LangChain imports for structured output
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.prompts import PromptTemplate
+from langchain_core.output_parsers import PydanticOutputParser
+from langchain.output_parsers import OutputFixingParser
 
 from src.ultibot_backend.core.domain_models.trading_strategy_models import (
     TradingStrategyConfig,
@@ -20,8 +29,30 @@ from src.ultibot_backend.core.domain_models.user_configuration_models import (
     ConfidenceThresholds,
 )
 from src.ultibot_backend.services.market_data_service import MarketDataService
+from src.ultibot_backend.app_config import get_app_config
 
 logger = logging.getLogger(__name__)
+
+# --- Pydantic Models for Structured LLM Output ---
+
+class TradeParameters(BaseModel):
+    entry_price: Optional[float] = Field(None, description="Suggested entry price for the trade.")
+    stop_loss: Optional[float] = Field(None, description="Suggested stop-loss price.")
+    take_profit: Optional[List[float]] = Field(None, description="List of suggested take-profit price levels.")
+    position_size_percentage: Optional[float] = Field(None, description="Suggested position size as a percentage of capital.")
+
+class DataVerification(BaseModel):
+    price_check: str = Field(..., description="Status of price verification (e.g., 'verified', 'discrepancy_found').")
+    volume_check: str = Field(..., description="Status of volume verification (e.g., 'sufficient', 'low_liquidity').")
+
+class AIResponse(BaseModel):
+    """Defines the structured JSON output expected from the AI."""
+    confidence: float = Field(..., ge=0.0, le=1.0, description="The AI's confidence level in its analysis.")
+    action: str = Field(..., description="The recommended action (e.g., 'strong_buy', 'hold_neutral', 'sell').")
+    reasoning: str = Field(..., description="Detailed reasoning behind the recommended action.")
+    trade_params: Optional[TradeParameters] = Field(None, description="Specific trade parameters, if applicable.")
+    warnings: Optional[List[str]] = Field(None, description="A list of any warnings or risks identified.")
+    data_verification: Optional[DataVerification] = Field(None, description="Results of data verification checks.")
 
 
 class AIAnalysisResult:
@@ -40,20 +71,6 @@ class AIAnalysisResult:
         ai_warnings: Optional[List[str]] = None,
         model_used: Optional[str] = None,
     ):
-        """Initialize AI analysis result.
-        
-        Args:
-            analysis_id: Unique identifier for this analysis.
-            calculated_confidence: Confidence score (0-1).
-            suggested_action: Action suggestion ('strong_buy', 'buy', 'hold_neutral', etc.).
-            reasoning_ai: AI's reasoning for the recommendation.
-            recommended_trade_strategy_type: Recommended trade strategy type.
-            recommended_trade_params: Recommended trade parameters.
-            data_verification: Data verification results.
-            processing_time_ms: Processing time in milliseconds.
-            ai_warnings: List of warnings from AI.
-            model_used: AI model used for analysis.
-        """
         self.analysis_id = analysis_id
         self.calculated_confidence = calculated_confidence
         self.suggested_action = suggested_action
@@ -67,7 +84,6 @@ class AIAnalysisResult:
         self.analyzed_at = datetime.now(timezone.utc)
     
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary format for storage."""
         return {
             "analysisId": self.analysis_id,
             "analyzedAt": self.analyzed_at.isoformat(),
@@ -96,17 +112,6 @@ class OpportunityData:
         source_data: Optional[Dict[str, Any]] = None,
         detected_at: Optional[datetime] = None,
     ):
-        """Initialize opportunity data.
-        
-        Args:
-            opportunity_id: Unique opportunity identifier.
-            symbol: Trading symbol (e.g., 'BTC/USDT').
-            initial_signal: Initial signal data.
-            source_type: Type of source that detected the opportunity.
-            source_name: Name of the specific source.
-            source_data: Additional source data.
-            detected_at: When the opportunity was detected.
-        """
         self.opportunity_id = opportunity_id
         self.symbol = symbol
         self.initial_signal = initial_signal
@@ -120,10 +125,19 @@ class AIOrchestrator:
     """Service for orchestrating AI analysis using Google Gemini."""
     
     def __init__(self, market_data_service: MarketDataService):
-        """Initialize the AI Orchestrator service."""
         self.market_data_service = market_data_service
-        self.gemini_client = None # Placeholder for the actual client
-        logger.info("AIOrchestrator initialized (using MOCK implementation for Gemini).")
+        app_config = get_app_config()
+        self.model_name = "gemini-1.5-pro-latest"
+        
+        self.llm = ChatGoogleGenerativeAI(
+            model=self.model_name,
+            google_api_key=app_config.google_gemini_api_key.get_secret_value(),
+            temperature=0.2,
+            convert_system_message_to_human=True
+        )
+        self.output_parser = PydanticOutputParser(pydantic_object=AIResponse)
+        self.robust_parser = OutputFixingParser.from_llm(parser=self.output_parser, llm=self.llm)
+        logger.info(f"AIOrchestrator initialized with {self.model_name} and PydanticOutputParser.")
     
     async def analyze_opportunity_with_strategy_context_async(
         self,
@@ -132,366 +146,166 @@ class AIOrchestrator:
         ai_config: AIStrategyConfiguration,
         user_id: str,
     ) -> AIAnalysisResult:
-        """Analyze an opportunity with strategy context using AI.
-        
-        Args:
-            opportunity: The opportunity data to analyze.
-            strategy: The trading strategy configuration.
-            ai_config: The AI configuration to use.
-            user_id: The user identifier.
-            
-        Returns:
-            AIAnalysisResult with the analysis.
-            
-        Raises:
-            HTTPException: If analysis fails.
-        """
         start_time = time.time()
+        analysis_id = f"ai_analysis_{opportunity.opportunity_id}_{int(start_time)}"
         
         try:
-            analysis_id = f"ai_analysis_{opportunity.opportunity_id}_{int(start_time)}"
-            
             historical_data = await self.market_data_service.get_candlestick_data(
                 symbol=opportunity.symbol,
-                interval='1h', # Or make this configurable
+                interval='1h',
                 limit=200
             )
 
-            prompt = self._build_dynamic_prompt(opportunity, strategy, ai_config, historical_data)
-            
-            logger.info(
-                f"Starting AI analysis {analysis_id} for opportunity {opportunity.opportunity_id} "
-                f"with strategy {strategy.config_name} using AI profile {ai_config.id}"
+            prompt_template_str = self._build_dynamic_prompt_template(ai_config)
+            prompt = PromptTemplate(
+                template=prompt_template_str,
+                input_variables=["strategy_type", "strategy_name", "strategy_params", "opportunity_details", "historical_data", "symbol", "tools_available", "confidence_threshold_paper", "confidence_threshold_real"],
+                partial_variables={"format_instructions": self.output_parser.get_format_instructions()}
             )
+
+            strategy_params = self._format_strategy_parameters(strategy)
+            opportunity_details = self._format_opportunity_details(opportunity)
+            historical_data_details = self._format_historical_data(historical_data)
+            tools_description = self._format_tools_description(ai_config.tools_available_to_gemini or [])
+
+            chain = prompt | self.llm
             
-            self.log_prompt_summary(prompt, analysis_id)
+            logger.info(f"Starting AI analysis {analysis_id} for opportunity {opportunity.opportunity_id}")
             
-            analysis_result = await self._mock_gemini_analysis(
-                analysis_id, prompt, opportunity, strategy, ai_config
-            )
+            llm_response = await chain.ainvoke({
+                "strategy_type": strategy.base_strategy_type.value,
+                "strategy_name": strategy.config_name,
+                "strategy_params": strategy_params,
+                "opportunity_details": opportunity_details,
+                "historical_data": historical_data_details,
+                "symbol": opportunity.symbol,
+                "tools_available": tools_description,
+                "confidence_threshold_paper": self._get_confidence_threshold(ai_config, "paper"),
+                "confidence_threshold_real": self._get_confidence_threshold(ai_config, "real"),
+            })
+
+            try:
+                parsed_response: AIResponse = self.output_parser.parse(llm_response.content)
+            except Exception:
+                logger.warning(f"PydanticOutputParser failed for analysis {analysis_id}. Attempting to fix with OutputFixingParser.")
+                parsed_response: AIResponse = self.robust_parser.parse(str(llm_response.content))
+
+            analysis_result = self._create_analysis_result(analysis_id, parsed_response, self.model_name)
             
             processing_time = int((time.time() - start_time) * 1000)
             analysis_result.processing_time_ms = processing_time
             
             self._log_ai_analysis_results(analysis_result, ai_config)
             
-            logger.info(
-                f"Completed AI analysis {analysis_id} in {processing_time}ms. "
-                f"Confidence: {analysis_result.calculated_confidence:.2f}, "
-                f"Action: {analysis_result.suggested_action}"
-            )
-            
             return analysis_result
             
         except Exception as e:
-            processing_time = int((time.time() - start_time) * 1000)
-            logger.error(
-                f"Error in AI analysis for opportunity {opportunity.opportunity_id}: {e}. "
-                f"Processing time: {processing_time}ms"
-            )
-            raise HTTPException(
-                status_code=500,
-                detail=f"AI analysis failed: {str(e)}"
-            )
-    
-    def _build_dynamic_prompt(
-        self,
-        opportunity: OpportunityData,
-        strategy: TradingStrategyConfig,
-        ai_config: AIStrategyConfiguration,
-        historical_data: List[Dict[str, Any]]
-    ) -> str:
-        """Build a dynamic prompt based on opportunity, strategy, and AI configuration.
-        
-        Args:
-            opportunity: The opportunity data.
-            strategy: The trading strategy configuration.
-            ai_config: The AI configuration.
-            historical_data: Historical market data.
-            
-        Returns:
-            The generated prompt string.
-        """
-        template = ai_config.gemini_prompt_template or self._get_default_prompt_template()
-        
-        strategy_params = self._format_strategy_parameters(strategy)
-        opportunity_details = self._format_opportunity_details(opportunity)
-        historical_data_details = self._format_historical_data(historical_data)
-        
-        available_tools = ai_config.tools_available_to_gemini or []
-        tools_description = self._format_tools_description(available_tools)
-        
-        prompt = template.format(
-            strategy_type=strategy.base_strategy_type.value,
-            strategy_name=strategy.config_name,
-            strategy_params=strategy_params,
-            opportunity_details=opportunity_details,
-            historical_data=historical_data_details,
-            symbol=opportunity.symbol,
-            tools_available=tools_description,
-            confidence_threshold_paper=self._get_confidence_threshold(ai_config, "paper"),
-            confidence_threshold_real=self._get_confidence_threshold(ai_config, "real"),
+            logger.error(f"Error in AI analysis for opportunity {opportunity.opportunity_id}: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"AI analysis failed: {str(e)}")
+
+    def _create_analysis_result(self, analysis_id: str, parsed_response: AIResponse, model_used: str) -> AIAnalysisResult:
+        trade_params_dict = parsed_response.trade_params.model_dump() if parsed_response.trade_params else None
+        data_verification_dict = parsed_response.data_verification.model_dump() if parsed_response.data_verification else None
+
+        return AIAnalysisResult(
+            analysis_id=analysis_id,
+            calculated_confidence=parsed_response.confidence,
+            suggested_action=parsed_response.action,
+            reasoning_ai=parsed_response.reasoning,
+            recommended_trade_params=trade_params_dict,
+            data_verification=data_verification_dict,
+            ai_warnings=parsed_response.warnings,
+            model_used=model_used,
         )
-        
-        return prompt
+
+    def _build_dynamic_prompt_template(self, ai_config: AIStrategyConfiguration) -> str:
+        """Builds the prompt template, incorporating format instructions."""
+        base_template = ai_config.gemini_prompt_template or self._get_default_prompt_template()
+        return base_template + "\n\n{format_instructions}\n"
 
     def _format_historical_data(self, historical_data: List[Dict[str, Any]]) -> str:
-        """Formats historical data for prompt inclusion."""
         if not historical_data:
             return "No historical data available."
         
         formatted_lines = ["Timestamp, Open, High, Low, Close, Volume"]
-        for kline in historical_data[-20:]: # Limit to last 20 records for prompt brevity
+        for kline in historical_data[-20:]:
             dt_object = datetime.fromtimestamp(kline['open_time'] / 1000)
             formatted_lines.append(
-                f"{dt_object.strftime('%Y-%m-%d %H:%M')}, {kline['open']}, {kline['high']}, {kline['low']}, {kline['close']}, {kline['volume']}"
+                f"{dt_object.strftime('%Y-%m-%d %H:%M')},{kline['open']},{kline['high']},{kline['low']},{kline['close']},{kline['volume']}"
             )
         return "\n".join(formatted_lines)
 
     def _get_default_prompt_template(self) -> str:
-        """Get the default prompt template for AI analysis.
-        
-        Returns:
-            Default prompt template string.
-        """
         return """
 Analyze this trading opportunity for {symbol} using the {strategy_type} strategy '{strategy_name}'.
 
-Strategy Configuration:
+**Strategy Configuration:**
 {strategy_params}
 
-Opportunity Details:
+**Opportunity Details:**
 {opportunity_details}
 
-Recent Market Data (last 20 hours):
+**Recent Market Data (last 20 hours, CSV format):**
 {historical_data}
 
-Available Analysis Tools:
+**Available Analysis Tools:**
 {tools_available}
 
-Please provide:
-1. Your confidence level (0.0 to 1.0) for this opportunity
-2. Recommended action (strong_buy, buy, hold_neutral, sell, strong_sell, further_investigation_needed)
-3. Detailed reasoning for your recommendation based on the provided historical data and strategy.
-4. Suggested trade parameters if applicable
-5. Any warnings or risk factors to consider
+**Task:**
+Based on all the information provided, perform a comprehensive analysis and provide a structured JSON response. Your analysis must be rigorous, considering the strategy's parameters, market data, and potential risks.
 
-Consider the strategy's specific parameters and risk profile when making your recommendation.
-For paper trading, minimum confidence threshold is {confidence_threshold_paper:.2f}.
-For real trading, minimum confidence threshold is {confidence_threshold_real:.2f}.
+**Confidence Thresholds:**
+- Paper Trading Minimum Confidence: {confidence_threshold_paper:.2f}
+- Real Trading Minimum Confidence: {confidence_threshold_real:.2f}
 
-Respond in JSON format:
-{{
-    "confidence": <float 0.0-1.0>,
-    "action": "<action_string>",
-    "reasoning": "<detailed_reasoning>",
-    "trade_params": {{
-        "entry_price": <float>,
-        "stop_loss": <float>,
-        "take_profit": [<float>, ...],
-        "position_size_percentage": <float>
-    }},
-    "warnings": ["<warning1>", "<warning2>"],
-    "data_verification": {{
-        "price_check": "verified",
-        "volume_check": "verified"
-    }}
-}}
+**Output Format:**
+You MUST respond ONLY with a valid JSON object that conforms to the schema provided in the format instructions below. Do not include any text or markdown formatting before or after the JSON object.
 """
     
     def _format_strategy_parameters(self, strategy: TradingStrategyConfig) -> str:
-        """Format strategy parameters for prompt inclusion.
-        
-        Args:
-            strategy: The trading strategy configuration.
-            
-        Returns:
-            Formatted string of strategy parameters.
-        """
         params_dict = {}
-
-        if hasattr(strategy.parameters, 'dict'):
-            params_dict = strategy.parameters.dict()  # type: ignore
+        if hasattr(strategy.parameters, 'model_dump'):
+            params_dict = strategy.parameters.model_dump()
         elif isinstance(strategy.parameters, dict):
             params_dict = strategy.parameters
 
-        formatted_params = []
-        for key, value in params_dict.items():
-            formatted_params.append(f"- {key}: {value}")
-        
-        return "\n".join(formatted_params) if formatted_params else "No specific parameters configured"
+        return "\n".join([f"- {key}: {value}" for key, value in params_dict.items()]) or "No specific parameters."
     
     def _format_opportunity_details(self, opportunity: OpportunityData) -> str:
-        """Format opportunity details for prompt inclusion.
-        
-        Args:
-            opportunity: The opportunity data.
-            
-        Returns:
-            Formatted string of opportunity details.
-        """
-        details = []
-        details.append(f"- Symbol: {opportunity.symbol}")
-        details.append(f"- Source: {opportunity.source_type}")
+        details = [
+            f"- Symbol: {opportunity.symbol}",
+            f"- Source: {opportunity.source_type}",
+            f"- Detected At: {opportunity.detected_at.isoformat()}"
+        ]
         if opportunity.source_name:
             details.append(f"- Source Name: {opportunity.source_name}")
-        details.append(f"- Detected At: {opportunity.detected_at.isoformat()}")
-        
-        # Format initial signal
-        signal = opportunity.initial_signal
-        if signal:
+        if opportunity.initial_signal:
             details.append("- Initial Signal:")
-            for key, value in signal.items():
-                details.append(f"  - {key}: {value}")
-        
+            details.extend([f"  - {key}: {value}" for key, value in opportunity.initial_signal.items()])
         return "\n".join(details)
     
     def _format_tools_description(self, tools: List[str]) -> str:
-        """Format available tools description.
-        
-        Args:
-            tools: List of available tool names.
-            
-        Returns:
-            Formatted string describing available tools.
-        """
         if not tools:
-            return "No specific tools configured"
+            return "No specific tools configured."
         
         tool_descriptions = {
-            "MobulaChecker": "Real-time price and market data verification",
-            "BinanceMarketReader": "Binance market data and order book analysis",
-            "TechnicalIndicators": "Technical analysis indicators (RSI, MACD, etc.)",
-            "NewsAnalyzer": "Recent news sentiment analysis",
-            "VolumeAnalyzer": "Trading volume pattern analysis",
+            "MobulaChecker": "Real-time price and market data verification.",
+            "BinanceMarketReader": "Binance market data and order book analysis.",
+            "TechnicalIndicators": "Technical analysis indicators (RSI, MACD, etc.).",
+            "NewsAnalyzer": "Recent news sentiment analysis.",
+            "VolumeAnalyzer": "Trading volume pattern analysis.",
         }
-        
-        descriptions = []
-        for tool in tools:
-            desc = tool_descriptions.get(tool, f"Tool: {tool}")
-            descriptions.append(f"- {desc}")
-        
-        return "\n".join(descriptions)
+        return "\n".join([f"- {tool_descriptions.get(tool, f'Tool: {tool}')}" for tool in tools])
     
     def _get_confidence_threshold(self, ai_config: AIStrategyConfiguration, mode: str) -> float:
-        """Get confidence threshold for a specific mode.
-        
-        Args:
-            ai_config: The AI configuration.
-            mode: The trading mode ('paper' or 'real').
-            
-        Returns:
-            Confidence threshold value.
-        """
         if ai_config.confidence_thresholds:
             if mode == "paper":
                 return ai_config.confidence_thresholds.paper_trading or 0.6
             elif mode == "real":
                 return ai_config.confidence_thresholds.real_trading or 0.8
-        
-        # Default thresholds
         return 0.6 if mode == "paper" else 0.8
     
-    async def _mock_gemini_analysis(
-        self,
-        analysis_id: str,
-        prompt: str,
-        opportunity: OpportunityData,
-        strategy: TradingStrategyConfig,
-        ai_config: AIStrategyConfiguration,
-    ) -> AIAnalysisResult:
-        """Mock Gemini analysis for testing purposes.
-        
-        This method provides realistic mock responses until actual Gemini integration is complete.
-        
-        Args:
-            analysis_id: The analysis identifier.
-            prompt: The generated prompt.
-            opportunity: The opportunity data.
-            strategy: The trading strategy configuration.
-            ai_config: The AI configuration.
-            
-        Returns:
-            Mock AIAnalysisResult.
-        """
-        # Simulate analysis based on strategy type and opportunity
-        confidence = 0.75  # Mock confidence
-        
-        if strategy.base_strategy_type == BaseStrategyType.SCALPING:
-            action = "buy"
-            reasoning = (
-                f"Based on the scalping strategy parameters and the {opportunity.symbol} opportunity, "
-                "I detect a favorable short-term price movement pattern. The entry signal shows "
-                "good momentum with acceptable risk parameters."
-            )
-            trade_params = {
-                "entry_price": 30000.0,
-                "stop_loss": 29700.0,
-                "take_profit": [30300.0],
-                "position_size_percentage": 2.0,
-            }
-        elif strategy.base_strategy_type == BaseStrategyType.DAY_TRADING:
-            action = "hold_neutral"
-            confidence = 0.65
-            reasoning = (
-                f"The day trading indicators for {opportunity.symbol} show mixed signals. "
-                "While there's some bullish momentum, the volume doesn't strongly support "
-                "a high-confidence entry at this time."
-            )
-            trade_params = {
-                "entry_price": 30050.0,
-                "stop_loss": 29500.0,
-                "take_profit": [30800.0, 31200.0],
-                "position_size_percentage": 3.0,
-            }
-        else:
-            action = "further_investigation_needed"
-            confidence = 0.5
-            reasoning = (
-                f"The opportunity for {opportunity.symbol} requires additional analysis. "
-                "The current market conditions and strategy parameters don't provide "
-                "sufficient clarity for a confident recommendation."
-            )
-            trade_params = None
-        
-        return AIAnalysisResult(
-            analysis_id=analysis_id,
-            calculated_confidence=confidence,
-            suggested_action=action,
-            reasoning_ai=reasoning,
-            recommended_trade_strategy_type="simple_entry",
-            recommended_trade_params=trade_params,
-            data_verification={
-                "mobulaCheckStatus": "success",
-                "binanceDataCheck": "verified",
-            },
-            ai_warnings=["This is a mock analysis for development purposes"],
-            model_used="Gemini-1.5-Pro (Mock)",
-        )
-    
-    def log_prompt_summary(self, prompt: str, analysis_id: str) -> None:
-        """Log a summary of the prompt for debugging and auditing.
-        
-        Args:
-            prompt: The full prompt sent to AI.
-            analysis_id: The analysis identifier.
-        """
-        # Log only a summary to avoid verbosity and potential data exposure
-        prompt_length = len(prompt)
-        first_100_chars = prompt[:100].replace('\n', ' ')
-        
-        logger.info(
-            f"AI Analysis {analysis_id}: Prompt sent (length: {prompt_length} chars). "
-            f"Preview: {first_100_chars}..."
-        )
-    
     def _log_ai_analysis_results(self, ai_result: AIAnalysisResult, ai_config: AIStrategyConfiguration) -> None:
-        """Log detailed AI analysis results for auditing.
-        
-        Args:
-            ai_result: AI analysis results.
-            ai_config: AI configuration used.
-        """
         logger.info(
             f"AI Analysis Results {ai_result.analysis_id}: "
             f"Profile={ai_config.id} ({ai_config.name}), "
@@ -500,21 +314,13 @@ Respond in JSON format:
             f"Action={ai_result.suggested_action}, "
             f"Processing={ai_result.processing_time_ms}ms"
         )
-        
-        # Log reasoning summary (truncated to avoid excessive verbosity)
         reasoning_preview = ai_result.reasoning_ai[:200] + "..." if len(ai_result.reasoning_ai) > 200 else ai_result.reasoning_ai
         logger.info(f"AI Reasoning {ai_result.analysis_id}: {reasoning_preview}")
-        
-        # Log any warnings
         if ai_result.ai_warnings:
             logger.warning(f"AI Warnings {ai_result.analysis_id}: {'; '.join(ai_result.ai_warnings)}")
-        
-        # Log trade parameters if provided
         if ai_result.recommended_trade_params:
-            params_summary = ", ".join([f"{k}={v}" for k, v in ai_result.recommended_trade_params.items() if k in ["entry_price", "stop_loss", "take_profit"]])
+            params_summary = ", ".join([f"{k}={v}" for k, v in ai_result.recommended_trade_params.items()])
             logger.info(f"AI Trade Params {ai_result.analysis_id}: {params_summary}")
-        
-        # Log data verification status
         if ai_result.data_verification:
             verification_summary = ", ".join([f"{k}={v}" for k, v in ai_result.data_verification.items()])
             logger.info(f"AI Data Verification {ai_result.analysis_id}: {verification_summary}")
