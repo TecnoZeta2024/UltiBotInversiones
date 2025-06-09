@@ -29,10 +29,11 @@ class PortfolioWidget(QWidget):
     portfolio_updated = pyqtSignal(object)
     error_occurred = pyqtSignal(str)
 
-    def __init__(self, user_id: UUID, main_window: BaseMainWindow, parent: Optional[QWidget] = None):
+    def __init__(self, user_id: UUID, main_window: BaseMainWindow, api_client: UltiBotAPIClient, parent: Optional[QWidget] = None): # Add api_client
         super().__init__(parent)
         self.user_id = user_id
         self.main_window = main_window
+        self.api_client = api_client # Store api_client
         self.active_workers: List[Tuple[QThread, ApiWorker]] = []
         self.current_snapshot: Optional[Dict[str, Any]] = None
         self.open_trades: List[Dict[str, Any]] = []
@@ -45,7 +46,7 @@ class PortfolioWidget(QWidget):
 
     def _start_api_worker(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine], on_success, on_error):
         thread = QThread()
-        worker = ApiWorker(coroutine_factory=coroutine_factory)
+        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory) # Pass api_client
         worker.moveToThread(thread)
 
         worker.result_ready.connect(on_success)

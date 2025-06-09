@@ -26,10 +26,11 @@ class PaperTradingReportWidget(QWidget):
     Widget principal para mostrar resultados y rendimiento del Paper Trading.
     """
     
-    def __init__(self, user_id: UUID, main_window: BaseMainWindow, parent=None):
+    def __init__(self, user_id: UUID, main_window: BaseMainWindow, api_client: UltiBotAPIClient, parent=None): # Add api_client
         super().__init__(parent)
         self.user_id = user_id
         self.main_window = main_window
+        self.api_client = api_client # Store api_client
         self.current_trades_data: List[Trade] = []
         self.current_metrics_data: Optional[PerformanceMetrics] = None
         
@@ -184,7 +185,7 @@ class PaperTradingReportWidget(QWidget):
         self.load_trades()
 
     def _start_api_worker(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine], on_success, on_error):
-        worker = ApiWorker(coroutine_factory=coroutine_factory)
+        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory) # Pass api_client
         thread = QThread()
         worker.moveToThread(thread)
 
