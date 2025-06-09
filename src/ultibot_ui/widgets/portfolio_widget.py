@@ -28,10 +28,9 @@ class PortfolioWidget(QWidget):
     portfolio_updated = pyqtSignal(object)
     error_occurred = pyqtSignal(str)
 
-    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent: Optional[QWidget] = None):
+    def __init__(self, user_id: UUID, main_window: BaseMainWindow, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.user_id = user_id
-        self.api_client = api_client
         self.main_window = main_window
         self.active_workers: List[Tuple[QThread, ApiWorker]] = []
         self.current_snapshot: Optional[Dict[str, Any]] = None
@@ -45,17 +44,14 @@ class PortfolioWidget(QWidget):
 
     def _start_api_worker(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine], on_success, on_error):
         thread = QThread()
-        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory)
+        worker = ApiWorker(coroutine_factory=coroutine_factory)
         worker.moveToThread(thread)
 
-        # Conexiones de señales y slots
         worker.result_ready.connect(on_success)
         worker.error_occurred.connect(on_error)
         thread.started.connect(worker.run)
         
-        # Limpieza automática del hilo y del worker
         def cleanup_worker():
-            # Encuentra y elimina el par (thread, worker) de la lista activa
             for i, (t, w) in enumerate(self.active_workers):
                 if t is thread:
                     self.active_workers.pop(i)
@@ -92,7 +88,7 @@ class PortfolioWidget(QWidget):
         self.capital_tab = QWidget()
         self.init_capital_tab()
         self.tab_widget.addTab(self.capital_tab, "Gestión de Capital")
-        self.tab_widget.setTabEnabled(2, False) # Deshabilitar la pestaña de capital
+        self.tab_widget.setTabEnabled(2, False)
 
         self._create_status_bar(main_layout)
 
@@ -307,6 +303,20 @@ class PortfolioWidget(QWidget):
         other_mode = "real" if mode == "paper" else "paper"
         other_mode_dict = snapshot_dict.get(f"{other_mode}_trading", {})
         self.comparison_info.setText(f"Portafolio {other_mode.title()}: {other_mode_dict.get('total_portfolio_value_usd', 0.0):,.2f} USD")
+
+    def _populate_assets_table(self, table: QTableWidget, assets: List[Dict[str, Any]]):
+        table.setRowCount(len(assets))
+        for row, asset in enumerate(assets):
+            self._set_item(table, row, 0, str(asset.get('symbol')))
+            self._set_item(table, row, 1, f"{asset.get('quantity', 0):.6f}")
+            self._set_item(table, row, 2, f"{asset.get('average_entry_price', 0):.4f}")
+            self._set_item(table, row, 3, f"{asset.get('current_price', 0):.4f}")
+            self._set_item(table, row, 4, f"{asset.get('value_in_usd', 0):.2f}")
+            
+            pnl = asset.get('pnl_percentage', 0) * 100
+            pnl_item = QTableWidgetItem(f"{pnl:.2f}%")
+            pnl_item.setForeground(QColor('green') if pnl >= 0 else QColor('red'))
+            table.setItem(row, 5, pnl_item)
 
     def _update_open_trades_ui(self, trades: List[Dict[str, Any]]):
         self.trades_info_label.setVisible(not trades)

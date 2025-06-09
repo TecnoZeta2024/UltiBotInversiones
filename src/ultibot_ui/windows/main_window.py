@@ -22,7 +22,7 @@ from PyQt5.QtWidgets import (
     QTextEdit,
     QVBoxLayout,
     QMenuBar,
-    QWidget  # Importación corregida
+    QWidget
 )
 
 from src.shared.data_types import UserConfiguration, AiStrategyConfiguration
@@ -46,20 +46,18 @@ class MainWindow(QMainWindow, BaseMainWindow):
     def __init__(
         self,
         user_id: UUID,
-        api_client: UltiBotAPIClient,
         parent: Optional[QWidget] = None,
     ):
         """Inicializa la ventana principal."""
         super().__init__(parent)
         self.user_id = user_id
-        self.api_client = api_client
         
         self._initialization_complete = False
         self.active_threads: List[QThread] = []
 
         self.setWindowTitle("UltiBotInversiones")
-        self.setGeometry(100, 100, 1280, 720) # Geometría por defecto
-        self.setMinimumSize(1024, 600) # Establecer un tamaño mínimo
+        self.setGeometry(100, 100, 1280, 720)
+        self.setMinimumSize(1024, 600)
 
         self.debug_log_widget = QTextEdit()
         self.debug_log_widget.setReadOnly(True)
@@ -79,11 +77,7 @@ class MainWindow(QMainWindow, BaseMainWindow):
         self._main_vbox.setContentsMargins(0, 0, 0, 0)
         self._main_vbox.setSpacing(0)
         
-        # No añadir el banner y el log directamente al layout principal
-        # se manejarán dentro del widget central si es necesario.
-
         self._central_content_widget = QWidget()
-        # El layout principal ahora solo contiene el widget de contenido central
         main_layout = QHBoxLayout()
         main_layout.setContentsMargins(0,0,0,0)
         main_layout.setSpacing(0)
@@ -133,10 +127,9 @@ class MainWindow(QMainWindow, BaseMainWindow):
 
     def _log_debug(self, msg: str):
         """Agrega un mensaje al panel de logs y al logger."""
-        # self.debug_log_widget.append(msg) # Desactivado temporalmente
         logger.info(msg)
 
-    def _setup_central_widget(self, parent_widget: QWidget): # Firma corregida
+    def _setup_central_widget(self, parent_widget: QWidget):
         """Configura el widget central con navegación y vistas."""
         main_layout = QHBoxLayout(parent_widget)
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -150,16 +143,15 @@ class MainWindow(QMainWindow, BaseMainWindow):
         self.stacked_widget = QStackedWidget()
         main_layout.addWidget(self.stacked_widget)
 
+        # Las vistas ya no necesitan el api_client, los workers lo crean.
         self.dashboard_view = DashboardView(
             user_id=self.user_id,
-            api_client=self.api_client,
             main_window=self
         )
         self.stacked_widget.addWidget(self.dashboard_view)
 
         self.opportunities_view = OpportunitiesView(
             user_id=self.user_id, 
-            api_client=self.api_client, 
             main_window=self
         )
         self.stacked_widget.addWidget(self.opportunities_view)
@@ -168,19 +160,17 @@ class MainWindow(QMainWindow, BaseMainWindow):
         self.stacked_widget.addWidget(self.strategies_view)
 
         self.portfolio_view = PortfolioView(
-            user_id=self.user_id, 
-            api_client=self.api_client
+            user_id=self.user_id
         )
         self.stacked_widget.addWidget(self.portfolio_view)
 
         self.history_view = HistoryView(
             user_id=self.user_id, 
-            api_client=self.api_client, 
             main_window=self
         )
         self.stacked_widget.addWidget(self.history_view)
 
-        self.settings_view = SettingsView(str(self.user_id), self.api_client)
+        self.settings_view = SettingsView(str(self.user_id))
         self.stacked_widget.addWidget(self.settings_view)
 
         self.view_map = {
@@ -188,8 +178,8 @@ class MainWindow(QMainWindow, BaseMainWindow):
             "portfolio": 3, "history": 4, "settings": 5,
         }
 
-        # Setup strategy service
-        self.strategy_service = UIStrategyService(api_client=self.api_client)
+        # El servicio de estrategia ahora se crea sin cliente, ya que el worker lo proporcionará.
+        self.strategy_service = UIStrategyService(main_window=self) # Pasar main_window
         self.strategy_service.strategies_updated.connect(self.strategies_view.update_strategies)
         self.strategy_service.error_occurred.connect(lambda msg: self._log_debug(f"[STRATEGY_SVC_ERR] {msg}"))
         
@@ -203,19 +193,16 @@ class MainWindow(QMainWindow, BaseMainWindow):
 
     def _fetch_strategies_async(self):
         """Ejecuta la obtención de estrategias en un hilo de trabajo."""
-        coro_factory = lambda client: self.strategy_service.fetch_strategies()
+        # La factory ahora pasa el cliente creado por el worker al servicio.
+        coro_factory = lambda api_client: self.strategy_service.fetch_strategies() # Ajustar coro_factory
         
-        # El ApiWorker se encargará de emitir la señal strategies_updated del servicio
-        # ya que el servicio y la vista están conectados. No necesitamos conectar aquí.
-        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coro_factory)
+        worker = ApiWorker(coroutine_factory=coro_factory)
         thread = QThread()
         worker.moveToThread(thread)
 
-        # Conectar señales del worker para manejar el resultado
         worker.error_occurred.connect(lambda msg: self._log_debug(f"[WORKER_ERR] {msg}"))
         thread.started.connect(worker.run)
         
-        # Limpieza del worker y el hilo
         worker.result_ready.connect(thread.quit)
         worker.error_occurred.connect(thread.quit)
         thread.finished.connect(worker.deleteLater)
@@ -230,7 +217,7 @@ class MainWindow(QMainWindow, BaseMainWindow):
         if index is not None:
             self.stacked_widget.setCurrentIndex(index)
             if view_name == "strategies":
-                self._fetch_strategies_async() # Refresh strategies when view is shown
+                self._fetch_strategies_async()
 
     def cleanup(self):
         """Limpia los recursos de la ventana."""

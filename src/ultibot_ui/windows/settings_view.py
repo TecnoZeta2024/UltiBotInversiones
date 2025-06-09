@@ -18,10 +18,9 @@ class SettingsView(QWidget):
     config_changed = pyqtSignal(UserConfiguration)
     real_trading_mode_status_changed = pyqtSignal(bool, int, int)
 
-    def __init__(self, user_id: str, api_client: UltiBotAPIClient, parent=None):
+    def __init__(self, user_id: str, parent=None):
         super().__init__(parent)
         self.user_id = user_id
-        self.api_client = api_client
         self.current_config: Optional[UserConfiguration] = None
         self.real_trading_status: Dict[str, Any] = {"isActive": False, "executedCount": 0, "limit": 5}
         self.active_threads: List[QThread] = []
@@ -93,7 +92,7 @@ class SettingsView(QWidget):
         self._load_real_trading_status()
 
     def _start_api_worker(self, coroutine_factory, on_success, on_error):
-        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory)
+        worker = ApiWorker(coroutine_factory=coroutine_factory)
         thread = QThread()
         self.active_threads.append(thread)
         worker.moveToThread(thread)

@@ -1,118 +1,120 @@
+import sys
 import asyncio
 import logging
-import os
-import sys
-from logging.config import dictConfig
-from uuid import UUID
-
+from typing import Optional
+from uuid import UUID, uuid4
 import httpx
 import qasync
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFontDatabase
-from PyQt5.QtWidgets import QApplication, QSplashScreen
+from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox
+from PyQt5.QtCore import QTimer, QThread, QObject, pyqtSignal
 
-from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
+from src.ultibot_ui.models import BaseMainWindow
 from src.ultibot_ui.windows.main_window import MainWindow
+from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
+from src.ultibot_ui.workers import ApiWorker
 
-# --- Configuración de Logging ---
-LOGS_DIR = "logs"
-os.makedirs(LOGS_DIR, exist_ok=True)
-
-LOGGING_CONFIG = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "default": {
-            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        },
-    },
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "formatter": "default",
-            "stream": "ext://sys.stdout",
-        },
-        "file": {
-            "class": "logging.handlers.RotatingFileHandler",
-            "formatter": "default",
-            "filename": os.path.join(LOGS_DIR, "frontend.log"),
-            "maxBytes": 10485760,  # 10 MB
-            "backupCount": 5,
-            "encoding": "utf-8",
-        },
-    },
-    "loggers": {
-        "httpx": {"handlers": ["console", "file"], "level": "INFO"},
-        "src.ultibot_ui": {"handlers": ["console", "file"], "level": "DEBUG", "propagate": False},
-    },
-    "root": {
-        "level": "DEBUG",
-        "handlers": ["console", "file"],
-    },
-}
-
-dictConfig(LOGGING_CONFIG)
+# Configuración básica de logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def load_stylesheet(app: QApplication):
-    """Carga la hoja de estilos QSS."""
-    stylesheet_path = os.path.join(os.path.dirname(__file__), "assets", "style.qss")
+class AppController(QObject):
+    """
+    Controlador principal de la aplicación que gestiona la inicialización asíncrona
+    y la creación de la ventana principal.
+    """
+    initialization_complete = pyqtSignal(UUID)
+    initialization_error = pyqtSignal(str)
+
+    def __init__(self, parent: Optional[QObject] = None):
+        super().__init__(parent)
+        self.user_id: Optional[UUID] = None
+
+    def start_initialization(self):
+        """Inicia el proceso de inicialización asíncrona en un hilo."""
+        logger.info("Fetching initial user configuration...")
+        # ApiWorker ahora es responsable de crear su propio UltiBotAPIClient
+        worker = ApiWorker(
+            coroutine_factory=lambda api_client: api_client.get_user_configuration()
+        )
+        thread = QThread()
+        worker.moveToThread(thread)
+
+        worker.result_ready.connect(self._handle_config_result)
+        worker.error_occurred.connect(self._handle_config_error)
+
+        thread.started.connect(worker.run)
+        worker.result_ready.connect(thread.quit)
+        worker.error_occurred.connect(thread.quit)
+        thread.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        thread.start()
+
+    def _handle_config_result(self, config_data: dict):
+        """Maneja el resultado de la configuración del usuario."""
+        try:
+            # Asumimos que la configuración contiene el user_id o lo generamos si no existe
+            self.user_id = UUID(config_data.get("userId", str(uuid4())))
+            logger.info(f"Configuration received for user ID: {self.user_id}")
+            self.initialization_complete.emit(self.user_id)
+        except Exception as e:
+            error_message = f"Error processing user configuration: {e}"
+            logger.critical(error_message, exc_info=True)
+            self.initialization_error.emit(error_message)
+
+    def _handle_config_error(self, error_message: str):
+        """Maneja errores durante la carga de la configuración."""
+        logger.critical(f"Failed to fetch initial user configuration: {error_message}")
+        QMessageBox.critical(None, "Error de Configuración", f"No se pudo cargar la configuración inicial: {error_message}")
+        self.initialization_error.emit(f"Failed to load application configuration: {error_message}")
+
+async def main(app: QApplication):
+    """Función principal asíncrona para la aplicación UI."""
+    
+    # Cargar y aplicar el stylesheet
     try:
-        with open(stylesheet_path, "r") as f:
+        with open("src/ultibot_ui/assets/style.qss", "r") as f:
             app.setStyleSheet(f.read())
         logger.info("Stylesheet loaded successfully.")
     except FileNotFoundError:
-        logger.error(f"Stylesheet not found at {stylesheet_path}")
+        logger.warning("Stylesheet file not found: src/ultibot_ui/assets/style.qss")
+    except Exception as e:
+        logger.error(f"Error loading stylesheet: {e}")
 
-async def main():
-    """Punto de entrada principal para la aplicación de UI."""
-    logger.info("Initializing application...")
+    controller = AppController()
     
-    app = QApplication(sys.argv)
-    app.setAttribute(Qt.AA_EnableHighDpiScaling) # type: ignore
-    
-    load_stylesheet(app)
+    main_window_instance: Optional[MainWindow] = None
 
-    main_window = None
-    async with httpx.AsyncClient(timeout=30.0) as http_client:
-        api_client = UltiBotAPIClient(base_url="http://127.0.0.1:8000", client=http_client)
-        
-        event_loop = qasync.QEventLoop(app)
-        asyncio.set_event_loop(event_loop)
-        
+    def on_initialization_complete(user_id: UUID):
+        nonlocal main_window_instance
         try:
-            logger.info("Fetching initial user configuration...")
-            user_config = await api_client.get_user_configuration()
-            user_id = UUID(user_config['id'])
-            logger.info(f"Configuration received for user ID: {user_id}")
-            
-            main_window = MainWindow(user_id=user_id, api_client=api_client)
-            main_window.show()
+            main_window_instance = MainWindow(user_id=user_id)
+            main_window_instance.show()
             logger.info("Main window shown.")
-
-        except APIError as e:
-            logger.critical(f"Failed to fetch initial configuration: {e}. Cannot start application.")
-            # Aquí podrías mostrar un QMessageBox de error
-            return
         except Exception as e:
-            logger.critical(f"An unexpected error occurred during initialization: {e}", exc_info=True)
-            return
+            logger.critical(f"An unexpected error occurred during main window creation: {e}", exc_info=True)
+            QMessageBox.critical(None, "Error Crítico de UI", f"La aplicación no pudo iniciarse debido a un error en la UI: {e}")
+            app.quit()
 
-        try:
-            await event_loop.run_forever() # type: ignore
-        finally:
-            logger.info("Application event loop stopped.")
-            if main_window:
-                main_window.cleanup()
-            event_loop.close()
+    def on_initialization_error(message: str):
+        logger.critical(f"An unexpected error occurred during initialization: {message}")
+        QMessageBox.critical(None, "Error Crítico de Inicialización", f"La aplicación no pudo iniciarse: {message}")
+        app.quit()
+
+    controller.initialization_complete.connect(on_initialization_complete)
+    controller.initialization_error.connect(on_initialization_error)
+
+    controller.start_initialization()
+
+    # Ejecutar el bucle de eventos de Qt. Esto también ejecuta el bucle de asyncio.
+    app.exec_()
 
 if __name__ == "__main__":
     try:
-        if sys.platform == "win32" and sys.version_info >= (3, 8):
-             asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-             
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        logger.info("Application interrupted by user.")
+        app = QApplication(sys.argv)
+        loop = qasync.QEventLoop(app)
+        asyncio.set_event_loop(loop)
+        with loop:
+            loop.run_until_complete(main(app))
     except Exception as e:
         logger.critical(f"Unhandled exception in main: {e}", exc_info=True)
+        sys.exit(1)

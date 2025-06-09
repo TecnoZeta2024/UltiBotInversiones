@@ -22,9 +22,8 @@ class NotificationWidget(QWidget):
     notification_dismissed = pyqtSignal(str)
     all_notifications_read = pyqtSignal()
 
-    def __init__(self, api_client: UltiBotAPIClient, user_id: UUID, main_window: BaseMainWindow, parent: Optional[QWidget] = None):
+    def __init__(self, user_id: UUID, main_window: BaseMainWindow, parent: Optional[QWidget] = None):
         super().__init__(parent)
-        self.api_client = api_client
         self.user_id = user_id
         self.main_window = main_window
         self.notifications: List[Notification] = []
@@ -46,8 +45,7 @@ class NotificationWidget(QWidget):
         self._is_fetching_notifications = True
         
         worker = ApiWorker(
-            api_client=self.api_client,
-            coroutine_factory=lambda client: client.get_notification_history(limit=20)
+            coroutine_factory=lambda api_client: api_client.get_notification_history(limit=20)
         )
         thread = QThread()
         
@@ -317,9 +315,15 @@ if __name__ == '__main__':
             ]
 
     test_user_id = uuid4()
-    # This will fail now as it needs a mock main_window
-    # notification_widget = NotificationWidget(MockUltiBotAPIClient(), test_user_id) # type: ignore
-    # main_layout.addWidget(notification_widget)
+    
+    class MockMainWindow(BaseMainWindow): # Heredar de BaseMainWindow
+        def add_thread(self, thread: QThread):
+            print(f"MockMainWindow: Thread '{thread.objectName()}' added for tracking.")
+
+    mock_main_window = MockMainWindow()
+
+    notification_widget = NotificationWidget(user_id=test_user_id, main_window=mock_main_window)
+    main_layout.addWidget(notification_widget)
     
     from datetime import timedelta
 

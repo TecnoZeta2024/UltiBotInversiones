@@ -175,6 +175,23 @@ This phase ensures all parts of the application are communicating correctly and 
 *   **Solution:** The `ApiWorker` in `src/ultibot_ui/workers.py` was refactored. Instead of creating a new task in the main loop, it now creates and manages its own `asyncio` event loop within the `QThread` using `asyncio.new_event_loop()` and `loop.run_until_complete()`. This isolates the worker's asynchronous operations, resolving the conflict and allowing the UI to deploy successfully. The logging level in `main.py` was also set to `DEBUG` to confirm the fix.
 *   **Status:** Completed. The UI now launches reliably.
 
+### Task 6.2: [IN PROGRESS] Refactorización de Inyección de Dependencias en UI
+*   **Description:** Eliminar la inyección directa de `api_client` en los constructores de los widgets y vistas de la UI, ya que `ApiWorker` ahora gestiona su propia instancia de `UltiBotAPIClient`.
+*   **Subtasks:**
+    *   **[x] 6.2.1:** Modificar `src/ultibot_ui/widgets/chart_widget.py`: Eliminar `api_client` del constructor `__init__` y de la instanciación de `ApiWorker`.
+    *   **[x] 6.2.2:** Modificar `src/ultibot_ui/widgets/notification_widget.py`: Eliminar `api_client` del constructor `__init__` y de la instanciación de `ApiWorker`.
+    *   **[x] 6.2.3:** Modificar `src/ultibot_ui/views/opportunities_view.py`: Eliminar `api_client` del constructor `__init__` y de la instanciación de `ApiWorker`.
+    *   **[x] 6.2.4:** Modificar `src/ultibot_ui/views/portfolio_view.py`: Eliminar `api_client` del constructor `__init__` y de la instanciación de `ApiWorker`.
+    *   **[x] 6.2.5:** Modificar `src/ultibot_ui/windows/history_view.py`: Eliminar `api_client` del constructor `__init__` y de la instanciación de `PaperTradingReportWidget`.
+    *   **[x] 6.2.6:** Modificar `src/ultibot_ui/widgets/paper_trading_report_widget.py`: Eliminar `api_client` del constructor `__init__` y de la instanciación de `ApiWorker`.
+    *   **[x] 6.2.7:** Modificar `src/ultibot_ui/windows/settings_view.py`: Eliminar `api_client` del constructor `__init__` y de la instanciación de `ApiWorker`.
+    *   **[ ] 6.2.8:** Verificación Final:
+        *   Ejecutar el script `run_frontend_with_backend.bat`.
+        *   Analizar los logs de `logs/frontend.log` y `logs/backend.log` para confirmar la ausencia de errores.
+        *   Observar la UI para confirmar visualmente que los datos del portafolio se renderizan y actualizan correctamente.
+    *   **[ ] 6.2.9:** Documentación:
+        *   Si la solución es exitosa, actualizar el archivo `AUDIT_TASK_JULES.md` para documentar la resolución de los errores de la UI y marcar la tarea como completada.
+
 ---
 
 This focused plan provides a clear path for deploying a powerful, AI-driven investment tool.
