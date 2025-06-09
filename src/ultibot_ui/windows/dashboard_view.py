@@ -23,17 +23,16 @@ class DashboardView(QWidget):
     """
     initialization_complete = pyqtSignal(bool)
 
-    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent: Optional[QWidget] = None):
+    def __init__(self, user_id: UUID, main_window: BaseMainWindow, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.user_id = user_id
-        self.api_client = api_client
         self.main_window = main_window
         self._is_initialized = False
         self._pending_tasks = 0
 
         self.main_layout = QVBoxLayout(self)
-        self.main_layout.setContentsMargins(20, 20, 20, 20) # Aumentar márgenes para que las tarjetas respiren
-        self.main_layout.setSpacing(20) # Aumentar espaciado entre tarjetas
+        self.main_layout.setContentsMargins(20, 20, 20, 20)
+        self.main_layout.setSpacing(20)
         self.setLayout(self.main_layout)
 
         self._setup_ui()
@@ -41,26 +40,22 @@ class DashboardView(QWidget):
 
     def _setup_ui(self):
         """Configura la interfaz de usuario básica del dashboard usando tarjetas."""
-        # Crear widgets
-        self.portfolio_widget = PortfolioWidget(self.user_id, self.api_client, self.main_window, self)
-        self.chart_widget = ChartWidget(self.api_client, self.main_window, self)
-        self.notification_widget = NotificationWidget(self.api_client, self.user_id, self.main_window, self)
+        self.portfolio_widget = PortfolioWidget(self.user_id, self.main_window, self)
+        self.chart_widget = ChartWidget(self.main_window, self)
+        self.notification_widget = NotificationWidget(self.user_id, self.main_window, self)
 
-        # Crear tarjeta para el Portfolio
         portfolio_card = QFrame()
         portfolio_card.setProperty("class", "card")
         portfolio_layout = QVBoxLayout(portfolio_card)
         portfolio_layout.addWidget(self.portfolio_widget)
         self.main_layout.addWidget(portfolio_card)
 
-        # Crear tarjeta para el Gráfico
         chart_card = QFrame()
         chart_card.setProperty("class", "card")
         chart_layout = QVBoxLayout(chart_card)
         chart_layout.addWidget(self.chart_widget)
         self.main_layout.addWidget(chart_card)
 
-        # Crear tarjeta para las Notificaciones
         notification_card = QFrame()
         notification_card.setProperty("class", "card")
         notification_layout = QVBoxLayout(notification_card)
@@ -76,7 +71,6 @@ class DashboardView(QWidget):
     ):
         """Inicia un ApiWorker en un hilo separado para ejecutar una corutina."""
         worker = ApiWorker(
-            api_client=self.api_client,
             coroutine_factory=coroutine_factory
         )
         thread = QThread()
@@ -114,7 +108,6 @@ class DashboardView(QWidget):
             self.initialization_complete.emit(True)
             logger.info("DashboardView: Inicialización de componentes asíncronos completada.")
             
-            # Iniciar actualizaciones de widgets clave después de la inicialización
             self.portfolio_widget.start_updates()
             self.chart_widget.start_updates()
             self.notification_widget.start_updates()

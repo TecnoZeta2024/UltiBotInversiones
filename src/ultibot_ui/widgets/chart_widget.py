@@ -26,9 +26,8 @@ class ChartWidget(QWidget):
     candlestick_data_fetched = pyqtSignal(list)
     api_error_occurred = pyqtSignal(str)
     
-    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent: Optional[QWidget] = None):
+    def __init__(self, main_window: BaseMainWindow, parent: Optional[QWidget] = None):
         super().__init__(parent)
-        self.api_client = api_client
         self.main_window = main_window
         self.current_symbol: Optional[str] = None
         self.current_interval: Optional[str] = "1h"
@@ -108,7 +107,6 @@ class ChartWidget(QWidget):
                 return
 
             worker = ApiWorker(
-                api_client=self.api_client,
                 coroutine_factory=lambda api_client: api_client.get_candlestick_data(
                     symbol=current_symbol,
                     interval=current_interval,
@@ -251,8 +249,8 @@ if __name__ == '__main__':
             ]
             return [Kline(**d) for d in sample_data]
 
-    mock_api_client = MockAPIClient(base_url="http://mock-api")
-    chart_widget = ChartWidget(api_client=mock_api_client, main_window=mock_main_window)
+    # mock_api_client = MockAPIClient(base_url="http://mock-api") # Eliminado
+    chart_widget = ChartWidget(main_window=mock_main_window)
     main_window_widget.setCentralWidget(chart_widget)
     main_window_widget.show()
 

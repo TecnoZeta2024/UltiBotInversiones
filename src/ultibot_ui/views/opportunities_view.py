@@ -18,11 +18,10 @@ from src.ultibot_ui.workers import ApiWorker
 logger = logging.getLogger(__name__)
 
 class OpportunitiesView(QWidget):
-    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent=None):
+    def __init__(self, user_id: UUID, main_window: BaseMainWindow, parent=None):
         super().__init__(parent)
         logger.info("OpportunitiesView: __init__ called.")
         self.user_id = user_id
-        self.api_client = api_client
         self.main_window = main_window
         logger.debug("OpportunitiesView initialized.")
 
@@ -118,7 +117,7 @@ class OpportunitiesView(QWidget):
     def _start_api_worker(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine]):
         logger.debug("Creating ApiWorker.")
         
-        worker = ApiWorker(coroutine_factory=coroutine_factory, api_client=self.api_client)
+        worker = ApiWorker(coroutine_factory=coroutine_factory)
         thread = QThread()
         self.main_window.add_thread(thread)
         worker.moveToThread(thread)
