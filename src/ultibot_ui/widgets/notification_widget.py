@@ -22,10 +22,11 @@ class NotificationWidget(QWidget):
     notification_dismissed = pyqtSignal(str)
     all_notifications_read = pyqtSignal()
 
-    def __init__(self, user_id: UUID, main_window: BaseMainWindow, parent: Optional[QWidget] = None):
+    def __init__(self, user_id: UUID, main_window: BaseMainWindow, api_client: UltiBotAPIClient, parent: Optional[QWidget] = None): # Add api_client
         super().__init__(parent)
         self.user_id = user_id
         self.main_window = main_window
+        self.api_client = api_client # Store api_client
         self.notifications: List[Notification] = []
         self._is_fetching_notifications = False
         self.init_ui()
@@ -45,7 +46,8 @@ class NotificationWidget(QWidget):
         self._is_fetching_notifications = True
         
         worker = ApiWorker(
-            coroutine_factory=lambda api_client: api_client.get_notification_history(limit=20)
+            api_client=self.api_client, # Pass stored api_client
+            coroutine_factory=lambda client_in_lambda: client_in_lambda.get_notification_history(limit=20)
         )
         thread = QThread()
         

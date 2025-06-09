@@ -18,9 +18,10 @@ from src.ultibot_ui.workers import ApiWorker
 logger = logging.getLogger(__name__)
 
 class PortfolioView(QWidget):
-    def __init__(self, user_id: UUID, parent: Optional[QWidget] = None):
+    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, parent: Optional[QWidget] = None): # Add api_client
         super().__init__(parent)
         self.user_id = user_id
+        self.api_client = api_client # Store api_client
         self.active_threads: List[QThread] = []
         self.current_portfolio_data: Optional[PortfolioSnapshot] = None
 
@@ -121,8 +122,11 @@ class PortfolioView(QWidget):
         self.refresh_button.setEnabled(False)
         self.assets_table.setRowCount(0)
 
+        # The lambda now takes one argument (the client passed by ApiWorker)
+        # and uses that argument to make the call.
         worker = ApiWorker(
-            coroutine_factory=lambda api_client: api_client.get_portfolio_snapshot(
+            api_client=self.api_client, # Pass the stored api_client to the worker
+            coroutine_factory=lambda client_in_lambda: client_in_lambda.get_portfolio_snapshot(
                 user_id=self.user_id, trading_mode=self.trading_mode_manager.current_mode
             )
         )
