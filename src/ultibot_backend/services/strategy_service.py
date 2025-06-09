@@ -84,9 +84,20 @@ class StrategyService:
     async def list_strategy_configs(self, user_id: str) -> List[TradingStrategyConfig]:
         try:
             db_records = await self.persistence_service.list_strategy_configs_by_user(uuid.UUID(user_id))
-            return [self._db_format_to_strategy_config(record) for record in db_records]
-        except Exception as e:
-            logger.error(f"Error listing strategies for user {user_id}: {e}")
+            configs = []
+            for record in db_records:
+                try:
+                    config = self._db_format_to_strategy_config(record)
+                    if config:
+                        configs.append(config)
+                    # If _db_format_to_strategy_config returns None, it means deserialization failed
+                    # and it has already logged the error.
+                except Exception as e: # Catch any unexpected error during processing a single record
+                    strategy_id_for_log = record.get('id', 'UNKNOWN_ID')
+                    logger.error(f"Unexpected error processing strategy record {strategy_id_for_log} for user {user_id}: {e}", exc_info=True)
+            return configs
+        except Exception as e: # Catch errors from persistence_service call or other broad issues
+            logger.error(f"Error listing strategies for user {user_id}: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail="Failed to list strategy configurations")
 
     async def update_strategy_config(self, strategy_id: str, user_id: str, strategy_data: Dict[str, Any]) -> Optional[TradingStrategyConfig]:
@@ -182,27 +193,65 @@ class StrategyService:
                 db_dict[key] = value.value
         return db_dict
 
-    def _db_format_to_strategy_config(self, db_record: Dict[str, Any]) -> TradingStrategyConfig:
+    def _db_format_to_strategy_config(self, db_record: Dict[str, Any]) -> Optional[TradingStrategyConfig]:
         record_copy = db_record.copy()
-        for key, value in record_copy.items():
-            if isinstance(value, str):
+        strategy_id_for_log = record_copy.get('id', 'UNKNOWN_ID') # For logging
+
+        try:
+            for key, value in record_copy.items():
+                if isinstance(value, str):
+                    try:
+                        if value.startswith('{') or value.startswith('['):
+                            record_copy[key] = json.loads(value)
+                    except json.JSONDecodeError:
+                        # Log if a field expected to be JSON is not, but might not be critical for all fields
+                        logger.warning(f"Strategy {strategy_id_for_log}: Field '{key}' looks like JSON but failed to parse: {value[:100]}")
+                        # Depending on the field, you might want to raise an error or handle it
+                        pass # Silently allow non-JSON strings for now, Pydantic will catch if type is wrong
+
+            strategy_type_str = record_copy.get("base_strategy_type")
+            if not strategy_type_str:
+                logger.error(f"Strategy {strategy_id_for_log}: 'base_strategy_type' is missing from DB record.")
+                return None
+
+            try:
+                strategy_type = BaseStrategyType(strategy_type_str)
+            except ValueError:
+                logger.error(f"Strategy {strategy_id_for_log}: Invalid 'base_strategy_type' value '{strategy_type_str}' in DB record.")
+                return None
+
+            parameters_data_raw = record_copy.get("parameters", "{}") # Default to empty JSON string if missing
+            if isinstance(parameters_data_raw, str):
                 try:
-                    if value.startswith('{') or value.startswith('['):
-                        record_copy[key] = json.loads(value)
-                except json.JSONDecodeError:
-                    pass
-        
-        strategy_type = BaseStrategyType(record_copy["base_strategy_type"])
-        parameters_data = record_copy.get("parameters", {})
-        if isinstance(parameters_data, str):
-             parameters_data = json.loads(parameters_data)
+                    parameters_data = json.loads(parameters_data_raw)
+                except json.JSONDecodeError as je:
+                    logger.error(f"Strategy {strategy_id_for_log}: Failed to parse 'parameters' JSON string: {je}. Data: {parameters_data_raw[:200]}")
+                    return None # Critical parsing failure
+            elif isinstance(parameters_data_raw, dict):
+                parameters_data = parameters_data_raw # Already a dict
+            else:
+                logger.error(f"Strategy {strategy_id_for_log}: 'parameters' field is of unexpected type {type(parameters_data_raw)}.")
+                return None
 
-        record_copy["parameters"] = self._convert_parameters_by_type(strategy_type, parameters_data)
+            # This call will now re-raise ValidationError if conversion fails
+            converted_parameters = self._convert_parameters_by_type(strategy_type, parameters_data, strategy_id_for_log)
+            record_copy["parameters"] = converted_parameters
 
-        return TradingStrategyConfig(**record_copy)
+            # Perform final model validation
+            return TradingStrategyConfig(**record_copy)
 
-    def _convert_parameters_by_type(self, strategy_type: BaseStrategyType, parameters_data: dict) -> StrategySpecificParameters:
-        param_map = {
+        except ValidationError as ve:
+            # This catches validation errors from TradingStrategyConfig(**record_copy)
+            # or from _convert_parameters_by_type if re-raised and not caught locally.
+            logger.error(f"Strategy {strategy_id_for_log}: Validation error during final model creation: {ve}", exc_info=True)
+            return None
+        except Exception as e:
+            # Catch any other unexpected errors during the conversion of this specific record
+            logger.error(f"Strategy {strategy_id_for_log}: Unexpected error during conversion: {e}", exc_info=True)
+            return None
+
+    def _convert_parameters_by_type(self, strategy_type: BaseStrategyType, parameters_data: dict, strategy_id_for_log: str) -> StrategySpecificParameters:
+        param_class_map = {
             BaseStrategyType.SCALPING: ScalpingParameters,
             BaseStrategyType.DAY_TRADING: DayTradingParameters,
             BaseStrategyType.ARBITRAGE_SIMPLE: ArbitrageSimpleParameters,
@@ -211,10 +260,18 @@ class StrategyService:
             BaseStrategyType.GRID_TRADING: GridTradingParameters,
             BaseStrategyType.DCA_INVESTING: DCAInvestingParameters,
         }
-        param_class = param_map.get(strategy_type)
-        if param_class:
-            try:
-                return param_class(**parameters_data)
-            except ValidationError as e:
-                logger.warning(f"Failed to validate parameters for {strategy_type}: {e}")
-        return parameters_data
+        param_class = param_class_map.get(strategy_type)
+
+        if not param_class:
+            logger.warning(f"Strategy {strategy_id_for_log}: No specific parameter model defined for strategy type '{strategy_type.value}'. Returning raw parameters dictionary.")
+            # Depending on strictness, you might want to raise an error here if all strategies MUST have specific param models.
+            # For now, returning the dict as per previous behavior if no class, but this should ideally be an error or handled.
+            return parameters_data
+
+        try:
+            return param_class(**parameters_data)
+        except ValidationError as e:
+            # Log the detailed error from Pydantic, then re-raise to be caught by the caller.
+            # The strategy_id_for_log is included here for direct context.
+            logger.error(f"Strategy {strategy_id_for_log}: Parameter validation failed for type '{strategy_type.value}' with data {parameters_data}. Error: {e}")
+            raise  # Re-raise the ValidationError

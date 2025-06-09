@@ -25,10 +25,11 @@ class HistoryView(QWidget):
     Incluye tanto paper trading como trading real en pestañas separadas.
     """
     
-    def __init__(self, user_id: UUID, main_window: BaseMainWindow, parent=None):
+    def __init__(self, user_id: UUID, main_window: BaseMainWindow, api_client: UltiBotAPIClient, parent=None): # Add api_client
         super().__init__(parent)
         self.user_id = user_id
         self.main_window = main_window
+        self.api_client = api_client # Store api_client
         
         self.setup_ui()
         logger.info(f"HistoryView inicializada para usuario {user_id}")
@@ -80,7 +81,8 @@ class HistoryView(QWidget):
         # Integrar el widget de paper trading report
         self.paper_trading_report_widget = PaperTradingReportWidget(
             user_id=self.user_id, 
-            main_window=self.main_window
+            main_window=self.main_window,
+            api_client=self.api_client # Pass api_client
         )
         layout.addWidget(self.paper_trading_report_widget)
         

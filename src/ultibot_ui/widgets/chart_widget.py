@@ -26,9 +26,10 @@ class ChartWidget(QWidget):
     candlestick_data_fetched = pyqtSignal(list)
     api_error_occurred = pyqtSignal(str)
     
-    def __init__(self, main_window: BaseMainWindow, parent: Optional[QWidget] = None):
+    def __init__(self, main_window: BaseMainWindow, api_client: UltiBotAPIClient, parent: Optional[QWidget] = None): # Add api_client
         super().__init__(parent)
         self.main_window = main_window
+        self.api_client = api_client # Store api_client
         self.current_symbol: Optional[str] = None
         self.current_interval: Optional[str] = "1h"
         self.candlestick_data: List[Kline] = []
@@ -107,7 +108,8 @@ class ChartWidget(QWidget):
                 return
 
             worker = ApiWorker(
-                coroutine_factory=lambda api_client: api_client.get_candlestick_data(
+                api_client=self.api_client, # Pass stored api_client
+                coroutine_factory=lambda client_in_lambda: client_in_lambda.get_candlestick_data(
                     symbol=current_symbol,
                     interval=current_interval,
                     limit=200

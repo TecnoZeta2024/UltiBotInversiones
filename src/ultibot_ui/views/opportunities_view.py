@@ -18,11 +18,12 @@ from src.ultibot_ui.workers import ApiWorker
 logger = logging.getLogger(__name__)
 
 class OpportunitiesView(QWidget):
-    def __init__(self, user_id: UUID, main_window: BaseMainWindow, parent=None):
+    def __init__(self, user_id: UUID, main_window: BaseMainWindow, api_client: UltiBotAPIClient, parent=None): # Add api_client
         super().__init__(parent)
         logger.info("OpportunitiesView: __init__ called.")
         self.user_id = user_id
         self.main_window = main_window
+        self.api_client = api_client # Store api_client
         logger.debug("OpportunitiesView initialized.")
 
         self._setup_ui()
@@ -117,9 +118,13 @@ class OpportunitiesView(QWidget):
     def _start_api_worker(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine]):
         logger.debug("Creating ApiWorker.")
         
-        worker = ApiWorker(coroutine_factory=coroutine_factory)
+        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory) # Pass api_client
         thread = QThread()
-        self.main_window.add_thread(thread)
+        # Assuming main_window has add_thread method for tracking
+        if hasattr(self.main_window, 'add_thread') and callable(getattr(self.main_window, 'add_thread')):
+            self.main_window.add_thread(thread)
+        else:
+            logger.warning("OpportunitiesView: self.main_window does not have add_thread. Thread not tracked by main_window.")
         worker.moveToThread(thread)
 
         worker.result_ready.connect(self._handle_opportunities_result)
