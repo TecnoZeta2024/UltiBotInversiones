@@ -37,8 +37,8 @@ def test_imports():
         # Importar widgets especializados
         from src.ultibot_ui.widgets.market_filter_widgets import (
             PriceRangeWidget, PercentageChangeWidget, VolumeFilterWidget,
-            MarketCapRangeWidget, TechnicalAnalysisWidget, TrendDirectionWidget,
-            ExclusionCriteriaWidget, ConfidenceThresholdsWidget
+            MarketCapRangeWidget, TechnicalAnalysisWidget, 
+            ExclusionFiltersWidget, ConfidenceThresholdWidget
         )
         from src.ultibot_ui.widgets.preset_selector_widget import (
             PresetSelectorWidget, ScanResultsWidget, PresetQuickActionWidget, PresetScannerWidget
@@ -107,14 +107,14 @@ def test_dialog_instantiation():
         if app is None:
             app = QApplication(sys.argv)
         
-        # Mock API Client básico
+        # Mock API Client básico con métodos requeridos
         class MockAPIClient:
             def __init__(self):
                 pass
                 
-        # Mock loop asyncio
-        loop = asyncio.new_event_loop()
-        
+            async def get_scan_presets(self):
+                return []
+                
         # Probar instanciación de diálogos (sin mostrar)
         from src.ultibot_ui.dialogs.market_scan_config_dialog import MarketScanConfigDialog
         from src.ultibot_ui.dialogs.preset_management_dialog import PresetManagementDialog
@@ -123,13 +123,13 @@ def test_dialog_instantiation():
         api_client = MockAPIClient()
         
         # Instanciar cada diálogo
-        market_dialog = MarketScanConfigDialog(api_client=api_client, loop=loop, parent=None)
+        market_dialog = MarketScanConfigDialog(api_client=api_client, parent=None)
         print("✅ MarketScanConfigDialog instanciado correctamente")
         
-        preset_dialog = PresetManagementDialog(api_client=api_client, loop=loop, parent=None)
+        preset_dialog = PresetManagementDialog(api_client=api_client, parent=None)
         print("✅ PresetManagementDialog instanciado correctamente")
         
-        asset_dialog = AssetTradingParametersDialog(api_client=api_client, loop=loop, parent=None)
+        asset_dialog = AssetTradingParametersDialog(api_client=api_client, parent=None)
         print("✅ AssetTradingParametersDialog instanciado correctamente")
         
         # Limpiar

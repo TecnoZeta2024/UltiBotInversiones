@@ -1,363 +1,776 @@
-2025-06-10 14:27:45,480 - __main__ - INFO - Logging configurado. stdout y stderr redirigidos al archivo de log.
-2025-06-10 14:27:45,480 - STDERR - ERROR - C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\main.py:70: DeprecationWarning: sipPyTypeDict() is deprecated, the extension module should use sipPyTypeDictRef() instead
-2025-06-10 14:27:45,480 - STDERR - ERROR -   class AppController(QObject):
-2025-06-10 14:27:45,497 - __main__ - INFO - Stylesheet cargado exitosamente.
-2025-06-10 14:27:45,680 - src.ultibot_ui.services.trading_mode_state - INFO - TradingModeStateManager initialized with mode: paper
-2025-06-10 14:27:45,680 - __main__ - INFO - Iniciando inicialización asíncrona...
-2025-06-10 14:27:47,686 - src.ultibot_ui.services.api_client - INFO - Obteniendo configuración de usuario.
-2025-06-10 14:27:47,688 - STDOUT - INFO - Solicitando configuración de usuario al backend...
-2025-06-10 14:27:47,688 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/config
-2025-06-10 14:27:48,503 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/config "HTTP/1.1 200 OK"
-2025-06-10 14:27:48,504 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/config "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:27:48,504 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:27:48,504 - __main__ - INFO - Configuración recibida para el ID de usuario: 9c374af5-0404-474c-947f-011c29fe169c
-2025-06-10 14:27:48,504 - src.ultibot_ui.services.trading_mode_state - INFO - Syncing trading mode with backend...
-2025-06-10 14:27:48,504 - src.ultibot_ui.services.api_client - INFO - Getting trading mode from backend.
-2025-06-10 14:27:48,504 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/trading-mode
-2025-06-10 14:27:48,504 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trading-mode "HTTP/1.1 200 OK"
-2025-06-10 14:27:48,508 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trading-mode "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:27:48,508 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:27:48,508 - src.ultibot_ui.windows.main_window - INFO - TaskManager inicializado con un máximo de 10 hilos.
-2025-06-10 14:27:48,708 - src.ultibot_ui.widgets.portfolio_widget - INFO - Timer de actualización del portafolio iniciado.
-2025-06-10 14:27:48,708 - src.ultibot_ui.widgets.chart_widget - INFO - Solicitando datos para BTCUSDT - 1h usando TaskManager
-2025-06-10 14:27:48,721 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: _initialize_async_components INVOCADO
-2025-06-10 14:27:48,937 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: __init__ called.
-2025-06-10 14:27:48,959 - src.ultibot_ui.windows.history_view - INFO - HistoryView inicializada para usuario 9c374af5-0404-474c-947f-011c29fe169c
-2025-06-10 14:27:48,969 - src.ultibot_ui.services.ui_strategy_service - INFO - UIStrategyService: Iniciando fetch_strategies a través de TaskManager.
-2025-06-10 14:27:48,969 - src.ultibot_ui.windows.main_window - INFO - MainWindow: Iniciada la obtención de estrategias.
-2025-06-10 14:27:48,969 - src.ultibot_ui.windows.main_window - INFO - Central widget y vistas configuradas.
-2025-06-10 14:27:48,989 - src.ultibot_ui.windows.main_window - INFO - MainWindow inicializada y visible.
-2025-06-10 14:27:49,103 - __main__ - INFO - Ventana principal mostrada.
-2025-06-10 14:27:49,182 - src.ultibot_ui.views.portfolio_view - INFO - PortfolioView: Fetching portfolio snapshot.
-2025-06-10 14:27:49,182 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/market/klines
-2025-06-10 14:27:49,182 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: both, filtros: {'trading_mode': 'both'}
-2025-06-10 14:27:49,182 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/trades
-2025-06-10 14:27:49,189 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/strategies/strategies
-2025-06-10 14:27:49,189 - src.ultibot_ui.services.trading_mode_state - INFO - Syncing trading mode with backend...
-2025-06-10 14:27:49,189 - src.ultibot_ui.services.api_client - INFO - Getting trading mode from backend.
-2025-06-10 14:27:49,189 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/trading-mode
-2025-06-10 14:27:49,189 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'date_from': '2025-05-11', 'date_to': '2025-06-10', 'limit': 500, 'offset': 0}
-2025-06-10 14:27:49,189 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/trades
-2025-06-10 14:27:49,189 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/performance/metrics
-2025-06-10 14:27:49,439 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trading-mode "HTTP/1.1 200 OK"
-2025-06-10 14:27:49,439 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trading-mode "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:27:49,439 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:27:49,439 - src.ultibot_ui.windows.main_window - INFO - Initial trading mode synced successfully.
-2025-06-10 14:27:49,739 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades?trading_mode=both "HTTP/1.1 200 OK"
-2025-06-10 14:27:49,739 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trades "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:27:49,739 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:27:49,739 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: 0 trades cargados para el análisis de desempeño.
-2025-06-10 14:27:49,739 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: Inicialización de componentes asíncronos completada.
-2025-06-10 14:27:49,739 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
-2025-06-10 14:27:49,739 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 9c374af5-0404-474c-947f-011c29fe169c, modo: paper
-2025-06-10 14:27:49,739 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/portfolio/snapshot
-2025-06-10 14:27:49,739 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'status': 'open'}
-2025-06-10 14:27:49,739 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/trades
-2025-06-10 14:27:49,804 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/performance/metrics?trading_mode=paper&date_from=2025-05-11&date_to=2025-06-10 "HTTP/1.1 200 OK"
-2025-06-10 14:27:49,804 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/performance/metrics "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:27:49,804 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:27:49,804 - src.ultibot_ui.widgets.paper_trading_report_widget - INFO - Métricas de rendimiento cargadas exitosamente
-2025-06-10 14:27:49,904 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/strategies/strategies "HTTP/1.1 200 OK"
-2025-06-10 14:27:49,904 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/strategies/strategies "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:27:49,904 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:27:49,908 - src.ultibot_ui.views.strategies_view - INFO - Strategies view updated with 2 strategies.
-2025-06-10 14:27:49,908 - src.ultibot_ui.services.ui_strategy_service - INFO - UIStrategyService: Se obtuvieron y emitieron 2 estrategias exitosamente.
-2025-06-10 14:27:49,979 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades?trading_mode=paper&date_from=2025-05-11&date_to=2025-06-10&limit=500&offset=0 "HTTP/1.1 200 OK"
-2025-06-10 14:27:49,979 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trades "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:27:49,979 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:27:49,979 - src.ultibot_ui.widgets.paper_trading_report_widget - INFO - Trades cargados exitosamente: 0 trades
-2025-06-10 14:27:50,039 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot?user_id=9c374af5-0404-474c-947f-011c29fe169c&trading_mode=paper "HTTP/1.1 200 OK"
-2025-06-10 14:27:50,039 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/portfolio/snapshot "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:27:50,039 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:27:50,129 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades?trading_mode=paper&status=open "HTTP/1.1 200 OK"
-2025-06-10 14:27:50,129 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trades "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:27:50,129 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:27:50,129 - src.ultibot_ui.widgets.portfolio_widget - INFO - DATOS COMPLETOS RECIBIDOS EN HANDLER: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-10T18:27:50.039036'}, 'open_trades': [], 'trading_mode': 'paper'}
-2025-06-10 14:27:50,236 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/market/klines?symbol=BTCUSDT&interval=1h&limit=100 "HTTP/1.1 200 OK"
-2025-06-10 14:27:50,236 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/market/klines "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:27:50,236 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:27:53,721 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
-2025-06-10 14:27:54,271 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
-2025-06-10 14:27:54,271 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:27:54,271 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:27:55,989 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: Entrando a la vista.
-2025-06-10 14:27:55,989 - src.ultibot_ui.views.opportunities_view - INFO - Fetching Gemini IA opportunities.
-2025-06-10 14:27:56,009 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/opportunities/real-trading-candidates
-2025-06-10 14:27:58,570 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/opportunities/real-trading-candidates "HTTP/1.1 200 OK"
-2025-06-10 14:27:58,570 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/opportunities/real-trading-candidates "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:27:58,570 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:27:58,570 - src.ultibot_ui.views.opportunities_view - INFO - Received 0 opportunities.
-2025-06-10 14:27:58,727 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
-2025-06-10 14:27:59,555 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
-2025-06-10 14:27:59,556 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:27:59,556 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:28:02,508 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: Saliendo de la vista.
-2025-06-10 14:28:02,508 - src.ultibot_ui.views.strategies_view - INFO - StrategiesView: Entrando a la vista.
-2025-06-10 14:28:02,511 - src.ultibot_ui.views.strategies_view - INFO - Fetching strategies.
-2025-06-10 14:28:02,511 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/strategies/strategies
-2025-06-10 14:28:03,451 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/strategies/strategies "HTTP/1.1 200 OK"
-2025-06-10 14:28:03,451 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/strategies/strategies "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:28:03,451 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:28:03,451 - src.ultibot_ui.views.strategies_view - INFO - Received 2 strategies.
-2025-06-10 14:28:03,451 - src.ultibot_ui.views.strategies_view - INFO - Strategies view updated with 2 strategies.
-2025-06-10 14:28:03,709 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
-2025-06-10 14:28:03,709 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 9c374af5-0404-474c-947f-011c29fe169c, modo: paper
-2025-06-10 14:28:03,709 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/portfolio/snapshot
-2025-06-10 14:28:03,709 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'status': 'open'}
-2025-06-10 14:28:03,709 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/trades
-2025-06-10 14:28:03,724 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
-2025-06-10 14:28:04,254 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
-2025-06-10 14:28:04,257 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:28:04,257 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:28:04,437 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades?trading_mode=paper&status=open "HTTP/1.1 200 OK"
-2025-06-10 14:28:04,437 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trades "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:28:04,437 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:28:04,720 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot?user_id=9c374af5-0404-474c-947f-011c29fe169c&trading_mode=paper "HTTP/1.1 200 OK"
-2025-06-10 14:28:04,720 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/portfolio/snapshot "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:28:04,720 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:28:04,720 - src.ultibot_ui.widgets.portfolio_widget - INFO - DATOS COMPLETOS RECIBIDOS EN HANDLER: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-10T18:28:04.720602'}, 'open_trades': [], 'trading_mode': 'paper'}
-2025-06-10 14:28:07,338 - src.ultibot_ui.views.strategies_view - INFO - StrategiesView: Saliendo de la vista.
-2025-06-10 14:28:08,716 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
-2025-06-10 14:28:09,730 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
-2025-06-10 14:28:09,730 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:28:09,730 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:28:13,722 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
-2025-06-10 14:28:15,059 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
-2025-06-10 14:28:15,059 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:28:15,059 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:28:18,698 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
-2025-06-10 14:28:18,698 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 9c374af5-0404-474c-947f-011c29fe169c, modo: paper
-2025-06-10 14:28:18,698 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/portfolio/snapshot
-2025-06-10 14:28:18,698 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'status': 'open'}
-2025-06-10 14:28:18,698 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/trades
-2025-06-10 14:28:18,715 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
-2025-06-10 14:28:19,490 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
-2025-06-10 14:28:19,490 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades?trading_mode=paper&status=open "HTTP/1.1 200 OK"
-2025-06-10 14:28:19,490 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:28:19,490 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:28:19,490 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trades "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:28:19,490 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:28:20,119 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot?user_id=9c374af5-0404-474c-947f-011c29fe169c&trading_mode=paper "HTTP/1.1 200 OK"
-2025-06-10 14:28:20,119 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/portfolio/snapshot "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:28:20,119 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:28:20,119 - src.ultibot_ui.widgets.portfolio_widget - INFO - DATOS COMPLETOS RECIBIDOS EN HANDLER: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-10T18:28:20.113222'}, 'open_trades': [], 'trading_mode': 'paper'}
-2025-06-10 14:28:23,720 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
-2025-06-10 14:28:24,719 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
-2025-06-10 14:28:24,719 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:28:24,729 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:28:28,722 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
-2025-06-10 14:28:29,759 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
-2025-06-10 14:28:29,759 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:28:29,759 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:28:33,702 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
-2025-06-10 14:28:33,704 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 9c374af5-0404-474c-947f-011c29fe169c, modo: paper
-2025-06-10 14:28:33,704 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/portfolio/snapshot
-2025-06-10 14:28:33,704 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'status': 'open'}
-2025-06-10 14:28:33,704 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/trades
-2025-06-10 14:28:33,719 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
-2025-06-10 14:28:34,228 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
-2025-06-10 14:28:34,228 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:28:34,228 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:28:34,387 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades?trading_mode=paper&status=open "HTTP/1.1 200 OK"
-2025-06-10 14:28:34,389 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trades "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:28:34,389 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:28:34,683 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot?user_id=9c374af5-0404-474c-947f-011c29fe169c&trading_mode=paper "HTTP/1.1 200 OK"
-2025-06-10 14:28:34,683 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/portfolio/snapshot "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:28:34,683 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:28:34,683 - src.ultibot_ui.widgets.portfolio_widget - INFO - DATOS COMPLETOS RECIBIDOS EN HANDLER: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-10T18:28:34.679136'}, 'open_trades': [], 'trading_mode': 'paper'}
-2025-06-10 14:28:38,338 - src.ultibot_ui.widgets.chart_widget - INFO - Solicitando datos para BTCUSDT - 5m usando TaskManager
-2025-06-10 14:28:38,338 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/market/klines
-2025-06-10 14:28:38,725 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
-2025-06-10 14:28:39,329 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/market/klines?symbol=BTCUSDT&interval=5m&limit=100 "HTTP/1.1 200 OK"
-2025-06-10 14:28:39,329 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/market/klines "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:28:39,329 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:28:39,727 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
-2025-06-10 14:28:39,727 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:28:39,727 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:28:42,209 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: Entrando a la vista.
-2025-06-10 14:28:42,209 - src.ultibot_ui.views.opportunities_view - INFO - Fetching Gemini IA opportunities.
-2025-06-10 14:28:42,229 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/opportunities/real-trading-candidates
-2025-06-10 14:28:43,718 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
-2025-06-10 14:28:44,661 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
-2025-06-10 14:28:44,661 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:28:44,661 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:28:45,628 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/opportunities/real-trading-candidates "HTTP/1.1 200 OK"
-2025-06-10 14:28:45,628 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/opportunities/real-trading-candidates "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:28:45,628 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:28:45,628 - src.ultibot_ui.views.opportunities_view - INFO - Received 0 opportunities.
-2025-06-10 14:28:48,703 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
-2025-06-10 14:28:48,704 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 9c374af5-0404-474c-947f-011c29fe169c, modo: paper
-2025-06-10 14:28:48,704 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/portfolio/snapshot
-2025-06-10 14:28:48,704 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'status': 'open'}
-2025-06-10 14:28:48,704 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/trades
-2025-06-10 14:28:48,719 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
-2025-06-10 14:28:49,019 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades?trading_mode=paper&status=open "HTTP/1.1 200 OK"
-2025-06-10 14:28:49,029 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trades "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:28:49,029 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:28:49,355 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
-2025-06-10 14:28:49,355 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:28:49,355 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:28:49,732 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot?user_id=9c374af5-0404-474c-947f-011c29fe169c&trading_mode=paper "HTTP/1.1 200 OK"
-2025-06-10 14:28:49,732 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/portfolio/snapshot "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:28:49,732 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:28:49,732 - src.ultibot_ui.widgets.portfolio_widget - INFO - DATOS COMPLETOS RECIBIDOS EN HANDLER: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-10T18:28:49.732053'}, 'open_trades': [], 'trading_mode': 'paper'}
-2025-06-10 14:28:53,714 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
-2025-06-10 14:28:56,458 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
-2025-06-10 14:28:56,458 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:28:56,458 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:28:56,759 - src.ultibot_ui.views.opportunities_view - INFO - Fetching Gemini IA opportunities.
-2025-06-10 14:28:56,780 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/opportunities/real-trading-candidates
-2025-06-10 14:28:58,715 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
-2025-06-10 14:28:59,517 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
-2025-06-10 14:28:59,517 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:28:59,517 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:29:00,699 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/opportunities/real-trading-candidates "HTTP/1.1 200 OK"
-2025-06-10 14:29:00,699 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/opportunities/real-trading-candidates "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:29:00,699 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:29:00,699 - src.ultibot_ui.views.opportunities_view - INFO - Received 0 opportunities.
-2025-06-10 14:29:03,698 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
-2025-06-10 14:29:03,698 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 9c374af5-0404-474c-947f-011c29fe169c, modo: paper
-2025-06-10 14:29:03,698 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/portfolio/snapshot
-2025-06-10 14:29:03,698 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'status': 'open'}
-2025-06-10 14:29:03,698 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/trades
-2025-06-10 14:29:03,714 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
-2025-06-10 14:29:04,019 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades?trading_mode=paper&status=open "HTTP/1.1 200 OK"
-2025-06-10 14:29:04,029 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trades "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:29:04,029 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:29:04,379 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
-2025-06-10 14:29:04,379 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:29:04,379 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:29:04,769 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot?user_id=9c374af5-0404-474c-947f-011c29fe169c&trading_mode=paper "HTTP/1.1 200 OK"
-2025-06-10 14:29:04,769 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/portfolio/snapshot "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:29:04,769 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:29:04,769 - src.ultibot_ui.widgets.portfolio_widget - INFO - DATOS COMPLETOS RECIBIDOS EN HANDLER: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-10T18:29:04.767291'}, 'open_trades': [], 'trading_mode': 'paper'}
-2025-06-10 14:29:08,721 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
-2025-06-10 14:29:09,739 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
-2025-06-10 14:29:09,739 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:29:09,739 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:29:12,199 - src.ultibot_ui.views.opportunities_view - INFO - Fetching Gemini IA opportunities.
-2025-06-10 14:29:12,199 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/opportunities/real-trading-candidates
-2025-06-10 14:29:13,720 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
-2025-06-10 14:29:14,907 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
-2025-06-10 14:29:14,907 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:29:14,907 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:29:14,959 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/opportunities/real-trading-candidates "HTTP/1.1 200 OK"
-2025-06-10 14:29:14,959 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/opportunities/real-trading-candidates "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:29:14,959 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:29:14,959 - src.ultibot_ui.views.opportunities_view - INFO - Received 0 opportunities.
-2025-06-10 14:29:18,699 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
-2025-06-10 14:29:18,699 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 9c374af5-0404-474c-947f-011c29fe169c, modo: paper
-2025-06-10 14:29:18,699 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/portfolio/snapshot
-2025-06-10 14:29:18,699 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'status': 'open'}
-2025-06-10 14:29:18,699 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/trades
-2025-06-10 14:29:18,714 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
-2025-06-10 14:29:19,029 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades?trading_mode=paper&status=open "HTTP/1.1 200 OK"
-2025-06-10 14:29:19,032 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trades "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:29:19,032 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:29:19,229 - src.ultibot_ui.views.opportunities_view - INFO - Fetching Gemini IA opportunities.
-2025-06-10 14:29:19,253 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/opportunities/real-trading-candidates
-2025-06-10 14:29:19,368 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
-2025-06-10 14:29:19,368 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:29:19,368 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:29:19,720 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot?user_id=9c374af5-0404-474c-947f-011c29fe169c&trading_mode=paper "HTTP/1.1 200 OK"
-2025-06-10 14:29:19,720 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/portfolio/snapshot "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:29:19,720 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:29:19,724 - src.ultibot_ui.widgets.portfolio_widget - INFO - DATOS COMPLETOS RECIBIDOS EN HANDLER: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-10T18:29:19.718876'}, 'open_trades': [], 'trading_mode': 'paper'}
-2025-06-10 14:29:22,803 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/opportunities/real-trading-candidates "HTTP/1.1 200 OK"
-2025-06-10 14:29:22,804 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/opportunities/real-trading-candidates "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:29:22,805 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:29:22,805 - src.ultibot_ui.views.opportunities_view - INFO - Received 0 opportunities.
-2025-06-10 14:29:23,720 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
-2025-06-10 14:29:24,739 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
-2025-06-10 14:29:24,739 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:29:24,739 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:29:28,716 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
-2025-06-10 14:29:29,725 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
-2025-06-10 14:29:29,725 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:29:29,725 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:29:33,700 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
-2025-06-10 14:29:33,700 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 9c374af5-0404-474c-947f-011c29fe169c, modo: paper
-2025-06-10 14:29:33,700 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/portfolio/snapshot
-2025-06-10 14:29:33,700 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'status': 'open'}
-2025-06-10 14:29:33,700 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/trades
-2025-06-10 14:29:33,716 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
-2025-06-10 14:29:34,559 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
-2025-06-10 14:29:34,559 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:29:34,559 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:29:34,639 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades?trading_mode=paper&status=open "HTTP/1.1 200 OK"
-2025-06-10 14:29:34,639 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trades "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:29:34,639 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:29:35,051 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot?user_id=9c374af5-0404-474c-947f-011c29fe169c&trading_mode=paper "HTTP/1.1 200 OK"
-2025-06-10 14:29:35,051 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/portfolio/snapshot "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:29:35,051 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:29:35,051 - src.ultibot_ui.widgets.portfolio_widget - INFO - DATOS COMPLETOS RECIBIDOS EN HANDLER: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-10T18:29:35.051912'}, 'open_trades': [], 'trading_mode': 'paper'}
-2025-06-10 14:29:38,716 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
-2025-06-10 14:29:40,264 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
-2025-06-10 14:29:40,264 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:29:40,264 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:29:42,198 - src.ultibot_ui.views.opportunities_view - INFO - Fetching Gemini IA opportunities.
-2025-06-10 14:29:42,198 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/opportunities/real-trading-candidates
-2025-06-10 14:29:43,715 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
-2025-06-10 14:29:44,854 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/opportunities/real-trading-candidates "HTTP/1.1 200 OK"
-2025-06-10 14:29:44,854 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/opportunities/real-trading-candidates "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:29:44,854 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:29:44,854 - src.ultibot_ui.views.opportunities_view - INFO - Received 0 opportunities.
-2025-06-10 14:29:44,870 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
-2025-06-10 14:29:44,870 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:29:44,870 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:29:47,509 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: Saliendo de la vista.
-2025-06-10 14:29:48,409 - src.ultibot_ui.views.strategies_view - INFO - StrategiesView: Entrando a la vista.
-2025-06-10 14:29:48,409 - src.ultibot_ui.views.strategies_view - INFO - Fetching strategies.
-2025-06-10 14:29:48,409 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/strategies/strategies
-2025-06-10 14:29:48,703 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
-2025-06-10 14:29:48,703 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 9c374af5-0404-474c-947f-011c29fe169c, modo: paper
-2025-06-10 14:29:48,703 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/portfolio/snapshot
-2025-06-10 14:29:48,703 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'status': 'open'}
-2025-06-10 14:29:48,703 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/trades
-2025-06-10 14:29:48,719 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
-2025-06-10 14:29:49,162 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot?user_id=9c374af5-0404-474c-947f-011c29fe169c&trading_mode=paper "HTTP/1.1 200 OK"
-2025-06-10 14:29:49,162 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/portfolio/snapshot "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:29:49,162 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:29:49,235 - src.ultibot_ui.views.strategies_view - INFO - StrategiesView: Saliendo de la vista.
-2025-06-10 14:29:49,259 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
-2025-06-10 14:29:49,259 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:29:49,259 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:29:49,439 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/strategies/strategies "HTTP/1.1 200 OK"
-2025-06-10 14:29:49,439 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/strategies/strategies "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:29:49,439 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:29:49,439 - src.ultibot_ui.views.strategies_view - INFO - StrategiesView no está activa, ignorando resultado.
-2025-06-10 14:29:49,629 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades?trading_mode=paper&status=open "HTTP/1.1 200 OK"
-2025-06-10 14:29:49,639 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trades "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:29:49,639 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:29:49,639 - src.ultibot_ui.widgets.portfolio_widget - INFO - DATOS COMPLETOS RECIBIDOS EN HANDLER: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-10T18:29:49.162850'}, 'open_trades': [], 'trading_mode': 'paper'}
-2025-06-10 14:29:50,609 - src.ultibot_ui.windows.settings_view - INFO - Entrando a la vista de configuración. Sincronizando estado.
-2025-06-10 14:29:53,716 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
-2025-06-10 14:29:54,778 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
-2025-06-10 14:29:54,780 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:29:54,780 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:29:58,730 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
-2025-06-10 14:29:59,758 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
-2025-06-10 14:29:59,765 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
-2025-06-10 14:29:59,765 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-10 14:30:02,515 - src.ultibot_ui.windows.main_window - INFO - Limpiando recursos de MainWindow...
-2025-06-10 14:30:02,515 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: Iniciando limpieza de tareas.
-2025-06-10 14:30:02,515 - src.ultibot_ui.widgets.portfolio_widget - INFO - PortfolioWidget: Limpiando hilos y workers activos.
-2025-06-10 14:30:02,515 - src.ultibot_ui.widgets.portfolio_widget - INFO - PortfolioWidget: Limpieza completada.
-2025-06-10 14:30:02,515 - src.ultibot_ui.widgets.chart_widget - INFO - ChartWidget: Limpieza completada.
-2025-06-10 14:30:02,515 - src.ultibot_ui.widgets.notification_widget - INFO - NotificationWidget: cleanup called.
-2025-06-10 14:30:02,518 - src.ultibot_ui.widgets.notification_widget - INFO - NotificationWidget: Stopping update timer.
-2025-06-10 14:30:02,518 - src.ultibot_ui.widgets.notification_widget - INFO - NotificationWidget: cleanup finished.
-2025-06-10 14:30:02,518 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: Limpieza completada.
-2025-06-10 14:30:02,518 - src.ultibot_ui.views.opportunities_view - INFO - Cleaning up OpportunitiesView...
-2025-06-10 14:30:02,518 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: Saliendo de la vista.
-2025-06-10 14:30:02,518 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView cleanup finished.
-2025-06-10 14:30:02,518 - src.ultibot_ui.views.strategies_view - INFO - Cleaning up StrategiesView...
-2025-06-10 14:30:02,518 - src.ultibot_ui.views.strategies_view - INFO - StrategiesView: Saliendo de la vista.
-2025-06-10 14:30:02,518 - src.ultibot_ui.views.strategies_view - INFO - StrategiesView cleanup finished.
-2025-06-10 14:30:02,518 - src.ultibot_ui.views.portfolio_view - INFO - PortfolioView: Cleaning up...
-2025-06-10 14:30:02,518 - src.ultibot_ui.views.portfolio_view - INFO - PortfolioView: Cleanup finished.
-2025-06-10 14:30:02,518 - src.ultibot_ui.widgets.paper_trading_report_widget - INFO - PaperTradingReportWidget cleanup: No hay acciones que tomar.
-2025-06-10 14:30:02,518 - src.ultibot_ui.windows.history_view - INFO - HistoryView cleanup completado
-2025-06-10 14:30:02,518 - src.ultibot_ui.windows.main_window - INFO - Cerrando el pool de hilos del TaskManager...
-2025-06-10 14:30:02,518 - src.ultibot_ui.windows.main_window - INFO - El pool de hilos del TaskManager ha sido cerrado.
-2025-06-10 14:30:02,518 - src.ultibot_ui.windows.main_window - INFO - Limpieza de MainWindow finalizada.
+2025-06-10 17:58:19,449 - __main__ - INFO - Logging configurado. stdout y stderr redirigidos al archivo de log.
+2025-06-10 17:58:19,449 - STDERR - ERROR - C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\main.py:70: DeprecationWarning: sipPyTypeDict() is deprecated, the extension module should use sipPyTypeDictRef() instead
+2025-06-10 17:58:19,449 - STDERR - ERROR -   class AppController(QObject):
+2025-06-10 17:58:19,461 - __main__ - INFO - Stylesheet cargado exitosamente.
+2025-06-10 17:58:19,642 - src.ultibot_ui.services.trading_mode_state - INFO - TradingModeStateManager initialized with mode: paper
+2025-06-10 17:58:19,642 - __main__ - INFO - Iniciando inicialización asíncrona...
+2025-06-10 17:58:21,656 - src.ultibot_ui.services.api_client - INFO - Obteniendo configuración de usuario.
+2025-06-10 17:58:21,658 - STDOUT - INFO - Solicitando configuración de usuario al backend...
+2025-06-10 17:58:21,658 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/config
+2025-06-10 17:58:22,446 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/config "HTTP/1.1 200 OK"
+2025-06-10 17:58:22,446 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/config "HTTP/HTTP/1.1 200 OK"
+2025-06-10 17:58:22,446 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
+2025-06-10 17:58:22,446 - __main__ - INFO - Configuración recibida para el ID de usuario: 33e296fc-59a0-4a90-bad0-9dcb5ea2ad46
+2025-06-10 17:58:22,446 - src.ultibot_ui.services.trading_mode_state - INFO - Syncing trading mode with backend...
+2025-06-10 17:58:22,446 - src.ultibot_ui.services.api_client - INFO - Getting trading mode from backend.
+2025-06-10 17:58:22,446 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/trading-mode
+2025-06-10 17:58:22,446 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trading-mode "HTTP/1.1 200 OK"
+2025-06-10 17:58:22,446 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trading-mode "HTTP/HTTP/1.1 200 OK"
+2025-06-10 17:58:22,446 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
+2025-06-10 17:58:22,446 - src.ultibot_ui.windows.main_window - INFO - TaskManager inicializado con un máximo de 10 hilos.
+2025-06-10 17:58:22,718 - src.ultibot_ui.widgets.portfolio_widget - INFO - Timer de actualización del portafolio iniciado.
+2025-06-10 17:58:22,718 - src.ultibot_ui.widgets.chart_widget - INFO - Solicitando datos para BTCUSDT - 1h usando TaskManager
+2025-06-10 17:58:22,731 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: _initialize_async_components INVOCADO
+2025-06-10 17:58:22,975 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: __init__ called.
+2025-06-10 17:58:22,994 - src.ultibot_ui.windows.history_view - INFO - HistoryView inicializada para usuario 33e296fc-59a0-4a90-bad0-9dcb5ea2ad46
+2025-06-10 17:58:23,010 - src.ultibot_ui.services.ui_strategy_service - INFO - UIStrategyService: Iniciando fetch_strategies a través de TaskManager.
+2025-06-10 17:58:23,010 - src.ultibot_ui.windows.main_window - INFO - MainWindow: Iniciada la obtención de estrategias.
+2025-06-10 17:58:23,010 - src.ultibot_ui.windows.main_window - INFO - Central widget y vistas configuradas.
+2025-06-10 17:58:23,032 - src.ultibot_ui.windows.main_window - INFO - MainWindow inicializada y visible.
+2025-06-10 17:58:23,130 - __main__ - INFO - Ventana principal mostrada.
+2025-06-10 17:58:23,221 - src.ultibot_ui.views.portfolio_view - INFO - PortfolioView: Fetching portfolio snapshot.
+2025-06-10 17:58:23,221 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/market/klines
+2025-06-10 17:58:23,221 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: both, filtros: {'trading_mode': 'both'}
+2025-06-10 17:58:23,221 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/trades
+2025-06-10 17:58:23,221 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/strategies/strategies
+2025-06-10 17:58:23,221 - src.ultibot_ui.services.trading_mode_state - INFO - Syncing trading mode with backend...
+2025-06-10 17:58:23,221 - src.ultibot_ui.services.api_client - INFO - Getting trading mode from backend.
+2025-06-10 17:58:23,221 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/trading-mode
+2025-06-10 17:58:23,221 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/performance/metrics
+2025-06-10 17:58:23,221 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'date_from': '2025-05-11', 'date_to': '2025-06-10', 'limit': 500, 'offset': 0}
+2025-06-10 17:58:23,221 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/trades
+2025-06-10 17:58:23,481 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trading-mode "HTTP/1.1 200 OK"
+2025-06-10 17:58:23,481 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trading-mode "HTTP/HTTP/1.1 200 OK"
+2025-06-10 17:58:23,481 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
+2025-06-10 17:58:23,481 - src.ultibot_ui.windows.main_window - INFO - Initial trading mode synced successfully.
+2025-06-10 17:58:23,763 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/strategies/strategies "HTTP/1.1 200 OK"
+2025-06-10 17:58:23,763 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/strategies/strategies "HTTP/HTTP/1.1 200 OK"
+2025-06-10 17:58:23,763 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
+2025-06-10 17:58:23,775 - src.ultibot_ui.views.strategies_view - INFO - Strategies view updated with 2 strategies.
+2025-06-10 17:58:23,775 - src.ultibot_ui.services.ui_strategy_service - INFO - UIStrategyService: Se obtuvieron y emitieron 2 estrategias exitosamente.
+2025-06-10 17:58:23,846 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades?trading_mode=both "HTTP/1.1 200 OK"
+2025-06-10 17:58:23,846 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trades "HTTP/HTTP/1.1 200 OK"
+2025-06-10 17:58:23,846 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
+2025-06-10 17:58:23,846 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: 0 trades cargados para el análisis de desempeño.
+2025-06-10 17:58:23,846 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: Inicialización de componentes asíncronos completada.
+2025-06-10 17:58:23,846 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
+2025-06-10 17:58:23,846 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 33e296fc-59a0-4a90-bad0-9dcb5ea2ad46, modo: paper
+2025-06-10 17:58:23,846 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/portfolio/snapshot
+2025-06-10 17:58:23,846 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'status': 'open'}
+2025-06-10 17:58:23,846 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/trades
+2025-06-10 17:58:23,914 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades?trading_mode=paper&date_from=2025-05-11&date_to=2025-06-10&limit=500&offset=0 "HTTP/1.1 200 OK"
+2025-06-10 17:58:23,914 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trades "HTTP/HTTP/1.1 200 OK"
+2025-06-10 17:58:23,914 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
+2025-06-10 17:58:23,914 - src.ultibot_ui.widgets.paper_trading_report_widget - INFO - Trades cargados exitosamente: 0 trades
+2025-06-10 17:58:23,980 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/performance/metrics?trading_mode=paper&date_from=2025-05-11&date_to=2025-06-10 "HTTP/1.1 200 OK"
+2025-06-10 17:58:23,980 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/performance/metrics "HTTP/HTTP/1.1 200 OK"
+2025-06-10 17:58:23,980 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
+2025-06-10 17:58:23,980 - src.ultibot_ui.widgets.paper_trading_report_widget - INFO - Métricas de rendimiento cargadas exitosamente
+2025-06-10 17:58:24,131 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot?user_id=33e296fc-59a0-4a90-bad0-9dcb5ea2ad46&trading_mode=paper "HTTP/1.1 200 OK"
+2025-06-10 17:58:24,131 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/portfolio/snapshot "HTTP/HTTP/1.1 200 OK"
+2025-06-10 17:58:24,131 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
+2025-06-10 17:58:24,165 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades?trading_mode=paper&status=open "HTTP/1.1 200 OK"
+2025-06-10 17:58:24,165 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trades "HTTP/HTTP/1.1 200 OK"
+2025-06-10 17:58:24,165 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
+2025-06-10 17:58:24,165 - src.ultibot_ui.widgets.portfolio_widget - INFO - DATOS COMPLETOS RECIBIDOS EN HANDLER: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-10T21:58:24.131788'}, 'open_trades': [], 'trading_mode': 'paper'}
+2025-06-10 17:58:24,184 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/market/klines?symbol=BTCUSDT&interval=1h&limit=100 "HTTP/1.1 200 OK"
+2025-06-10 17:58:24,184 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/market/klines "HTTP/HTTP/1.1 200 OK"
+2025-06-10 17:58:24,184 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
+2025-06-10 17:58:27,714 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
+2025-06-10 17:58:28,245 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
+2025-06-10 17:58:28,245 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
+2025-06-10 17:58:28,245 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
+2025-06-10 17:58:31,115 - src.ultibot_ui.services.api_client - INFO - Obteniendo presets de escaneo.
+2025-06-10 17:58:31,115 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/market-configuration/presets
+2025-06-10 17:58:31,115 - src.ultibot_ui.services.api_client - CRITICAL - Error inesperado durante la petición a /api/v1/market-configuration/presets: unknown async library, or not in async context
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 40, in _make_request
+    response = await self._client.request(method, url, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1585, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1674, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1702, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1739, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1768, in _send_single_request
+    await timer.async_start()
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 307, in async_start
+    self.started = await self._get_time()
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 293, in _get_time
+    library = sniffio.current_async_library()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\sniffio\_impl.py", line 93, in current_async_library
+    raise AsyncLibraryNotFoundError(
+sniffio._impl.AsyncLibraryNotFoundError: unknown async library, or not in async context
+2025-06-10 17:58:31,115 - STDOUT - INFO - ERROR CRÍTICO: Error inesperado durante la petición a /api/v1/market-configuration/presets: unknown async library, or not in async context
+2025-06-10 17:58:31,115 - src.ultibot_ui.dialogs.preset_management_dialog - ERROR - Error cargando presets: Error de API: Error inesperado: unknown async library, or not in async context
+2025-06-10 17:58:32,724 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
+2025-06-10 17:58:32,724 - src.ultibot_ui.services.api_client - CRITICAL - Error inesperado durante la petición a /api/v1/notifications/history: unknown async library, or not in async context
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 40, in _make_request
+    response = await self._client.request(method, url, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1585, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1674, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1702, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1739, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1768, in _send_single_request
+    await timer.async_start()
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 307, in async_start
+    self.started = await self._get_time()
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 293, in _get_time
+    library = sniffio.current_async_library()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\sniffio\_impl.py", line 93, in current_async_library
+    raise AsyncLibraryNotFoundError(
+sniffio._impl.AsyncLibraryNotFoundError: unknown async library, or not in async context
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\dialogs\preset_management_dialog.py", line 731, in load_presets
+    self.presets = loop.run_until_complete(self.api_client.get_scan_presets())
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\qasync\__init__.py", line 409, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 188, in get_scan_presets
+    response = await self._make_request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 73, in _make_request
+    raise APIError(f"Error inesperado: {str(e)}") from e
+src.ultibot_ui.services.api_client.APIError: Error de API: Error inesperado: unknown async library, or not in async context
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 40, in _make_request
+    response = await self._client.request(method, url, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1585, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1674, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1702, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1739, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1768, in _send_single_request
+    await timer.async_start()
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 307, in async_start
+    self.started = await self._get_time()
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 293, in _get_time
+    library = sniffio.current_async_library()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\sniffio\_impl.py", line 93, in current_async_library
+    raise AsyncLibraryNotFoundError(
+sniffio._impl.AsyncLibraryNotFoundError: unknown async library, or not in async context
+2025-06-10 17:58:32,727 - STDOUT - INFO - ERROR CRÍTICO: Error inesperado durante la petición a /api/v1/notifications/history: unknown async library, or not in async context
+2025-06-10 17:58:32,727 - src.ultibot_ui.workers - ERROR - ApiWorker: APIError: Error de API: Error inesperado: unknown async library, or not in async context
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 40, in _make_request
+    response = await self._client.request(method, url, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1585, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1674, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1702, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1739, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1768, in _send_single_request
+    await timer.async_start()
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 307, in async_start
+    self.started = await self._get_time()
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 293, in _get_time
+    library = sniffio.current_async_library()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\sniffio\_impl.py", line 93, in current_async_library
+    raise AsyncLibraryNotFoundError(
+sniffio._impl.AsyncLibraryNotFoundError: unknown async library, or not in async context
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\dialogs\preset_management_dialog.py", line 731, in load_presets
+    self.presets = loop.run_until_complete(self.api_client.get_scan_presets())
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\qasync\__init__.py", line 409, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 188, in get_scan_presets
+    response = await self._make_request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 73, in _make_request
+    raise APIError(f"Error inesperado: {str(e)}") from e
+src.ultibot_ui.services.api_client.APIError: Error de API: Error inesperado: unknown async library, or not in async context
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 40, in _make_request
+    response = await self._client.request(method, url, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1585, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1674, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1702, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1739, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1768, in _send_single_request
+    await timer.async_start()
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 307, in async_start
+    self.started = await self._get_time()
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 293, in _get_time
+    library = sniffio.current_async_library()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\sniffio\_impl.py", line 93, in current_async_library
+    raise AsyncLibraryNotFoundError(
+sniffio._impl.AsyncLibraryNotFoundError: unknown async library, or not in async context
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\workers.py", line 38, in run
+    result = future.result()
+             ^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\concurrent\futures\_base.py", line 456, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\concurrent\futures\_base.py", line 401, in __get_result
+    raise self._exception
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 134, in get_notification_history
+    return await self._make_request("GET", "/api/v1/notifications/history", params=params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 73, in _make_request
+    raise APIError(f"Error inesperado: {str(e)}") from e
+src.ultibot_ui.services.api_client.APIError: Error de API: Error inesperado: unknown async library, or not in async context
+2025-06-10 17:58:32,727 - src.ultibot_ui.widgets.notification_widget - ERROR - Error API al obtener notificaciones en tiempo real: Error de API (None): Error inesperado: unknown async library, or not in async context
+2025-06-10 17:58:37,720 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
+2025-06-10 17:58:37,720 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
+2025-06-10 17:58:37,720 - src.ultibot_ui.services.api_client - CRITICAL - Error inesperado durante la petición a /api/v1/notifications/history: unknown async library, or not in async context
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 40, in _make_request
+    response = await self._client.request(method, url, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1585, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1674, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1702, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1739, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1768, in _send_single_request
+    await timer.async_start()
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 307, in async_start
+    self.started = await self._get_time()
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 293, in _get_time
+    library = sniffio.current_async_library()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\sniffio\_impl.py", line 93, in current_async_library
+    raise AsyncLibraryNotFoundError(
+sniffio._impl.AsyncLibraryNotFoundError: unknown async library, or not in async context
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\dialogs\preset_management_dialog.py", line 731, in load_presets
+    self.presets = loop.run_until_complete(self.api_client.get_scan_presets())
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\qasync\__init__.py", line 409, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 188, in get_scan_presets
+    response = await self._make_request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 73, in _make_request
+    raise APIError(f"Error inesperado: {str(e)}") from e
+src.ultibot_ui.services.api_client.APIError: Error de API: Error inesperado: unknown async library, or not in async context
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 40, in _make_request
+    response = await self._client.request(method, url, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1585, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1674, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1702, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1739, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1768, in _send_single_request
+    await timer.async_start()
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 307, in async_start
+    self.started = await self._get_time()
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 293, in _get_time
+    library = sniffio.current_async_library()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\sniffio\_impl.py", line 93, in current_async_library
+    raise AsyncLibraryNotFoundError(
+sniffio._impl.AsyncLibraryNotFoundError: unknown async library, or not in async context
+2025-06-10 17:58:37,720 - STDOUT - INFO - ERROR CRÍTICO: Error inesperado durante la petición a /api/v1/notifications/history: unknown async library, or not in async context
+2025-06-10 17:58:37,720 - src.ultibot_ui.workers - ERROR - ApiWorker: APIError: Error de API: Error inesperado: unknown async library, or not in async context
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 40, in _make_request
+    response = await self._client.request(method, url, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1585, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1674, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1702, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1739, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1768, in _send_single_request
+    await timer.async_start()
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 307, in async_start
+    self.started = await self._get_time()
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 293, in _get_time
+    library = sniffio.current_async_library()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\sniffio\_impl.py", line 93, in current_async_library
+    raise AsyncLibraryNotFoundError(
+sniffio._impl.AsyncLibraryNotFoundError: unknown async library, or not in async context
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\dialogs\preset_management_dialog.py", line 731, in load_presets
+    self.presets = loop.run_until_complete(self.api_client.get_scan_presets())
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\qasync\__init__.py", line 409, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 188, in get_scan_presets
+    response = await self._make_request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 73, in _make_request
+    raise APIError(f"Error inesperado: {str(e)}") from e
+src.ultibot_ui.services.api_client.APIError: Error de API: Error inesperado: unknown async library, or not in async context
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 40, in _make_request
+    response = await self._client.request(method, url, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1585, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1674, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1702, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1739, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1768, in _send_single_request
+    await timer.async_start()
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 307, in async_start
+    self.started = await self._get_time()
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 293, in _get_time
+    library = sniffio.current_async_library()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\sniffio\_impl.py", line 93, in current_async_library
+    raise AsyncLibraryNotFoundError(
+sniffio._impl.AsyncLibraryNotFoundError: unknown async library, or not in async context
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\workers.py", line 38, in run
+    result = future.result()
+             ^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\concurrent\futures\_base.py", line 456, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\concurrent\futures\_base.py", line 401, in __get_result
+    raise self._exception
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 134, in get_notification_history
+    return await self._make_request("GET", "/api/v1/notifications/history", params=params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 73, in _make_request
+    raise APIError(f"Error inesperado: {str(e)}") from e
+src.ultibot_ui.services.api_client.APIError: Error de API: Error inesperado: unknown async library, or not in async context
+2025-06-10 17:58:37,720 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 33e296fc-59a0-4a90-bad0-9dcb5ea2ad46, modo: paper
+2025-06-10 17:58:37,720 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/portfolio/snapshot
+2025-06-10 17:58:37,720 - src.ultibot_ui.services.api_client - CRITICAL - Error inesperado durante la petición a /api/v1/portfolio/snapshot: unknown async library, or not in async context
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 40, in _make_request
+    response = await self._client.request(method, url, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1585, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1674, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1702, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1739, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1768, in _send_single_request
+    await timer.async_start()
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 307, in async_start
+    self.started = await self._get_time()
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 293, in _get_time
+    library = sniffio.current_async_library()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\sniffio\_impl.py", line 93, in current_async_library
+    raise AsyncLibraryNotFoundError(
+sniffio._impl.AsyncLibraryNotFoundError: unknown async library, or not in async context
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\dialogs\preset_management_dialog.py", line 731, in load_presets
+    self.presets = loop.run_until_complete(self.api_client.get_scan_presets())
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\qasync\__init__.py", line 409, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 188, in get_scan_presets
+    response = await self._make_request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 73, in _make_request
+    raise APIError(f"Error inesperado: {str(e)}") from e
+src.ultibot_ui.services.api_client.APIError: Error de API: Error inesperado: unknown async library, or not in async context
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 40, in _make_request
+    response = await self._client.request(method, url, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1585, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1674, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1702, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1739, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1768, in _send_single_request
+    await timer.async_start()
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 307, in async_start
+    self.started = await self._get_time()
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 293, in _get_time
+    library = sniffio.current_async_library()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\sniffio\_impl.py", line 93, in current_async_library
+    raise AsyncLibraryNotFoundError(
+sniffio._impl.AsyncLibraryNotFoundError: unknown async library, or not in async context
+2025-06-10 17:58:37,720 - STDOUT - INFO - ERROR CRÍTICO: Error inesperado durante la petición a /api/v1/portfolio/snapshot: unknown async library, or not in async context
+2025-06-10 17:58:37,720 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'status': 'open'}
+2025-06-10 17:58:37,720 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/trades
+2025-06-10 17:58:37,720 - src.ultibot_ui.services.api_client - CRITICAL - Error inesperado durante la petición a /api/v1/trades: unknown async library, or not in async context
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 40, in _make_request
+    response = await self._client.request(method, url, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1585, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1674, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1702, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1739, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1768, in _send_single_request
+    await timer.async_start()
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 307, in async_start
+    self.started = await self._get_time()
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 293, in _get_time
+    library = sniffio.current_async_library()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\sniffio\_impl.py", line 93, in current_async_library
+    raise AsyncLibraryNotFoundError(
+sniffio._impl.AsyncLibraryNotFoundError: unknown async library, or not in async context
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\dialogs\preset_management_dialog.py", line 731, in load_presets
+    self.presets = loop.run_until_complete(self.api_client.get_scan_presets())
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\qasync\__init__.py", line 409, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 188, in get_scan_presets
+    response = await self._make_request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 73, in _make_request
+    raise APIError(f"Error inesperado: {str(e)}") from e
+src.ultibot_ui.services.api_client.APIError: Error de API: Error inesperado: unknown async library, or not in async context
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 40, in _make_request
+    response = await self._client.request(method, url, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1585, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1674, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1702, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1739, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1768, in _send_single_request
+    await timer.async_start()
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 307, in async_start
+    self.started = await self._get_time()
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 293, in _get_time
+    library = sniffio.current_async_library()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\sniffio\_impl.py", line 93, in current_async_library
+    raise AsyncLibraryNotFoundError(
+sniffio._impl.AsyncLibraryNotFoundError: unknown async library, or not in async context
+2025-06-10 17:58:37,720 - STDOUT - INFO - ERROR CRÍTICO: Error inesperado durante la petición a /api/v1/trades: unknown async library, or not in async context
+2025-06-10 17:58:37,720 - src.ultibot_ui.widgets.notification_widget - ERROR - Error API al obtener notificaciones en tiempo real: Error de API (None): Error inesperado: unknown async library, or not in async context
+2025-06-10 17:58:37,720 - src.ultibot_ui.workers - ERROR - ApiWorker: Generic Exception: Task <Task pending name='Task-36' coro=<PortfolioWidget._start_update_worker.<locals>.fetch_data_coroutine() running at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\portfolio_widget.py:257> cb=[_chain_future.<locals>._call_set_state() at C:\Program Files\Python311\Lib\asyncio\futures.py:394]> got Future <_GatheringFuture pending> attached to a different loop
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\workers.py", line 38, in run
+    result = future.result()
+             ^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\concurrent\futures\_base.py", line 456, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\concurrent\futures\_base.py", line 401, in __get_result
+    raise self._exception
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\portfolio_widget.py", line 257, in fetch_data_coroutine
+    results = await asyncio.gather(
+              ^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: Task <Task pending name='Task-36' coro=<PortfolioWidget._start_update_worker.<locals>.fetch_data_coroutine() running at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\portfolio_widget.py:257> cb=[_chain_future.<locals>._call_set_state() at C:\Program Files\Python311\Lib\asyncio\futures.py:394]> got Future <_GatheringFuture pending> attached to a different loop
+2025-06-10 17:58:37,720 - src.ultibot_ui.widgets.portfolio_widget - ERROR - PortfolioWidget: Error en DataUpdateWorker: Task <Task pending name='Task-36' coro=<PortfolioWidget._start_update_worker.<locals>.fetch_data_coroutine() running at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\portfolio_widget.py:257> cb=[_chain_future.<locals>._call_set_state() at C:\Program Files\Python311\Lib\asyncio\futures.py:394]> got Future <_GatheringFuture pending> attached to a different loop
+2025-06-10 17:58:42,723 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
+2025-06-10 17:58:42,723 - src.ultibot_ui.services.api_client - CRITICAL - Error inesperado durante la petición a /api/v1/notifications/history: unknown async library, or not in async context
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 40, in _make_request
+    response = await self._client.request(method, url, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1585, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1674, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1702, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1739, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1768, in _send_single_request
+    await timer.async_start()
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 307, in async_start
+    self.started = await self._get_time()
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 293, in _get_time
+    library = sniffio.current_async_library()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\sniffio\_impl.py", line 93, in current_async_library
+    raise AsyncLibraryNotFoundError(
+sniffio._impl.AsyncLibraryNotFoundError: unknown async library, or not in async context
+2025-06-10 17:58:42,723 - STDOUT - INFO - ERROR CRÍTICO: Error inesperado durante la petición a /api/v1/notifications/history: unknown async library, or not in async context
+2025-06-10 17:58:42,723 - src.ultibot_ui.workers - ERROR - ApiWorker: APIError: Error de API: Error inesperado: unknown async library, or not in async context
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 40, in _make_request
+    response = await self._client.request(method, url, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1585, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1674, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1702, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1739, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1768, in _send_single_request
+    await timer.async_start()
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 307, in async_start
+    self.started = await self._get_time()
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 293, in _get_time
+    library = sniffio.current_async_library()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\sniffio\_impl.py", line 93, in current_async_library
+    raise AsyncLibraryNotFoundError(
+sniffio._impl.AsyncLibraryNotFoundError: unknown async library, or not in async context
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\workers.py", line 38, in run
+    result = future.result()
+             ^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\concurrent\futures\_base.py", line 456, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\concurrent\futures\_base.py", line 401, in __get_result
+    raise self._exception
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 134, in get_notification_history
+    return await self._make_request("GET", "/api/v1/notifications/history", params=params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 73, in _make_request
+    raise APIError(f"Error inesperado: {str(e)}") from e
+src.ultibot_ui.services.api_client.APIError: Error de API: Error inesperado: unknown async library, or not in async context
+2025-06-10 17:58:42,723 - src.ultibot_ui.widgets.notification_widget - ERROR - Error API al obtener notificaciones en tiempo real: Error de API (None): Error inesperado: unknown async library, or not in async context
+2025-06-10 17:58:47,710 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
+2025-06-10 17:58:47,710 - src.ultibot_ui.services.api_client - CRITICAL - Error inesperado durante la petición a /api/v1/notifications/history: unknown async library, or not in async context
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 40, in _make_request
+    response = await self._client.request(method, url, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1585, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1674, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1702, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1739, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1768, in _send_single_request
+    await timer.async_start()
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 307, in async_start
+    self.started = await self._get_time()
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 293, in _get_time
+    library = sniffio.current_async_library()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\sniffio\_impl.py", line 93, in current_async_library
+    raise AsyncLibraryNotFoundError(
+sniffio._impl.AsyncLibraryNotFoundError: unknown async library, or not in async context
+2025-06-10 17:58:47,711 - STDOUT - INFO - ERROR CRÍTICO: Error inesperado durante la petición a /api/v1/notifications/history: unknown async library, or not in async context
+2025-06-10 17:58:47,711 - src.ultibot_ui.workers - ERROR - ApiWorker: APIError: Error de API: Error inesperado: unknown async library, or not in async context
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 40, in _make_request
+    response = await self._client.request(method, url, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1585, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1674, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1702, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1739, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 1768, in _send_single_request
+    await timer.async_start()
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 307, in async_start
+    self.started = await self._get_time()
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_utils.py", line 293, in _get_time
+    library = sniffio.current_async_library()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\sniffio\_impl.py", line 93, in current_async_library
+    raise AsyncLibraryNotFoundError(
+sniffio._impl.AsyncLibraryNotFoundError: unknown async library, or not in async context
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\workers.py", line 38, in run
+    result = future.result()
+             ^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\concurrent\futures\_base.py", line 456, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\concurrent\futures\_base.py", line 401, in __get_result
+    raise self._exception
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 134, in get_notification_history
+    return await self._make_request("GET", "/api/v1/notifications/history", params=params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 73, in _make_request
+    raise APIError(f"Error inesperado: {str(e)}") from e
+src.ultibot_ui.services.api_client.APIError: Error de API: Error inesperado: unknown async library, or not in async context
+2025-06-10 17:58:47,712 - src.ultibot_ui.widgets.notification_widget - ERROR - Error API al obtener notificaciones en tiempo real: Error de API (None): Error inesperado: unknown async library, or not in async context

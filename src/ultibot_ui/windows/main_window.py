@@ -303,7 +303,6 @@ class MainWindow(QMainWindow, BaseMainWindow):
         try:
             dialog = MarketScanConfigDialog(
                 api_client=self.api_client,
-                loop=self.loop,
                 parent=self
             )
             dialog.exec_()
@@ -317,7 +316,6 @@ class MainWindow(QMainWindow, BaseMainWindow):
         try:
             dialog = PresetManagementDialog(
                 api_client=self.api_client,
-                loop=self.loop,
                 parent=self
             )
             dialog.exec_()
@@ -331,7 +329,6 @@ class MainWindow(QMainWindow, BaseMainWindow):
         try:
             dialog = AssetTradingParametersDialog(
                 api_client=self.api_client,
-                loop=self.loop,
                 parent=self
             )
             dialog.exec_()
