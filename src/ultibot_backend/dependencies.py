@@ -18,6 +18,7 @@ from src.ultibot_backend.services.portfolio_service import PortfolioService
 from src.ultibot_backend.services.strategy_service import StrategyService
 from src.ultibot_backend.services.trading_engine_service import TradingEngineService
 from src.ultibot_backend.services.trading_report_service import TradingReportService
+from src.ultibot_backend.services.market_scan_service import MarketScanService
 
 # New imports for paper trading
 from src.ultibot_backend.services.trading_mode_service import TradingModeService, get_trading_mode_service, TradingMode
@@ -45,6 +46,7 @@ class DependencyContainer:
         self.config_service: Optional[ConfigurationService] = None
         self.strategy_service: Optional[StrategyService] = None
         self.trading_engine_service: Optional[TradingEngineService] = None
+        self.market_scan_service: Optional[MarketScanService] = None
         
         # Paper trading services
         self.trading_mode_service: Optional[TradingModeService] = None
@@ -109,6 +111,12 @@ class DependencyContainer:
         self.portfolio_service = PortfolioService(
             persistence_service=self.persistence_service,
             market_data_service=self.market_data_service
+        )
+        
+        self.market_scan_service = MarketScanService(
+            binance_adapter=self.binance_adapter,
+            mobula_adapter=self.mobula_adapter,
+            persistence_service=self.persistence_service
         )
 
         # Level 4: Depend on previous levels
@@ -242,3 +250,17 @@ async def get_ai_orchestrator_service() -> AIOrchestratorService:
     container = get_container()
     assert container.ai_orchestrator_service is not None
     return container.ai_orchestrator_service
+
+async def get_market_scan_service() -> MarketScanService:
+    container = get_container()
+    assert container.market_scan_service is not None
+    return container.market_scan_service
+
+async def get_current_user_id() -> str:
+    """Get current user ID for single-user application.
+    
+    Returns:
+        The default user ID for this single-user application.
+    """
+    # For this single-user application, we return a fixed user ID
+    return "default_user"

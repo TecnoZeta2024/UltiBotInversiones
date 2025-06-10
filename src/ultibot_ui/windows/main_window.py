@@ -38,6 +38,11 @@ from src.ultibot_ui.views.portfolio_view import PortfolioView
 from src.ultibot_ui.workers import ApiWorker
 from src.ultibot_ui.services.trading_mode_state import TradingModeStateManager, TradingMode
 
+# Importar diálogos de configuración avanzada
+from src.ultibot_ui.dialogs.market_scan_config_dialog import MarketScanConfigDialog
+from src.ultibot_ui.dialogs.preset_management_dialog import PresetManagementDialog
+from src.ultibot_ui.dialogs.asset_config_dialog import AssetTradingParametersDialog
+
 logger = logging.getLogger(__name__)
 
 class RunnableApiWorker(QRunnable):
@@ -181,7 +186,48 @@ class MainWindow(QMainWindow, BaseMainWindow):
     def _create_menu_bar(self) -> QMenuBar:
         """Crea y devuelve la barra de menú principal."""
         menu_bar = QMenuBar(self)
-        # ... (código del menú sin cambios)
+        
+        # Menú Archivo
+        file_menu = menu_bar.addMenu("&Archivo")
+        
+        exit_action = QAction("&Salir", self)
+        exit_action.setShortcut("Ctrl+Q")
+        exit_action.triggered.connect(self.close)
+        file_menu.addAction(exit_action)
+        
+        # Menú Configuración Avanzada
+        config_menu = menu_bar.addMenu("&Configuración Avanzada")
+        
+        # Acción para Configuración de Escaneo de Mercado
+        market_scan_action = QAction("&Escaneo de Mercado...", self)
+        market_scan_action.setShortcut("Ctrl+M")
+        market_scan_action.setStatusTip("Configurar parámetros de escaneo de mercado")
+        market_scan_action.triggered.connect(self.open_market_scan_config)
+        config_menu.addAction(market_scan_action)
+        
+        # Acción para Gestión de Presets
+        preset_mgmt_action = QAction("&Gestión de Presets...", self)
+        preset_mgmt_action.setShortcut("Ctrl+P")
+        preset_mgmt_action.setStatusTip("Crear y gestionar presets de configuración")
+        preset_mgmt_action.triggered.connect(self.open_preset_management)
+        config_menu.addAction(preset_mgmt_action)
+        
+        config_menu.addSeparator()
+        
+        # Acción para Parámetros de Trading por Activo
+        asset_config_action = QAction("&Parámetros por Activo...", self)
+        asset_config_action.setShortcut("Ctrl+A")
+        asset_config_action.setStatusTip("Configurar parámetros de trading específicos por activo")
+        asset_config_action.triggered.connect(self.open_asset_trading_parameters)
+        config_menu.addAction(asset_config_action)
+        
+        # Menú Ayuda
+        help_menu = menu_bar.addMenu("&Ayuda")
+        
+        about_action = QAction("&Acerca de", self)
+        about_action.triggered.connect(self._show_about_dialog)
+        help_menu.addAction(about_action)
+        
         return menu_bar
 
     def _log_debug(self, msg: str):
@@ -251,6 +297,73 @@ class MainWindow(QMainWindow, BaseMainWindow):
             view_widget = self.stacked_widget.widget(index)
             if hasattr(view_widget, 'enter_view'):
                 view_widget.enter_view()
+
+    def open_market_scan_config(self):
+        """Abre el diálogo de configuración de escaneo de mercado."""
+        try:
+            dialog = MarketScanConfigDialog(
+                api_client=self.api_client,
+                loop=self.loop,
+                parent=self
+            )
+            dialog.exec_()
+            logger.info("Diálogo de configuración de escaneo de mercado cerrado")
+        except Exception as e:
+            logger.error(f"Error al abrir el diálogo de configuración de escaneo: {str(e)}")
+            self.statusBar().showMessage(f"Error: {str(e)}", 5000)
+
+    def open_preset_management(self):
+        """Abre el diálogo de gestión de presets."""
+        try:
+            dialog = PresetManagementDialog(
+                api_client=self.api_client,
+                loop=self.loop,
+                parent=self
+            )
+            dialog.exec_()
+            logger.info("Diálogo de gestión de presets cerrado")
+        except Exception as e:
+            logger.error(f"Error al abrir el diálogo de gestión de presets: {str(e)}")
+            self.statusBar().showMessage(f"Error: {str(e)}", 5000)
+
+    def open_asset_trading_parameters(self):
+        """Abre el diálogo de configuración de parámetros de trading por activo."""
+        try:
+            dialog = AssetTradingParametersDialog(
+                api_client=self.api_client,
+                loop=self.loop,
+                parent=self
+            )
+            dialog.exec_()
+            logger.info("Diálogo de parámetros de trading por activo cerrado")
+        except Exception as e:
+            logger.error(f"Error al abrir el diálogo de parámetros de trading: {str(e)}")
+            self.statusBar().showMessage(f"Error: {str(e)}", 5000)
+
+    def _show_about_dialog(self):
+        """Muestra el diálogo 'Acerca de'."""
+        from PyQt5.QtWidgets import QMessageBox
+        
+        about_text = """
+        <h2>UltiBotInversiones</h2>
+        <p><b>Sistema Avanzado de Trading Automatizado</b></p>
+        <p>Versión 1.0.0</p>
+        <p>
+        UltiBotInversiones es una plataforma completa de trading automatizado 
+        que combina análisis de mercado, inteligencia artificial y estrategias 
+        personalizables para optimizar las inversiones.
+        </p>
+        <p><b>Características principales:</b></p>
+        <ul>
+        <li>Sistema de configuración avanzada de escaneo de mercado</li>
+        <li>Gestión de presets personalizables</li>
+        <li>Parámetros de trading específicos por activo</li>
+        <li>Integración con múltiples exchanges</li>
+        <li>Análisis técnico y fundamental automatizado</li>
+        </ul>
+        """
+        
+        QMessageBox.about(self, "Acerca de UltiBotInversiones", about_text)
 
     def cleanup(self):
         """Limpia los recursos de la ventana."""
