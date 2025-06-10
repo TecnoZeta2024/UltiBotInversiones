@@ -17,7 +17,7 @@ from fastapi.responses import JSONResponse
 from asgi_correlation_id import CorrelationIdMiddleware, correlation_id, CorrelationIdFilter
 
 from src.ultibot_backend.api.v1.endpoints import (
-    config, market_data, notifications, opportunities,
+    config, market_data, market_configuration, notifications, opportunities,
     performance, portfolio, reports, strategies, trades, trading, trading_mode
 )
 from src.ultibot_backend.dependencies import get_container
@@ -158,6 +158,7 @@ app.include_router(opportunities.router, prefix=f"{api_prefix}/opportunities", t
 app.include_router(strategies.router, prefix=f"{api_prefix}/strategies", tags=["strategies"])
 app.include_router(trading.router, prefix=f"{api_prefix}/trading", tags=["trading"])
 app.include_router(market_data.router, prefix=f"{api_prefix}/market", tags=["market_data"])
+app.include_router(market_configuration.router, prefix=api_prefix, tags=["market_configuration"])
 app.include_router(trading_mode.router, prefix=api_prefix, tags=["trading_mode"])
 logger.info("Todos los routers han sido registrados.")
 
