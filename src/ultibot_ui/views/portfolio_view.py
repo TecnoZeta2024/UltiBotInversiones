@@ -1,6 +1,7 @@
 import logging
 from uuid import UUID
 from typing import List, Dict, Any, Optional
+import asyncio
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget, QTableWidgetItem,
@@ -18,10 +19,11 @@ from src.ultibot_ui.workers import ApiWorker
 logger = logging.getLogger(__name__)
 
 class PortfolioView(QWidget):
-    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, parent: Optional[QWidget] = None): # Add api_client
+    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, loop: asyncio.AbstractEventLoop, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.user_id = user_id
-        self.api_client = api_client # Store api_client
+        self.api_client = api_client
+        self.loop = loop
         self.active_threads: List[QThread] = []
         self.current_portfolio_data: Optional[PortfolioSnapshot] = None
 
@@ -122,13 +124,12 @@ class PortfolioView(QWidget):
         self.refresh_button.setEnabled(False)
         self.assets_table.setRowCount(0)
 
-        # The lambda now takes one argument (the client passed by ApiWorker)
-        # and uses that argument to make the call.
         worker = ApiWorker(
-            api_client=self.api_client, # Pass the stored api_client to the worker
+            api_client=self.api_client,
             coroutine_factory=lambda client_in_lambda: client_in_lambda.get_portfolio_snapshot(
                 user_id=self.user_id, trading_mode=self.trading_mode_manager.current_mode
-            )
+            ),
+            loop=self.loop
         )
         thread = QThread()
         self.active_threads.append(thread)
@@ -278,10 +279,9 @@ if __name__ == '__main__':
     class MockApiWorker(QObject):
         result_ready = pyqtSignal(object)
         error_occurred = pyqtSignal(str)
-        def __init__(self, coroutine_factory): # Eliminado api_client
+        def __init__(self, coroutine_factory, loop): # Added loop
             super().__init__()
             self.coro_factory = coroutine_factory
-            # self.api_client = api_client # Eliminado
         def run(self):
             try:
                 mock_data = _mock_get_portfolio_snapshot("paper")
@@ -300,7 +300,14 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     
-    view = PortfolioView(user_id=UUID("00000000-0000-0000-0000-000000000000")) # Eliminado api_client
+    # Mock loop for testing purposes
+    test_loop = asyncio.get_event_loop()
+    
+    view = PortfolioView(
+        user_id=UUID("00000000-0000-0000-0000-000000000000"),
+        api_client=None, # Mocked, not used in this test
+        loop=test_loop
+    )
     view.setWindowTitle("Portfolio View - Test")
     view.setGeometry(100, 100, 1000, 700)
     view.show()

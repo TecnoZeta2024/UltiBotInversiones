@@ -82,10 +82,11 @@ class MarketDataWidget(QWidget):
     config_saved = pyqtSignal(UserConfiguration)
     market_data_api_error = pyqtSignal(str)
     
-    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, parent: Optional[QWidget] = None):
+    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, loop: asyncio.AbstractEventLoop, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.user_id = user_id
         self.api_client = api_client
+        self.loop = loop
         self.selected_pairs: List[str] = [] 
         self.all_available_pairs: List[str] = [] 
         self.active_api_workers: List[Any] = []
@@ -100,10 +101,10 @@ class MarketDataWidget(QWidget):
         self.load_initial_configuration()
 
     def _run_api_worker_and_await_result(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine]) -> asyncio.Future:
-        qasync_loop = asyncio.get_event_loop()
+        qasync_loop = self.loop
         future = qasync_loop.create_future()
 
-        worker = ApiWorker(coroutine_factory=coroutine_factory, api_client=self.api_client)
+        worker = ApiWorker(coroutine_factory=coroutine_factory, api_client=self.api_client, loop=self.loop)
         thread = QThread()
         self.active_api_workers.append((worker, thread))
 
@@ -304,7 +305,7 @@ if __name__ == '__main__':
 
         test_user_id = UUID("123e4567-e89b-12d3-a456-426614174000")
         mock_api_client = MockAPIClient(base_url="http://mock")
-        widget = MarketDataWidget(user_id=test_user_id, api_client=mock_api_client)
+        widget = MarketDataWidget(user_id=test_user_id, api_client=mock_api_client, loop=loop)
         
         widget.load_initial_configuration()
         widget.show()

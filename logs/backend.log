@@ -1,241 +1,147 @@
-2025-06-08 20:03:57,948 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
-2025-06-08 20:03:57,948 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
-2025-06-08 20:03:57,965 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
-2025-06-08 20:03:57,966 - uvicorn.error - INFO - [MainThread] - server.py:82 - Started server process [12432]
-2025-06-08 20:03:57,966 - uvicorn.error - INFO - [MainThread] - on.py:48 - Waiting for application startup.
-2025-06-08 20:03:57,966 - ultibot_backend - INFO - [MainThread] - main.py:74 - Iniciando UltiBot Backend...
-2025-06-08 20:03:57,966 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:47 - Initializing dependency container...
-2025-06-08 20:03:57,966 - httpx - DEBUG - [MainThread] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
-2025-06-08 20:03:57,967 - httpx - DEBUG - [MainThread] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
-2025-06-08 20:03:58,145 - src.ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:68 - Pool de conexiones a Supabase (psycopg_pool) establecido exitosamente. Min: 2, Max: 10
-2025-06-08 20:03:58,146 - httpx - DEBUG - [MainThread] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
-2025-06-08 20:03:58,146 - httpx - DEBUG - [MainThread] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
-2025-06-08 20:03:58,321 - src.ultibot_backend.services.order_execution_service - INFO - [MainThread] - order_execution_service.py:110 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
-2025-06-08 20:03:58,321 - src.ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:28 - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
-2025-06-08 20:03:58,321 - src.ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:34 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
-2025-06-08 20:03:58,321 - src.ultibot_backend.services.unified_order_execution_service - INFO - [MainThread] - unified_order_execution_service.py:27 - UnifiedOrderExecutionService initialized with both real and paper execution services
-2025-06-08 20:03:58,347 - src.ultibot_backend.services.ai_orchestrator_service - INFO - [MainThread] - ai_orchestrator_service.py:143 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
-2025-06-08 20:03:58,347 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:126 - Dependency container initialized successfully.
-2025-06-08 20:03:58,347 - ultibot_backend - INFO - [MainThread] - main.py:79 - Contenedor de dependencias inicializado.
-2025-06-08 20:03:58,347 - ultibot_backend - INFO - [MainThread] - main.py:86 - Aplicación iniciada correctamente.
-2025-06-08 20:03:58,349 - uvicorn.error - INFO - [MainThread] - on.py:62 - Application startup complete.
-2025-06-08 20:04:05,487 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/config
-2025-06-08 20:04:05,894 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/config - Status: 200
-2025-06-08 20:04:05,895 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56420 - "GET /api/v1/config HTTP/1.1" 200
-2025-06-08 20:34:52,810 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
-2025-06-08 20:34:52,810 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
-2025-06-08 20:34:52,828 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
-2025-06-08 20:34:52,828 - uvicorn.error - INFO - [MainThread] - server.py:82 - Started server process [21800]
-2025-06-08 20:34:52,828 - uvicorn.error - INFO - [MainThread] - on.py:48 - Waiting for application startup.
-2025-06-08 20:34:52,829 - ultibot_backend - INFO - [MainThread] - main.py:74 - Iniciando UltiBot Backend...
-2025-06-08 20:34:52,829 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:47 - Initializing dependency container...
-2025-06-08 20:34:52,829 - httpx - DEBUG - [MainThread] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
-2025-06-08 20:34:52,830 - httpx - DEBUG - [MainThread] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
-2025-06-08 20:34:53,004 - src.ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:68 - Pool de conexiones a Supabase (psycopg_pool) establecido exitosamente. Min: 2, Max: 10
-2025-06-08 20:34:53,005 - httpx - DEBUG - [MainThread] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
-2025-06-08 20:34:53,005 - httpx - DEBUG - [MainThread] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
-2025-06-08 20:34:53,181 - src.ultibot_backend.services.order_execution_service - INFO - [MainThread] - order_execution_service.py:110 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
-2025-06-08 20:34:53,181 - src.ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:28 - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
-2025-06-08 20:34:53,181 - src.ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:34 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
-2025-06-08 20:34:53,181 - src.ultibot_backend.services.unified_order_execution_service - INFO - [MainThread] - unified_order_execution_service.py:27 - UnifiedOrderExecutionService initialized with both real and paper execution services
-2025-06-08 20:34:53,208 - src.ultibot_backend.services.ai_orchestrator_service - INFO - [MainThread] - ai_orchestrator_service.py:143 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
-2025-06-08 20:34:53,208 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:126 - Dependency container initialized successfully.
-2025-06-08 20:34:53,208 - ultibot_backend - INFO - [MainThread] - main.py:79 - Contenedor de dependencias inicializado.
-2025-06-08 20:34:53,208 - ultibot_backend - INFO - [MainThread] - main.py:86 - Aplicación iniciada correctamente.
-2025-06-08 20:34:53,211 - uvicorn.error - INFO - [MainThread] - on.py:62 - Application startup complete.
-2025-06-08 20:35:00,445 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/config
-2025-06-08 20:35:00,811 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/config - Status: 200
-2025-06-08 20:35:00,812 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56683 - "GET /api/v1/config HTTP/1.1" 200
-2025-06-08 20:35:16,318 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
-2025-06-08 20:35:16,319 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/trades
-2025-06-08 20:35:16,606 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
-2025-06-08 20:35:16,607 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56691 - "GET /api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open HTTP/1.1" 200
-2025-06-08 20:35:16,808 - src.ultibot_backend.services.portfolio_service - INFO - [MainThread] - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
-2025-06-08 20:35:16,808 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
-2025-06-08 20:35:16,809 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56690 - "GET /api/v1/portfolio/snapshot?user_id=86e5f6c7-02a0-475b-b277-1fccbf23aa56&trading_mode=paper HTTP/1.1" 200
-2025-06-08 20:35:31,323 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
-2025-06-08 20:35:31,324 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/trades
-2025-06-08 20:35:31,624 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
-2025-06-08 20:35:31,624 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56702 - "GET /api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open HTTP/1.1" 200
-2025-06-08 20:35:31,847 - src.ultibot_backend.services.portfolio_service - INFO - [MainThread] - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
-2025-06-08 20:35:31,847 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
-2025-06-08 20:35:31,847 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56701 - "GET /api/v1/portfolio/snapshot?user_id=86e5f6c7-02a0-475b-b277-1fccbf23aa56&trading_mode=paper HTTP/1.1" 200
-2025-06-08 20:35:46,341 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
-2025-06-08 20:35:46,342 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/trades
-2025-06-08 20:35:46,646 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
-2025-06-08 20:35:46,646 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56707 - "GET /api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open HTTP/1.1" 200
-2025-06-08 20:35:46,935 - src.ultibot_backend.services.portfolio_service - INFO - [MainThread] - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
-2025-06-08 20:35:46,935 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
-2025-06-08 20:35:46,936 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56706 - "GET /api/v1/portfolio/snapshot?user_id=86e5f6c7-02a0-475b-b277-1fccbf23aa56&trading_mode=paper HTTP/1.1" 200
-2025-06-08 20:36:01,353 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
-2025-06-08 20:36:01,354 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/trades
-2025-06-08 20:36:01,644 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
-2025-06-08 20:36:01,644 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56713 - "GET /api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open HTTP/1.1" 200
-2025-06-08 20:36:02,033 - src.ultibot_backend.services.portfolio_service - INFO - [MainThread] - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
-2025-06-08 20:36:02,034 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
-2025-06-08 20:36:02,034 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56712 - "GET /api/v1/portfolio/snapshot?user_id=86e5f6c7-02a0-475b-b277-1fccbf23aa56&trading_mode=paper HTTP/1.1" 200
-2025-06-08 20:36:16,372 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
-2025-06-08 20:36:16,374 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/trades
-2025-06-08 20:36:16,689 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
-2025-06-08 20:36:16,690 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56718 - "GET /api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open HTTP/1.1" 200
-2025-06-08 20:36:17,117 - src.ultibot_backend.services.portfolio_service - INFO - [MainThread] - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
-2025-06-08 20:36:17,118 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
-2025-06-08 20:36:17,118 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56717 - "GET /api/v1/portfolio/snapshot?user_id=86e5f6c7-02a0-475b-b277-1fccbf23aa56&trading_mode=paper HTTP/1.1" 200
-2025-06-08 20:36:31,380 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
-2025-06-08 20:36:31,381 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/trades
-2025-06-08 20:36:31,677 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
-2025-06-08 20:36:31,678 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56723 - "GET /api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open HTTP/1.1" 200
-2025-06-08 20:36:32,212 - src.ultibot_backend.services.portfolio_service - INFO - [MainThread] - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
-2025-06-08 20:36:32,212 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
-2025-06-08 20:36:32,213 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56722 - "GET /api/v1/portfolio/snapshot?user_id=86e5f6c7-02a0-475b-b277-1fccbf23aa56&trading_mode=paper HTTP/1.1" 200
-2025-06-08 20:36:46,397 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/trades
-2025-06-08 20:36:46,398 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
-2025-06-08 20:36:46,703 - src.ultibot_backend.services.portfolio_service - INFO - [MainThread] - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
-2025-06-08 20:36:46,703 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
-2025-06-08 20:36:46,704 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56727 - "GET /api/v1/portfolio/snapshot?user_id=86e5f6c7-02a0-475b-b277-1fccbf23aa56&trading_mode=paper HTTP/1.1" 200
-2025-06-08 20:36:47,353 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
-2025-06-08 20:36:47,353 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56728 - "GET /api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open HTTP/1.1" 200
-2025-06-08 20:37:01,412 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
-2025-06-08 20:37:01,413 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/trades
-2025-06-08 20:37:01,698 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
-2025-06-08 20:37:01,699 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56733 - "GET /api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open HTTP/1.1" 200
-2025-06-08 20:37:02,403 - src.ultibot_backend.services.portfolio_service - INFO - [MainThread] - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
-2025-06-08 20:37:02,403 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
-2025-06-08 20:37:02,404 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56732 - "GET /api/v1/portfolio/snapshot?user_id=86e5f6c7-02a0-475b-b277-1fccbf23aa56&trading_mode=paper HTTP/1.1" 200
-2025-06-08 20:37:16,412 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/trades
-2025-06-08 20:37:16,413 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
-2025-06-08 20:37:16,719 - src.ultibot_backend.services.portfolio_service - INFO - [MainThread] - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
-2025-06-08 20:37:16,719 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
-2025-06-08 20:37:16,719 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56742 - "GET /api/v1/portfolio/snapshot?user_id=86e5f6c7-02a0-475b-b277-1fccbf23aa56&trading_mode=paper HTTP/1.1" 200
-2025-06-08 20:37:17,431 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
-2025-06-08 20:37:17,432 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56743 - "GET /api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open HTTP/1.1" 200
-2025-06-08 20:37:31,426 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/trades
-2025-06-08 20:37:31,427 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
-2025-06-08 20:37:31,731 - src.ultibot_backend.services.portfolio_service - INFO - [MainThread] - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
-2025-06-08 20:37:31,732 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
-2025-06-08 20:37:31,732 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56746 - "GET /api/v1/portfolio/snapshot?user_id=86e5f6c7-02a0-475b-b277-1fccbf23aa56&trading_mode=paper HTTP/1.1" 200
-2025-06-08 20:37:32,380 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
-2025-06-08 20:37:32,380 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56747 - "GET /api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open HTTP/1.1" 200
-2025-06-08 20:37:46,438 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
-2025-06-08 20:37:46,439 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/trades
-2025-06-08 20:37:46,731 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
-2025-06-08 20:37:46,732 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56751 - "GET /api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open HTTP/1.1" 200
-2025-06-08 20:37:47,434 - src.ultibot_backend.services.portfolio_service - INFO - [MainThread] - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
-2025-06-08 20:37:47,434 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
-2025-06-08 20:37:47,435 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56750 - "GET /api/v1/portfolio/snapshot?user_id=86e5f6c7-02a0-475b-b277-1fccbf23aa56&trading_mode=paper HTTP/1.1" 200
-2025-06-08 20:38:01,449 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/trades
-2025-06-08 20:38:01,451 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
-2025-06-08 20:38:01,736 - src.ultibot_backend.services.portfolio_service - INFO - [MainThread] - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
-2025-06-08 20:38:01,737 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
-2025-06-08 20:38:01,737 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56757 - "GET /api/v1/portfolio/snapshot?user_id=86e5f6c7-02a0-475b-b277-1fccbf23aa56&trading_mode=paper HTTP/1.1" 200
-2025-06-08 20:38:02,449 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
-2025-06-08 20:38:02,449 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56758 - "GET /api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open HTTP/1.1" 200
-2025-06-08 20:38:16,445 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
-2025-06-08 20:38:16,446 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/trades
-2025-06-08 20:38:16,783 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
-2025-06-08 20:38:16,784 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56762 - "GET /api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open HTTP/1.1" 200
-2025-06-08 20:38:17,488 - src.ultibot_backend.services.portfolio_service - INFO - [MainThread] - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
-2025-06-08 20:38:17,489 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
-2025-06-08 20:38:17,489 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:56761 - "GET /api/v1/portfolio/snapshot?user_id=86e5f6c7-02a0-475b-b277-1fccbf23aa56&trading_mode=paper HTTP/1.1" 200
-2025-06-08 20:38:23,230 - uvicorn.error - INFO - [MainThread] - server.py:258 - Shutting down
-2025-06-08 20:38:23,340 - uvicorn.error - INFO - [MainThread] - on.py:67 - Waiting for application shutdown.
-2025-06-08 20:38:23,341 - ultibot_backend - INFO - [MainThread] - main.py:89 - Apagando UltiBot Backend...
-2025-06-08 20:38:23,341 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:129 - Shutting down dependency container...
-2025-06-08 20:38:23,343 - src.ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:79 - Pool de conexiones a Supabase (psycopg_pool) cerrado.
-2025-06-08 20:38:23,343 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:136 - Dependency container shut down.
-2025-06-08 20:38:23,343 - ultibot_backend - INFO - [MainThread] - main.py:91 - Recursos liberados y aplicación apagada.
-2025-06-08 20:38:23,343 - uvicorn.error - INFO - [MainThread] - on.py:76 - Application shutdown complete.
-2025-06-08 20:38:23,343 - uvicorn.error - INFO - [MainThread] - server.py:92 - Finished server process [21800]
-2025-06-08 20:43:07,801 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
-2025-06-08 20:43:07,801 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
-2025-06-08 20:43:07,818 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
-2025-06-08 20:43:07,818 - uvicorn.error - INFO - [MainThread] - server.py:82 - Started server process [30160]
-2025-06-08 20:43:07,818 - uvicorn.error - INFO - [MainThread] - on.py:48 - Waiting for application startup.
-2025-06-08 20:43:07,819 - ultibot_backend - INFO - [MainThread] - main.py:74 - Iniciando UltiBot Backend...
-2025-06-08 20:43:07,819 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:47 - Initializing dependency container...
-2025-06-08 20:43:07,819 - httpx - DEBUG - [MainThread] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
-2025-06-08 20:43:07,819 - httpx - DEBUG - [MainThread] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
-2025-06-08 20:43:07,998 - src.ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:68 - Pool de conexiones a Supabase (psycopg_pool) establecido exitosamente. Min: 2, Max: 10
-2025-06-08 20:43:07,999 - httpx - DEBUG - [MainThread] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
-2025-06-08 20:43:07,999 - httpx - DEBUG - [MainThread] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
-2025-06-08 20:43:08,177 - src.ultibot_backend.services.order_execution_service - INFO - [MainThread] - order_execution_service.py:110 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
-2025-06-08 20:43:08,177 - src.ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:28 - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
-2025-06-08 20:43:08,178 - src.ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:34 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
-2025-06-08 20:43:08,178 - src.ultibot_backend.services.unified_order_execution_service - INFO - [MainThread] - unified_order_execution_service.py:27 - UnifiedOrderExecutionService initialized with both real and paper execution services
-2025-06-08 20:43:08,205 - src.ultibot_backend.services.ai_orchestrator_service - INFO - [MainThread] - ai_orchestrator_service.py:143 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
-2025-06-08 20:43:08,206 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:126 - Dependency container initialized successfully.
-2025-06-08 20:43:08,206 - ultibot_backend - INFO - [MainThread] - main.py:79 - Contenedor de dependencias inicializado.
-2025-06-08 20:43:08,206 - ultibot_backend - INFO - [MainThread] - main.py:86 - Aplicación iniciada correctamente.
-2025-06-08 20:43:08,208 - uvicorn.error - INFO - [MainThread] - on.py:62 - Application startup complete.
-2025-06-08 20:48:02,194 - uvicorn.error - INFO - [MainThread] - server.py:258 - Shutting down
-2025-06-08 20:48:02,304 - uvicorn.error - INFO - [MainThread] - on.py:67 - Waiting for application shutdown.
-2025-06-08 20:48:02,304 - ultibot_backend - INFO - [MainThread] - main.py:89 - Apagando UltiBot Backend...
-2025-06-08 20:48:02,304 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:129 - Shutting down dependency container...
-2025-06-08 20:48:02,325 - src.ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:79 - Pool de conexiones a Supabase (psycopg_pool) cerrado.
-2025-06-08 20:48:02,325 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:136 - Dependency container shut down.
-2025-06-08 20:48:02,325 - ultibot_backend - INFO - [MainThread] - main.py:91 - Recursos liberados y aplicación apagada.
-2025-06-08 20:48:02,325 - uvicorn.error - INFO - [MainThread] - on.py:76 - Application shutdown complete.
-2025-06-08 20:48:02,325 - uvicorn.error - INFO - [MainThread] - server.py:92 - Finished server process [30160]
-2025-06-08 20:48:06,191 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
-2025-06-08 20:48:06,191 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
-2025-06-08 20:48:06,211 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
-2025-06-08 20:48:06,211 - uvicorn.error - INFO - [MainThread] - server.py:82 - Started server process [27752]
-2025-06-08 20:48:06,211 - uvicorn.error - INFO - [MainThread] - on.py:48 - Waiting for application startup.
-2025-06-08 20:48:06,212 - ultibot_backend - INFO - [MainThread] - main.py:74 - Iniciando UltiBot Backend...
-2025-06-08 20:48:06,212 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:47 - Initializing dependency container...
-2025-06-08 20:48:06,212 - httpx - DEBUG - [MainThread] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
-2025-06-08 20:48:06,212 - httpx - DEBUG - [MainThread] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
-2025-06-08 20:48:06,389 - src.ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:68 - Pool de conexiones a Supabase (psycopg_pool) establecido exitosamente. Min: 2, Max: 10
-2025-06-08 20:48:06,390 - httpx - DEBUG - [MainThread] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
-2025-06-08 20:48:06,390 - httpx - DEBUG - [MainThread] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
-2025-06-08 20:48:06,560 - src.ultibot_backend.services.order_execution_service - INFO - [MainThread] - order_execution_service.py:110 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
-2025-06-08 20:48:06,560 - src.ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:28 - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
-2025-06-08 20:48:06,561 - src.ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:34 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
-2025-06-08 20:48:06,561 - src.ultibot_backend.services.unified_order_execution_service - INFO - [MainThread] - unified_order_execution_service.py:27 - UnifiedOrderExecutionService initialized with both real and paper execution services
-2025-06-08 20:48:06,574 - src.ultibot_backend.services.ai_orchestrator_service - INFO - [MainThread] - ai_orchestrator_service.py:143 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
-2025-06-08 20:48:06,574 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:126 - Dependency container initialized successfully.
-2025-06-08 20:48:06,574 - ultibot_backend - INFO - [MainThread] - main.py:79 - Contenedor de dependencias inicializado.
-2025-06-08 20:48:06,574 - ultibot_backend - INFO - [MainThread] - main.py:86 - Aplicación iniciada correctamente.
-2025-06-08 20:48:06,576 - uvicorn.error - INFO - [MainThread] - on.py:62 - Application startup complete.
-2025-06-08 20:53:44,082 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
-2025-06-08 20:53:44,082 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
-2025-06-08 20:53:44,099 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
-2025-06-08 20:53:44,099 - uvicorn.error - INFO - [MainThread] - server.py:82 - Started server process [31484]
-2025-06-08 20:53:44,099 - uvicorn.error - INFO - [MainThread] - on.py:48 - Waiting for application startup.
-2025-06-08 20:53:44,099 - ultibot_backend - INFO - [MainThread] - main.py:74 - Iniciando UltiBot Backend...
-2025-06-08 20:53:44,099 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:47 - Initializing dependency container...
-2025-06-08 20:53:44,100 - httpx - DEBUG - [MainThread] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
-2025-06-08 20:53:44,100 - httpx - DEBUG - [MainThread] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
-2025-06-08 20:53:44,283 - src.ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:68 - Pool de conexiones a Supabase (psycopg_pool) establecido exitosamente. Min: 2, Max: 10
-2025-06-08 20:53:44,284 - httpx - DEBUG - [MainThread] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
-2025-06-08 20:53:44,285 - httpx - DEBUG - [MainThread] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
-2025-06-08 20:53:44,466 - src.ultibot_backend.services.order_execution_service - INFO - [MainThread] - order_execution_service.py:110 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
-2025-06-08 20:53:44,467 - src.ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:28 - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
-2025-06-08 20:53:44,467 - src.ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:34 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
-2025-06-08 20:53:44,467 - src.ultibot_backend.services.unified_order_execution_service - INFO - [MainThread] - unified_order_execution_service.py:27 - UnifiedOrderExecutionService initialized with both real and paper execution services
-2025-06-08 20:53:44,495 - src.ultibot_backend.services.ai_orchestrator_service - INFO - [MainThread] - ai_orchestrator_service.py:143 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
-2025-06-08 20:53:44,495 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:126 - Dependency container initialized successfully.
-2025-06-08 20:53:44,495 - ultibot_backend - INFO - [MainThread] - main.py:79 - Contenedor de dependencias inicializado.
-2025-06-08 20:53:44,495 - ultibot_backend - INFO - [MainThread] - main.py:86 - Aplicación iniciada correctamente.
-2025-06-08 20:53:44,497 - uvicorn.error - INFO - [MainThread] - on.py:62 - Application startup complete.
-2025-06-08 20:58:18,929 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
-2025-06-08 20:58:18,929 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
-2025-06-08 20:58:18,945 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
-2025-06-08 20:58:18,946 - uvicorn.error - INFO - [MainThread] - server.py:82 - Started server process [30324]
-2025-06-08 20:58:18,946 - uvicorn.error - INFO - [MainThread] - on.py:48 - Waiting for application startup.
-2025-06-08 20:58:18,946 - ultibot_backend - INFO - [MainThread] - main.py:74 - Iniciando UltiBot Backend...
-2025-06-08 20:58:18,946 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:47 - Initializing dependency container...
-2025-06-08 20:58:18,946 - httpx - DEBUG - [MainThread] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
-2025-06-08 20:58:18,947 - httpx - DEBUG - [MainThread] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
-2025-06-08 20:58:19,120 - src.ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:68 - Pool de conexiones a Supabase (psycopg_pool) establecido exitosamente. Min: 2, Max: 10
-2025-06-08 20:58:19,120 - httpx - DEBUG - [MainThread] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
-2025-06-08 20:58:19,121 - httpx - DEBUG - [MainThread] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
-2025-06-08 20:58:19,297 - src.ultibot_backend.services.order_execution_service - INFO - [MainThread] - order_execution_service.py:110 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
-2025-06-08 20:58:19,297 - src.ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:28 - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
-2025-06-08 20:58:19,298 - src.ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:34 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
-2025-06-08 20:58:19,298 - src.ultibot_backend.services.unified_order_execution_service - INFO - [MainThread] - unified_order_execution_service.py:27 - UnifiedOrderExecutionService initialized with both real and paper execution services
-2025-06-08 20:58:19,323 - src.ultibot_backend.services.ai_orchestrator_service - INFO - [MainThread] - ai_orchestrator_service.py:143 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
-2025-06-08 20:58:19,323 - src.ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:126 - Dependency container initialized successfully.
-2025-06-08 20:58:19,324 - ultibot_backend - INFO - [MainThread] - main.py:79 - Contenedor de dependencias inicializado.
-2025-06-08 20:58:19,324 - ultibot_backend - INFO - [MainThread] - main.py:86 - Aplicación iniciada correctamente.
-2025-06-08 20:58:19,326 - uvicorn.error - INFO - [MainThread] - on.py:62 - Application startup complete.
+2025-06-09 21:26:00,230 - ultibot_backend - INFO - [367868a5d04f] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/config - Status: 200
+2025-06-09 21:26:00,230 - uvicorn.access - INFO - [7dc860014cfc] - MainThread - httptools_impl.py:481 - 127.0.0.1:58767 - "GET /api/v1/config HTTP/1.1" 200
+2025-06-09 21:26:12,546 - ultibot_backend - INFO - [8aabe41cf48e] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
+2025-06-09 21:26:12,546 - ultibot_backend - INFO - [48e718d70dff] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-09 21:26:12,862 - ultibot_backend - INFO - [d689d4734324] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
+2025-06-09 21:26:12,862 - uvicorn.access - INFO - [1738252af6ad] - MainThread - httptools_impl.py:481 - 127.0.0.1:58781 - "GET /api/v1/trades?trading_mode=paper&status=open HTTP/1.1" 200
+2025-06-09 21:26:13,015 - src.ultibot_backend.services.portfolio_service - INFO - [16ec15c61eef442f829df2a744d1934d] - MainThread - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
+2025-06-09 21:26:13,016 - ultibot_backend - INFO - [3c9502b69e73] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
+2025-06-09 21:26:13,016 - uvicorn.access - INFO - [8ab4f087fb16] - MainThread - httptools_impl.py:481 - 127.0.0.1:58780 - "GET /api/v1/portfolio/snapshot?user_id=e5330834-1f2b-4775-bfc5-f2e50b234e42&trading_mode=paper HTTP/1.1" 200
+2025-06-09 21:26:15,463 - ultibot_backend - INFO - [c97d7bcc17ab] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
+2025-06-09 21:26:15,463 - ultibot_backend - INFO - [3ec0cc75ce91] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-09 21:26:15,794 - ultibot_backend - INFO - [cf1a0bc08f13] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
+2025-06-09 21:26:15,795 - uvicorn.access - INFO - [5a0140f027f6] - MainThread - httptools_impl.py:481 - 127.0.0.1:58781 - "GET /api/v1/trades?trading_mode=paper&status=open HTTP/1.1" 200
+2025-06-09 21:26:16,031 - src.ultibot_backend.services.portfolio_service - INFO - [cae7b2329bfc4a3e844fd5411f172c2e] - MainThread - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
+2025-06-09 21:26:16,031 - ultibot_backend - INFO - [8d9e44670015] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
+2025-06-09 21:26:16,031 - uvicorn.access - INFO - [22bb49dd0c9f] - MainThread - httptools_impl.py:481 - 127.0.0.1:58780 - "GET /api/v1/portfolio/snapshot?user_id=e5330834-1f2b-4775-bfc5-f2e50b234e42&trading_mode=paper HTTP/1.1" 200
+2025-06-09 21:26:30,712 - ultibot_backend - INFO - [c5cb5cb357b2] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
+2025-06-09 21:26:30,712 - ultibot_backend - INFO - [0f60933e7524] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-09 21:26:31,031 - ultibot_backend - INFO - [efa3f294629a] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
+2025-06-09 21:26:31,031 - uvicorn.access - INFO - [9af571a59a86] - MainThread - httptools_impl.py:481 - 127.0.0.1:58787 - "GET /api/v1/trades?trading_mode=paper&status=open HTTP/1.1" 200
+2025-06-09 21:26:31,328 - src.ultibot_backend.services.portfolio_service - INFO - [e7a9ac3e40664facb8c0af8b972f6ddb] - MainThread - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
+2025-06-09 21:26:31,329 - ultibot_backend - INFO - [ba5dc07aca95] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
+2025-06-09 21:26:31,329 - uvicorn.access - INFO - [da603dc35d0e] - MainThread - httptools_impl.py:481 - 127.0.0.1:58786 - "GET /api/v1/portfolio/snapshot?user_id=e5330834-1f2b-4775-bfc5-f2e50b234e42&trading_mode=paper HTTP/1.1" 200
+2025-06-09 21:26:45,747 - ultibot_backend - INFO - [35d337327c49] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
+2025-06-09 21:26:45,750 - ultibot_backend - INFO - [c77b7aa8ddd1] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-09 21:26:46,051 - ultibot_backend - INFO - [1747bf3d4cb3] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
+2025-06-09 21:26:46,051 - uvicorn.access - INFO - [1c4097a9632d] - MainThread - httptools_impl.py:481 - 127.0.0.1:58792 - "GET /api/v1/trades?trading_mode=paper&status=open HTTP/1.1" 200
+2025-06-09 21:26:46,431 - src.ultibot_backend.services.portfolio_service - INFO - [6438a889409d4142b3a27b4df35bec32] - MainThread - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
+2025-06-09 21:26:46,431 - ultibot_backend - INFO - [f9855e76fdd5] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
+2025-06-09 21:26:46,431 - uvicorn.access - INFO - [3f3e1b73efc0] - MainThread - httptools_impl.py:481 - 127.0.0.1:58791 - "GET /api/v1/portfolio/snapshot?user_id=e5330834-1f2b-4775-bfc5-f2e50b234e42&trading_mode=paper HTTP/1.1" 200
+2025-06-09 21:27:00,751 - ultibot_backend - INFO - [d6530d1ade94] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
+2025-06-09 21:27:00,751 - ultibot_backend - INFO - [baaef38b1d4d] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-09 21:27:01,093 - ultibot_backend - INFO - [6c57a8b64959] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
+2025-06-09 21:27:01,093 - uvicorn.access - INFO - [a9f698239341] - MainThread - httptools_impl.py:481 - 127.0.0.1:58801 - "GET /api/v1/trades?trading_mode=paper&status=open HTTP/1.1" 200
+2025-06-09 21:27:01,570 - src.ultibot_backend.services.portfolio_service - INFO - [504af19a6759406b8c11e4acd13996cd] - MainThread - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
+2025-06-09 21:27:01,573 - ultibot_backend - INFO - [692ffbceb8b9] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
+2025-06-09 21:27:01,573 - uvicorn.access - INFO - [77b36f7f2591] - MainThread - httptools_impl.py:481 - 127.0.0.1:58800 - "GET /api/v1/portfolio/snapshot?user_id=e5330834-1f2b-4775-bfc5-f2e50b234e42&trading_mode=paper HTTP/1.1" 200
+2025-06-09 21:30:26,400 - ultibot_backend - INFO - [0f0841644f81] - MainThread - main.py:110 - Apagando UltiBot Backend...
+2025-06-09 21:30:26,400 - src.ultibot_backend.dependencies - INFO - [a44757401414] - MainThread - dependencies.py:141 - Shutting down dependency container...
+2025-06-09 21:30:26,401 - src.ultibot_backend.adapters.persistence_service - INFO - [7689e5b46deb] - MainThread - persistence_service.py:79 - Pool de conexiones a Supabase (psycopg_pool) cerrado.
+2025-06-09 21:30:26,401 - src.ultibot_backend.adapters.binance_adapter - INFO - [5784f3e0d5cc] - MainThread - binance_adapter.py:135 - Closing BinanceAdapter...
+2025-06-09 21:30:26,401 - src.ultibot_backend.adapters.binance_adapter - INFO - [e3f7b752fc7e] - MainThread - binance_adapter.py:150 - BinanceAdapter closed.
+2025-06-09 21:30:26,401 - src.ultibot_backend.dependencies - INFO - [15fded19a1f8] - MainThread - dependencies.py:148 - Dependency container shut down.
+2025-06-09 21:30:26,401 - ultibot_backend - INFO - [860df2968ebf] - MainThread - main.py:112 - Recursos liberados y aplicación apagada.
+2025-06-09 21:30:29,750 - ultibot_backend - INFO - [d3c98f5c56c3] - MainThread - main.py:87 - Logging configurado exitosamente usando dictConfig.
+2025-06-09 21:30:29,750 - ultibot_backend - INFO - [ad1460b29075] - MainThread - main.py:157 - Registrando routers de la API...
+2025-06-09 21:30:29,771 - ultibot_backend - INFO - [09766e615355] - MainThread - main.py:168 - Todos los routers han sido registrados.
+2025-06-09 21:30:29,771 - ultibot_backend - INFO - [27c56616e5ea] - MainThread - main.py:96 - Iniciando UltiBot Backend...
+2025-06-09 21:30:29,771 - src.ultibot_backend.dependencies - INFO - [1f5c83a4576b] - MainThread - dependencies.py:47 - Initializing dependency container...
+2025-06-09 21:30:29,771 - httpx - DEBUG - [6875efbd7e40] - MainThread - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-09 21:30:29,771 - httpx - DEBUG - [b9f48862d210] - MainThread - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\AppData\\Local\\pypoetry\\Cache\\virtualenvs\\ultibotinversiones-UOQi1NQu-py3.11\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-09 21:30:29,951 - src.ultibot_backend.adapters.persistence_service - INFO - [4b67e58f88cd] - MainThread - persistence_service.py:68 - Pool de conexiones a Supabase (psycopg_pool) establecido exitosamente. Min: 2, Max: 10
+2025-06-09 21:30:29,955 - src.ultibot_backend.services.order_execution_service - INFO - [178cefe03aa7] - MainThread - order_execution_service.py:110 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-09 21:30:29,967 - src.ultibot_backend.services.ai_orchestrator_service - INFO - [e3c2c9254a9d] - MainThread - ai_orchestrator_service.py:84 - AIOrchestrator initialized with models/gemini-1.5-pro-latest and PydanticOutputParser.
+2025-06-09 21:30:29,967 - src.ultibot_backend.services.credential_service - INFO - [0466a6fa2520] - MainThread - credential_service.py:28 - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
+2025-06-09 21:30:29,967 - src.ultibot_backend.services.credential_service - INFO - [dd57f8a2427e] - MainThread - credential_service.py:34 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-09 21:30:29,967 - src.ultibot_backend.services.unified_order_execution_service - INFO - [bd4f06da7c55] - MainThread - unified_order_execution_service.py:27 - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-09 21:30:29,967 - src.ultibot_backend.services.config_service - WARNING - [50e85a783103] - MainThread - config_service.py:41 - NotificationService already set in ConfigService, ignoring attempt to reset.
+2025-06-09 21:30:29,967 - src.ultibot_backend.dependencies - INFO - [ad125212a66c] - MainThread - dependencies.py:138 - Dependency container initialized successfully.
+2025-06-09 21:30:29,967 - ultibot_backend - INFO - [2d9a3a172180] - MainThread - main.py:101 - Contenedor de dependencias inicializado.
+2025-06-09 21:30:29,967 - ultibot_backend - INFO - [c19ebdf950a1] - MainThread - main.py:107 - Aplicación iniciada correctamente.
+2025-06-09 21:30:40,784 - ultibot_backend - INFO - [9f259b219d5c] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/config
+2025-06-09 21:30:41,316 - ultibot_backend - INFO - [5950764b8d58] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/config - Status: 200
+2025-06-09 21:30:41,317 - uvicorn.access - INFO - [33c71a569ab3] - MainThread - httptools_impl.py:481 - 127.0.0.1:58995 - "GET /api/v1/config HTTP/1.1" 200
+2025-06-09 21:30:49,501 - ultibot_backend - INFO - [f5edd0d9a70e] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
+2025-06-09 21:30:49,501 - ultibot_backend - INFO - [345a0ac37d5a] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-09 21:30:50,271 - ultibot_backend - INFO - [0be85112623c] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
+2025-06-09 21:30:50,271 - uvicorn.access - INFO - [14743ac31bf0] - MainThread - httptools_impl.py:481 - 127.0.0.1:59004 - "GET /api/v1/trades?trading_mode=paper&status=open HTTP/1.1" 200
+2025-06-09 21:30:50,568 - src.ultibot_backend.services.portfolio_service - INFO - [721cff57d1784a4c87b8b3c7e2f32b5f] - MainThread - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
+2025-06-09 21:30:50,568 - ultibot_backend - INFO - [bf38dbfdf11f] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
+2025-06-09 21:30:50,568 - uvicorn.access - INFO - [b875982326bb] - MainThread - httptools_impl.py:481 - 127.0.0.1:59003 - "GET /api/v1/portfolio/snapshot?user_id=74f43bb3-eecc-4329-8a43-9fe9b73fb38b&trading_mode=paper HTTP/1.1" 200
+2025-06-09 21:30:56,804 - ultibot_backend - INFO - [3062d773206b] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
+2025-06-09 21:30:56,804 - ultibot_backend - INFO - [765c3e0f6626] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-09 21:30:57,221 - ultibot_backend - INFO - [a3c760b12fd8] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
+2025-06-09 21:30:57,221 - uvicorn.access - INFO - [4e1a1161e7af] - MainThread - httptools_impl.py:481 - 127.0.0.1:59009 - "GET /api/v1/trades?trading_mode=paper&status=open HTTP/1.1" 200
+2025-06-09 21:30:57,524 - src.ultibot_backend.services.portfolio_service - INFO - [4474d61a809946a0badfa1abd50e87c1] - MainThread - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
+2025-06-09 21:30:57,524 - ultibot_backend - INFO - [11a5dd518681] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
+2025-06-09 21:30:57,525 - uvicorn.access - INFO - [260b5c4ecfab] - MainThread - httptools_impl.py:481 - 127.0.0.1:59008 - "GET /api/v1/portfolio/snapshot?user_id=74f43bb3-eecc-4329-8a43-9fe9b73fb38b&trading_mode=paper HTTP/1.1" 200
+2025-06-09 21:31:11,818 - ultibot_backend - INFO - [3a3c190f0e38] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
+2025-06-09 21:31:11,818 - ultibot_backend - INFO - [52285c4a44c1] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-09 21:31:12,471 - ultibot_backend - INFO - [617be41eb036] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
+2025-06-09 21:31:12,471 - uvicorn.access - INFO - [6c273a658bd7] - MainThread - httptools_impl.py:481 - 127.0.0.1:59014 - "GET /api/v1/trades?trading_mode=paper&status=open HTTP/1.1" 200
+2025-06-09 21:31:13,211 - src.ultibot_backend.services.portfolio_service - INFO - [153cac4a50db4a7e979d76b0f0af7f4c] - MainThread - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
+2025-06-09 21:31:13,211 - ultibot_backend - INFO - [0580814604a6] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
+2025-06-09 21:31:13,211 - uvicorn.access - INFO - [73c260b9103e] - MainThread - httptools_impl.py:481 - 127.0.0.1:59013 - "GET /api/v1/portfolio/snapshot?user_id=74f43bb3-eecc-4329-8a43-9fe9b73fb38b&trading_mode=paper HTTP/1.1" 200
+2025-06-09 21:31:26,835 - ultibot_backend - INFO - [35a28d75a6fe] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-09 21:31:26,835 - ultibot_backend - INFO - [bde834d212fb] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
+2025-06-09 21:31:27,171 - src.ultibot_backend.services.portfolio_service - INFO - [7b552484cd404d4e877814080ba7b766] - MainThread - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
+2025-06-09 21:31:27,171 - ultibot_backend - INFO - [2236b558cf5d] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
+2025-06-09 21:31:27,171 - uvicorn.access - INFO - [308b82af6190] - MainThread - httptools_impl.py:481 - 127.0.0.1:59034 - "GET /api/v1/portfolio/snapshot?user_id=74f43bb3-eecc-4329-8a43-9fe9b73fb38b&trading_mode=paper HTTP/1.1" 200
+2025-06-09 21:31:27,571 - ultibot_backend - INFO - [e4f4dd4f6bf2] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
+2025-06-09 21:31:27,571 - uvicorn.access - INFO - [54ec3240fb57] - MainThread - httptools_impl.py:481 - 127.0.0.1:59033 - "GET /api/v1/trades?trading_mode=paper&status=open HTTP/1.1" 200
+2025-06-09 21:34:38,823 - ultibot_backend - INFO - [cc9081024c55] - MainThread - main.py:87 - Logging configurado exitosamente usando dictConfig.
+2025-06-09 21:34:38,831 - ultibot_backend - INFO - [32a37b0892da] - MainThread - main.py:157 - Registrando routers de la API...
+2025-06-09 21:34:38,849 - ultibot_backend - INFO - [74851ae7ed06] - MainThread - main.py:168 - Todos los routers han sido registrados.
+2025-06-09 21:34:38,851 - ultibot_backend - INFO - [dd91fc5e15f1] - MainThread - main.py:96 - Iniciando UltiBot Backend...
+2025-06-09 21:34:38,851 - src.ultibot_backend.dependencies - INFO - [0d70a79b11fd] - MainThread - dependencies.py:47 - Initializing dependency container...
+2025-06-09 21:34:38,851 - httpx - DEBUG - [de4c19850e78] - MainThread - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-09 21:34:38,851 - httpx - DEBUG - [80d0e07f3276] - MainThread - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\AppData\\Local\\pypoetry\\Cache\\virtualenvs\\ultibotinversiones-UOQi1NQu-py3.11\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-09 21:34:39,032 - src.ultibot_backend.adapters.persistence_service - INFO - [14ebc6a8b044] - MainThread - persistence_service.py:68 - Pool de conexiones a Supabase (psycopg_pool) establecido exitosamente. Min: 2, Max: 10
+2025-06-09 21:34:39,033 - src.ultibot_backend.services.order_execution_service - INFO - [d2b55f9c7361] - MainThread - order_execution_service.py:110 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-09 21:34:39,041 - src.ultibot_backend.services.ai_orchestrator_service - INFO - [b41d5cf81807] - MainThread - ai_orchestrator_service.py:84 - AIOrchestrator initialized with models/gemini-1.5-pro-latest and PydanticOutputParser.
+2025-06-09 21:34:39,041 - src.ultibot_backend.services.credential_service - INFO - [ddee08d69c16] - MainThread - credential_service.py:28 - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
+2025-06-09 21:34:39,041 - src.ultibot_backend.services.credential_service - INFO - [b1a77acf75c3] - MainThread - credential_service.py:34 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-09 21:34:39,041 - src.ultibot_backend.services.unified_order_execution_service - INFO - [9d096b98477a] - MainThread - unified_order_execution_service.py:27 - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-09 21:34:39,048 - src.ultibot_backend.services.config_service - WARNING - [a1655dcbf84d] - MainThread - config_service.py:41 - NotificationService already set in ConfigService, ignoring attempt to reset.
+2025-06-09 21:34:39,048 - src.ultibot_backend.dependencies - INFO - [b68e772ee8f5] - MainThread - dependencies.py:138 - Dependency container initialized successfully.
+2025-06-09 21:34:39,048 - ultibot_backend - INFO - [c19da0e3b75c] - MainThread - main.py:101 - Contenedor de dependencias inicializado.
+2025-06-09 21:34:39,048 - ultibot_backend - INFO - [2625c1dba322] - MainThread - main.py:107 - Aplicación iniciada correctamente.
+2025-06-09 21:34:49,805 - ultibot_backend - INFO - [69c2feed74d9] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/config
+2025-06-09 21:34:50,481 - ultibot_backend - INFO - [c948209b04c6] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/config - Status: 200
+2025-06-09 21:34:50,481 - uvicorn.access - INFO - [adcf88a34527] - MainThread - httptools_impl.py:481 - 127.0.0.1:59131 - "GET /api/v1/config HTTP/1.1" 200
+2025-06-09 21:35:05,969 - ultibot_backend - INFO - [1c6137087381] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
+2025-06-09 21:35:05,972 - ultibot_backend - INFO - [66d512711c9a] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-09 21:35:06,705 - ultibot_backend - INFO - [bb5617596e73] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
+2025-06-09 21:35:06,705 - uvicorn.access - INFO - [eb11e5e1a789] - MainThread - httptools_impl.py:481 - 127.0.0.1:59149 - "GET /api/v1/trades?trading_mode=paper&status=open HTTP/1.1" 200
+2025-06-09 21:35:07,507 - src.ultibot_backend.services.portfolio_service - INFO - [db2b9180a9474e4e986ee395bc7dfea7] - MainThread - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
+2025-06-09 21:35:07,507 - ultibot_backend - INFO - [e564431f555e] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
+2025-06-09 21:35:07,507 - uvicorn.access - INFO - [a972749c4231] - MainThread - httptools_impl.py:481 - 127.0.0.1:59148 - "GET /api/v1/portfolio/snapshot?user_id=79e03200-81a9-4330-b2a1-a2109554002e&trading_mode=paper HTTP/1.1" 200
+2025-06-09 21:35:20,972 - ultibot_backend - INFO - [55e6ccb7a5b2] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
+2025-06-09 21:35:20,972 - ultibot_backend - INFO - [9050c7e87a08] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-09 21:35:21,304 - ultibot_backend - INFO - [6f23c19f84c1] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
+2025-06-09 21:35:21,305 - uvicorn.access - INFO - [e2d60694a7cb] - MainThread - httptools_impl.py:481 - 127.0.0.1:59155 - "GET /api/v1/trades?trading_mode=paper&status=open HTTP/1.1" 200
+2025-06-09 21:35:21,561 - src.ultibot_backend.services.portfolio_service - INFO - [76fcf7748b894463a22ec877e727de75] - MainThread - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
+2025-06-09 21:35:21,571 - ultibot_backend - INFO - [7ea11f8bc3d1] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
+2025-06-09 21:35:21,573 - uvicorn.access - INFO - [5fcd4f36dc35] - MainThread - httptools_impl.py:481 - 127.0.0.1:59154 - "GET /api/v1/portfolio/snapshot?user_id=79e03200-81a9-4330-b2a1-a2109554002e&trading_mode=paper HTTP/1.1" 200
+2025-06-09 21:35:26,960 - ultibot_backend - INFO - [228523a9dbb0] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
+2025-06-09 21:35:26,961 - ultibot_backend - INFO - [f93d9b4e4289] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-09 21:35:27,331 - ultibot_backend - INFO - [749619a4b70a] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
+2025-06-09 21:35:27,331 - uvicorn.access - INFO - [ab47dc97d05c] - MainThread - httptools_impl.py:481 - 127.0.0.1:59160 - "GET /api/v1/trades?trading_mode=paper&status=open HTTP/1.1" 200
+2025-06-09 21:35:27,641 - src.ultibot_backend.services.portfolio_service - INFO - [3a40ba6032314138a9e64dff65bb2b7e] - MainThread - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
+2025-06-09 21:35:27,641 - ultibot_backend - INFO - [d835b06f5b60] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
+2025-06-09 21:35:27,641 - uvicorn.access - INFO - [dcf10fae65ff] - MainThread - httptools_impl.py:481 - 127.0.0.1:59159 - "GET /api/v1/portfolio/snapshot?user_id=79e03200-81a9-4330-b2a1-a2109554002e&trading_mode=paper HTTP/1.1" 200
+2025-06-09 21:35:35,981 - ultibot_backend - INFO - [9efc1745a338] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
+2025-06-09 21:35:35,981 - ultibot_backend - INFO - [8cd02e501ad6] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-09 21:35:36,331 - ultibot_backend - INFO - [d813247d4264] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
+2025-06-09 21:35:36,337 - uvicorn.access - INFO - [9a01d1de7d2c] - MainThread - httptools_impl.py:481 - 127.0.0.1:59165 - "GET /api/v1/trades?trading_mode=paper&status=open HTTP/1.1" 200
+2025-06-09 21:35:36,711 - src.ultibot_backend.services.portfolio_service - INFO - [b6f994f881ea4b25a9b9fa04886de57c] - MainThread - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
+2025-06-09 21:35:36,721 - ultibot_backend - INFO - [561b671cb714] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
+2025-06-09 21:35:36,722 - uvicorn.access - INFO - [fbef2fd39bb8] - MainThread - httptools_impl.py:481 - 127.0.0.1:59164 - "GET /api/v1/portfolio/snapshot?user_id=79e03200-81a9-4330-b2a1-a2109554002e&trading_mode=paper HTTP/1.1" 200
+2025-06-09 21:35:50,981 - ultibot_backend - INFO - [b806b8c9e974] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
+2025-06-09 21:35:50,981 - ultibot_backend - INFO - [cd8408ddbbd1] - MainThread - main.py:134 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-09 21:35:51,491 - ultibot_backend - INFO - [aa82e951ef0c] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
+2025-06-09 21:35:51,491 - uvicorn.access - INFO - [b574882cf440] - MainThread - httptools_impl.py:481 - 127.0.0.1:59171 - "GET /api/v1/trades?trading_mode=paper&status=open HTTP/1.1" 200
+2025-06-09 21:35:52,257 - src.ultibot_backend.services.portfolio_service - INFO - [df6f27bd328c4b75b32710fc704a0837] - MainThread - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
+2025-06-09 21:35:52,257 - ultibot_backend - INFO - [1a71ea45c930] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
+2025-06-09 21:35:52,257 - uvicorn.access - INFO - [87930446cab0] - MainThread - httptools_impl.py:481 - 127.0.0.1:59170 - "GET /api/v1/portfolio/snapshot?user_id=79e03200-81a9-4330-b2a1-a2109554002e&trading_mode=paper HTTP/1.1" 200

@@ -3,6 +3,7 @@ Widget para visualizar resultados y rendimiento del Paper Trading.
 """
 
 import logging
+import asyncio
 from typing import Optional, List, Dict, Any, Callable, Coroutine
 from uuid import UUID
 
@@ -26,11 +27,12 @@ class PaperTradingReportWidget(QWidget):
     Widget principal para mostrar resultados y rendimiento del Paper Trading.
     """
     
-    def __init__(self, user_id: UUID, main_window: BaseMainWindow, api_client: UltiBotAPIClient, parent=None): # Add api_client
+    def __init__(self, user_id: UUID, main_window: BaseMainWindow, api_client: UltiBotAPIClient, loop: asyncio.AbstractEventLoop, parent=None):
         super().__init__(parent)
         self.user_id = user_id
         self.main_window = main_window
-        self.api_client = api_client # Store api_client
+        self.api_client = api_client
+        self.loop = loop
         self.current_trades_data: List[Trade] = []
         self.current_metrics_data: Optional[PerformanceMetrics] = None
         
@@ -185,7 +187,11 @@ class PaperTradingReportWidget(QWidget):
         self.load_trades()
 
     def _start_api_worker(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine], on_success, on_error):
-        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory) # Pass api_client
+        worker = ApiWorker(
+            api_client=self.api_client, 
+            coroutine_factory=coroutine_factory,
+            loop=self.loop
+        )
         thread = QThread()
         worker.moveToThread(thread)
 
@@ -233,13 +239,14 @@ class PaperTradingReportWidget(QWidget):
     def on_metrics_loaded(self, data: object):
         """Maneja la carga exitosa de métricas."""
         try:
-            if not isinstance(data, PerformanceMetrics):
-                error_msg = f"Tipo de dato inesperado para métricas: se esperaba PerformanceMetrics pero se recibió {type(data).__name__}"
+            if not isinstance(data, dict):
+                error_msg = f"Tipo de dato inesperado para métricas: se esperaba un dict pero se recibió {type(data).__name__}"
                 logger.error(error_msg)
                 self.on_error(error_msg)
                 return
-            self.current_metrics_data = data
-            self.update_metrics_display(data)
+            metrics = PerformanceMetrics(**data)
+            self.current_metrics_data = metrics
+            self.update_metrics_display(metrics)
             logger.info("Métricas de rendimiento cargadas exitosamente")
         except Exception as e:
             logger.error(f"Error procesando métricas: {e}", exc_info=True)
@@ -255,7 +262,7 @@ class PaperTradingReportWidget(QWidget):
                 logger.error(error_msg)
                 self.on_error(error_msg)
                 return
-            self.current_trades_data = data 
+            self.current_trades_data = [Trade(**t) for t in data]
             self.update_trades_table(self.current_trades_data)
             logger.info(f"Trades cargados exitosamente: {len(self.current_trades_data)} trades")
         except Exception as e:

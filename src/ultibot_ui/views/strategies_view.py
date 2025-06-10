@@ -1,12 +1,15 @@
 import logging
+from typing import List, Dict, Any, Optional
+
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QListWidget, QListWidgetItem
-from typing import List, Dict, Any
+from src.ultibot_ui.services.api_client import UltiBotAPIClient
 
 logger = logging.getLogger(__name__)
 
 class StrategiesView(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, api_client: UltiBotAPIClient, parent: Optional[QWidget] = None):
         super().__init__(parent)
+        self.api_client = api_client
         self.setWindowTitle("Trading Strategies")
         
         self._layout = QVBoxLayout(self)
@@ -31,7 +34,7 @@ class StrategiesView(QWidget):
             
         for strategy in strategies:
             # Customize how the strategy is displayed in the list
-            item_text = f"{strategy.get('name', 'Unnamed Strategy')} ({strategy.get('id')})"
+            item_text = f"{strategy.get('strategy_name', 'Unnamed Strategy')} (ID: {strategy.get('id')})"
             list_item = QListWidgetItem(item_text)
             self.strategies_list_widget.addItem(list_item)
         

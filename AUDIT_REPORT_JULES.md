@@ -373,6 +373,7 @@ The system's resilience to malformed strategy configurations has been improved. 
 *   **Conclusion:** The refactoring effort to ensure all `ApiWorker` instances use the shared `UltiBotAPIClient` is now comprehensive across the identified UI components.
 
 ---
+
 ## Part 4: Setup and Execution on Windows
 
 This section provides guidance on setting up and running the UltiBotInversiones application (both backend and frontend) on a Windows environment from the source code.

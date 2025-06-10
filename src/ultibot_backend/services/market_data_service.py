@@ -2,6 +2,7 @@ import logging
 from typing import List, Optional, Dict, Set, Callable, Any
 from uuid import UUID
 from fastapi import Depends
+from datetime import timedelta
 
 from src.shared.data_types import AssetBalance, ServiceName, BinanceConnectionStatus, MarketData
 from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
@@ -30,6 +31,7 @@ class MarketDataService:
         self._closed = False
         self._invalid_symbols_cache: Set[str] = set()
         self._cache_expiration = {}
+        self._historical_data_tasks: Dict[str, asyncio.Task] = {}
 
     async def get_binance_connection_status(self) -> BinanceConnectionStatus:
         """
@@ -291,6 +293,221 @@ class MarketDataService:
             logger.critical(f"Error inesperado al obtener datos de velas para {symbol}-{interval}: {e}", exc_info=True)
             raise UltiBotError(f"Error inesperado al obtener datos de velas de Binance para {symbol}-{interval}: {e}")
 
+    async def fetch_and_store_historical_data(self, symbol: str, interval: str = '1h', days_back: int = 30):
+        """
+        Fetches historical data for a symbol going back a specified number of days
+        and stores it in the database.
+        
+        Args:
+            symbol: The trading pair symbol (e.g., 'BTCUSDT')
+            interval: Candlestick interval (e.g., '1h', '4h', '1d')
+            days_back: Number of days of historical data to fetch
+        """
+        if self._closed:
+            logger.warning(f"MarketDataService está cerrado. No se pueden obtener datos históricos para {symbol}-{interval}.")
+            return
+        
+        logger.info(f"Iniciando descarga de datos históricos para {symbol} (intervalo: {interval}, días: {days_back})")
+        
+        end_time = int(datetime.now().timestamp() * 1000)
+        start_time = int((datetime.now() - timedelta(days=days_back)).timestamp() * 1000)
+        
+        # Determine the appropriate limit and number of iterations based on the interval
+        limit_per_call = 1000  # Maximum allowed by Binance API
+        total_candles_needed = days_back * 24  # Aproximación para intervalo '1h'
+        
+        if interval == '15m':
+            total_candles_needed = days_back * 24 * 4
+        elif interval == '30m':
+            total_candles_needed = days_back * 24 * 2
+        elif interval == '4h':
+            total_candles_needed = days_back * 6
+        elif interval == '1d':
+            total_candles_needed = days_back
+        
+        iterations = (total_candles_needed + limit_per_call - 1) // limit_per_call
+        
+        total_candles_stored = 0
+        current_end_time = end_time
+        
+        try:
+            for _ in range(iterations):
+                klines = await self.binance_adapter.get_klines(
+                    symbol=symbol,
+                    interval=interval,
+                    start_time=start_time,
+                    end_time=current_end_time,
+                    limit=limit_per_call
+                )
+                
+                if not klines:
+                    break
+                
+                market_data_to_save = []
+                for kline in klines:
+                    market_data_to_save.append(MarketData(
+                        symbol=symbol,
+                        timestamp=datetime.fromtimestamp(kline[0] / 1000, tz=timezone.utc),
+                        open=float(kline[1]),
+                        high=float(kline[2]),
+                        low=float(kline[3]),
+                        close=float(kline[4]),
+                        volume=float(kline[5])
+                    ))
+                
+                # Save the data to the database
+                if market_data_to_save:
+                    await self.persistence_service.save_market_data(market_data_to_save)
+                    total_candles_stored += len(market_data_to_save)
+                    
+                    # Update the end time for the next iteration
+                    current_end_time = klines[0][0] - 1  # Use the earliest timestamp from this batch - 1ms
+                
+                # API Rate limiting: Sleep to prevent hitting Binance API rate limits
+                await asyncio.sleep(1)
+            
+            logger.info(f"Completada la descarga histórica para {symbol}-{interval}. "
+                        f"Se almacenaron {total_candles_stored} velas en la base de datos.")
+                        
+        except Exception as e:
+            logger.error(f"Error al obtener datos históricos para {symbol}-{interval}: {e}", exc_info=True)
+            raise
+
+    async def start_continuous_historical_data_collection(self, symbols: List[str], intervals: List[str] = ['1h']):
+        """
+        Starts continuous collection of historical data for a list of symbols and intervals.
+        
+        Args:
+            symbols: List of trading pair symbols to monitor
+            intervals: List of candlestick intervals to collect
+        """
+        if self._closed:
+            logger.warning("MarketDataService está cerrado. No se puede iniciar la colección de datos históricos.")
+            return
+            
+        logger.info(f"Iniciando colección continua de datos históricos para {len(symbols)} símbolos.")
+        
+        # Initial historical data fetch
+        for symbol in symbols:
+            for interval in intervals:
+                task_key = f"{symbol}_{interval}_historical"
+                if task_key in self._historical_data_tasks and not self._historical_data_tasks[task_key].done():
+                    logger.warning(f"Ya existe una tarea de recolección para {symbol}-{interval}. Ignorando.")
+                    continue
+                
+                logger.info(f"Iniciando tarea de recolección de datos históricos para {symbol}-{interval}.")
+                # First, fetch historical data going back 30 days
+                await self.fetch_and_store_historical_data(symbol, interval, days_back=30)
+                
+                # Then start a continuous task to keep the data updated
+                self._historical_data_tasks[task_key] = asyncio.create_task(
+                    self._continuous_data_collection(symbol, interval)
+                )
+
+    async def _continuous_data_collection(self, symbol: str, interval: str):
+        """
+        Continuously collects recent data for a symbol at specified interval.
+        This runs as a background task.
+        
+        Args:
+            symbol: The trading pair symbol
+            interval: Candlestick interval
+        """
+        try:
+            update_frequency = 300  # 5 minutes in seconds
+            
+            # Adjust update frequency based on interval
+            if interval == '1m':
+                update_frequency = 60  # 1 minute
+            elif interval == '5m':
+                update_frequency = 60 * 5  # 5 minutes
+            elif interval == '15m':
+                update_frequency = 60 * 15  # 15 minutes
+            elif interval == '30m':
+                update_frequency = 60 * 30  # 30 minutes
+            elif interval == '1h':
+                update_frequency = 60 * 60  # 1 hour
+            elif interval == '4h':
+                update_frequency = 60 * 60 * 4  # 4 hours
+            elif interval == '1d':
+                update_frequency = 60 * 60 * 24  # 24 hours
+                
+            logger.info(f"Iniciando colección continua para {symbol}-{interval} (frecuencia: {update_frequency}s)")
+            
+            while not self._closed:
+                try:
+                    # Get only the last 5 candles to keep data up to date
+                    klines = await self.binance_adapter.get_klines(
+                        symbol=symbol,
+                        interval=interval,
+                        limit=5
+                    )
+                    
+                    if klines:
+                        market_data_to_save = []
+                        for kline in klines:
+                            market_data_to_save.append(MarketData(
+                                symbol=symbol,
+                                timestamp=datetime.fromtimestamp(kline[0] / 1000, tz=timezone.utc),
+                                open=float(kline[1]),
+                                high=float(kline[2]),
+                                low=float(kline[3]),
+                                close=float(kline[4]),
+                                volume=float(kline[5])
+                            ))
+                        
+                        # Save recent data to database with upsert logic
+                        await self.persistence_service.save_market_data(market_data_to_save)
+                        logger.debug(f"Actualizados {len(market_data_to_save)} puntos de datos para {symbol}-{interval}")
+                        
+                except Exception as e:
+                    logger.error(f"Error en la colección continua de datos para {symbol}-{interval}: {e}", exc_info=True)
+                
+                # Sleep until next update
+                await asyncio.sleep(update_frequency)
+        except asyncio.CancelledError:
+            logger.info(f"Tarea de colección continua cancelada para {symbol}-{interval}")
+        except Exception as e:
+            logger.error(f"Error fatal en la tarea de colección continua para {symbol}-{interval}: {e}", exc_info=True)
+
+    async def stop_continuous_data_collection(self, symbol: Optional[str] = None, interval: Optional[str] = None):
+        """
+        Stops the continuous data collection tasks.
+        
+        Args:
+            symbol: If provided, only stops the task for this symbol
+            interval: If provided with symbol, stops the specific symbol-interval task
+        """
+        tasks_to_cancel = []
+        
+        if symbol and interval:
+            task_key = f"{symbol}_{interval}_historical"
+            if task_key in self._historical_data_tasks:
+                tasks_to_cancel.append((task_key, self._historical_data_tasks[task_key]))
+        elif symbol:
+            for key, task in self._historical_data_tasks.items():
+                if key.startswith(f"{symbol}_"):
+                    tasks_to_cancel.append((key, task))
+        else:
+            tasks_to_cancel = list(self._historical_data_tasks.items())
+            
+        for task_key, task in tasks_to_cancel:
+            if not task.done():
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    logger.info(f"Tarea de colección de datos {task_key} cancelada correctamente.")
+                except Exception as e:
+                    logger.error(f"Error al cancelar tarea {task_key}: {e}")
+                    
+            del self._historical_data_tasks[task_key]
+            
+        if not symbol and not interval:
+            self._historical_data_tasks.clear()
+            
+        logger.info(f"Se han detenido {len(tasks_to_cancel)} tareas de colección de datos.")
+
     async def close(self):
         """
         Cierra el cliente HTTP y cancela todas las tareas WebSocket activas.
@@ -301,6 +518,7 @@ class MarketDataService:
         self._closed = True
         logger.info("MarketDataService: Iniciando cierre...")
 
+        # Cancel websocket tasks
         for symbol, task in list(self._active_websocket_tasks.items()):
             task.cancel()
             try:
@@ -310,6 +528,9 @@ class MarketDataService:
             except Exception as e:
                 logger.error(f"MarketDataService: Error al cancelar la tarea de WebSocket para {symbol} durante el cierre: {e}")
         self._active_websocket_tasks.clear()
+        
+        # Cancel historical data collection tasks
+        await self.stop_continuous_data_collection()
         
         await self.binance_adapter.close()
         logger.info("MarketDataService: Cierre completado.")

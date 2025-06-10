@@ -46,15 +46,17 @@ class MainWindow(QMainWindow, BaseMainWindow):
     def __init__(
         self,
         user_id: UUID,
-        api_client: UltiBotAPIClient, # Add api_client parameter
+        api_client: UltiBotAPIClient,
+        loop: asyncio.AbstractEventLoop,
         parent: Optional[QWidget] = None,
     ):
         """Inicializa la ventana principal."""
         super().__init__(parent)
         self.user_id = user_id
-        self.api_client = api_client # Store the shared API client
+        self.api_client = api_client
+        self.loop = loop
         
-        self._initialization_complete = False # Consider if this flag is still used/needed
+        self._initialization_complete = False
         self.active_threads: List[QThread] = []
 
         self.setWindowTitle("UltiBotInversiones")
@@ -145,43 +147,47 @@ class MainWindow(QMainWindow, BaseMainWindow):
         self.stacked_widget = QStackedWidget()
         main_layout.addWidget(self.stacked_widget)
 
-        # Views are instantiated. If they need the api_client, it should be passed here,
-        # or they can access it via self.main_window.api_client if they have main_window.
-        # Example: self.dashboard_view = DashboardView(user_id=self.user_id, main_window=self, api_client=self.api_client)
-
         self.dashboard_view = DashboardView(
             user_id=self.user_id,
             main_window=self,
-            api_client=self.api_client # Pass api_client
+            api_client=self.api_client,
+            loop=self.loop
         )
         self.stacked_widget.addWidget(self.dashboard_view)
 
         self.opportunities_view = OpportunitiesView(
             user_id=self.user_id, 
             main_window=self,
-            api_client=self.api_client # Pass api_client
+            api_client=self.api_client,
+            loop=self.loop
         )
         self.stacked_widget.addWidget(self.opportunities_view)
 
-        self.strategies_view = StrategiesView(parent=self) # Assuming this view does not directly need api_client
+        self.strategies_view = StrategiesView(
+            api_client=self.api_client,
+            parent=self
+        )
         self.stacked_widget.addWidget(self.strategies_view)
 
         self.portfolio_view = PortfolioView(
             user_id=self.user_id,
-            api_client=self.api_client # Pass api_client
+            api_client=self.api_client,
+            loop=self.loop
         )
         self.stacked_widget.addWidget(self.portfolio_view)
 
         self.history_view = HistoryView(
             user_id=self.user_id, 
             main_window=self,
-            api_client=self.api_client # Pass api_client
+            api_client=self.api_client,
+            loop=self.loop
         )
         self.stacked_widget.addWidget(self.history_view)
 
         self.settings_view = SettingsView(
-            user_id=str(self.user_id), # Keep user_id as str as per original
-            api_client=self.api_client # Pass api_client
+            user_id=str(self.user_id),
+            api_client=self.api_client,
+            loop=self.loop
         )
         self.stacked_widget.addWidget(self.settings_view)
 
@@ -190,15 +196,15 @@ class MainWindow(QMainWindow, BaseMainWindow):
             "portfolio": 3, "history": 4, "settings": 5,
         }
 
-        # Instantiate UIStrategyService with the shared api_client and main_window reference
         self.strategy_service = UIStrategyService(
             api_client=self.api_client,
-            main_window=self
+            main_window=self,
+            loop=self.loop
         )
         self.strategy_service.strategies_updated.connect(self.strategies_view.update_strategies)
         self.strategy_service.error_occurred.connect(lambda msg: self._log_debug(f"[STRATEGY_SVC_ERR] {msg}"))
         
-        self._fetch_strategies() # Renamed method to reflect it calls the service
+        self._fetch_strategies()
 
         dashboard_button = self.sidebar.findChild(QPushButton, "navButton_dashboard")
         if dashboard_button:
@@ -209,37 +215,9 @@ class MainWindow(QMainWindow, BaseMainWindow):
     def _fetch_strategies(self):
         """
         Initiates fetching strategies using the UIStrategyService.
-        The UIStrategyService is responsible for creating and managing its own ApiWorker
-        using the shared api_client that was passed to it during its initialization.
         """
-        self.strategy_service.fetch_strategies() # This call now uses the refactored service
+        self.strategy_service.fetch_strategies()
         self._log_debug("MainWindow: Initiated strategy fetch via UIStrategyService.")
-
-    # Example of how a direct API call from MainWindow would look with a refactored worker:
-    # async def _my_custom_api_task_coroutine(self, current_api_client: UltiBotAPIClient):
-    #     # 'current_api_client' is the shared self.api_client passed by the worker
-    #     # Example: data = await current_api_client.some_other_endpoint()
-    #     # return data
-    #     pass # Replace with actual async code
-    #
-    # def run_my_custom_api_task(self):
-    #     """ Example of running a worker for a direct API call from MainWindow """
-    #     worker = ApiWorker(
-    #         api_client=self.api_client, # Pass the shared client to the worker
-    #         coroutine_factory=self._my_custom_api_task_coroutine # The factory receives the client
-    #     )
-    #     thread = QThread()
-    #     worker.moveToThread(thread)
-    #     # Connect signals from worker (result_ready, error_occurred) to MainWindow slots
-    #     # worker.result_ready.connect(self._handle_my_custom_task_result)
-    #     # worker.error_occurred.connect(self._handle_my_custom_task_error)
-    #     thread.started.connect(worker.run)
-    #     worker.result_ready.connect(thread.quit)
-    #     worker.error_occurred.connect(thread.quit)
-    #     thread.finished.connect(worker.deleteLater)
-    #     thread.finished.connect(thread.deleteLater)
-    #     self.add_thread(thread) # Track the thread
-    #     thread.start()
 
     def _switch_view(self, view_name: str):
         """Cambia a la vista especificada."""
@@ -247,7 +225,7 @@ class MainWindow(QMainWindow, BaseMainWindow):
         if index is not None:
             self.stacked_widget.setCurrentIndex(index)
             if view_name == "strategies":
-                self._fetch_strategies() # Call the updated method name
+                self._fetch_strategies()
 
     def cleanup(self):
         """Limpia los recursos de la ventana."""

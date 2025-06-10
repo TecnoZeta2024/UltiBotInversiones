@@ -5,6 +5,7 @@ import sys
 from contextlib import asynccontextmanager
 from logging.config import dictConfig
 from typing import Any
+import uuid
 
 # Solución para Windows ProactorEventLoop con psycopg/asyncio
 if sys.platform == "win32":
@@ -13,6 +14,7 @@ if sys.platform == "win32":
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from asgi_correlation_id import CorrelationIdMiddleware, correlation_id, CorrelationIdFilter
 
 from src.ultibot_backend.api.v1.endpoints import (
     config, market_data, notifications, opportunities,
@@ -25,12 +27,30 @@ from src.ultibot_backend.core.exceptions import UltiBotError
 LOGS_DIR = "logs"
 os.makedirs(LOGS_DIR, exist_ok=True)
 
+# Filtro para añadir correlation_id si no existe
+class UuidCorrelationIdFilter(CorrelationIdFilter):
+    def __init__(self, name: str = "", uuid_length: int = 32):
+        super().__init__(name=name, uuid_length=uuid_length)
+        self.uuid_length = uuid_length
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if not hasattr(record, "correlation_id"):
+            cid = correlation_id.get()
+            record.correlation_id = cid or uuid.uuid4().hex[:self.uuid_length]
+        return True
+
 LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
+    "filters": {
+        "correlation_id": {
+            "()": UuidCorrelationIdFilter,
+            "uuid_length": 12,
+        },
+    },
     "formatters": {
         "default": {
-            "format": "%(asctime)s - %(name)s - %(levelname)s - [%(threadName)s] - %(filename)s:%(lineno)d - %(message)s",
+            "format": "%(asctime)s - %(name)s - %(levelname)s - [%(correlation_id)s] - %(threadName)s - %(filename)s:%(lineno)d - %(message)s",
         },
     },
     "handlers": {
@@ -38,6 +58,7 @@ LOGGING_CONFIG = {
             "class": "logging.StreamHandler",
             "formatter": "default",
             "stream": "ext://sys.stdout",
+            "filters": ["correlation_id"],
         },
         "file": {
             "class": "logging.handlers.RotatingFileHandler",
@@ -46,12 +67,13 @@ LOGGING_CONFIG = {
             "maxBytes": 10485760,  # 10 MB
             "backupCount": 5,
             "encoding": "utf-8",
+            "filters": ["correlation_id"],
         },
     },
     "loggers": {
-        "uvicorn": {"handlers": ["console", "file"], "level": "INFO"},
-        "uvicorn.error": {"level": "INFO"},
-        "uvicorn.access": {"handlers": ["console", "file"], "level": "INFO"},
+        "uvicorn": {"handlers": ["console", "file"], "level": "INFO", "propagate": False},
+        "uvicorn.error": {"level": "INFO", "propagate": False},
+        "uvicorn.access": {"handlers": ["console", "file"], "level": "INFO", "propagate": False},
         "ultibot_backend": {"handlers": ["console", "file"], "level": "DEBUG", "propagate": False},
     },
     "root": {
@@ -80,7 +102,6 @@ async def lifespan(app: FastAPI):
         
     except Exception as e:
         logger.critical(f"Error fatal durante el arranque de la aplicación: {e}", exc_info=True)
-        # Es importante relanzar la excepción para que el proceso falle si la inicialización no es exitosa.
         raise
 
     logger.info("Aplicación iniciada correctamente.")
@@ -96,6 +117,17 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+
+# Añadir middlewares
+app.add_middleware(CorrelationIdMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -120,14 +152,6 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
         content={"detail": "Ocurrió un error interno inesperado en el servidor."},
     )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # Registro explícito de cada router desde su módulo
 api_prefix = "/api/v1"
 logger.info("Registrando routers de la API...")
@@ -141,7 +165,6 @@ app.include_router(opportunities.router, prefix=f"{api_prefix}/opportunities", t
 app.include_router(strategies.router, prefix=f"{api_prefix}/strategies", tags=["strategies"])
 app.include_router(trading.router, prefix=f"{api_prefix}/trading", tags=["trading"])
 app.include_router(market_data.router, prefix=f"{api_prefix}/market", tags=["market_data"])
-# app.include_router(capital_management.router, prefix=f"{api_prefix}/capital-management", tags=["capital_management"])
 logger.info("Todos los routers han sido registrados.")
 
 
