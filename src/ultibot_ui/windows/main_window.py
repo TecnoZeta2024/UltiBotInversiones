@@ -165,7 +165,9 @@ class MainWindow(QMainWindow, BaseMainWindow):
 
         self.strategies_view = StrategiesView(
             api_client=self.api_client,
-            parent=self
+            user_id=self.user_id,
+            main_window=self,
+            loop=self.loop
         )
         self.stacked_widget.addWidget(self.strategies_view)
 
@@ -201,7 +203,7 @@ class MainWindow(QMainWindow, BaseMainWindow):
             main_window=self,
             loop=self.loop
         )
-        self.strategy_service.strategies_updated.connect(self.strategies_view.update_strategies)
+        self.strategy_service.strategies_updated.connect(self.strategies_view.update_strategies_list)
         self.strategy_service.error_occurred.connect(lambda msg: self._log_debug(f"[STRATEGY_SVC_ERR] {msg}"))
         
         self._fetch_strategies()
