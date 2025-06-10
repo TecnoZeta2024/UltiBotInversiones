@@ -54,7 +54,7 @@ class AppController(QObject):
         """
         logger.info("Iniciando inicialización asíncrona...")
         try:
-            await asyncio.sleep(2) # Simula carga inicial
+            await asyncio.sleep(2) 
             config_data = await self.api_client.get_user_configuration()
             self.user_id = UUID(config_data.get("userId", str(uuid4())))
             logger.info(f"Configuración recibida para el ID de usuario: {self.user_id}")
@@ -66,8 +66,8 @@ class AppController(QObject):
             )
             self.initialization_complete.emit(self.main_window)
 
-        except APIError as e:
-            error_message = f"Fallo al cargar la configuración de la aplicación: {e}"
+        except (APIError, httpx.ConnectError) as e:
+            error_message = f"Fallo al conectar con el backend: {e}"
             logger.critical(error_message, exc_info=True)
             self.initialization_error.emit(error_message)
         except Exception as e:
@@ -88,10 +88,15 @@ class AppController(QObject):
 
     async def cleanup(self):
         """Cierra los recursos asíncronos de forma segura."""
-        logger.info("Iniciando el proceso de cierre del cliente HTTP...")
+        logger.info("Iniciando el proceso de cierre de la aplicación...")
+        if self.main_window:
+            logger.info("Limpiando la ventana principal...")
+            self.main_window.cleanup()
+        
+        logger.info("Cerrando el cliente HTTP...")
         if self.http_client and not self.http_client.is_closed:
             await self.http_client.aclose()
-        logger.info("Cliente HTTP cerrado.")
+        logger.info("Cliente HTTP cerrado. Limpieza completada.")
 
 
 async def main():
@@ -115,10 +120,6 @@ async def main():
 
     @qasync.asyncSlot()
     async def on_about_to_quit():
-        """
-        Slot asíncrono que se ejecuta cuando la aplicación está a punto de cerrarse.
-        Gestiona la limpieza de recursos asíncronos antes de que el bucle se detenga.
-        """
         logger.info("Señal 'aboutToQuit' recibida. Ejecutando limpieza asíncrona.")
         await controller.cleanup()
         logger.info("Limpieza asíncrona completada.")
@@ -126,16 +127,19 @@ async def main():
 
     app.aboutToQuit.connect(on_about_to_quit)
 
-    # Iniciar la inicialización
+    # Lanzar la inicialización como una tarea de fondo
     init_task = asyncio.create_task(controller.initialize())
+    
+    # Esperar a que la inicialización termine (para bien o para mal)
     await controller.initialization_finished.wait()
 
+    # Si la inicialización falló, no continuar
     if not controller.main_window:
         logger.error("No se pudo crear la ventana principal. Saliendo.")
         init_task.cancel()
         return
 
-    # Esperar a que la señal de cierre se complete
+    # Esperar a que la aplicación se cierre
     await app_is_closing.wait()
     logger.info("El bucle principal de la aplicación ha finalizado.")
 

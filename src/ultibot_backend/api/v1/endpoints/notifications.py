@@ -19,8 +19,8 @@ async def get_notification_history(
     Recupera el historial de notificaciones para el usuario.
     """
     try:
-        user_id = settings.FIXED_USER_ID
-        notifications = await notification_service.get_notification_history(user_id, limit)
+        # user_id = settings.FIXED_USER_ID # No es necesario pasar user_id aquí, ya está en el servicio
+        notifications = await notification_service.get_notification_history(limit)
         return notifications
     except NotificationError as e:
         raise HTTPException(
@@ -42,8 +42,8 @@ async def mark_notification_as_read(
     Marca una notificación específica como leída para el usuario.
     """
     try:
-        user_id = settings.FIXED_USER_ID
-        updated_notification = await notification_service.mark_notification_as_read(notification_id, user_id)
+        # user_id = settings.FIXED_USER_ID # No es necesario pasar user_id aquí, ya está en el servicio
+        updated_notification = await notification_service.mark_notification_as_read(notification_id)
         if not updated_notification:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

@@ -35,9 +35,11 @@ class BinanceAdapter:
     async def initialize(self):
         """Inicializa el cliente asíncrono de Binance."""
         if not self.client:
-            self.client = await AsyncClient.create(
-                self.api_key, self.api_secret, http_client=self.http_client
-            )
+            self.client = AsyncClient(self.api_key, self.api_secret)
+            # Si se necesita un cliente HTTP personalizado, se puede configurar
+            # el cliente de Binance para usarlo, o pasar como 'session' si la versión lo soporta.
+            # Por ahora, se elimina el argumento 'http_client' directo para resolver el error.
+            # await self.client.set_http_client(self.http_client) # Esto sería si existiera un método para setearlo
             self.bsm = BinanceSocketManager(self.client)
             logger.info("Binance AsyncClient and SocketManager initialized.")
 
@@ -78,11 +80,18 @@ class BinanceAdapter:
             raise BinanceAPIError(message=e.message, status_code=e.status_code, response_data=e.response.json() if e.response else None, original_exception=e)
 
     @binance_api_retry
-    async def get_candlestick_data(self, symbol: str, interval: str, limit: int) -> List[List[Any]]:
+    async def get_candlestick_data(self, symbol: str, interval: str, limit: int, start_time: Optional[int] = None, end_time: Optional[int] = None) -> List[List[Any]]:
         """Obtiene datos de velas para un símbolo."""
         await self.initialize()
         try:
-            klines = await self.client.get_klines(symbol=symbol, interval=interval, limit=limit)
+            # Nota: La API de python-binance usa startTime y endTime, no start_time y end_time.
+            klines = await self.client.get_klines(
+                symbol=symbol, 
+                interval=interval, 
+                limit=limit,
+                startTime=start_time,
+                endTime=end_time
+            )
             return klines
         except BinanceLibAPIError as e:
             logger.error(f"Binance API error getting klines for {symbol}: {e}", exc_info=True)

@@ -14,7 +14,6 @@ from PyQt5.QtGui import QColor
 from src.shared.data_types import Opportunity
 from src.ultibot_ui.models import BaseMainWindow
 from src.ultibot_ui.services.api_client import UltiBotAPIClient
-from src.ultibot_ui.workers import ApiWorker
 
 logger = logging.getLogger(__name__)
 
@@ -26,10 +25,10 @@ class OpportunitiesView(QWidget):
         self.main_window = main_window
         self.api_client = api_client
         self.loop = loop
+        self.is_active = False
         logger.debug("OpportunitiesView initialized.")
 
         self._setup_ui()
-        self._load_initial_data()
 
     def _setup_ui(self):
         main_layout = QVBoxLayout(self)
@@ -95,11 +94,19 @@ class OpportunitiesView(QWidget):
         self._auto_refresh_timer = QTimer(self)
         self._auto_refresh_timer.setInterval(30_000)
         self._auto_refresh_timer.timeout.connect(self._fetch_opportunities)
-        self._auto_refresh_timer.start()
 
-    def _load_initial_data(self):
-        logger.info("OpportunitiesView: _load_initial_data called.")
-        QTimer.singleShot(100, self._fetch_opportunities)
+    def enter_view(self):
+        """Se llama cuando la vista se vuelve activa."""
+        logger.info("OpportunitiesView: Entrando a la vista.")
+        self.is_active = True
+        self._auto_refresh_timer.start()
+        self._fetch_opportunities()
+
+    def leave_view(self):
+        """Se llama cuando la vista se vuelve inactiva."""
+        logger.info("OpportunitiesView: Saliendo de la vista.")
+        self.is_active = False
+        self._auto_refresh_timer.stop()
 
     def _apply_shadow_effect(self, widget: QWidget, color_hex: str = "#000000", blur_radius: int = 10, x_offset: int = 0, y_offset: int = 1):
         shadow = QGraphicsDropShadowEffect(self)
@@ -113,37 +120,16 @@ class OpportunitiesView(QWidget):
         logger.info("Fetching Gemini IA opportunities.")
         self.status_label.setText("Loading opportunities...")
         self.refresh_button.setEnabled(False)
-        self.opportunities_table.setRowCount(0)
         
-        coro_factory = lambda api_client: api_client.get_ai_opportunities()
-        await self._start_api_worker(coro_factory)
+        coroutine_factory = lambda client: client.get_ai_opportunities()
+        self.main_window.submit_task(coroutine_factory, self._handle_opportunities_result, self._handle_opportunities_error)
 
-    async def _start_api_worker(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine]):
-        logger.debug("Creating ApiWorker.")
-        
-        worker = ApiWorker(
-            api_client=self.api_client, 
-            coroutine_factory=coroutine_factory,
-            loop=self.loop
-        )
-        thread = QThread()
-        if hasattr(self.main_window, 'add_thread') and callable(getattr(self.main_window, 'add_thread')):
-            self.main_window.add_thread(thread)
-        else:
-            logger.warning("OpportunitiesView: self.main_window does not have add_thread. Thread not tracked by main_window.")
-        worker.moveToThread(thread)
-
-        worker.result_ready.connect(self._handle_opportunities_result)
-        worker.error_occurred.connect(self._handle_opportunities_error)
-        thread.started.connect(worker.run)
-        worker.result_ready.connect(thread.quit)
-        worker.error_occurred.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
-        
-        thread.start()
-
-    @qasync.asyncSlot()
+    @qasync.asyncSlot(object)
     async def _handle_opportunities_result(self, data: object):
+        if not self.is_active:
+            logger.info("OpportunitiesView no está activa, ignorando resultado.")
+            return
+
         if not isinstance(data, list):
             error_msg = f"Invalid data format: Expected list, got {type(data).__name__}"
             logger.error(f"OpportunitiesView: {error_msg}")
@@ -210,8 +196,12 @@ class OpportunitiesView(QWidget):
         self.opportunities_table.resizeColumnsToContents()
         self.last_updated_label.setText(f"Last updated: {QDateTime.currentDateTime().toString('yyyy-MM-dd HH:mm:ss')}")
 
-    @qasync.asyncSlot()
+    @qasync.asyncSlot(str)
     async def _handle_opportunities_error(self, error_message: str):
+        if not self.is_active:
+            logger.info("OpportunitiesView no está activa, ignorando error.")
+            return
+            
         logger.error(f"Error fetching opportunities: {error_message}")
         self.status_label.setText("Failed to load opportunities.")
         self.refresh_button.setEnabled(True)
@@ -225,14 +215,5 @@ class OpportunitiesView(QWidget):
 
     def cleanup(self):
         logger.info("Cleaning up OpportunitiesView...")
-        if self._auto_refresh_timer.isActive():
-            self._auto_refresh_timer.stop()
+        self.leave_view()
         logger.info("OpportunitiesView cleanup finished.")
-
-if __name__ == '__main__':
-    from PyQt5.QtWidgets import QApplication
-    import sys
-
-    app = QApplication(sys.argv)
-    
-    print("To test this view, please run it as part of the main application.")

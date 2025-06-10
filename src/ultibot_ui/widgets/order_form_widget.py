@@ -172,16 +172,19 @@ class OrderFormWidget(QWidget):
         buttons_layout = QHBoxLayout()
         
         self.validate_button = QPushButton("Validar Orden")
+        self.validate_button.setProperty("class", "secondary")
         self.validate_button.clicked.connect(self._validate_order)
         buttons_layout.addWidget(self.validate_button)
         
         buttons_layout.addStretch()
         
         self.clear_button = QPushButton("Limpiar")
+        self.clear_button.setProperty("class", "secondary")
         self.clear_button.clicked.connect(self._clear_form)
         buttons_layout.addWidget(self.clear_button)
         
         self.execute_button = QPushButton("Ejecutar Orden")
+        self.execute_button.setProperty("class", "primary")
         self.execute_button.clicked.connect(self._execute_order)
         self.execute_button.setEnabled(False)
         buttons_layout.addWidget(self.execute_button)
@@ -248,7 +251,7 @@ class OrderFormWidget(QWidget):
             """)
             self.execute_button.setText("🚨 EJECUTAR ORDEN REAL")
         else:
-            self.execute_button.setStyleSheet("")
+            # self.execute_button.setStyleSheet("") # QSS .primary will handle styling
             self.execute_button.setText("Ejecutar Orden Paper")
         
         self._validate_form()

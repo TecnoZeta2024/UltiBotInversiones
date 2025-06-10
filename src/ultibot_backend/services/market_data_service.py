@@ -244,7 +244,7 @@ class MarketDataService:
             logger.warning(f"MarketDataService está cerrado. No se pueden obtener datos de velas para {symbol}-{interval}.")
             return []
         try:
-            klines_data = await self.binance_adapter.get_klines(
+            klines_data = await self.binance_adapter.get_candlestick_data(
                 symbol=symbol,
                 interval=interval,
                 start_time=start_time,
@@ -332,7 +332,7 @@ class MarketDataService:
         
         try:
             for _ in range(iterations):
-                klines = await self.binance_adapter.get_klines(
+                klines = await self.binance_adapter.get_candlestick_data(
                     symbol=symbol,
                     interval=interval,
                     start_time=start_time,
@@ -437,7 +437,7 @@ class MarketDataService:
             while not self._closed:
                 try:
                     # Get only the last 5 candles to keep data up to date
-                    klines = await self.binance_adapter.get_klines(
+                    klines = await self.binance_adapter.get_candlestick_data(
                         symbol=symbol,
                         interval=interval,
                         limit=5

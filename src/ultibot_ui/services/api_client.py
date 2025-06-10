@@ -43,6 +43,9 @@ class UltiBotAPIClient:
             print(f"Respuesta recibida: Estado {response.status_code} {response.reason_phrase}")
 
             response.raise_for_status()
+            # Handle cases with no content
+            if response.status_code == 204:
+                return None
             data = response.json()
             logger.debug(f"Datos recibidos: {data}")
             return data
@@ -69,6 +72,16 @@ class UltiBotAPIClient:
             print(f"ERROR CRÍTICO: {error_msg}")
             raise APIError(f"Error inesperado: {str(e)}") from e
 
+    async def get_trading_mode(self) -> Dict[str, str]:
+        """Gets the application's current trading mode."""
+        logger.info("Getting trading mode from backend.")
+        return await self._make_request("GET", "/api/v1/trading-mode")
+
+    async def set_trading_mode(self, mode: str) -> Dict[str, Any]:
+        """Sets the application's trading mode."""
+        logger.info(f"Setting trading mode to {mode} via backend.")
+        return await self._make_request("POST", "/api/v1/trading-mode", json={"mode": mode})
+
     @retry(
         stop=stop_after_attempt(5),
         wait=wait_fixed(2),
@@ -92,15 +105,20 @@ class UltiBotAPIClient:
 
     async def get_trading_performance(self, trading_mode: str, **kwargs) -> Dict[str, Any]:
         params = {"trading_mode": trading_mode, **kwargs}
-        return await self._make_request("GET", "/api/v1/trading/performance", params=params)
+        return await self._make_request("GET", "/api/v1/performance/metrics", params=params)
 
     async def get_ohlcv_data(self, symbol: str, timeframe: str, limit: int = 100) -> List[Dict[str, Any]]:
-        params = {"symbol": symbol, "timeframe": timeframe, "limit": limit}
-        return await self._make_request("GET", "/api/v1/market/ohlcv", params=params)
+        params = {"symbol": symbol, "interval": timeframe, "limit": limit}
+        return await self._make_request("GET", "/api/v1/market/klines", params=params)
 
     async def get_ai_opportunities(self) -> List[Dict[str, Any]]:
-        return await self._make_request("GET", "/api/v1/opportunities/ai")
+        return await self._make_request("GET", "/api/v1/opportunities/real-trading-candidates")
 
     async def get_strategies(self) -> List[Dict[str, Any]]:
         """Obtiene la lista de estrategias de IA disponibles."""
-        return await self._make_request("GET", "/api/v1/strategies/ai")
+        return await self._make_request("GET", "/api/v1/strategies/strategies")
+
+    async def get_notification_history(self, limit: int = 20) -> List[Dict[str, Any]]:
+        """Obtiene el historial de notificaciones."""
+        params = {"limit": limit}
+        return await self._make_request("GET", "/api/v1/notifications/history", params=params)
