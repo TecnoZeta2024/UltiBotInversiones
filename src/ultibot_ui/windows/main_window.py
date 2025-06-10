@@ -301,6 +301,7 @@ class MainWindow(QMainWindow, BaseMainWindow):
     def open_market_scan_config(self):
         """Abre el diálogo de configuración de escaneo de mercado."""
         try:
+            # TODO: Refactorizar este diálogo para usar el TaskManager central
             dialog = MarketScanConfigDialog(
                 api_client=self.api_client,
                 parent=self
@@ -316,6 +317,8 @@ class MainWindow(QMainWindow, BaseMainWindow):
         try:
             dialog = PresetManagementDialog(
                 api_client=self.api_client,
+                main_window=self,
+                loop=self.loop,
                 parent=self
             )
             dialog.exec_()
@@ -327,6 +330,7 @@ class MainWindow(QMainWindow, BaseMainWindow):
     def open_asset_trading_parameters(self):
         """Abre el diálogo de configuración de parámetros de trading por activo."""
         try:
+            # TODO: Refactorizar este diálogo para usar el TaskManager central
             dialog = AssetTradingParametersDialog(
                 api_client=self.api_client,
                 parent=self
