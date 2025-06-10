@@ -9,7 +9,7 @@ from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
 from src.ultibot_backend.adapters.mobula_adapter import MobulaAdapter
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService as PersistenceService
 from src.ultibot_backend.services.ai_orchestrator_service import AIOrchestratorService
-from src.ultibot_backend.services.config_service import ConfigurationService
+from src.ultibot_backend.services.configuration_service import ConfigurationService
 from src.ultibot_backend.services.credential_service import CredentialService
 from src.ultibot_backend.services.market_data_service import MarketDataService
 from src.ultibot_backend.services.notification_service import NotificationService
@@ -118,8 +118,6 @@ class DependencyContainer:
             portfolio_service=self.portfolio_service,
             notification_service=self.notification_service
         )
-        self.config_service.set_notification_service(self.notification_service)
-
 
         # Level 5: Depend on previous levels
         self.strategy_service = StrategyService(

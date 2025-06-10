@@ -5,7 +5,7 @@ from uuid import UUID
 from src.ultibot_backend.core.domain_models.opportunity_models import Opportunity, OpportunityStatus
 from src.shared.data_types import UserConfiguration, RealTradingSettings
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend.services.config_service import ConfigurationService
+from src.ultibot_backend.services.configuration_service import ConfigurationService
 import logging
 from src.ultibot_backend.dependencies import (
     get_persistence_service,
@@ -27,17 +27,12 @@ async def get_real_trading_candidates(
     para operativa real para el usuario fijo, si el modo de trading real está activo y hay cupos disponibles.
     """
     user_id = settings.FIXED_USER_ID
-    user_config_dict = await config_service.get_user_configuration(str(user_id))
-    if not user_config_dict:
+    
+    user_config = await config_service.get_user_configuration(user_id)
+    if not user_config:
         raise HTTPException(status_code=404, detail="User configuration not found")
-        
-    # Convertir explcitamente a dict y aadir user_id
-    config_data = dict(user_config_dict)
-    config_data['user_id'] = user_id
-    user_config = UserConfiguration(**config_data)
 
-
-    real_trading_settings = user_config.realTradingSettings
+    real_trading_settings = user_config.real_trading_settings
     if real_trading_settings is None:
         real_trading_settings = RealTradingSettings(
             real_trading_mode_active=False,
@@ -52,7 +47,6 @@ async def get_real_trading_candidates(
     #     )
 
     closed_real_trades_count = await persistence_service.get_closed_trades_count(
-        user_id=user_id,
         is_real_trade=True
     )
 
@@ -63,7 +57,6 @@ async def get_real_trading_candidates(
         )
 
     opportunities = await persistence_service.get_opportunities_by_status(
-        user_id=user_id,
         status=OpportunityStatus.PENDING_USER_CONFIRMATION_REAL
     )
 

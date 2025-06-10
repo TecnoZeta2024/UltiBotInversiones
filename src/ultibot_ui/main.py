@@ -2,7 +2,7 @@ import sys
 import asyncio
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Optional, TextIO
 from uuid import UUID, uuid4
 import httpx
 import qasync
@@ -11,22 +11,61 @@ from PyQt5.QtCore import QObject, pyqtSignal
 
 from src.ultibot_ui.windows.main_window import MainWindow
 from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
+from src.ultibot_ui.services.trading_mode_state import TradingModeStateManager
 from src.ultibot_ui import app_config
 
-# Crear directorio de logs si no existe
+# --- Configuración de Logging Mejorada ---
+
+# 1. Crear directorio de logs
 logs_dir = Path("logs")
 logs_dir.mkdir(exist_ok=True)
 
-# Configuración avanzada de logging con salida a archivo
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler(logs_dir / "frontend.log")
-    ]
-)
+# 2. Obtener el logger raíz para configurarlo
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.INFO)
+
+# Limpiar handlers existentes para evitar duplicados
+if root_logger.hasHandlers():
+    root_logger.handlers.clear()
+
+# 3. Crear formateador
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# 4. Crear handler para el archivo
+file_handler = logging.FileHandler(logs_dir / "frontend.log", mode='w')
+file_handler.setFormatter(formatter)
+root_logger.addHandler(file_handler)
+
+# 5. Crear handler para la consola
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(formatter)
+root_logger.addHandler(stream_handler)
+
+# 6. Clase para redirigir stdout/stderr al logger
+class StreamToLogger(TextIO):
+    """
+    Fake file-like stream object that redirects writes to a logger instance.
+    """
+    def __init__(self, logger_instance: logging.Logger, level: int):
+        self.logger = logger_instance
+        self.level = level
+        self.linebuf = ''
+
+    def write(self, buf: str):
+        for line in buf.rstrip().splitlines():
+            self.logger.log(self.level, line.rstrip())
+
+    def flush(self):
+        pass
+
+# 7. Redirigir stdout y stderr
+sys.stdout = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
+sys.stderr = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
+
 logger = logging.getLogger(__name__)
+logger.info("Logging configurado. stdout y stderr redirigidos al archivo de log.")
+# --- Fin de la Configuración de Logging ---
+
 
 class AppController(QObject):
     """
@@ -46,6 +85,7 @@ class AppController(QObject):
             timeout=app_config.REQUEST_TIMEOUT
         )
         self.api_client = UltiBotAPIClient(client=self.http_client)
+        self.trading_mode_manager = TradingModeStateManager(api_client=self.api_client)
         self.initialization_finished = asyncio.Event()
 
     async def initialize(self):
@@ -59,9 +99,13 @@ class AppController(QObject):
             self.user_id = UUID(config_data.get("userId", str(uuid4())))
             logger.info(f"Configuración recibida para el ID de usuario: {self.user_id}")
             
+            # Sincronizar el modo de trading inicial
+            await self.trading_mode_manager.sync_with_backend()
+
             self.main_window = MainWindow(
                 user_id=self.user_id, 
                 api_client=self.api_client,
+                trading_mode_manager=self.trading_mode_manager,
                 loop=self.loop
             )
             self.initialization_complete.emit(self.main_window)

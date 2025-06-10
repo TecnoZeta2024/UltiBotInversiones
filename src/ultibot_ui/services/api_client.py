@@ -111,6 +111,12 @@ class UltiBotAPIClient:
         params = {"symbol": symbol, "interval": timeframe, "limit": limit}
         return await self._make_request("GET", "/api/v1/market/klines", params=params)
 
+    async def get_market_history(self, symbol: str, interval: str, limit: int) -> List[Dict[str, Any]]:
+        """Gets historical market data from the database."""
+        logger.info(f"Getting market history for {symbol} from backend.")
+        params = {"interval": interval, "limit": limit}
+        return await self._make_request("GET", f"/api/v1/market/history/{symbol}", params=params)
+
     async def get_ai_opportunities(self) -> List[Dict[str, Any]]:
         return await self._make_request("GET", "/api/v1/opportunities/real-trading-candidates")
 

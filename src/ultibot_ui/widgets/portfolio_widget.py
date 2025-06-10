@@ -15,7 +15,7 @@ import qasync
 
 from src.ultibot_ui.models import BaseMainWindow
 from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
-from src.ultibot_ui.services.trading_mode_state import get_trading_mode_manager, TradingModeStateManager
+from src.ultibot_ui.services.trading_mode_state import TradingModeStateManager
 from src.ultibot_ui.workers import ApiWorker
 
 
@@ -29,7 +29,7 @@ class PortfolioWidget(QWidget):
     portfolio_updated = pyqtSignal(object)
     error_occurred = pyqtSignal(str)
 
-    def __init__(self, user_id: UUID, main_window: BaseMainWindow, api_client: UltiBotAPIClient, loop: asyncio.AbstractEventLoop, parent: Optional[QWidget] = None):
+    def __init__(self, user_id: UUID, main_window: BaseMainWindow, api_client: UltiBotAPIClient, trading_mode_manager: TradingModeStateManager, loop: asyncio.AbstractEventLoop, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.user_id = user_id
         self.main_window = main_window
@@ -39,7 +39,7 @@ class PortfolioWidget(QWidget):
         self.current_snapshot: Optional[Dict[str, Any]] = None
         self.open_trades: List[Dict[str, Any]] = []
 
-        self.trading_mode_manager: TradingModeStateManager = get_trading_mode_manager()
+        self.trading_mode_manager = trading_mode_manager
         self.trading_mode_manager.trading_mode_changed.connect(self._on_trading_mode_changed)
 
         self.init_ui()
@@ -114,9 +114,9 @@ class PortfolioWidget(QWidget):
         layout.addLayout(header_layout)
 
     def _update_mode_indicator(self):
-        mode_info = self.trading_mode_manager.get_mode_display_info()
-        self.mode_indicator.setText(f"{mode_info['icon']} {mode_info['display_name']}")
-        self.mode_indicator.setProperty("tradingMode", self.trading_mode_manager.current_mode)
+        mode_info = self.trading_mode_manager.current_mode
+        self.mode_indicator.setText(f"{mode_info.icon} {mode_info.display_name}")
+        self.mode_indicator.setProperty("tradingMode", self.trading_mode_manager.current_mode.value)
 
     def init_portfolio_tab(self):
         layout = QVBoxLayout(self.portfolio_tab)
@@ -164,8 +164,8 @@ class PortfolioWidget(QWidget):
         layout.addWidget(self.trades_info_label)
 
     def _update_trades_title(self):
-        mode_info = self.trading_mode_manager.get_mode_display_info()
-        self.trades_title.setText(f"Operaciones {mode_info['display_name']} con TSL/TP Activos")
+        mode_info = self.trading_mode_manager.current_mode
+        self.trades_title.setText(f"Operaciones {mode_info.display_name} con TSL/TP Activos")
 
     def init_capital_tab(self):
         layout = QVBoxLayout(self.capital_tab)
@@ -243,7 +243,7 @@ class PortfolioWidget(QWidget):
 
     @qasync.asyncSlot()
     async def _start_update_worker(self):
-        current_mode = self.trading_mode_manager.current_mode
+        current_mode = self.trading_mode_manager.current_mode.value
         user_id = self.user_id
         logger.info(f"Actualizando datos del portafolio para modo: {current_mode}")
         self.last_updated_label.setText(f"Actualizando portafolio ({current_mode.title()})...")
@@ -278,7 +278,7 @@ class PortfolioWidget(QWidget):
         logger.info(f"DATOS COMPLETOS RECIBIDOS EN HANDLER: {result_data}")
         has_error = False
         try:
-            current_mode = self.trading_mode_manager.current_mode
+            current_mode = self.trading_mode_manager.current_mode.value
             if result_data.get("trading_mode", current_mode) != current_mode:
                 logger.warning(f"Datos para modo incorrecto. Esperado: {current_mode}, Recibido: {result_data.get('trading_mode')}")
                 return

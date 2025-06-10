@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QFrame
 from src.shared.data_types import Trade
 from src.ultibot_ui.models import BaseMainWindow
 from src.ultibot_ui.services.api_client import UltiBotAPIClient
+from src.ultibot_ui.services.trading_mode_state import TradingModeStateManager
 from src.ultibot_ui.widgets.chart_widget import ChartWidget
 from src.ultibot_ui.widgets.notification_widget import NotificationWidget
 from src.ultibot_ui.widgets.portfolio_widget import PortfolioWidget
@@ -22,11 +23,12 @@ class DashboardView(QWidget):
     """
     initialization_complete = pyqtSignal(bool)
 
-    def __init__(self, user_id: UUID, main_window: BaseMainWindow, api_client: UltiBotAPIClient, loop: asyncio.AbstractEventLoop, parent: Optional[QWidget] = None):
+    def __init__(self, user_id: UUID, main_window: BaseMainWindow, api_client: UltiBotAPIClient, trading_mode_manager: TradingModeStateManager, loop: asyncio.AbstractEventLoop, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.user_id = user_id
         self.main_window = main_window
         self.api_client = api_client
+        self.trading_mode_manager = trading_mode_manager
         self.loop = loop
         self._is_initialized = False
         self._pending_tasks = 0
@@ -41,7 +43,7 @@ class DashboardView(QWidget):
 
     def _setup_ui(self):
         """Configura la interfaz de usuario básica del dashboard usando tarjetas."""
-        self.portfolio_widget = PortfolioWidget(self.user_id, self.main_window, self.api_client, self.loop, self)
+        self.portfolio_widget = PortfolioWidget(self.user_id, self.main_window, self.api_client, self.trading_mode_manager, self.loop, self)
         self.chart_widget = ChartWidget(self.main_window, self.api_client, self.loop, self)
         self.notification_widget = NotificationWidget(self.user_id, self.main_window, self.api_client, self.loop, self)
 

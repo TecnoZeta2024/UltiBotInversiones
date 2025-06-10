@@ -132,6 +132,31 @@ class SupabasePersistenceService:
             logger.error(f"Error al obtener datos de mercado para {symbol}: {e}", exc_info=True)
             raise
 
+    async def get_market_data_from_db(self, symbol: str, limit: int) -> List[MarketData]:
+        """
+        Obtiene los últimos N registros de datos de mercado para un símbolo desde la BD.
+        """
+        await self._check_pool()
+        assert self.pool is not None
+
+        query = SQL("""
+            SELECT * FROM market_data 
+            WHERE symbol = %s 
+            ORDER BY timestamp DESC 
+            LIMIT %s;
+        """)
+
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, (symbol, limit))
+                    records = await cur.fetchall()
+                    # Los datos se devuelven en orden descendente, los invertimos para que el más antiguo sea el primero
+                    return [MarketData(**record) for record in reversed(records)]
+        except Exception as e:
+            logger.error(f"Error al obtener datos de mercado desde la BD para {symbol}: {e}", exc_info=True)
+            raise
+
     async def get_opportunity_by_id(self, opportunity_id: UUID) -> Optional[Opportunity]:
         await self._check_pool()
         assert self.pool is not None
@@ -304,20 +329,20 @@ class SupabasePersistenceService:
             logger.error(f"Error al eliminar credencial {credential_id} para usuario {self.fixed_user_id} (psycopg_pool): {e}")
             raise
 
-    async def get_user_configuration(self) -> Optional[Dict[str, Any]]:
+    async def get_user_configuration(self, user_id: UUID) -> Optional[Dict[str, Any]]:
         await self._check_pool()
         assert self.pool is not None
         query = SQL("SELECT * FROM user_configurations WHERE user_id = %s;")
         try:
             async with self.pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
-                    await cur.execute(query, (self.fixed_user_id,))
+                    await cur.execute(query, (user_id,))
                     record = await cur.fetchone()
                     if record:
                         return dict(record)
             return None
         except Exception as e:
-            logger.error(f"Error al obtener configuración de usuario para {self.fixed_user_id} (psycopg_pool): {e}", exc_info=True)
+            logger.error(f"Error al obtener configuración de usuario para {user_id} (psycopg_pool): {e}", exc_info=True)
             raise
 
     async def upsert_user_configuration(self, config_data: Dict[str, Any]):

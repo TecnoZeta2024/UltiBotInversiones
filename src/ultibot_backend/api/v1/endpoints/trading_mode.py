@@ -5,7 +5,7 @@ API endpoints for managing the trading mode.
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from ultibot_backend.services.trading_mode_service import (
+from src.ultibot_backend.services.trading_mode_service import (
     get_trading_mode_service,
     TradingMode,
     TradingModeService,

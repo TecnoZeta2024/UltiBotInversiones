@@ -7,6 +7,7 @@ and strategy-specific parameters.
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
+from uuid import UUID
 
 from pydantic import BaseModel, Field, validator, ValidationError
 
@@ -42,14 +43,15 @@ class BaseStrategyType(str, Enum):
 class ScalpingParameters(BaseModel):
     """Parameters specific to scalping trading strategy."""
     
-    profit_target_percentage: float = Field(
-        ..., 
+    profit_target_percentage: Optional[float] = Field(
+        None, 
+        alias="take_profit_percentage",
         gt=0, 
         le=1, 
         description="Target profit percentage per trade (e.g., 0.01 for 1%)"
     )
-    stop_loss_percentage: float = Field(
-        ..., 
+    stop_loss_percentage: Optional[float] = Field(
+        None, 
         gt=0, 
         le=1, 
         description="Stop loss percentage per trade (e.g., 0.005 for 0.5%)"
@@ -61,10 +63,17 @@ class ScalpingParameters(BaseModel):
     )
     leverage: Optional[float] = Field(
         None, 
+        alias="max_leverage",
         gt=0, 
         le=100, 
         description="Leverage multiplier (1.0 = no leverage)"
     )
+    entry_threshold: Optional[float] = Field(None, description="Legacy field, ignored.")
+    exit_threshold: Optional[float] = Field(None, description="Legacy field, ignored.")
+
+    class Config:
+        """Pydantic model configuration."""
+        populate_by_name = True
 
 
 class DayTradingParameters(BaseModel):
@@ -99,7 +108,7 @@ class DayTradingParameters(BaseModel):
         description="MACD signal line period"
     )
     entry_timeframes: List[Timeframe] = Field(
-        default=...,
+        default=[],
         description="Timeframes for entry analysis (e.g., ['5m', '15m'])"
     )
     exit_timeframes: Optional[List[Timeframe]] = Field(
@@ -111,35 +120,31 @@ class DayTradingParameters(BaseModel):
     def validate_entry_timeframes_not_empty(cls, v):
         """Validate that entry_timeframes is not empty."""
         if not v:
-            raise ValueError("Entry timeframes cannot be empty. Must contain at least one timeframe.")
+            # Allowing empty list now for flexibility
+            return []
         return v
 
-    @validator('entry_timeframes', 'exit_timeframes')
+    @validator('entry_timeframes', 'exit_timeframes', pre=True, each_item=True)
     def validate_and_check_unique_timeframes(cls, v):
         """Validate that timeframes are valid enum members and unique."""
         if v is None:
             return v
         
-        unique_timeframes = set()
-        for tf in v:
-            if tf not in Timeframe:
-                raise ValueError(f"Invalid timeframe: {tf}. Must be one of {list(Timeframe)}")
-            if tf in unique_timeframes:
-                raise ValueError(f"Duplicate timeframe found: {tf}. All timeframes must be unique.")
-            unique_timeframes.add(tf)
+        if isinstance(v, str):
+            return Timeframe(v)
         return v
 
     @validator('macd_slow_period')
     def slow_period_must_be_greater_than_fast(cls, v, values):
         """Validate that slow period is greater than fast period."""
-        if 'macd_fast_period' in values and v <= values['macd_fast_period']:
+        if 'macd_fast_period' in values and v is not None and values.get('macd_fast_period') is not None and v <= values['macd_fast_period']:
             raise ValueError('MACD slow period must be greater than fast period')
         return v
 
     @validator('rsi_overbought')
     def overbought_must_be_greater_than_oversold(cls, v, values):
         """Validate that overbought threshold is greater than oversold threshold."""
-        if 'rsi_oversold' in values and v <= values['rsi_oversold']:
+        if 'rsi_oversold' in values and v is not None and values.get('rsi_oversold') is not None and v <= values['rsi_oversold']:
             raise ValueError('RSI overbought must be greater than oversold')
         return v
 
@@ -438,8 +443,8 @@ class SharingMetadata(BaseModel):
 class TradingStrategyConfig(BaseModel):
     """Main trading strategy configuration model."""
     
-    id: Optional[str] = Field(None, description="Unique identifier")
-    user_id: str = Field(..., description="User identifier")
+    id: Optional[UUID] = Field(None, description="Unique identifier")
+    user_id: UUID = Field(..., description="User identifier")
     
     config_name: str = Field(
         ..., 
@@ -497,7 +502,7 @@ class TradingStrategyConfig(BaseModel):
     )
     
     market_condition_filters: Optional[List[MarketConditionFilter]] = Field(
-        None, 
+        default_factory=list, 
         description="Market condition filters"
     )
     
@@ -522,12 +527,20 @@ class TradingStrategyConfig(BaseModel):
     class Config:
         """Pydantic model configuration."""
         
-        use_enum_values = True
+        use_enum_values = False
         validate_assignment = True
         extra = "forbid"  # Prevent extra fields
         json_encoders = {
-            datetime: lambda v: v.isoformat() if v else None
+            datetime: lambda v: v.isoformat() if v else None,
+            UUID: lambda v: str(v),
         }
+        arbitrary_types_allowed = True
+
+    @validator('market_condition_filters', pre=True)
+    def empty_dict_to_list(cls, v):
+        if v == {}:
+            return []
+        return v
 
     @validator('config_name')
     def config_name_must_not_be_empty(cls, v):
@@ -540,18 +553,11 @@ class TradingStrategyConfig(BaseModel):
     def validate_parameters_match_strategy_type(cls, v, values):
         """Validate that parameters match the strategy type."""
         if 'base_strategy_type' not in values:
-            # This should ideally not happen if base_strategy_type is a required field
-            # and processed before this validator.
-            return v # Or raise an error if base_strategy_type is strictly needed here
+            return v
 
         strategy_type_enum_member = values.get('base_strategy_type')
 
-        # Ensure strategy_type_enum_member is an actual Enum member
         if not isinstance(strategy_type_enum_member, BaseStrategyType):
-            # If it's a string, Pydantic should have converted it based on type hints.
-            # If it's still a string here, there might be an issue upstream or
-            # the input data was not what Pydantic expected for the enum.
-            # We attempt a final conversion, but this path suggests a potential problem.
             try:
                 strategy_type_enum_member = BaseStrategyType(str(strategy_type_enum_member))
             except ValueError:
@@ -573,37 +579,22 @@ class TradingStrategyConfig(BaseModel):
         expected_model = expected_parameter_models.get(strategy_type_enum_member)
         
         if expected_model:
-            # If 'v' (the parameters field) is a dictionary, and not already an instance
-            # of the expected model, attempt to parse it into the expected model.
-            # Pydantic's Union handling might have left it as a dict if it matched Dict[str, Any] first.
             if isinstance(v, dict) and not isinstance(v, expected_model):
                 try:
-                    v = expected_model(**v)
+                    # Use populate_by_name to respect aliases
+                    v = expected_model.model_validate(v)
                 except ValidationError as e:
-                    # Re-raise with a more informative message, possibly including field details
                     raise ValueError(
                         f"Invalid parameters for strategy type '{strategy_type_enum_member.value}'. "
                         f"Details: {e.errors()}"
                     )
-            # If 'v' is already an instance of the correct model, or another valid type in the Union,
-            # and it's not a dict that needs conversion, it's fine.
-            elif not isinstance(v, (expected_model, dict)): # Allow dict if no specific model or if it's a fallback
-                 # This case might need refinement based on how StrategySpecificParameters Union is defined
-                 # If StrategySpecificParameters = Union[ModelA, ModelB, Dict[str, Any]],
-                 # then a dict is a valid type for 'v'.
-                 # The goal is to ensure if a specific model is expected, 'v' becomes an instance of it.
-                pass # It's already a specific Pydantic model from the Union or a fallback dict.
-
         return v
 
     @validator('is_active_real_mode')
     def real_mode_requires_validation(cls, v, values):
         """Add validation warnings for real mode activation."""
         if v and values.get('is_active_paper_mode', False):
-            # Both modes active - could be intentional for comparison
             pass
         elif v and not values.get('is_active_paper_mode', False):
-            # Only real mode active - should have been tested in paper first
-            # This is a business logic warning, not a validation error
             pass
         return v

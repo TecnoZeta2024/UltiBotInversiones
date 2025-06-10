@@ -14,13 +14,13 @@ from PyQt5.QtChart import QChart, QChartView, QPieSeries, QPieSlice
 
 from src.shared.data_types import PortfolioSnapshot, PortfolioAsset
 from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
-from src.ultibot_ui.services.trading_mode_state import get_trading_mode_manager, TradingModeStateManager
+from src.ultibot_ui.services.trading_mode_state import TradingModeStateManager, TradingMode
 from src.ultibot_ui.workers import ApiWorker
 
 logger = logging.getLogger(__name__)
 
 class PortfolioView(QWidget):
-    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, loop: asyncio.AbstractEventLoop, parent: Optional[QWidget] = None):
+    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, trading_mode_manager: TradingModeStateManager, loop: asyncio.AbstractEventLoop, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.user_id = user_id
         self.api_client = api_client
@@ -28,7 +28,7 @@ class PortfolioView(QWidget):
         self.active_threads: List[QThread] = []
         self.current_portfolio_data: Optional[PortfolioSnapshot] = None
 
-        self.trading_mode_manager: TradingModeStateManager = get_trading_mode_manager()
+        self.trading_mode_manager = trading_mode_manager
         self.trading_mode_manager.trading_mode_changed.connect(self._on_trading_mode_changed)
 
         self._setup_ui()
@@ -110,9 +110,9 @@ class PortfolioView(QWidget):
         content_splitter.setSizes([self.width() // 3, 2 * self.width() // 3])
 
     def _update_mode_indicator_label(self):
-        mode_info = self.trading_mode_manager.get_mode_display_info()
-        self.mode_indicator_label.setText(f"Mode: {mode_info['display_name']}")
-        self.mode_indicator_label.setStyleSheet(f"font-weight: bold; color: {mode_info['color']}; padding: 4px; border-radius: 4px; background-color: {mode_info['color']}22;")
+        mode_obj = self.trading_mode_manager.current_mode
+        self.mode_indicator_label.setText(f"Mode: {mode_obj.display_name}")
+        self.mode_indicator_label.setStyleSheet(f"font-weight: bold; color: {mode_obj.color}; padding: 4px; border-radius: 4px; background-color: {mode_obj.color}22;")
 
     @qasync.asyncSlot()
     async def _on_trading_mode_changed(self, new_mode: str):
@@ -123,14 +123,14 @@ class PortfolioView(QWidget):
     @qasync.asyncSlot()
     async def _fetch_portfolio_data(self):
         logger.info("PortfolioView: Fetching portfolio snapshot.")
-        self.status_label.setText(f"Loading portfolio data ({self.trading_mode_manager.current_mode.title()})...")
+        self.status_label.setText(f"Loading portfolio data ({self.trading_mode_manager.current_mode.display_name.title()})...")
         self.refresh_button.setEnabled(False)
         self.assets_table.setRowCount(0)
 
         worker = ApiWorker(
             api_client=self.api_client,
             coroutine_factory=lambda client_in_lambda: client_in_lambda.get_portfolio_snapshot(
-                user_id=self.user_id, trading_mode=self.trading_mode_manager.current_mode
+                user_id=self.user_id, trading_mode=self.trading_mode_manager.current_mode.value
             ),
             loop=self.loop
         )
@@ -169,13 +169,13 @@ class PortfolioView(QWidget):
 
         self.current_portfolio_data = portfolio_snapshot
         
-        if self.trading_mode_manager.current_mode == "paper":
+        if self.trading_mode_manager.current_mode == TradingMode.PAPER:
             mode_specific_data = portfolio_snapshot.paper_trading
         else:
             mode_specific_data = portfolio_snapshot.real_trading
 
         if not mode_specific_data:
-            logger.warning(f"PortfolioView: No data found for mode '{self.trading_mode_manager.current_mode}' in snapshot.")
+            logger.warning(f"PortfolioView: No data found for mode '{self.trading_mode_manager.current_mode.value}' in snapshot.")
             self.total_value_label.setText("Total Portfolio Value: Data unavailable")
             self.available_balance_label.setText("Available Balance: Data unavailable")
             self.assets_table.setRowCount(0)
@@ -183,7 +183,7 @@ class PortfolioView(QWidget):
             return
 
         self.total_value_label.setText(f"Total Portfolio Value: {mode_specific_data.total_portfolio_value_usd:,.2f} USD")
-        currency_suffix = " (Virtual)" if self.trading_mode_manager.current_mode == "paper" else ""
+        currency_suffix = " (Virtual)" if self.trading_mode_manager.current_mode == TradingMode.PAPER else ""
         self.available_balance_label.setText(f"Available Balance: {mode_specific_data.available_balance_usdt:,.2f} USDT{currency_suffix}")
 
         assets_list = mode_specific_data.assets

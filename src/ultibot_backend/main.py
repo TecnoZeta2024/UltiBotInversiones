@@ -60,25 +60,16 @@ LOGGING_CONFIG = {
             "stream": "ext://sys.stdout",
             "filters": ["correlation_id"],
         },
-        "file": {
-            "class": "logging.handlers.RotatingFileHandler",
-            "formatter": "default",
-            "filename": os.path.join(LOGS_DIR, "backend.log"),
-            "maxBytes": 10485760,  # 10 MB
-            "backupCount": 5,
-            "encoding": "utf-8",
-            "filters": ["correlation_id"],
-        },
     },
     "loggers": {
-        "uvicorn": {"handlers": ["console", "file"], "level": "INFO", "propagate": False},
+        "uvicorn": {"handlers": ["console"], "level": "INFO", "propagate": False},
         "uvicorn.error": {"level": "INFO", "propagate": False},
-        "uvicorn.access": {"handlers": ["console", "file"], "level": "INFO", "propagate": False},
-        "ultibot_backend": {"handlers": ["console", "file"], "level": "DEBUG", "propagate": False},
+        "uvicorn.access": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "ultibot_backend": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
     },
     "root": {
         "level": "DEBUG",
-        "handlers": ["console", "file"],
+        "handlers": ["console"],
     },
 }
 
@@ -97,19 +88,21 @@ async def lifespan(app: FastAPI):
     container = get_container()
     app.state.container = container
     try:
+        logger.info("LIFESPAN: Inicializando contenedor de dependencias...")
         await container.initialize_services()
-        logger.info("Contenedor de dependencias inicializado.")
+        logger.info("LIFESPAN: Contenedor de dependencias inicializado.")
         
     except Exception as e:
-        logger.critical(f"Error fatal durante el arranque de la aplicación: {e}", exc_info=True)
+        logger.critical(f"LIFESPAN: Error fatal durante el arranque de la aplicación: {e}", exc_info=True)
+        # Es crucial relanzar la excepción para que uvicorn sepa que el arranque falló.
         raise
 
-    logger.info("Aplicación iniciada correctamente.")
+    logger.info("LIFESPAN: Aplicación iniciada correctamente, cediendo el control (yield).")
     yield
     
-    logger.info("Apagando UltiBot Backend...")
+    logger.info("LIFESPAN: Apagando UltiBot Backend...")
     await container.shutdown()
-    logger.info("Recursos liberados y aplicación apagada.")
+    logger.info("LIFESPAN: Recursos liberados y aplicación apagada.")
 
 app = FastAPI(
     title="UltiBot Backend",
