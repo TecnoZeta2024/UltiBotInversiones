@@ -6,6 +6,7 @@ import logging
 import asyncio
 from typing import Optional, List, Dict, Any, Callable, Coroutine
 from uuid import UUID
+import qasync
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
@@ -177,16 +178,26 @@ class PaperTradingReportWidget(QWidget):
         self.apply_filters_btn.clicked.connect(self.apply_filters)
         self.refresh_btn.clicked.connect(self.load_data)
         
-    def apply_filters(self):
+    @qasync.asyncSlot()
+    async def apply_filters(self):
         """Aplica los filtros seleccionados y recarga los datos."""
-        self.load_data()
+        await self.load_data()
         
-    def load_data(self):
+    @qasync.asyncSlot()
+    async def load_data(self):
         """Carga tanto las métricas como los trades."""
-        self.load_metrics()
-        self.load_trades()
+        await self.load_metrics()
+        await self.load_trades()
 
-    def _start_api_worker(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine], on_success, on_error):
+    async def _start_api_worker(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine], on_success: Callable, on_error: Callable):
+        """
+        Crea y ejecuta un ApiWorker en un hilo separado para realizar llamadas a la API de forma asíncrona.
+
+        Args:
+            coroutine_factory: Una función que toma un api_client y devuelve la corutina a ejecutar.
+            on_success: El slot a llamar cuando la operación es exitosa.
+            on_error: El slot a llamar cuando ocurre un error.
+        """
         worker = ApiWorker(
             api_client=self.api_client, 
             coroutine_factory=coroutine_factory,
@@ -206,20 +217,20 @@ class PaperTradingReportWidget(QWidget):
         self.main_window.add_thread(thread)
         thread.start()
         
-    def load_metrics(self):
+    async def load_metrics(self):
         """Carga las métricas de rendimiento."""
         self.show_loading(True)
         params = self.get_filters()
         coro_factory = lambda client: client.get_trading_performance(trading_mode="paper", **params)
-        self._start_api_worker(coro_factory, self.on_metrics_loaded, self.on_error)
+        await self._start_api_worker(coro_factory, self._on_metrics_received, self.on_error)
         
-    def load_trades(self):
+    async def load_trades(self):
         """Carga la lista de trades."""
         params = self.get_filters()
         params['limit'] = 500
         params['offset'] = 0
         coro_factory = lambda client: client.get_trades(trading_mode="paper", **params)
-        self._start_api_worker(coro_factory, self.on_trades_loaded, self.on_error)
+        await self._start_api_worker(coro_factory, self._on_trades_received, self.on_error)
 
     def get_filters(self) -> Dict[str, Any]:
         """Recopila los filtros de la UI."""
@@ -236,42 +247,45 @@ class PaperTradingReportWidget(QWidget):
         
         return filters
         
-    def on_metrics_loaded(self, data: object):
+    @qasync.asyncSlot(object)
+    async def _on_metrics_received(self, data: object):
         """Maneja la carga exitosa de métricas."""
         try:
             if not isinstance(data, dict):
                 error_msg = f"Tipo de dato inesperado para métricas: se esperaba un dict pero se recibió {type(data).__name__}"
                 logger.error(error_msg)
-                self.on_error(error_msg)
+                await self.on_error(error_msg)
                 return
             metrics = PerformanceMetrics(**data)
             self.current_metrics_data = metrics
             self.update_metrics_display(metrics)
             logger.info("Métricas de rendimiento cargadas exitosamente")
-        except Exception as e:
+        except (TypeError, ValueError) as e:
             logger.error(f"Error procesando métricas: {e}", exc_info=True)
             self.show_error_message(f"Error procesando métricas: {str(e)}")
         finally:
             self.show_loading(False)
             
-    def on_trades_loaded(self, data: object):
+    @qasync.asyncSlot(object)
+    async def _on_trades_received(self, data: object):
         """Maneja la carga exitosa de trades."""
         try:
             if not isinstance(data, list):
                 error_msg = f"Tipo de dato inesperado para trades: se esperaba una lista pero se recibió {type(data).__name__}"
                 logger.error(error_msg)
-                self.on_error(error_msg)
+                await self.on_error(error_msg)
                 return
             self.current_trades_data = [Trade(**t) for t in data]
             self.update_trades_table(self.current_trades_data)
             logger.info(f"Trades cargados exitosamente: {len(self.current_trades_data)} trades")
-        except Exception as e:
+        except (TypeError, ValueError) as e:
             logger.error(f"Error procesando trades: {e}", exc_info=True)
             self.show_error_message(f"Error procesando trades: {str(e)}")
         finally:
             self.show_loading(False)
             
-    def on_error(self, error_message: str):
+    @qasync.asyncSlot(str)
+    async def on_error(self, error_message: str):
         """Maneja errores en la carga de datos."""
         self.show_loading(False)
         self.show_error_message(f"Error cargando datos: {error_message}")

@@ -2,6 +2,7 @@ import logging
 from uuid import UUID
 from typing import List, Dict, Any, Optional
 import asyncio
+import qasync
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget, QTableWidgetItem,
@@ -113,12 +114,14 @@ class PortfolioView(QWidget):
         self.mode_indicator_label.setText(f"Mode: {mode_info['display_name']}")
         self.mode_indicator_label.setStyleSheet(f"font-weight: bold; color: {mode_info['color']}; padding: 4px; border-radius: 4px; background-color: {mode_info['color']}22;")
 
-    def _on_trading_mode_changed(self, new_mode: str):
+    @qasync.asyncSlot()
+    async def _on_trading_mode_changed(self, new_mode: str):
         logger.info(f"PortfolioView: Trading mode changed to {new_mode}. Refreshing data.")
         self._update_mode_indicator_label()
-        self._fetch_portfolio_data()
+        await self._fetch_portfolio_data()
 
-    def _fetch_portfolio_data(self):
+    @qasync.asyncSlot()
+    async def _fetch_portfolio_data(self):
         logger.info("PortfolioView: Fetching portfolio snapshot.")
         self.status_label.setText(f"Loading portfolio data ({self.trading_mode_manager.current_mode.title()})...")
         self.refresh_button.setEnabled(False)
@@ -145,8 +148,22 @@ class PortfolioView(QWidget):
         thread.finished.connect(lambda t=thread: self.active_threads.remove(t) if t in self.active_threads else None)
         thread.start()
 
-    def _handle_portfolio_result(self, portfolio_snapshot: PortfolioSnapshot):
+    @qasync.asyncSlot()
+    async def _handle_portfolio_result(self, data: object):
         logger.info("PortfolioView: Portfolio snapshot data received.")
+        
+        if not isinstance(data, dict):
+            logger.error(f"PortfolioView: Invalid data type received: {type(data)}")
+            await self._handle_portfolio_error(f"Invalid data format: Expected dict, got {type(data).__name__}")
+            return
+            
+        try:
+            portfolio_snapshot = PortfolioSnapshot(**data)
+        except Exception as e:
+            logger.error(f"PortfolioView: Error parsing portfolio data: {e}")
+            await self._handle_portfolio_error(f"Data parsing error: {e}")
+            return
+
         self.status_label.setText("Portfolio data loaded successfully.")
         self.refresh_button.setEnabled(True)
 
@@ -173,7 +190,8 @@ class PortfolioView(QWidget):
         self._populate_assets_table(assets_list)
         self._update_pie_chart(assets_list)
 
-    def _handle_portfolio_error(self, error_message: str):
+    @qasync.asyncSlot()
+    async def _handle_portfolio_error(self, error_message: str):
         logger.error(f"PortfolioView: Error fetching portfolio data: {error_message}")
         self.status_label.setText("Failed to load portfolio data.")
         self.refresh_button.setEnabled(True)

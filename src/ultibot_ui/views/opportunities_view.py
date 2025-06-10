@@ -2,6 +2,7 @@ import asyncio
 import logging
 from uuid import UUID
 from typing import List, Dict, Any, Coroutine, Callable
+import qasync
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget, QTableWidgetItem,
@@ -107,16 +108,17 @@ class OpportunitiesView(QWidget):
         shadow.setOffset(x_offset, y_offset)
         widget.setGraphicsEffect(shadow)
 
-    def _fetch_opportunities(self):
+    @qasync.asyncSlot()
+    async def _fetch_opportunities(self):
         logger.info("Fetching Gemini IA opportunities.")
         self.status_label.setText("Loading opportunities...")
         self.refresh_button.setEnabled(False)
         self.opportunities_table.setRowCount(0)
         
         coro_factory = lambda api_client: api_client.get_ai_opportunities()
-        self._start_api_worker(coro_factory)
+        await self._start_api_worker(coro_factory)
 
-    def _start_api_worker(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine]):
+    async def _start_api_worker(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine]):
         logger.debug("Creating ApiWorker.")
         
         worker = ApiWorker(
@@ -140,8 +142,22 @@ class OpportunitiesView(QWidget):
         
         thread.start()
 
-    def _handle_opportunities_result(self, opportunities_data: List[Dict[str, Any]]):
-        opportunities = [Opportunity(**opp) for opp in opportunities_data]
+    @qasync.asyncSlot()
+    async def _handle_opportunities_result(self, data: object):
+        if not isinstance(data, list):
+            error_msg = f"Invalid data format: Expected list, got {type(data).__name__}"
+            logger.error(f"OpportunitiesView: {error_msg}")
+            await self._handle_opportunities_error(error_msg)
+            return
+
+        try:
+            opportunities = [Opportunity(**opp) for opp in data]
+        except (TypeError, ValueError) as e:
+            error_msg = f"Data parsing error: {e}"
+            logger.error(f"OpportunitiesView: {error_msg}")
+            await self._handle_opportunities_error(error_msg)
+            return
+
         logger.info(f"Received {len(opportunities)} opportunities.")
         self.status_label.setText(f"Loaded {len(opportunities)} opportunities.")
         self.refresh_button.setEnabled(True)
@@ -194,7 +210,8 @@ class OpportunitiesView(QWidget):
         self.opportunities_table.resizeColumnsToContents()
         self.last_updated_label.setText(f"Last updated: {QDateTime.currentDateTime().toString('yyyy-MM-dd HH:mm:ss')}")
 
-    def _handle_opportunities_error(self, error_message: str):
+    @qasync.asyncSlot()
+    async def _handle_opportunities_error(self, error_message: str):
         logger.error(f"Error fetching opportunities: {error_message}")
         self.status_label.setText("Failed to load opportunities.")
         self.refresh_button.setEnabled(True)

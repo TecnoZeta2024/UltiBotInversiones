@@ -45,7 +45,7 @@ class PortfolioWidget(QWidget):
         self.init_ui()
         self.setup_update_timer()
 
-    def _start_api_worker(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine], on_success, on_error):
+    def _start_api_worker(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine], on_success: Callable, on_error: Callable):
         thread = QThread()
         worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory, loop=self.loop)
         worker.moveToThread(thread)
@@ -55,6 +55,7 @@ class PortfolioWidget(QWidget):
         thread.started.connect(worker.run)
         
         def cleanup_worker():
+            # This function will be called in the main thread, ensuring thread-safe list removal
             for i, (t, w) in enumerate(self.active_workers):
                 if t is thread:
                     self.active_workers.pop(i)
@@ -64,7 +65,8 @@ class PortfolioWidget(QWidget):
         worker.result_ready.connect(cleanup_worker)
         worker.error_occurred.connect(cleanup_worker)
         thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
+        # The thread will be deleted after its finished signal has been emitted and processed.
+        # No need to connect thread.deleteLater() here, as it's handled by the worker's cleanup.
 
         self.active_workers.append((thread, worker))
         thread.start()
@@ -228,13 +230,15 @@ class PortfolioWidget(QWidget):
         self.update_timer.start()
         logger.info("Timer de actualización del portafolio iniciado.")
 
-    def _on_trading_mode_changed(self, new_mode: str):
+    @qasync.asyncSlot(str)
+    async def _on_trading_mode_changed(self, new_mode: str):
         logger.info(f"PortfolioWidget: Modo de trading cambió a {new_mode}")
         self._update_mode_indicator()
         self._update_trades_title()
-        self._start_update_worker()
+        await self._start_update_worker()
 
-    def _start_update_worker(self):
+    @qasync.asyncSlot()
+    async def _start_update_worker(self):
         current_mode = self.trading_mode_manager.current_mode
         user_id = self.user_id
         logger.info(f"Actualizando datos del portafolio para modo: {current_mode}")
@@ -261,7 +265,12 @@ class PortfolioWidget(QWidget):
 
         self._start_api_worker(fetch_data_coroutine, self._handle_update_result, self._handle_worker_error)
 
-    def _handle_update_result(self, result_data: Dict[str, Any]):
+    @qasync.asyncSlot(object)
+    async def _handle_update_result(self, result_data: object):
+        if not isinstance(result_data, dict):
+            await self._handle_worker_error(f"Invalid data format: Expected dict, got {type(result_data).__name__}")
+            return
+
         logger.info(f"DATOS COMPLETOS RECIBIDOS EN HANDLER: {result_data}")
         has_error = False
         try:
@@ -343,7 +352,8 @@ class PortfolioWidget(QWidget):
         item = QTableWidgetItem(str(text) if text is not None else "")
         table.setItem(row, col, item)
 
-    def _handle_worker_error(self, error_msg: str):
+    @qasync.asyncSlot(str)
+    async def _handle_worker_error(self, error_msg: str):
         logger.error(f"PortfolioWidget: Error en DataUpdateWorker: {error_msg}")
         self.error_label.setText("Error al cargar datos.")
         self.last_updated_label.setText("Actualización fallida.")
