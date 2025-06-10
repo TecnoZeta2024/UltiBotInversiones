@@ -6,7 +6,7 @@ permitiendo crear, editar, eliminar y ejecutar presets tanto del sistema como pe
 
 import asyncio
 import logging
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Callable, Coroutine
 
 from PyQt5.QtCore import QThread, QTimer, pyqtSignal
 from PyQt5.QtGui import QFont, QIcon
@@ -20,57 +20,10 @@ from PyQt5.QtWidgets import (
 from ...ultibot_backend.core.domain_models.user_configuration_models import (
     MarketScanConfiguration, ScanPreset, TrendDirection, VolumeFilter, MarketCapRange
 )
-from ..services.api_client import UltiBotAPIClient
-from ..services.api_client import APIError
+from ..services.api_client import UltiBotAPIClient, APIError
+from ..models import BaseMainWindow
 
 logger = logging.getLogger(__name__)
-
-class PresetExecutionWorker(QThread):
-    """Worker thread para ejecutar escaneos de presets de forma asíncrona."""
-    
-    execution_completed = pyqtSignal(list)  # Resultados del escaneo
-    execution_error = pyqtSignal(str)       # Error durante ejecución
-    execution_progress = pyqtSignal(str)    # Progreso de la ejecución
-    
-    def __init__(self, api_client: UltiBotAPIClient, preset_id: str):
-        super().__init__()
-        self.api_client = api_client
-        self.preset_id = preset_id
-        
-    def run(self):
-        """Ejecuta el escaneo del preset en un hilo separado."""
-        try:
-            self.execution_progress.emit(f"Iniciando ejecución del preset {self.preset_id}...")
-            
-            # Crear un nuevo loop de eventos para este hilo
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            
-            # Ejecutar el escaneo del preset
-            try:
-                results = loop.run_until_complete(
-                    self.api_client.execute_preset_scan(self.preset_id)
-                )
-                self.execution_progress.emit(f"Escaneo completado. {len(results)} resultados encontrados.")
-                self.execution_completed.emit(results)
-                
-            except APIError as e:
-                error_msg = f"Error de API: {str(e)}"
-                logger.error(f"Error ejecutando preset {self.preset_id}: {error_msg}")
-                self.execution_error.emit(error_msg)
-                
-            except Exception as e:
-                error_msg = f"Error inesperado: {str(e)}"
-                logger.error(f"Error inesperado ejecutando preset {self.preset_id}: {error_msg}")
-                self.execution_error.emit(error_msg)
-                
-            finally:
-                loop.close()
-                
-        except Exception as e:
-            error_msg = f"Error configurando ejecución: {str(e)}"
-            logger.error(f"Error configurando ejecución del preset: {error_msg}")
-            self.execution_error.emit(error_msg)
 
 class PresetDetailsWidget(QWidget):
     """Widget para mostrar y editar detalles de un preset."""
@@ -502,12 +455,13 @@ class PresetManagementDialog(QDialog):
     
     preset_executed = pyqtSignal(list)  # Emitido cuando se ejecuta un preset con resultados
     
-    def __init__(self, api_client: UltiBotAPIClient, parent=None):
+    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, loop: asyncio.AbstractEventLoop, parent=None):
         super().__init__(parent)
         self.api_client = api_client
+        self.main_window = main_window
+        self.loop = loop
         self.presets = []
         self.current_preset = None
-        self.execution_worker = None
         
         self.setup_ui()
         self.connect_signals()
@@ -720,40 +674,33 @@ class PresetManagementDialog(QDialog):
             self.status_label.setText("Cambios pendientes - Guarda o cancela los cambios")
             self.status_label.setStyleSheet("color: #FF6B00; font-weight: bold;")
             
+    def _submit_api_task(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine], on_success: Callable, on_error: Callable):
+        """Envía una tarea a la ventana principal para su ejecución."""
+        self.main_window.submit_task(coroutine_factory, on_success, on_error)
+
     def load_presets(self):
-        """Carga los presets desde el API."""
-        try:
-            # Crear un event loop temporal para la operación async
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            
-            try:
-                self.presets = loop.run_until_complete(self.api_client.get_scan_presets())
-                self._populate_presets_table()
-                self.status_label.setText(f"Cargados {len(self.presets)} presets")
-                self.status_label.setStyleSheet("color: #2E7D32; font-style: italic;")
-                
-            except APIError as e:
-                logger.error(f"Error cargando presets: {e}")
-                QMessageBox.warning(
-                    self, 
-                    "Error",
-                    f"Error cargando presets: {str(e)}"
-                )
-                self.status_label.setText("Error cargando presets")
-                self.status_label.setStyleSheet("color: #D32F2F; font-weight: bold;")
-                
-            finally:
-                loop.close()
-                
-        except Exception as e:
-            logger.error(f"Error inesperado cargando presets: {e}")
-            QMessageBox.critical(
-                self,
-                "Error Crítico", 
-                f"Error inesperado cargando presets: {str(e)}"
-            )
-            
+        """Carga los presets desde el API usando el task manager."""
+        self.status_label.setText("Cargando presets...")
+        self.status_label.setStyleSheet("color: #FF6B00; font-style: italic;")
+        
+        self._submit_api_task(
+            lambda client: client.get_scan_presets(),
+            self._on_load_presets_success,
+            self._on_load_presets_error
+        )
+
+    def _on_load_presets_success(self, presets: List[Dict]):
+        self.presets = presets
+        self._populate_presets_table()
+        self.status_label.setText(f"Cargados {len(self.presets)} presets")
+        self.status_label.setStyleSheet("color: #2E7D32; font-style: italic;")
+
+    def _on_load_presets_error(self, error_msg: str):
+        logger.error(f"Error cargando presets: {error_msg}")
+        QMessageBox.warning(self, "Error", f"Error cargando presets: {error_msg}")
+        self.status_label.setText("Error cargando presets")
+        self.status_label.setStyleSheet("color: #D32F2F; font-weight: bold;")
+
     def _populate_presets_table(self):
         """Llena la tabla de presets con los datos cargados."""
         # Aplicar filtro actual
@@ -1012,98 +959,46 @@ class PresetManagementDialog(QDialog):
         if not self.current_preset or self.current_preset.get('is_system_preset', False):
             return
             
-        # Confirmar eliminación
         reply = QMessageBox.question(
-            self,
-            "Confirmar Eliminación",
-            f"¿Estás seguro de que quieres eliminar el preset '{self.current_preset.get('name', '')}'?\n\n"
-            "Esta acción no se puede deshacer.",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
+            self, "Confirmar Eliminación",
+            f"¿Estás seguro de que quieres eliminar el preset '{self.current_preset.get('name', '')}'?",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
         )
-        
-        if reply != QMessageBox.Yes:
-            return
-            
-        try:
-            # Crear event loop temporal
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            
-            try:
-                loop.run_until_complete(
-                    self.api_client.delete_scan_preset(self.current_preset.get('id'))
-                )
-                
-                # Recargar presets
-                self.load_presets()
-                self._clear_selection()
-                
-                QMessageBox.information(
-                    self,
-                    "Preset Eliminado",
-                    f"El preset '{self.current_preset.get('name', '')}' ha sido eliminado exitosamente."
-                )
-                
-            except APIError as e:
-                logger.error(f"Error eliminando preset: {e}")
-                QMessageBox.warning(
-                    self,
-                    "Error",
-                    f"Error eliminando preset: {str(e)}"
-                )
-                
-            finally:
-                loop.close()
-                
-        except Exception as e:
-            logger.error(f"Error inesperado eliminando preset: {e}")
-            QMessageBox.critical(
-                self,
-                "Error Crítico",
-                f"Error inesperado eliminando preset: {str(e)}"
-            )
-            
+        if reply != QMessageBox.Yes: return
+
+        self.status_label.setText(f"Eliminando preset '{self.current_preset.get('name', '')}'...")
+        coroutine_factory = lambda client: client.delete_scan_preset(self.current_preset.get('id'))
+        self._submit_api_task(coroutine_factory, self._on_delete_preset_success, self._on_delete_preset_error)
+
+    def _on_delete_preset_success(self, _):
+        QMessageBox.information(self, "Preset Eliminado", "El preset ha sido eliminado exitosamente.")
+        self.load_presets()
+        self._clear_selection()
+
+    def _on_delete_preset_error(self, error_msg: str):
+        QMessageBox.warning(self, "Error", f"Error eliminando preset: {error_msg}")
+        self.status_label.setText("Error al eliminar preset.")
+        self.status_label.setStyleSheet("color: #D32F2F; font-weight: bold;")
+
     def _execute_preset(self):
         """Ejecuta el preset seleccionado."""
         if not self.current_preset or not self.current_preset.get('is_active', True):
             return
             
-        if self.execution_worker and self.execution_worker.isRunning():
-            QMessageBox.information(
-                self,
-                "Ejecución en Progreso",
-                "Ya hay una ejecución de preset en progreso. Espera a que termine."
-            )
-            return
-            
-        # Confirmar ejecución
         reply = QMessageBox.question(
-            self,
-            "Confirmar Ejecución",
-            f"¿Quieres ejecutar el preset '{self.current_preset.get('name', '')}'?\n\n"
-            "Esto realizará un escaneo del mercado con los criterios configurados.",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.Yes
+            self, "Confirmar Ejecución",
+            f"¿Quieres ejecutar el preset '{self.current_preset.get('name', '')}'?",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes
         )
-        
-        if reply != QMessageBox.Yes:
-            return
-            
-        # Crear y iniciar worker
-        self.execution_worker = PresetExecutionWorker(self.api_client, self.current_preset.get('id'))
-        self.execution_worker.execution_completed.connect(self._on_preset_execution_completed)
-        self.execution_worker.execution_error.connect(self._on_preset_execution_error)
-        self.execution_worker.execution_progress.connect(self._on_preset_execution_progress)
-        
-        # Deshabilitar botón de ejecución durante el proceso
+        if reply != QMessageBox.Yes: return
+
         self.execute_preset_btn.setEnabled(False)
         self.execute_preset_btn.setText("Ejecutando...")
-        
         self.status_label.setText("Iniciando ejecución del preset...")
         self.status_label.setStyleSheet("color: #FF6B00; font-weight: bold;")
-        
-        self.execution_worker.start()
+
+        coroutine_factory = lambda client: client.execute_preset_scan(self.current_preset.get('id'))
+        self._submit_api_task(coroutine_factory, self._on_preset_execution_completed, self._on_preset_execution_error)
         
     def _on_preset_execution_completed(self, results: List):
         """Maneja la finalización exitosa de la ejecución del preset."""
@@ -1113,110 +1008,59 @@ class PresetManagementDialog(QDialog):
         if results:
             self.status_label.setText(f"Ejecución completada: {len(results)} resultados encontrados")
             self.status_label.setStyleSheet("color: #2E7D32; font-weight: bold;")
-            
-            # Emitir señal con los resultados
             self.preset_executed.emit(results)
-            
-            # Mostrar mensaje de éxito
-            QMessageBox.information(
-                self,
-                "Ejecución Completada",
-                f"El preset se ejecutó exitosamente.\n\n"
-                f"Resultados encontrados: {len(results)}\n"
-                f"Los resultados han sido enviados a la ventana principal."
-            )
+            QMessageBox.information(self, "Ejecución Completada", f"Ejecución completada con {len(results)} resultados.")
         else:
             self.status_label.setText("Ejecución completada: Sin resultados")
             self.status_label.setStyleSheet("color: #FF6B00; font-style: italic;")
-            
-            QMessageBox.information(
-                self,
-                "Sin Resultados",
-                "El preset se ejecutó correctamente pero no se encontraron activos que cumplan los criterios."
-            )
+            QMessageBox.information(self, "Sin Resultados", "La ejecución no encontró activos que cumplan los criterios.")
             
     def _on_preset_execution_error(self, error_message: str):
         """Maneja errores durante la ejecución del preset."""
         self.execute_preset_btn.setEnabled(True)
         self.execute_preset_btn.setText("Ejecutar Preset")
-        
         self.status_label.setText(f"Error en ejecución: {error_message}")
         self.status_label.setStyleSheet("color: #D32F2F; font-weight: bold;")
-        
-        QMessageBox.warning(
-            self,
-            "Error de Ejecución",
-            f"Error ejecutando el preset:\n\n{error_message}"
-        )
-        
-    def _on_preset_execution_progress(self, message: str):
-        """Maneja actualizaciones de progreso durante la ejecución."""
-        self.status_label.setText(message)
-        self.status_label.setStyleSheet("color: #FF6B00; font-style: italic;")
+        QMessageBox.warning(self, "Error de Ejecución", f"Error ejecutando el preset:\n\n{error_message}")
         
     def _save_preset(self):
         """Guarda los cambios del preset actual."""
-        try:
-            preset_data = self.details_widget.get_preset_data()
-            
-            # Validar datos
-            if not preset_data["name"].strip():
-                QMessageBox.warning(self, "Error", "El nombre del preset es obligatorio.")
-                return
-                
-            if not preset_data["description"].strip():
-                QMessageBox.warning(self, "Error", "La descripción del preset es obligatoria.")
-                return
-            
-            # Crear event loop temporal
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            
-            try:
-                if self.current_preset is None:
-                    # Crear nuevo preset
-                    new_preset = loop.run_until_complete(
-                        self.api_client.create_scan_preset(preset_data)
-                    )
-                    success_message = f"Preset '{new_preset['name']}' creado exitosamente."
-                else:
-                    # Actualizar preset existente
-                    updated_preset = loop.run_until_complete(
-                        self.api_client.update_scan_preset(self.current_preset['id'], preset_data)
-                    )
-                    success_message = f"Preset '{updated_preset['name']}' actualizado exitosamente."
-                
-                # Recargar presets
-                self.load_presets()
-                
-                # Limpiar estado de edición
-                self.save_preset_btn.setEnabled(False)
-                self.cancel_changes_btn.setEnabled(False)
-                
-                self.status_label.setText("Preset guardado exitosamente")
-                self.status_label.setStyleSheet("color: #2E7D32; font-weight: bold;")
-                
-                QMessageBox.information(self, "Éxito", success_message)
-                
-            except APIError as e:
-                logger.error(f"Error guardando preset: {e}")
-                QMessageBox.warning(
-                    self,
-                    "Error",
-                    f"Error guardando preset: {str(e)}"
-                )
-                
-            finally:
-                loop.close()
-                
-        except Exception as e:
-            logger.error(f"Error inesperado guardando preset: {e}")
-            QMessageBox.critical(
-                self,
-                "Error Crítico",
-                f"Error inesperado guardando preset: {str(e)}"
-            )
-            
+        preset_data = self.details_widget.get_preset_data()
+        if not preset_data["name"].strip() or not preset_data["description"].strip():
+            QMessageBox.warning(self, "Error", "El nombre y la descripción son obligatorios.")
+            return
+
+        if self.current_preset is None:
+            # Crear nuevo preset
+            coroutine_factory = lambda client: client.create_scan_preset(preset_data)
+            on_success = self._on_create_preset_success
+        else:
+            # Actualizar preset existente
+            coroutine_factory = lambda client: client.update_scan_preset(self.current_preset['id'], preset_data)
+            on_success = self._on_update_preset_success
+        
+        self._submit_api_task(coroutine_factory, on_success, self._on_save_preset_error)
+
+    def _on_create_preset_success(self, new_preset: Dict):
+        self._on_save_success(f"Preset '{new_preset['name']}' creado exitosamente.")
+
+    def _on_update_preset_success(self, updated_preset: Dict):
+        self._on_save_success(f"Preset '{updated_preset['name']}' actualizado exitosamente.")
+
+    def _on_save_success(self, message: str):
+        QMessageBox.information(self, "Éxito", message)
+        self.load_presets()
+        self.save_preset_btn.setEnabled(False)
+        self.cancel_changes_btn.setEnabled(False)
+        self.status_label.setText("Preset guardado exitosamente")
+        self.status_label.setStyleSheet("color: #2E7D32; font-weight: bold;")
+
+    def _on_save_preset_error(self, error_msg: str):
+        logger.error(f"Error guardando preset: {error_msg}")
+        QMessageBox.warning(self, "Error", f"Error guardando preset: {error_msg}")
+        self.status_label.setText("Error al guardar preset.")
+        self.status_label.setStyleSheet("color: #D32F2F; font-weight: bold;")
+
     def _cancel_changes(self):
         """Cancela los cambios pendientes."""
         if self.current_preset is None:
@@ -1232,168 +1076,13 @@ class PresetManagementDialog(QDialog):
         self.status_label.setText("Cambios cancelados")
         self.status_label.setStyleSheet("color: #666666; font-style: italic;")
 
-# Mock API Client para pruebas independientes
-class MockAPIClient:
-    """Cliente API mock para pruebas sin backend."""
-    
-    def __init__(self):
-        self.presets = self._create_sample_presets()
-        
-    def _create_sample_presets(self) -> List[Dict]:
-        """Crea presets de ejemplo para testing."""
-        from datetime import datetime
-        
-        return [
-            {
-                "id": "momentum_breakout",
-                "name": "Momentum Breakout",
-                "description": "Detecta activos con fuerte momentum alcista y breakouts de volumen",
-                "category": "momentum",
-                "market_scan_configuration": {
-                    "id": "momentum_config",
-                    "name": "Momentum Breakout Config",
-                    "description": "Configuración para detectar momentum",
-                    "min_price_change_24h_percent": 5.0,
-                    "max_price_change_24h_percent": 30.0,
-                    "volume_filter_type": "high_volume",
-                    "min_volume_24h_usd": 1000000,
-                    "market_cap_ranges": ["small", "mid"],
-                    "trend_direction": "bullish",
-                    "min_rsi": 60,
-                    "max_rsi": 80,
-                    "max_results": 20,
-                    "scan_interval_minutes": 15,
-                    "allowed_quote_currencies": ["USDT", "BTC"],
-                    "is_active": True
-                },
-                "recommended_strategies": ["momentum_rsi", "breakout_volume"],
-                "usage_count": 45,
-                "success_rate": 0.72,
-                "is_system_preset": True,
-                "is_active": True,
-                "created_at": datetime.now().isoformat(),
-                "updated_at": datetime.now().isoformat()
-            },
-            {
-                "id": "value_discovery",
-                "name": "Value Discovery",
-                "description": "Busca activos infravalorados con fundamentos sólidos",
-                "category": "value",
-                "market_scan_configuration": {
-                    "id": "value_config",
-                    "name": "Value Discovery Config",
-                    "description": "Configuración para descubrir valor",
-                    "min_price_change_24h_percent": -10.0,
-                    "max_price_change_24h_percent": 2.0,
-                    "volume_filter_type": "above_average",
-                    "market_cap_ranges": ["mid", "large"],
-                    "trend_direction": "any",
-                    "min_rsi": 20,
-                    "max_rsi": 45,
-                    "max_results": 30,
-                    "scan_interval_minutes": 30,
-                    "allowed_quote_currencies": ["USDT", "BUSD"],
-                    "is_active": True
-                },
-                "recommended_strategies": ["value_rsi", "mean_reversion"],
-                "usage_count": 28,
-                "success_rate": 0.68,
-                "is_system_preset": True,
-                "is_active": True,
-                "created_at": datetime.now().isoformat(),
-                "updated_at": datetime.now().isoformat()
-            }
-        ]
-        
-    async def get_scan_presets(self) -> List[Dict]:
-        """Obtiene todos los presets de escaneo."""
-        await asyncio.sleep(0.1)  # Simular latencia
-        return self.presets
-        
-    async def create_scan_preset(self, preset_data: Dict) -> Dict:
-        """Crea un nuevo preset de escaneo."""
-        await asyncio.sleep(0.1)
-        
-        new_preset = preset_data.copy()
-        new_preset["id"] = f"preset_{len(self.presets)}"
-        new_preset["usage_count"] = 0
-        new_preset["success_rate"] = None
-        
-        self.presets.append(new_preset)
-        return new_preset
-        
-    async def update_scan_preset(self, preset_id: str, preset_data: Dict) -> Dict:
-        """Actualiza un preset existente."""
-        await asyncio.sleep(0.1)
-        
-        for i, preset in enumerate(self.presets):
-            if preset["id"] == preset_id:
-                updated_preset = preset_data.copy()
-                updated_preset["id"] = preset_id
-                updated_preset["usage_count"] = preset.get("usage_count", 0)
-                updated_preset["success_rate"] = preset.get("success_rate")
-                
-                self.presets[i] = updated_preset
-                return updated_preset
-                
-        raise APIError(f"Preset {preset_id} no encontrado")
-        
-    async def delete_scan_preset(self, preset_id: str) -> bool:
-        """Elimina un preset."""
-        await asyncio.sleep(0.1)
-        
-        for i, preset in enumerate(self.presets):
-            if preset["id"] == preset_id:
-                if preset.get("is_system_preset", False):
-                    raise APIError("No se pueden eliminar presets del sistema")
-                del self.presets[i]
-                return True
-                
-        raise APIError(f"Preset {preset_id} no encontrado")
-        
-    async def execute_preset_scan(self, preset_id: str) -> List[Dict]:
-        """Ejecuta un escaneo con un preset."""
-        await asyncio.sleep(2.0)  # Simular proceso de escaneo
-        
-        # Incrementar contador de uso
-        for preset in self.presets:
-            if preset["id"] == preset_id:
-                preset["usage_count"] = preset.get("usage_count", 0) + 1
-                break
-        
-        # Devolver resultados simulados
-        return [
-            {
-                "symbol": "BTCUSDT",
-                "price": 45000.0,
-                "price_change_24h_percent": 8.5,
-                "volume_24h_usd": 15000000,
-                "market_cap_usd": 850000000000,
-                "rsi": 65.2
-            },
-            {
-                "symbol": "ETHUSDT", 
-                "price": 3200.0,
-                "price_change_24h_percent": 12.3,
-                "volume_24h_usd": 8000000,
-                "market_cap_usd": 385000000000,
-                "rsi": 72.1
-            }
-        ]
-
 def main():
     """Función principal para testing del diálogo."""
     import sys
     
-    app = QApplication(sys.argv)
-    
-    # Usar mock client para testing
-    mock_client = MockAPIClient()
-    
-    dialog = PresetManagementDialog(mock_client)
-    dialog.show()
-    
-    sys.exit(app.exec())
+    # Esta sección es para pruebas y no se usará en la aplicación principal.
+    # Se deja por si se necesita para debugging futuro.
+    pass
 
 if __name__ == "__main__":
     main()
