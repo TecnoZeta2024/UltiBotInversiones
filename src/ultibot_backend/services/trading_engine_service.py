@@ -7,7 +7,7 @@ results with strategy logic to make informed trading decisions.
 import logging
 from uuid import UUID
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING, Union
 
 from fastapi import HTTPException
 
@@ -42,7 +42,8 @@ from src.ultibot_backend.core.domain_models.trade_models import (
     TradeSide
 )
 from src.ultibot_backend.services.market_data_service import MarketDataService
-from src.ultibot_backend.services.unified_order_execution_service import UnifiedOrderExecutionService
+from src.ultibot_backend.services.order_execution_service import OrderExecutionService
+from src.ultibot_backend.services.simulated_order_execution_service import SimulatedOrderExecutionService
 from src.ultibot_backend.services.credential_service import CredentialService
 from src.ultibot_backend.core.exceptions import MarketDataError, BinanceAPIError, OrderExecutionError
 from src.shared.data_types import ServiceName
@@ -96,7 +97,7 @@ class TradingEngineService:
         self,
         persistence_service: "SupabasePersistenceService",
         market_data_service: MarketDataService,
-        unified_order_execution_service: UnifiedOrderExecutionService,
+        order_execution_service: Union[OrderExecutionService, SimulatedOrderExecutionService],
         credential_service: CredentialService,
         notification_service: "NotificationService",
         strategy_service: "StrategyService",
@@ -107,7 +108,7 @@ class TradingEngineService:
     ):
         self.persistence_service = persistence_service
         self.market_data_service = market_data_service
-        self.unified_order_execution_service = unified_order_execution_service
+        self.order_execution_service = order_execution_service
         self.credential_service = credential_service
         self.notification_service = notification_service
         self.strategy_service = strategy_service
@@ -177,7 +178,7 @@ class TradingEngineService:
             trade_side = self._determine_trade_side_from_opportunity(opportunity)
             trade_mode_str = getattr(decision, 'mode', 'paper')
             
-            actual_trade_mode = TradeMode(trade_mode_str)
+            actual_trade_mode = TradeMode(trade_mode_str.upper()) # Ensure uppercase
             actual_trade_side = TradeSide(trade_side)
 
             tp_price = None

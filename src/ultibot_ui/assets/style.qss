@@ -2,58 +2,76 @@
  * UltiBotInversiones - Modern Dark Theme
  */
 
+/* Dark Theme Implementation */
 QWidget {
-    background-color: #1A1C2E; /* Azul marino oscuro casi negro */
-    color: #E0E0E0; /* Texto principal - blanco roto */
+    background-color: #2E2E2E; /* Deep charcoal gray */
+    color: #D3D3D3; /* Light gray text color */
     font-family: "Segoe UI", "Arial", sans-serif;
     font-size: 14px;
 }
 
 /* ---- Ventana Principal y Frames ---- */
 QMainWindow, QFrame#mainFrame {
-    background-color: #1A1C2E;
+    background-color: #2E2E2E; /* Deep charcoal gray */
     border: none;
 }
 
 /* ---- Tarjetas (Cards) ---- */
 QFrame.card {
-    background-color: #282A40; /* Un tono más claro de azul/gris */
-    border-radius: 8px;
-    border: 1px solid #3A3C54;
+    background-color: #3C3C3C; /* Slightly lighter shade of the dark background */
+    border-radius: 10px; /* Rounded corners */
+    padding: 15px; /* Padding inside the card */
+    border: 1px solid #4A4A4A; /* Subtle border for separation */
+    /* Añadir sombra sutil para profundidad, inspirándose en magic-card */
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2); 
 }
 
 /* ---- Botones ---- */
 QPushButton {
-    background-color: #4A4D7D; /* Púrpura/azul para botones estándar */
-    color: #FFFFFF;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
-    font-weight: bold;
+    background-color: #3E3E3E; /* Slightly lighter charcoal */
+    color: #D3D3D3; /* Light gray */
+    border: none; /* Remove default border */
+    padding: 8px 15px; /* Aumentar padding para mejor clicabilidad */
+    border-radius: 8px; /* Rounded corners */
+    /* Se elimina la propiedad 'transition' ya que no es soportada por QSS */
 }
 
 QPushButton:hover {
-    background-color: #5A5D9A;
+    background-color: #4E4E4E; /* Slightly lighter on hover */
 }
 
 QPushButton:pressed {
-    background-color: #3A3C54;
+    background-color: #5E5E5E; /* Even lighter on press */
 }
 
+/* Primary Buttons */
 QPushButton.primary {
-    background-color: #00BFFF; /* Azul brillante para acciones primarias */
+    background-color: #00FF7F; /* Vibrant electric green */
+    color: #1E1E1E; /* Black or very dark gray for contrast */
+    font-weight: bold;
 }
 
 QPushButton.primary:hover {
-    background-color: #33CCFF;
+    background-color: #00E673; /* Slightly darker green */
 }
 
-QPushButton.success {
-    background-color: #28A745; /* Verde para éxito */
+QPushButton.primary:pressed {
+    background-color: #00CC66; /* Even darker green */
 }
 
-QPushButton.success:hover {
-    background-color: #2EBF4F;
+/* Secondary Buttons */
+QPushButton.secondary {
+    background-color: transparent; /* Transparent or very dark gray */
+    color: #00FF7F; /* Electric green */
+    border: 1px solid #00FF7F; /* Electric green border */
+}
+
+QPushButton.secondary:hover {
+    background-color: #383838; /* Slightly lighter background on hover */
+}
+
+QPushButton.secondary:pressed {
+    background-color: #484848; /* Even lighter background on press */
 }
 
 /* ---- Pestañas (Tabs) ---- */
@@ -114,6 +132,25 @@ QLabel#subtitleLabel {
     color: #A0A0A0;
 }
 
+/* For important numerical data */
+QLabel.keyData {
+    font-size: 18px; /* Increased font size */
+    font-weight: bold; /* Bold for emphasis */
+    color: #D3D3D3; /* Ensure high contrast on card background */
+}
+
+/* For positive financial indicators */
+QLabel.positiveChange {
+    color: #00FF7F; /* Electric green */
+    font-weight: bold; /* Often good to bold these too */
+}
+
+/* For negative financial indicators */
+QLabel.negativeChange {
+    color: #FF6347; /* Tomato red */
+    font-weight: bold; /* Often good to bold these too */
+}
+
 /* ---- Inputs ---- */
 QLineEdit, QComboBox {
     background-color: #3A3C54;
@@ -150,4 +187,81 @@ QListWidget::item:selected {
     background-color: #007BFF; /* Azul brillante para el item seleccionado */
     color: #FFFFFF;
     border-left: 3px solid #00BFFF;
+}
+
+/* ---- Estilos específicos para NotificationWidget (anteriormente locales) ---- */
+NotificationWidget {
+    background-color: #3C3C3C; /* Usar el mismo color que QFrame.card para consistencia */
+    border: 1px solid #4A4A4A;
+    border-radius: 10px; /* Consistente con QFrame.card */
+}
+
+NotificationWidget QListWidget {
+    background-color: #2E2E2E; /* Fondo más oscuro para la lista de notificaciones */
+    border: 1px solid #3A3C54;
+    border-radius: 5px;
+    color: #D3D3D3;
+}
+
+NotificationWidget QListWidget::item {
+    padding: 8px;
+    margin-bottom: 2px;
+    border-bottom: 1px solid #333;
+}
+
+NotificationWidget QListWidget::item:alternate {
+    background-color: #333333; /* Ligeramente diferente para filas alternas */
+}
+
+NotificationWidget QListWidget::item:selected {
+    background-color: #007BFF; /* Azul de selección */
+    color: white;
+}
+
+NotificationWidget QPushButton {
+    background-color: #007BFF; /* Azul para botones de control */
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+}
+
+NotificationWidget QPushButton:hover {
+    background-color: #0056b3;
+}
+
+NotificationWidget QPushButton:disabled {
+    background-color: #555;
+    color: #bbb;
+}
+
+/* Estilo para el botón de cerrar notificación individual */
+NotificationWidget QPushButton#dismissButton { /* Asumiendo que se le puede dar un objectName */
+    background-color: #dc3545; /* Rojo para descartar */
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-weight: bold;
+}
+
+NotificationWidget QPushButton#dismissButton:hover {
+    background-color: #c82333;
+}
+
+/* ---- Estilos específicos para ChartWidget (anteriormente locales) ---- */
+ChartWidget {
+    background-color: #3C3C3C; /* Consistente con QFrame.card */
+    border-radius: 10px;
+    padding: 15px;
+}
+
+/* Asegurar que los elementos de texto dentro del ChartWidget sean legibles */
+ChartWidget QLabel {
+    color: #D3D3D3;
+}
+
+ChartWidget QComboBox {
+    background-color: #282A40; /* Fondo más oscuro para los comboboxes del gráfico */
+    border: 1px solid #5A5D9A;
+    color: #D3D3D3;
 }

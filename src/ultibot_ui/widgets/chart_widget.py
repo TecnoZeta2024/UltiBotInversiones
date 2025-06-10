@@ -1,5 +1,5 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QComboBox, QHBoxLayout
-from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QThread
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QComboBox, QHBoxLayout, QSizePolicy
+from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QPainter, QColor, QPen
 import mplfinance as mpf
 import pandas as pd
@@ -10,7 +10,6 @@ import httpx
 import qasync
 
 from src.ultibot_ui.models import BaseMainWindow
-from src.ultibot_ui.workers import ApiWorker
 from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
 from src.shared.data_types import Kline
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
@@ -70,9 +69,11 @@ class ChartWidget(QWidget):
         self.chart_area = QLabel("Cargando gráfico...")
         self.chart_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.main_layout.addWidget(self.chart_area)
+        self.chart_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding) # Asegurar que el QLabel inicial se expanda
 
         self.setLayout(self.main_layout)
-        self.setStyleSheet("background-color: #1e1e1e; color: #cccccc;")
+        # Se elimina el estilo local para que el estilo global de style.qss se aplique
+        # self.setStyleSheet("background-color: #1e1e1e; color: #cccccc;")
 
         self.current_symbol = self.symbol_combo.currentText()
         self.load_chart_data()
@@ -86,6 +87,14 @@ class ChartWidget(QWidget):
         self.current_interval = self.interval_combo.currentText()
         self.interval_selected.emit(self.current_interval)
         self.load_chart_data()
+
+    def _on_data_loaded_success(self, data: object):
+        """Callback para cuando los datos del gráfico se cargan con éxito."""
+        self.candlestick_data_fetched.emit(data)
+
+    def _on_data_loaded_error(self, error_message: str):
+        """Callback para cuando ocurre un error al cargar los datos del gráfico."""
+        self.api_error_occurred.emit(error_message)
 
     @qasync.asyncSlot(object)
     async def set_candlestick_data(self, data: object):
@@ -108,49 +117,26 @@ class ChartWidget(QWidget):
         if isinstance(self.chart_area, QLabel):
             self.chart_area.setText(f"Error API: {message}")
         else:
-            # If chart_area is already a canvas, we can't set text.
-            # We could replace it with a QLabel again, or just log.
             logger.warning("Chart area is not a QLabel, cannot display error text directly.")
 
     def load_chart_data(self):
         if self.current_symbol and self.current_interval:
             if isinstance(self.chart_area, QLabel):
                 self.chart_area.setText(f"Cargando datos para {self.current_symbol} ({self.current_interval})...")
-            logger.info(f"Solicitando datos para {self.current_symbol} - {self.current_interval} usando ApiWorker")
             
-            current_symbol = self.current_symbol
-            current_interval = self.current_interval.lower() # Ensure lowercase for API
-
-            if current_symbol is None or current_interval is None:
-                logger.error("ChartWidget: Símbolo o intervalo no definidos al intentar cargar datos del gráfico.")
-                if isinstance(self.chart_area, QLabel):
-                    self.chart_area.setText("Error: Símbolo o intervalo no definidos.")
-                return
-
-            worker = ApiWorker(
-                api_client=self.api_client,
-                coroutine_factory=lambda client_in_lambda: client_in_lambda.get_ohlcv_data(
-                    symbol=current_symbol,
-                    timeframe=current_interval,
-                    limit=100 # Reduced for faster loading
-                ),
-                loop=self.loop
+            logger.info(f"Solicitando datos para {self.current_symbol} - {self.current_interval} usando TaskManager")
+            
+            coroutine_factory = lambda client: client.get_ohlcv_data(
+                symbol=self.current_symbol,
+                timeframe=self.current_interval,
+                limit=100
             )
-            thread = QThread()
-            self.main_window.add_thread(thread)
-
-            worker.moveToThread(thread)
-
-            worker.result_ready.connect(self.candlestick_data_fetched.emit)
-            worker.error_occurred.connect(lambda e: self.api_error_occurred.emit(str(e)))
             
-            thread.started.connect(worker.run)
-            worker.result_ready.connect(thread.quit)
-            worker.error_occurred.connect(thread.quit)
-            thread.finished.connect(worker.deleteLater)
-            thread.finished.connect(lambda t=thread: self.main_window.remove_thread(t) if hasattr(self.main_window, 'remove_thread') else None)
-
-            thread.start()
+            self.main_window.submit_task(
+                coroutine_factory, 
+                self._on_data_loaded_success, 
+                self._on_data_loaded_error
+            )
         else:
             if isinstance(self.chart_area, QLabel):
                 self.chart_area.setText("Seleccione un par y una temporalidad para ver el gráfico.")
@@ -174,12 +160,10 @@ class ChartWidget(QWidget):
             df = df.set_index('open_time')
             df.index.name = 'Date'
             
-            # Convert columns to numeric, coercing errors
             numeric_cols = ['open', 'high', 'low', 'close', 'volume']
             for col in numeric_cols:
                 df[col] = pd.to_numeric(df[col], errors='coerce')
             df.dropna(subset=numeric_cols, inplace=True)
-
 
             df.rename(columns={
                 'open': 'Open',
@@ -218,8 +202,8 @@ class ChartWidget(QWidget):
             axlist[2].set_ylabel('Volume', color='#cccccc')
             
             canvas = FigureCanvas(fig)
+            canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding) # Asegurar que el canvas se expanda
             
-            # Replace the old chart_area widget with the new canvas
             old_widget = self.main_layout.itemAt(1).widget()
             if old_widget:
                 self.main_layout.removeWidget(old_widget)
@@ -231,7 +215,6 @@ class ChartWidget(QWidget):
 
         except Exception as e:
             logger.critical(f"Error al renderizar el gráfico: {e}", exc_info=True)
-            # Ensure chart_area is a QLabel to show the error
             if not isinstance(self.chart_area, QLabel):
                 old_widget = self.main_layout.itemAt(1).widget()
                 if old_widget:
@@ -242,7 +225,6 @@ class ChartWidget(QWidget):
                 self.chart_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 self.main_layout.addWidget(self.chart_area)
             self.chart_area.setText(f"Error al renderizar el gráfico: {e}")
-
 
     def cleanup(self):
         logger.info("ChartWidget: Limpieza completada.")
@@ -262,19 +244,24 @@ if __name__ == '__main__':
             super().__init__()
             self._threads = []
 
-        def add_thread(self, thread: QThread):
-            logger.info(f"MockMainWindow: Thread '{thread.objectName()}' added for tracking.")
-            self._threads.append(thread)
-        
-        def remove_thread(self, thread: QThread):
-            logger.info(f"MockMainWindow: Thread '{thread.objectName()}' removed.")
-            if thread in self._threads:
-                self._threads.remove(thread)
+        def submit_task(self, coro, on_success, on_error):
+            # Mock implementation for testing
+            logger.info("MockMainWindow: Tarea enviada.")
+            async def task_wrapper():
+                try:
+                    result = await coro
+                    future = asyncio.Future()
+                    future.set_result(result)
+                    on_success(future)
+                except Exception as e:
+                    future = asyncio.Future()
+                    future.set_exception(e)
+                    on_error(future)
+            asyncio.create_task(task_wrapper())
 
     class MockAPIClient(UltiBotAPIClient):
         async def get_ohlcv_data(self, symbol: str, timeframe: str, limit: int = 100) -> List[Dict[str, Any]]:
             logger.info(f"MockAPIClient: Obteniendo datos de velas para {symbol}-{timeframe}")
-            # Generar datos de ejemplo más realistas
             import random
             import time
             
@@ -287,7 +274,7 @@ if __name__ == '__main__':
                 low = open_price * (1 - random.uniform(0, 0.01))
                 close_price = low + (high - low) * random.uniform(0, 1)
                 volume = random.uniform(100, 2000)
-                open_time = now - (limit - i) * 60000 # 1 minute interval
+                open_time = now - (limit - i) * 60000
                 
                 data.append({
                     "open_time": open_time,
@@ -312,7 +299,6 @@ if __name__ == '__main__':
         mock_main_window.setWindowTitle("Chart Widget Test")
         mock_main_window.setGeometry(100, 100, 900, 700)
 
-        # Correctly instantiate the mock client
         mock_http_client = httpx.AsyncClient()
         mock_api_client = MockAPIClient(client=mock_http_client)
         

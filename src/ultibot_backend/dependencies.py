@@ -1,10 +1,10 @@
 import logging
 from functools import lru_cache
-from typing import Optional
+from typing import Optional, Union
 
 import httpx
 from src.ultibot_backend.app_config import settings
-from src.ultibot_backend.services.order_execution_service import PaperOrderExecutionService, OrderExecutionService
+from src.ultibot_backend.services.order_execution_service import OrderExecutionService
 from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
 from src.ultibot_backend.adapters.mobula_adapter import MobulaAdapter
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService as PersistenceService
@@ -18,7 +18,12 @@ from src.ultibot_backend.services.portfolio_service import PortfolioService
 from src.ultibot_backend.services.strategy_service import StrategyService
 from src.ultibot_backend.services.trading_engine_service import TradingEngineService
 from src.ultibot_backend.services.trading_report_service import TradingReportService
-from src.ultibot_backend.services.unified_order_execution_service import UnifiedOrderExecutionService
+
+# New imports for paper trading
+from src.ultibot_backend.services.trading_mode_service import TradingModeService, get_trading_mode_service, TradingMode
+from src.ultibot_backend.services.simulated_portfolio_service import SimulatedPortfolioService, get_simulated_portfolio_service
+from src.ultibot_backend.services.simulated_order_execution_service import SimulatedOrderExecutionService
+
 
 logger = logging.getLogger(__name__)
 
@@ -37,11 +42,15 @@ class DependencyContainer:
         self.market_data_service: Optional[MarketDataService] = None
         self.portfolio_service: Optional[PortfolioService] = None
         self.order_execution_service: Optional[OrderExecutionService] = None
-        self.paper_order_execution_service: Optional[PaperOrderExecutionService] = None
-        self.unified_order_execution_service: Optional[UnifiedOrderExecutionService] = None
         self.config_service: Optional[ConfigurationService] = None
         self.strategy_service: Optional[StrategyService] = None
         self.trading_engine_service: Optional[TradingEngineService] = None
+        
+        # Paper trading services
+        self.trading_mode_service: Optional[TradingModeService] = None
+        self.simulated_portfolio_service: Optional[SimulatedPortfolioService] = None
+        self.simulated_order_execution_service: Optional[SimulatedOrderExecutionService] = None
+
 
     async def initialize_services(self):
         logger.info("Initializing dependency container...")
@@ -60,10 +69,15 @@ class DependencyContainer:
             http_client=self.http_client
         )
         
-        self.paper_order_execution_service = PaperOrderExecutionService()
-        
         self.ai_orchestrator_service = AIOrchestratorService(
             app_settings=settings
+        )
+        
+        # Initialize trading mode and simulation services
+        self.trading_mode_service = get_trading_mode_service()
+        self.simulated_portfolio_service = get_simulated_portfolio_service()
+        self.simulated_order_execution_service = SimulatedOrderExecutionService(
+            simulated_portfolio_service=self.simulated_portfolio_service
         )
 
         # Level 1: Depend on Level 0
@@ -89,10 +103,6 @@ class DependencyContainer:
             credential_service=self.credential_service,
             binance_adapter=self.binance_adapter,
             persistence_service=self.persistence_service
-        )
-        self.unified_order_execution_service = UnifiedOrderExecutionService(
-            real_execution_service=self.order_execution_service,
-            paper_execution_service=self.paper_order_execution_service
         )
 
         # Level 3: Depend on Level 2
@@ -126,7 +136,7 @@ class DependencyContainer:
         self.trading_engine_service = TradingEngineService(
             persistence_service=self.persistence_service,
             market_data_service=self.market_data_service,
-            unified_order_execution_service=self.unified_order_execution_service,
+            order_execution_service=self.get_active_order_execution_service(), # Dynamic dependency
             credential_service=self.credential_service,
             notification_service=self.notification_service,
             strategy_service=self.strategy_service,
@@ -136,6 +146,17 @@ class DependencyContainer:
             app_settings=settings
         )
         logger.info("Dependency container initialized successfully.")
+
+    def get_active_order_execution_service(self) -> Union[OrderExecutionService, SimulatedOrderExecutionService]:
+        """
+        Returns the active order execution service based on the current trading mode.
+        """
+        if self.trading_mode_service.get_mode() == TradingMode.LIVE:
+            assert self.order_execution_service is not None
+            return self.order_execution_service
+        else:
+            assert self.simulated_order_execution_service is not None
+            return self.simulated_order_execution_service
 
     async def shutdown(self):
         logger.info("Shutting down dependency container...")
@@ -152,6 +173,7 @@ class DependencyContainer:
 def get_container() -> DependencyContainer:
     return DependencyContainer()
 
+# Existing providers... (no changes needed for them)
 
 async def get_persistence_service() -> PersistenceService:
     container = get_container()
@@ -194,17 +216,10 @@ async def get_strategy_service() -> StrategyService:
     assert container.strategy_service is not None
     return container.strategy_service
 
-
-async def get_order_execution_service() -> OrderExecutionService:
+# New dynamic provider for order execution
+def get_active_order_execution_service() -> Union[OrderExecutionService, SimulatedOrderExecutionService]:
     container = get_container()
-    assert container.order_execution_service is not None
-    return container.order_execution_service
-
-
-async def get_unified_order_execution_service() -> UnifiedOrderExecutionService:
-    container = get_container()
-    assert container.unified_order_execution_service is not None
-    return container.unified_order_execution_service
+    return container.get_active_order_execution_service()
 
 
 async def get_trading_engine_service() -> TradingEngineService:

@@ -13,12 +13,11 @@ from PyQt5.QtWidgets import (
     QLabel, QComboBox, QDateEdit, QPushButton, QGroupBox, QGridLayout,
     QHeaderView, QMessageBox, QProgressBar, QSplitter
 )
-from PyQt5.QtCore import Qt, QDate, QThread
+from PyQt5.QtCore import Qt, QDate, pyqtSlot
 from PyQt5.QtGui import QFont, QColor
 
 from src.ultibot_ui.services.api_client import UltiBotAPIClient
 from src.shared.data_types import Trade, PerformanceMetrics
-from src.ultibot_ui.workers import ApiWorker
 from src.ultibot_ui.models import BaseMainWindow
 
 logger = logging.getLogger(__name__)
@@ -175,62 +174,29 @@ class PaperTradingReportWidget(QWidget):
         
     def connect_signals(self):
         """Conecta las señales de la UI."""
-        self.apply_filters_btn.clicked.connect(self.apply_filters)
+        self.apply_filters_btn.clicked.connect(self.load_data)
         self.refresh_btn.clicked.connect(self.load_data)
-        
-    @qasync.asyncSlot()
-    async def apply_filters(self):
-        """Aplica los filtros seleccionados y recarga los datos."""
-        await self.load_data()
         
     @qasync.asyncSlot()
     async def load_data(self):
         """Carga tanto las métricas como los trades."""
-        await self.load_metrics()
-        await self.load_trades()
+        self.load_metrics()
+        self.load_trades()
 
-    async def _start_api_worker(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine], on_success: Callable, on_error: Callable):
-        """
-        Crea y ejecuta un ApiWorker en un hilo separado para realizar llamadas a la API de forma asíncrona.
-
-        Args:
-            coroutine_factory: Una función que toma un api_client y devuelve la corutina a ejecutar.
-            on_success: El slot a llamar cuando la operación es exitosa.
-            on_error: El slot a llamar cuando ocurre un error.
-        """
-        worker = ApiWorker(
-            api_client=self.api_client, 
-            coroutine_factory=coroutine_factory,
-            loop=self.loop
-        )
-        thread = QThread()
-        worker.moveToThread(thread)
-
-        worker.result_ready.connect(on_success)
-        worker.error_occurred.connect(on_error)
-        thread.started.connect(worker.run)
-        worker.result_ready.connect(thread.quit)
-        worker.error_occurred.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        
-        self.main_window.add_thread(thread)
-        thread.start()
-        
-    async def load_metrics(self):
+    def load_metrics(self):
         """Carga las métricas de rendimiento."""
         self.show_loading(True)
         params = self.get_filters()
         coro_factory = lambda client: client.get_trading_performance(trading_mode="paper", **params)
-        await self._start_api_worker(coro_factory, self._on_metrics_received, self.on_error)
+        self.main_window.submit_task(coro_factory, self._on_metrics_received, self.on_error)
         
-    async def load_trades(self):
+    def load_trades(self):
         """Carga la lista de trades."""
         params = self.get_filters()
         params['limit'] = 500
         params['offset'] = 0
         coro_factory = lambda client: client.get_trades(trading_mode="paper", **params)
-        await self._start_api_worker(coro_factory, self._on_trades_received, self.on_error)
+        self.main_window.submit_task(coro_factory, self._on_trades_received, self.on_error)
 
     def get_filters(self) -> Dict[str, Any]:
         """Recopila los filtros de la UI."""
@@ -254,7 +220,7 @@ class PaperTradingReportWidget(QWidget):
             if not isinstance(data, dict):
                 error_msg = f"Tipo de dato inesperado para métricas: se esperaba un dict pero se recibió {type(data).__name__}"
                 logger.error(error_msg)
-                await self.on_error(error_msg)
+                self.on_error(error_msg)
                 return
             metrics = PerformanceMetrics(**data)
             self.current_metrics_data = metrics
@@ -273,7 +239,7 @@ class PaperTradingReportWidget(QWidget):
             if not isinstance(data, list):
                 error_msg = f"Tipo de dato inesperado para trades: se esperaba una lista pero se recibió {type(data).__name__}"
                 logger.error(error_msg)
-                await self.on_error(error_msg)
+                self.on_error(error_msg)
                 return
             self.current_trades_data = [Trade(**t) for t in data]
             self.update_trades_table(self.current_trades_data)
@@ -284,8 +250,8 @@ class PaperTradingReportWidget(QWidget):
         finally:
             self.show_loading(False)
             
-    @qasync.asyncSlot(str)
-    async def on_error(self, error_message: str):
+    @pyqtSlot(str)
+    def on_error(self, error_message: str):
         """Maneja errores en la carga de datos."""
         self.show_loading(False)
         self.show_error_message(f"Error cargando datos: {error_message}")

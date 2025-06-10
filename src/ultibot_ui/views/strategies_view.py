@@ -8,11 +8,10 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QListWidget, QListWidgetItem, QPushButton,
     QHBoxLayout, QMessageBox
 )
-from PyQt5.QtCore import QThread, QTimer
+from PyQt5.QtCore import QTimer
 
 from src.ultibot_ui.models import BaseMainWindow
 from src.ultibot_ui.services.api_client import UltiBotAPIClient
-from src.ultibot_ui.workers import ApiWorker
 from src.ultibot_backend.core.domain_models.trading_strategy_models import TradingStrategyConfig
 
 logger = logging.getLogger(__name__)
@@ -24,9 +23,9 @@ class StrategiesView(QWidget):
         self.main_window = main_window
         self.api_client = api_client
         self.loop = loop
+        self.is_active = False
         
         self._setup_ui()
-        QTimer.singleShot(0, self._fetch_strategies)
         
     def _setup_ui(self):
         self._layout = QVBoxLayout(self)
@@ -51,46 +50,50 @@ class StrategiesView(QWidget):
         
         self.setLayout(self._layout)
 
+    def enter_view(self):
+        """Se llama cuando la vista se vuelve activa."""
+        logger.info("StrategiesView: Entrando a la vista.")
+        self.is_active = True
+        self._fetch_strategies()
+
+    def leave_view(self):
+        """Se llama cuando la vista se vuelve inactiva."""
+        logger.info("StrategiesView: Saliendo de la vista.")
+        self.is_active = False
+
     @qasync.asyncSlot()
     async def _fetch_strategies(self):
         logger.info("Fetching strategies.")
         self.status_label.setText("Loading strategies...")
         self.refresh_button.setEnabled(False)
         
-        coro_factory = lambda client: client.get_strategies(user_id=self.user_id)
-        
-        worker = ApiWorker(
-            api_client=self.api_client,
-            coroutine_factory=coro_factory,
-            loop=self.loop
-        )
-        thread = QThread()
-        self.main_window.add_thread(thread)
-        worker.moveToThread(thread)
-
-        worker.result_ready.connect(self._handle_strategies_result)
-        worker.error_occurred.connect(self._handle_strategies_error)
-        
-        thread.started.connect(worker.run)
-        worker.result_ready.connect(thread.quit)
-        worker.error_occurred.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(lambda t=thread: self.main_window.remove_thread(t))
-        
-        thread.start()
+        coroutine_factory = lambda client: client.get_strategies()
+        self.main_window.submit_task(coroutine_factory, self._handle_strategies_result, self._handle_strategies_error)
 
     @qasync.asyncSlot(object)
     async def _handle_strategies_result(self, data: object):
-        if not isinstance(data, list):
-            await self._handle_strategies_error(f"Invalid data format: Expected list, got {type(data).__name__}")
+        if not self.is_active:
+            logger.info("StrategiesView no está activa, ignorando resultado.")
             return
 
-        logger.info(f"Received {len(data)} strategies.")
-        self.status_label.setText(f"Loaded {len(data)} strategies successfully.")
+        # La respuesta de la API es un diccionario que contiene la lista de estrategias
+        if not isinstance(data, dict):
+            await self._handle_strategies_error(f"Invalid data format: Expected dict, got {type(data).__name__}")
+            return
+        
+        strategies_data = data.get('strategies', [])
+        
+        if not isinstance(strategies_data, list):
+            await self._handle_strategies_error(f"Invalid data format: 'strategies' key should be a list, got {type(strategies_data).__name__}")
+            return
+
+        logger.info(f"Received {len(strategies_data)} strategies.")
+        self.status_label.setText(f"Loaded {len(strategies_data)} strategies successfully.")
         self.refresh_button.setEnabled(True)
         
         try:
-            strategies = [TradingStrategyConfig(**s_data) for s_data in data]
+            # Asumimos que la API devuelve diccionarios que se pueden convertir a nuestro modelo Pydantic
+            strategies = [TradingStrategyConfig(**s_data) for s_data in strategies_data]
         except (TypeError, ValueError) as e:
             await self._handle_strategies_error(f"Data parsing error: {e}")
             return
@@ -99,6 +102,10 @@ class StrategiesView(QWidget):
 
     @qasync.asyncSlot(str)
     async def _handle_strategies_error(self, error_message: str):
+        if not self.is_active:
+            logger.info("StrategiesView no está activa, ignorando error.")
+            return
+
         logger.error(f"Error fetching strategies: {error_message}")
         self.status_label.setText("Failed to load strategies.")
         self.refresh_button.setEnabled(True)
@@ -122,3 +129,8 @@ class StrategiesView(QWidget):
             self.strategies_list_widget.addItem(list_item)
         
         logger.info(f"Strategies view updated with {len(strategies)} strategies.")
+
+    def cleanup(self):
+        logger.info("Cleaning up StrategiesView...")
+        self.leave_view()
+        logger.info("StrategiesView cleanup finished.")

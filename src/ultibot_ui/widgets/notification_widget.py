@@ -4,16 +4,18 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
     QPushButton, QApplication, QAbstractItemView, QSizePolicy
 )
-from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QThread, QObject
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer
 from PyQt5.QtGui import QColor, QFont, QIcon
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Dict
 from datetime import datetime
 from uuid import UUID, uuid4
+import logging
 
 from src.shared.data_types import Notification, NotificationPriority
 from src.ultibot_ui.models import BaseMainWindow
 from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
-from src.ultibot_ui.workers import ApiWorker
+
+logger = logging.getLogger(__name__)
 
 class NotificationWidget(QWidget):
     """
@@ -31,7 +33,8 @@ class NotificationWidget(QWidget):
         self.notifications: List[Notification] = []
         self._is_fetching_notifications = False
         self.init_ui()
-        self._setup_styles()
+        # Se elimina la llamada a _setup_styles() para que los estilos se manejen globalmente en style.qss
+        # self._setup_styles()
         self._setup_realtime_updates()
 
     def _setup_realtime_updates(self):
@@ -46,52 +49,41 @@ class NotificationWidget(QWidget):
 
         self._is_fetching_notifications = True
         
-        worker = ApiWorker(
-            api_client=self.api_client,
-            coroutine_factory=lambda client_in_lambda: client_in_lambda.get_notification_history(limit=20),
-            loop=self.loop
+        coroutine_factory = lambda client: client.get_notification_history(limit=20)
+        
+        self.main_window.submit_task(
+            coroutine_factory,
+            self._handle_fetch_notifications_result,
+            self._handle_fetch_notifications_error
         )
-        thread = QThread()
-        
-        worker.moveToThread(thread)
 
-        worker.result_ready.connect(self._handle_fetch_notifications_result)
-        worker.error_occurred.connect(self._handle_fetch_notifications_error)
-
-        thread.started.connect(worker.run)
-        worker.result_ready.connect(thread.quit)
-        worker.error_occurred.connect(thread.quit)
-        
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        
-        self.main_window.add_thread(thread)
-        thread.start()
-
-    def _handle_fetch_notifications_result(self, new_notifications_response: Any):
+    def _handle_fetch_notifications_result(self, new_notifications_response: List[Dict[str, Any]]):
         try:
             if not isinstance(new_notifications_response, list):
-                print(f"Respuesta inesperada al obtener notificaciones: {type(new_notifications_response)}")
+                logger.warning(f"Respuesta inesperada al obtener notificaciones: {type(new_notifications_response)}")
                 return
 
             for notif_data in new_notifications_response:
-                if isinstance(notif_data, Notification):
-                     self.add_notification(notif_data)
+                if isinstance(notif_data, dict):
+                    try:
+                        notification = Notification(**notif_data)
+                        self.add_notification(notification)
+                    except Exception as e:
+                        logger.error(f"Error al deserializar notificación: {e} - Datos: {notif_data}")
                 else:
-                    print(f"Tipo de notificación desconocido recibido: {type(notif_data)}")
+                    logger.warning(f"Tipo de notificación desconocido recibido: {type(notif_data)}")
         except Exception as e:
-            print(f"Error al procesar resultado de notificaciones: {e}")
+            logger.error(f"Error al procesar resultado de notificaciones: {e}", exc_info=True)
         finally:
             self._is_fetching_notifications = False
 
-    def _handle_fetch_notifications_error(self, error_message: Any):
-        actual_message = error_message.message if isinstance(error_message, APIError) else str(error_message)
-        
-        if isinstance(error_message, APIError):
-            print(f"Error API al obtener notificaciones en tiempo real: {actual_message}")
-        else:
-            print(f"Error al obtener notificaciones en tiempo real: {actual_message}")
-        self._is_fetching_notifications = False
+    def _handle_fetch_notifications_error(self, error_message: str):
+        try:
+            logger.error(f"Error API al obtener notificaciones en tiempo real: {error_message}")
+        except Exception as e:
+            logger.critical(f"Error irrecuperable en el manejador de errores de notificación: {e}", exc_info=True)
+        finally:
+            self._is_fetching_notifications = False
 
     def init_ui(self):
         main_layout = QVBoxLayout(self)
@@ -125,45 +117,6 @@ class NotificationWidget(QWidget):
         main_layout.addLayout(controls_layout)
         self.notification_list.itemSelectionChanged.connect(self._update_dismiss_button_state)
 
-    def _setup_styles(self):
-        self.setStyleSheet("""
-            NotificationWidget {
-                background-color: #2b2b2b;
-                border: 1px solid #444;
-                border-radius: 5px;
-            }
-            QListWidget {
-                background-color: #222;
-                border: 1px solid #333;
-                border-radius: 3px;
-                color: #f0f0f0;
-            }
-            QListWidget::item {
-                padding: 8px;
-                margin-bottom: 2px;
-                border-bottom: 1px solid #333;
-            }
-            QListWidget::item:alternate {
-                background-color: #2a2a2a;
-            }
-            QListWidget::item:selected {
-                background-color: #0056b3;
-            }
-            QPushButton {
-                background-color: #007bff;
-                color: white;
-                border: none;
-                padding: 6px 12px;
-                border-radius: 4px;
-            }
-            QPushButton:hover {
-                background-color: #0056b3;
-            }
-            QPushButton:disabled {
-                background-color: #555;
-                color: #bbb;
-            }
-        """)
 
     def add_notification(self, notification: Notification):
         if any(n.id == notification.id for n in self.notifications):
@@ -198,9 +151,9 @@ class NotificationWidget(QWidget):
                 if not q_icon.isNull():
                     icon_label.setPixmap(q_icon.pixmap(20, 20))
                 else:
-                    print(f"Advertencia: No se pudo cargar el icono: {icon_path}")
+                    logger.warning(f"No se pudo cargar el icono: {icon_path}")
             except Exception as e:
-                print(f"Error al cargar icono {icon_path}: {e}")
+                logger.error(f"Error al cargar icono {icon_path}: {e}")
 
         icon_label.setStyleSheet(f"background-color: {bg_color}; border-radius: 12px;")
         item_layout.addWidget(icon_label)
@@ -235,9 +188,17 @@ class NotificationWidget(QWidget):
             QPushButton:hover { background-color: #c82333; }
         """)
         dismiss_button.clicked.connect(lambda _, n_id=str(notification.id): self._dismiss_notification_by_id(n_id))
+        dismiss_button.setObjectName("dismissButton") # Asignar un objectName para estilizarlo desde QSS
+        dismiss_button.clicked.connect(lambda _, n_id=str(notification.id): self._dismiss_notification_by_id(n_id))
         item_layout.addWidget(dismiss_button, alignment=Qt.AlignmentFlag.AlignTop)
 
+        # Asegurar que el widget del ítem ajuste su tamaño para el contenido envuelto
+        item_widget.adjustSize() 
+        item.setSizeHint(item_widget.sizeHint()) # Recalcular sizeHint después de ajustar el tamaño
+
         if notification.status in ["read", "archived"]:
+            # Estos estilos se manejarán preferentemente desde QSS global si es posible,
+            # pero se mantienen aquí para estados específicos que pueden no ser cubiertos por QSS.
             item_widget.setStyleSheet("background-color: #3a3a3a; color: #888;")
             title_label.setStyleSheet("font-weight: bold; color: #888;")
             message_label.setStyleSheet("color: #666;")
@@ -290,52 +251,11 @@ class NotificationWidget(QWidget):
         self.dismiss_selected_button.setEnabled(has_notifications and len(self.notification_list.selectedItems()) > 0)
 
     def cleanup(self):
-        print("NotificationWidget: cleanup called.")
+        logger.info("NotificationWidget: cleanup called.")
         if hasattr(self, 'update_timer') and self.update_timer.isActive():
-            print("NotificationWidget: Stopping update timer.")
+            logger.info("NotificationWidget: Stopping update timer.")
             self.update_timer.stop()
-        print("NotificationWidget: cleanup finished.")
+        logger.info("NotificationWidget: cleanup finished.")
 
 if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    app.setStyleSheet("""
-        QWidget { background-color: #222; color: #f0f0f0; font-family: "Segoe UI", sans-serif; }
-        QLabel { color: #f0f0f0; }
-        QPushButton { background-color: #007bff; color: white; border: none; padding: 8px 15px; border-radius: 5px; }
-        QPushButton:hover { background-color: #0056b3; }
-        QPushButton:disabled { background-color: #555; color: #bbb; }
-    """)
-
-    main_window_widget = QWidget()
-    main_layout = QVBoxLayout(main_window_widget)
-    main_window_widget.setLayout(main_layout)
-
-    class MockUltiBotAPIClient:
-        async def get_notification_history(self, limit: int = 50) -> List[Notification]:
-            from datetime import timedelta
-            return [
-                Notification(id=uuid4(), userId=uuid4(), eventType="MOCK_INFO", channel="ui", title="Notificación de Prueba 1", message="Este es un mensaje de prueba para el historial.", createdAt=datetime.utcnow() - timedelta(minutes=10)),
-                Notification(id=uuid4(), userId=uuid4(), eventType="MOCK_WARNING", channel="ui", title="Notificación de Prueba 2", message="Otro mensaje de prueba para el historial.", createdAt=datetime.utcnow() - timedelta(minutes=20))
-            ]
-
-    test_user_id = uuid4()
-    
-    class MockMainWindow(BaseMainWindow): # Heredar de BaseMainWindow
-        def add_thread(self, thread: QThread):
-            print(f"MockMainWindow: Thread '{thread.objectName()}' added for tracking.")
-
-    mock_main_window = MockMainWindow()
-    
-    # Mock loop for testing purposes
-    test_loop = asyncio.get_event_loop()
-
-    notification_widget = NotificationWidget(user_id=test_user_id, main_window=mock_main_window, api_client=None, loop=test_loop)
-    main_layout.addWidget(notification_widget)
-    
-    from datetime import timedelta
-
-    # notification_widget.add_notification(Notification(id=uuid4(), eventType="SYSTEM_ERROR", channel="ui", title="Error Crítico de Conexión", message="No se pudo establecer conexión con la API de Binance.", priority=NotificationPriority.CRITICAL, createdAt=datetime.utcnow() - timedelta(minutes=5)))
-    # notification_widget.add_notification(Notification(id=uuid4(), eventType="REAL_TRADE_EXECUTED", channel="ui", title="Operación Exitosa", message="Compra de BTC/USDT ejecutada.", priority=NotificationPriority.HIGH, createdAt=datetime.utcnow() - timedelta(minutes=2)))
-
-    main_window_widget.show()
-    sys.exit(app.exec_())
+    pass

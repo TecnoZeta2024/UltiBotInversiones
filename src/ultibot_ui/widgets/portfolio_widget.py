@@ -123,8 +123,11 @@ class PortfolioWidget(QWidget):
         layout.setSpacing(15)
         
         self.balance_label = QLabel("Saldo Disponible: N/A")
+        self.balance_label.setProperty("class", "keyData")
         self.total_assets_label = QLabel("Valor Total Activos: N/A")
+        self.total_assets_label.setProperty("class", "keyData")
         self.portfolio_value_label = QLabel("Valor Total Portafolio: N/A")
+        self.portfolio_value_label.setProperty("class", "keyData")
         
         summary_layout = QHBoxLayout()
         summary_layout.addWidget(self.balance_label)
@@ -178,6 +181,7 @@ class PortfolioWidget(QWidget):
         self.last_updated_label.setObjectName("subtitleLabel")
         
         self.refresh_button = QPushButton("Actualizar")
+        self.refresh_button.setProperty("class", "secondary")
         self.refresh_button.clicked.connect(self._start_update_worker)
         
         status_layout.addWidget(self.last_updated_label)

@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-@router.get("/opportunities/real-trading-candidates", response_model=List[Opportunity])
+@router.get("/real-trading-candidates", response_model=List[Opportunity])
 async def get_real_trading_candidates(
     persistence_service: SupabasePersistenceService = Depends(get_persistence_service),
     config_service: ConfigurationService = Depends(get_config_service)
@@ -31,7 +31,7 @@ async def get_real_trading_candidates(
     if not user_config_dict:
         raise HTTPException(status_code=404, detail="User configuration not found")
         
-    # Convertir explícitamente a dict y añadir user_id
+    # Convertir explcitamente a dict y aadir user_id
     config_data = dict(user_config_dict)
     config_data['user_id'] = user_id
     user_config = UserConfiguration(**config_data)
@@ -48,7 +48,7 @@ async def get_real_trading_candidates(
     # if not real_trading_settings.real_trading_mode_active:
     #     raise HTTPException(
     #         status_code=status.HTTP_403_FORBIDDEN,
-    #         detail="El modo de trading real no está activo para este usuario."
+    #         detail="El modo de trading real no est activo para este usuario."
     #     )
 
     closed_real_trades_count = await persistence_service.get_closed_trades_count(
@@ -59,7 +59,7 @@ async def get_real_trading_candidates(
     if closed_real_trades_count >= real_trading_settings.max_real_trades:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"Se ha alcanzado el límite de {real_trading_settings.max_real_trades} operaciones reales."
+            detail=f"Se ha alcanzado el lmite de {real_trading_settings.max_real_trades} operaciones reales."
         )
 
     opportunities = await persistence_service.get_opportunities_by_status(
@@ -68,3 +68,14 @@ async def get_real_trading_candidates(
     )
 
     return opportunities
+
+@router.get("/ai", response_model=List[Opportunity])
+async def get_ai_opportunities(
+    persistence_service: SupabasePersistenceService = Depends(get_persistence_service),
+    config_service: ConfigurationService = Depends(get_config_service)
+):
+    """
+    Endpoint para compatibilidad con la ruta anterior de oportunidades de IA.
+    Redirige o sirve los mismos datos que /opportunities/real-trading-candidates.
+    """
+    return await get_real_trading_candidates(persistence_service, config_service)
