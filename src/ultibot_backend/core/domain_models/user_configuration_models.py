@@ -141,6 +141,11 @@ class RealTradingSettings(BaseModel):
         gt=0, 
         description="Maximum concurrent operations"
     )
+    max_real_trades: Optional[int] = Field(
+        10,
+        gt=0,
+        description="Maximum number of real trades to execute"
+    )
     daily_loss_limit_absolute: Optional[float] = Field(
         None, 
         gt=0, 

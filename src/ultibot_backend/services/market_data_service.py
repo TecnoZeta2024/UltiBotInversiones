@@ -293,6 +293,28 @@ class MarketDataService:
             logger.critical(f"Error inesperado al obtener datos de velas para {symbol}-{interval}: {e}", exc_info=True)
             raise UltiBotError(f"Error inesperado al obtener datos de velas de Binance para {symbol}-{interval}: {e}")
 
+    async def get_historical_market_data(self, symbol: str, interval: str, limit: int = 1000) -> List[MarketData]:
+        """
+        Obtiene datos de mercado históricos desde la base de datos.
+        """
+        if self._closed:
+            logger.warning(f"MarketDataService está cerrado. No se pueden obtener datos históricos para {symbol}-{interval}.")
+            return []
+        try:
+            logger.info(f"Obteniendo datos históricos para {symbol}-{interval} desde la base de datos.")
+            # Aquí asumimos que el persistence_service tendrá un método para obtener los datos.
+            # Este método necesita ser creado en SupabasePersistenceService.
+            historical_data = await self.persistence_service.get_market_data_from_db(
+                symbol=symbol,
+                limit=limit
+            )
+            logger.info(f"Se obtuvieron {len(historical_data)} registros históricos para {symbol}-{interval} desde la base de datos.")
+            return historical_data
+        except Exception as e:
+            logger.critical(f"Error inesperado al obtener datos históricos desde la base de datos para {symbol}-{interval}: {e}", exc_info=True)
+            raise UltiBotError(f"Error inesperado al obtener datos históricos para {symbol}-{interval}: {e}")
+
+
     async def fetch_and_store_historical_data(self, symbol: str, interval: str = '1h', days_back: int = 30):
         """
         Fetches historical data for a symbol going back a specified number of days

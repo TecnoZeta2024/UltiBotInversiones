@@ -49,7 +49,7 @@ async def create_strategy(
             user_id=str(user_id),
             strategy_data=strategy_data
         )
-        response = TradingStrategyResponse.from_strategy_config(created_strategy)
+        response = TradingStrategyResponse.from_orm(created_strategy)
         logger.info(f"Successfully created strategy {created_strategy.id}")
         return response
     except HTTPException:
@@ -78,7 +78,7 @@ async def list_strategies(
             user_id=str(user_id)
         )
         strategy_responses = [
-            TradingStrategyResponse.from_strategy_config(strategy)
+            TradingStrategyResponse.from_orm(strategy)
             for strategy in strategies
         ]
         response = StrategyListResponse(
@@ -116,7 +116,7 @@ async def get_strategy(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Strategy {strategy_id} not found"
             )
-        response = TradingStrategyResponse.from_strategy_config(strategy)
+        response = TradingStrategyResponse.from_orm(strategy)
         logger.info(f"Retrieved strategy {strategy_id}")
         return response
     except HTTPException:
@@ -153,7 +153,7 @@ async def update_strategy(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Strategy {strategy_id} not found"
             )
-        response = TradingStrategyResponse.from_strategy_config(updated_strategy)
+        response = TradingStrategyResponse.from_orm(updated_strategy)
         logger.info(f"Successfully updated strategy {strategy_id}")
         return response
     except HTTPException:
@@ -227,7 +227,7 @@ async def activate_strategy(
             else updated_strategy.is_active_real_mode
         )
         response = StrategyActivationResponse(
-            strategy_id=strategy_id,
+            strategy_id=updated_strategy.id,
             mode=activation_request.mode,
             is_active=is_active,
             message=f"Strategy activated in {activation_request.mode} mode"
@@ -273,7 +273,7 @@ async def deactivate_strategy(
             else updated_strategy.is_active_real_mode
         )
         response = StrategyActivationResponse(
-            strategy_id=strategy_id,
+            strategy_id=updated_strategy.id,
             mode=deactivation_request.mode,
             is_active=is_active,
             message=f"Strategy deactivated in {deactivation_request.mode} mode"
@@ -307,7 +307,7 @@ async def get_active_strategies_by_mode(
             mode=mode
         )
         strategy_responses = [
-            TradingStrategyResponse.from_strategy_config(strategy)
+            TradingStrategyResponse.from_orm(strategy)
             for strategy in strategies
         ]
         response = StrategyListResponse(

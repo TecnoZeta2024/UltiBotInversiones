@@ -1,17 +1,25 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from uuid import UUID
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal, Optional, Union
 from pydantic import BaseModel, Field
 
 from src.shared.data_types import ConfirmRealTradeRequest, OpportunityStatus, Opportunity, TradeOrderDetails
 from src.ultibot_backend.services.trading_engine_service import TradingEngineService
 from src.ultibot_backend.services.config_service import ConfigurationService
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend.services.unified_order_execution_service import UnifiedOrderExecutionService
+from src.ultibot_backend.services.order_execution_service import OrderExecutionService
+from src.ultibot_backend.services.simulated_order_execution_service import SimulatedOrderExecutionService
 from src.ultibot_backend import dependencies as deps
 from src.ultibot_backend.app_config import settings
 
 router = APIRouter()
+
+# Definir un tipo para la dependencia unificada
+ActiveOrderExecutionService = Annotated[
+    Union[OrderExecutionService, SimulatedOrderExecutionService],
+    Depends(deps.get_active_order_execution_service)
+]
+
 
 @router.post("/real/confirm-opportunity/{opportunity_id}", status_code=status.HTTP_200_OK)
 async def confirm_real_opportunity(
@@ -105,27 +113,19 @@ class MarketOrderRequest(BaseModel):
 @router.post("/market-order", response_model=TradeOrderDetails, status_code=status.HTTP_200_OK)
 async def execute_market_order(
     request: MarketOrderRequest,
-    unified_execution_service: Annotated[UnifiedOrderExecutionService, Depends(deps.get_unified_order_execution_service)]
+    execution_service: ActiveOrderExecutionService
 ):
     """
     Execute a market order in the specified trading mode for the fixed user.
     """
     user_id = settings.FIXED_USER_ID
     try:
-        if not unified_execution_service.validate_trading_mode(request.trading_mode):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid trading mode: {request.trading_mode}. Must be 'paper' or 'real'"
-            )
-        
-        order_details = await unified_execution_service.execute_market_order(
+        # La validación del modo de trading ahora es implícita por la dependencia
+        order_details = await execution_service.execute_market_order(
             user_id=user_id,
             symbol=request.symbol,
             side=request.side,
             quantity=request.quantity,
-            trading_mode=request.trading_mode,
-            api_key=request.api_key,
-            api_secret=request.api_secret
         )
         
         return order_details
@@ -140,14 +140,17 @@ async def execute_market_order(
 
 @router.get("/paper-balances", status_code=status.HTTP_200_OK)
 async def get_paper_trading_balances(
-    unified_execution_service: Annotated[UnifiedOrderExecutionService, Depends(deps.get_unified_order_execution_service)]
+    execution_service: ActiveOrderExecutionService
 ):
     """
     Get current virtual balances for paper trading for the fixed user.
     """
     user_id = settings.FIXED_USER_ID
     try:
-        balances = await unified_execution_service.get_virtual_balances()
+        if not isinstance(execution_service, SimulatedOrderExecutionService):
+            raise HTTPException(status_code=400, detail="This endpoint is only for paper trading mode.")
+
+        balances = await execution_service.get_virtual_balances()
         return {
             "user_id": user_id,
             "trading_mode": "paper",
@@ -162,7 +165,7 @@ async def get_paper_trading_balances(
 
 @router.post("/paper-balances/reset", status_code=status.HTTP_200_OK)
 async def reset_paper_trading_balances(
-    unified_execution_service: Annotated[UnifiedOrderExecutionService, Depends(deps.get_unified_order_execution_service)],
+    execution_service: ActiveOrderExecutionService,
     initial_capital: float = Query(..., gt=0, description="Initial capital amount (must be positive)")
 ):
     """
@@ -170,7 +173,10 @@ async def reset_paper_trading_balances(
     """
     user_id = settings.FIXED_USER_ID
     try:
-        unified_execution_service.reset_virtual_balances(initial_capital=initial_capital)
+        if not isinstance(execution_service, SimulatedOrderExecutionService):
+            raise HTTPException(status_code=400, detail="This endpoint is only for paper trading mode.")
+            
+        execution_service.reset_virtual_balances(initial_capital=initial_capital)
         return {
             "user_id": user_id,
             "trading_mode": "paper",
@@ -185,24 +191,14 @@ async def reset_paper_trading_balances(
         )
 
 @router.get("/supported-modes", status_code=status.HTTP_200_OK)
-async def get_supported_trading_modes(
-    unified_execution_service: Annotated[UnifiedOrderExecutionService, Depends(deps.get_unified_order_execution_service)]
-):
+async def get_supported_trading_modes():
     """
     Get list of supported trading modes.
     """
-    try:
-        supported_modes = unified_execution_service.get_supported_trading_modes()
-        return {
-            "supported_trading_modes": supported_modes,
-            "description": {
-                "paper": "Simulated trading with virtual funds",
-                "real": "Live trading with real funds via Binance API"
-            }
+    return {
+        "supported_trading_modes": ["paper", "real"],
+        "description": {
+            "paper": "Simulated trading with virtual funds",
+            "real": "Live trading with real funds via Binance API"
         }
-        
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve supported trading modes: {str(e)}"
-        )
+    }

@@ -1,379 +1,148 @@
-"""Configuration Service for managing user configuration settings.
-
-This service provides CRUD operations for user configuration settings
-including AI strategy configurations for Gemini integration.
-"""
-
-import json
 import logging
-import uuid
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Optional, Dict, Any
+from uuid import UUID
 
 from fastapi import HTTPException
 from pydantic import ValidationError
 
+from src.ultibot_backend.core.domain_models.user_configuration_models import UserConfiguration, RealTradingSettings
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend.core.domain_models.user_configuration_models import (
-    UserConfiguration,
-    AIStrategyConfiguration,
-    ConfidenceThresholds,
-)
+from src.ultibot_backend.services.notification_service import NotificationService
+from src.ultibot_backend.core.exceptions import ConfigurationError, RealTradeLimitReachedError, InsufficientUSDTBalanceError
+from src.ultibot_backend.app_config import settings
 
 logger = logging.getLogger(__name__)
 
-
 class ConfigurationService:
-    """Service for managing user configuration settings."""
-    
-    def __init__(self, persistence_service: SupabasePersistenceService):
-        """Initialize the configuration service with persistence service dependency.
-        
-        Args:
-            persistence_service: The persistence service for database operations.
-        """
+    """
+    Servicio para gestionar la configuración del usuario.
+    """
+
+    def __init__(
+        self,
+        persistence_service: SupabasePersistenceService,
+        notification_service: NotificationService,
+        portfolio_service: Any, # Evitar importación circular
+        credential_service: Any, # Evitar importación circular
+    ):
         self.persistence_service = persistence_service
-    
-    async def get_user_configuration(self, user_id: str) -> Optional[UserConfiguration]:
-        """Get user configuration by user ID.
-        
-        Args:
-            user_id: The user identifier.
-            
-        Returns:
-            The UserConfiguration if found, None otherwise.
-            
-        Raises:
-            HTTPException: If database operation fails.
-        """
+        self.notification_service = notification_service
+        self.portfolio_service = portfolio_service
+        self.credential_service = credential_service
+        self._user_configuration: Optional[UserConfiguration] = None
+
+    async def _load_config_from_db(self, user_id: UUID) -> UserConfiguration:
         try:
-            db_record = await self._get_user_config_from_db(user_id)
-            if not db_record:
-                return None
-            
-            return self._db_format_to_user_config(db_record)
-            
-        except Exception as e:
-            logger.error(f"Error retrieving user configuration for {user_id}: {e}")
-            raise HTTPException(
-                status_code=500, 
-                detail="Failed to retrieve user configuration"
-            )
-    
-    async def create_or_update_user_configuration(
-        self, 
-        user_id: str, 
-        config_data: Dict[str, Any]
-    ) -> UserConfiguration:
-        """Create or update user configuration.
-        
-        Args:
-            user_id: The user identifier.
-            config_data: Dictionary containing configuration data.
-            
-        Returns:
-            The created or updated UserConfiguration.
-            
-        Raises:
-            HTTPException: If validation fails or database operation fails.
-        """
-        try:
-            # Prepare configuration data
-            config_data_copy = config_data.copy()
-            config_data_copy.update({
-                "user_id": user_id,
-                "updated_at": datetime.now(timezone.utc),
-            })
-            
-            # Check if configuration exists
-            existing_config = await self.get_user_configuration(user_id)
-            if existing_config:
-                # Update existing configuration
-                config_data_copy["id"] = existing_config.id
-                config_data_copy["created_at"] = existing_config.created_at
+            await self.persistence_service._check_pool()
+            config_data = await self.persistence_service.get_user_configuration(user_id)
+            if config_data:
+                # Convertir UUIDs a strings antes de la validación de Pydantic
+                if 'id' in config_data and isinstance(config_data['id'], UUID):
+                    config_data['id'] = str(config_data['id'])
+                if 'user_id' in config_data and isinstance(config_data['user_id'], UUID):
+                    config_data['user_id'] = str(config_data['user_id'])
+
+                user_config = UserConfiguration(**config_data)
+                if user_config.real_trading_settings is None:
+                    user_config.real_trading_settings = RealTradingSettings()
+                return user_config
             else:
-                # Create new configuration
-                config_data_copy["id"] = str(uuid.uuid4())
-                config_data_copy["created_at"] = datetime.now(timezone.utc)
-            
-            # Validate configuration
-            user_config = UserConfiguration(**config_data_copy)
-            
-            # Convert to database format and save
-            db_data = self._user_config_to_db_format(user_config)
-            await self._save_user_config_to_db(db_data)
-            
-            logger.info(f"Saved user configuration for user {user_id}")
-            return user_config
-            
+                logger.info(f"No configuration found for user {user_id}. Creating default configuration.")
+                default_config = self.get_default_configuration(user_id)
+                await self.save_user_configuration(default_config)
+                return default_config
         except ValidationError as e:
-            logger.error(f"Validation error saving user configuration: {e}")
-            raise HTTPException(
-                status_code=400, 
-                detail=f"Invalid user configuration: {e}"
-            )
+            logger.error(f"Pydantic validation error for user {user_id}: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="User configuration data is invalid.")
         except Exception as e:
-            logger.error(f"Error saving user configuration for {user_id}: {e}")
-            raise HTTPException(
-                status_code=500, 
-                detail="Failed to save user configuration"
-            )
-    
-    async def get_ai_strategy_configuration(
-        self, 
-        user_id: str, 
-        ai_config_id: str
-    ) -> Optional[AIStrategyConfiguration]:
-        """Get AI strategy configuration by ID.
-        
-        Args:
-            user_id: The user identifier.
-            ai_config_id: The AI configuration ID.
-            
-        Returns:
-            The AIStrategyConfiguration if found, None otherwise.
-        """
-        user_config = await self.get_user_configuration(user_id)
-        if not user_config:
-            return None
-        
-        return user_config.get_ai_configuration_by_id(ai_config_id)
-    
-    async def get_effective_confidence_thresholds(
-        self, 
-        user_id: str, 
-        ai_config_id: Optional[str] = None
-    ) -> Optional[ConfidenceThresholds]:
-        """Get effective confidence thresholds for a user.
-        
-        Args:
-            user_id: The user identifier.
-            ai_config_id: Optional AI configuration ID.
-            
-        Returns:
-            Effective confidence thresholds.
-        """
-        user_config = await self.get_user_configuration(user_id)
-        if not user_config:
-            return None
-        
-        return user_config.get_effective_confidence_thresholds(ai_config_id)
-    
-    async def validate_ai_profile_exists(
-        self, 
-        user_id: str, 
-        ai_profile_id: str
-    ) -> bool:
-        """Validate that an AI profile exists for a user.
-        
-        Args:
-            user_id: The user identifier.
-            ai_profile_id: The AI profile ID to validate.
-            
-        Returns:
-            True if the AI profile exists, False otherwise.
-        """
-        ai_config = await self.get_ai_strategy_configuration(user_id, ai_profile_id)
-        return ai_config is not None
-    
-    def _user_config_to_db_format(self, config: UserConfiguration) -> Dict[str, Any]:
-        """Convert UserConfiguration to database format.
-        
-        Args:
-            config: The UserConfiguration object.
-            
-        Returns:
-            Dictionary with database column names and values.
-        """
-        def to_json(field_value):
-            if field_value is None:
-                return None
-            if isinstance(field_value, list):
-                return json.dumps([
-                    item.dict() if hasattr(item, 'dict') else item 
-                    for item in field_value
-                ])
-            elif isinstance(field_value, dict):
-                return json.dumps({
-                    k: v.dict() if hasattr(v, 'dict') else v 
-                    for k, v in field_value.items()
-                })
-            elif hasattr(field_value, 'dict'):
-                return json.dumps(field_value.dict())
-            else:
-                return json.dumps(field_value)
-        
-        return {
-            "id": config.id,
-            "user_id": config.user_id,
-            "telegram_chat_id": config.telegram_chat_id,
-            "notification_preferences": to_json(config.notification_preferences),
-            "enable_telegram_notifications": config.enable_telegram_notifications,
-            "default_paper_trading_capital": config.default_paper_trading_capital,
-            "paper_trading_active": config.paper_trading_active,
-            "watchlists": to_json(config.watchlists),
-            "favorite_pairs": json.dumps(config.favorite_pairs) if config.favorite_pairs else None,
-            "risk_profile": config.risk_profile.value if config.risk_profile else None,
-            "risk_profile_settings": to_json(config.risk_profile_settings),
-            "real_trading_settings": to_json(config.real_trading_settings),
-            "ai_strategy_configurations": to_json(config.ai_strategy_configurations),
-            "ai_analysis_confidence_thresholds": to_json(config.ai_analysis_confidence_thresholds),
-            "mcp_server_preferences": to_json(config.mcp_server_preferences),
-            "selected_theme": config.selected_theme.value if config.selected_theme else None,
-            "dashboard_layout_profiles": to_json(config.dashboard_layout_profiles),
-            "active_dashboard_layout_profile_id": config.active_dashboard_layout_profile_id,
-            "dashboard_layout_config": to_json(config.dashboard_layout_config),
-            "cloud_sync_preferences": to_json(config.cloud_sync_preferences),
-            "created_at": config.created_at,
-            "updated_at": config.updated_at,
-        }
-    
-    def _db_format_to_user_config(self, db_record: Dict[str, Any]) -> UserConfiguration:
-        """Convert database record to UserConfiguration.
-        
-        Args:
-            db_record: Dictionary from database query.
-            
-        Returns:
-            UserConfiguration object.
-        """
-        def from_json(json_value):
-            if json_value is None:
-                return None
-            if isinstance(json_value, str):
-                return json.loads(json_value)
-            return json_value
-        
+            logger.error(f"Error loading configuration for user {user_id}: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Failed to retrieve user configuration")
+
+
+    async def get_user_configuration(self, user_id: UUID) -> UserConfiguration:
+        # For simplicity, we can always load from DB. Caching can be added if performance becomes an issue.
+        self._user_configuration = await self._load_config_from_db(user_id)
+        return self._user_configuration
+
+    def get_cached_user_configuration(self) -> Optional[UserConfiguration]:
+        return self._user_configuration
+
+    async def reload_user_configuration(self, user_id: UUID) -> UserConfiguration:
+        self._user_configuration = await self._load_config_from_db(user_id)
+        return self._user_configuration
+
+    async def save_user_configuration(self, config: UserConfiguration):
+        if not config.user_id:
+            raise ConfigurationError("User ID is required to save a configuration.")
+
+        try:
+            await self.persistence_service._check_pool()
+            config_dict = config.model_dump(mode='json', by_alias=True, exclude_none=True)
+            await self.persistence_service.upsert_user_configuration(config_dict)
+            logger.info(f"Configuration saved successfully for user {config.user_id}.")
+            self._user_configuration = config
+        except Exception as e:
+            logger.error(f"Error saving configuration for user {config.user_id}: {e}", exc_info=True)
+            raise ConfigurationError("Could not save configuration.") from e
+
+    def get_default_configuration(self, user_id: UUID) -> UserConfiguration:
         return UserConfiguration(
-            id=db_record["id"],
-            user_id=db_record["user_id"],
-            telegram_chat_id=db_record.get("telegram_chat_id"),
-            notification_preferences=from_json(db_record.get("notification_preferences")),
-            enable_telegram_notifications=db_record.get("enable_telegram_notifications"),
-            default_paper_trading_capital=db_record.get("default_paper_trading_capital"),
-            paper_trading_active=db_record.get("paper_trading_active"),
-            watchlists=from_json(db_record.get("watchlists")),
-            favorite_pairs=from_json(db_record.get("favorite_pairs")),
-            risk_profile=db_record.get("risk_profile"),
-            risk_profile_settings=from_json(db_record.get("risk_profile_settings")),
-            real_trading_settings=from_json(db_record.get("real_trading_settings")),
-            ai_strategy_configurations=from_json(db_record.get("ai_strategy_configurations")),
-            ai_analysis_confidence_thresholds=from_json(db_record.get("ai_analysis_confidence_thresholds")),
-            mcp_server_preferences=from_json(db_record.get("mcp_server_preferences")),
-            selected_theme=db_record.get("selected_theme"),
-            dashboard_layout_profiles=from_json(db_record.get("dashboard_layout_profiles")),
-            active_dashboard_layout_profile_id=db_record.get("active_dashboard_layout_profile_id"),
-            dashboard_layout_config=from_json(db_record.get("dashboard_layout_config")),
-            cloud_sync_preferences=from_json(db_record.get("cloud_sync_preferences")),
-            created_at=db_record.get("created_at"),
-            updated_at=db_record.get("updated_at"),
+            user_id=str(user_id),
+            id=str(UUID(int=0)), # A default, placeholder ID
+            paper_trading_active=True,
+            real_trading_settings=RealTradingSettings(
+                real_trading_mode_active=False,
+                real_trades_executed_count=0,
+                max_real_trades=5
+            )
         )
-    
-    # Database interaction methods
-    
-    async def _get_user_config_from_db(self, user_id: str) -> Optional[Dict[str, Any]]:
-        """Get user configuration from database.
-        
-        Args:
-            user_id: The user ID.
-            
-        Returns:
-            Dictionary with user configuration data or None if not found.
-        """
-        await self.persistence_service._ensure_connection()
-        
-        query = """
-        SELECT * FROM user_configurations 
-        WHERE user_id = %s;
-        """
-        
-        try:
-            from psycopg.rows import dict_row
-            from psycopg.sql import SQL
-            
-            async with self.persistence_service.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(SQL(query), (user_id,))
-                record = await cur.fetchone()
-                return dict(record) if record else None
-        except Exception as e:
-            logger.error(f"Database error getting user configuration {user_id}: {e}")
-            raise
-    
-    async def _save_user_config_to_db(self, config_data: Dict[str, Any]) -> None:
-        """Save user configuration to database.
-        
-        Args:
-            config_data: Dictionary with configuration data in database format.
-        """
-        await self.persistence_service._ensure_connection()
-        
-        query = """
-        INSERT INTO user_configurations (
-            id, user_id, telegram_chat_id, notification_preferences, enable_telegram_notifications,
-            default_paper_trading_capital, paper_trading_active, watchlists, favorite_pairs,
-            risk_profile, risk_profile_settings, real_trading_settings, ai_strategy_configurations,
-            ai_analysis_confidence_thresholds, mcp_server_preferences, selected_theme,
-            dashboard_layout_profiles, active_dashboard_layout_profile_id, dashboard_layout_config,
-            cloud_sync_preferences, created_at, updated_at
-        ) VALUES (
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
-        )
-        ON CONFLICT (user_id) DO UPDATE SET
-            telegram_chat_id = EXCLUDED.telegram_chat_id,
-            notification_preferences = EXCLUDED.notification_preferences,
-            enable_telegram_notifications = EXCLUDED.enable_telegram_notifications,
-            default_paper_trading_capital = EXCLUDED.default_paper_trading_capital,
-            paper_trading_active = EXCLUDED.paper_trading_active,
-            watchlists = EXCLUDED.watchlists,
-            favorite_pairs = EXCLUDED.favorite_pairs,
-            risk_profile = EXCLUDED.risk_profile,
-            risk_profile_settings = EXCLUDED.risk_profile_settings,
-            real_trading_settings = EXCLUDED.real_trading_settings,
-            ai_strategy_configurations = EXCLUDED.ai_strategy_configurations,
-            ai_analysis_confidence_thresholds = EXCLUDED.ai_analysis_confidence_thresholds,
-            mcp_server_preferences = EXCLUDED.mcp_server_preferences,
-            selected_theme = EXCLUDED.selected_theme,
-            dashboard_layout_profiles = EXCLUDED.dashboard_layout_profiles,
-            active_dashboard_layout_profile_id = EXCLUDED.active_dashboard_layout_profile_id,
-            dashboard_layout_config = EXCLUDED.dashboard_layout_config,
-            cloud_sync_preferences = EXCLUDED.cloud_sync_preferences,
-            updated_at = EXCLUDED.updated_at;
-        """
-        
-        try:
-            from psycopg.rows import dict_row
-            from psycopg.sql import SQL
-            
-            async with self.persistence_service.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(
-                    SQL(query),
-                    (
-                        config_data["id"],
-                        config_data["user_id"],
-                        config_data["telegram_chat_id"],
-                        config_data["notification_preferences"],
-                        config_data["enable_telegram_notifications"],
-                        config_data["default_paper_trading_capital"],
-                        config_data["paper_trading_active"],
-                        config_data["watchlists"],
-                        config_data["favorite_pairs"],
-                        config_data["risk_profile"],
-                        config_data["risk_profile_settings"],
-                        config_data["real_trading_settings"],
-                        config_data["ai_strategy_configurations"],
-                        config_data["ai_analysis_confidence_thresholds"],
-                        config_data["mcp_server_preferences"],
-                        config_data["selected_theme"],
-                        config_data["dashboard_layout_profiles"],
-                        config_data["active_dashboard_layout_profile_id"],
-                        config_data["dashboard_layout_config"],
-                        config_data["cloud_sync_preferences"],
-                        config_data["created_at"],
-                        config_data["updated_at"],
-                    )
-                )
-                await self.persistence_service.connection.commit()
-        except Exception as e:
-            await self.persistence_service.connection.rollback()
-            logger.error(f"Database error saving user configuration: {e}")
-            raise
+
+    def is_paper_trading_mode_active(self) -> bool:
+        if not self._user_configuration:
+            logger.warning("Attempted to check paper trading mode without loaded user configuration.")
+            return False
+        return self._user_configuration.paper_trading_active is True
+
+    async def activate_real_trading_mode(self, user_id: UUID, min_usdt_balance: float = 10.0):
+        config = await self.get_user_configuration(user_id)
+        real_settings = config.real_trading_settings
+        assert real_settings is not None
+
+        # This logic would typically involve checks against a portfolio service, etc.
+        # For now, we just activate the mode if not already active.
+        if real_settings.real_trading_mode_active:
+            logger.info(f"Real trading mode is already active for user {user_id}.")
+            return
+
+        real_settings.real_trading_mode_active = True
+        await self.save_user_configuration(config)
+        logger.info(f"Real trading mode activated successfully for user {user_id}.")
+        if self.notification_service:
+            await self.notification_service.send_real_trading_mode_activated_notification(config)
+
+    async def deactivate_real_trading_mode(self, user_id: UUID):
+        config = await self.get_user_configuration(user_id)
+        real_settings = config.real_trading_settings
+        assert real_settings is not None
+        if real_settings.real_trading_mode_active:
+            real_settings.real_trading_mode_active = False
+            await self.save_user_configuration(config)
+            logger.info(f"Real trading mode deactivated for user {user_id}.")
+
+    async def increment_real_trades_count(self, user_id: UUID):
+        config = await self.get_user_configuration(user_id)
+        real_settings = config.real_trading_settings
+        assert real_settings is not None
+        real_settings.real_trades_executed_count += 1
+        await self.save_user_configuration(config)
+        logger.info(f"Real trades count incremented for user {user_id}. New count: {real_settings.real_trades_executed_count}")
+
+    async def get_real_trading_status(self, user_id: UUID) -> Dict[str, Any]:
+        config = await self.get_user_configuration(user_id)
+        real_settings = config.real_trading_settings
+        assert real_settings is not None
+        return {
+            "real_trading_mode_active": real_settings.real_trading_mode_active,
+            "real_trades_executed_count": real_settings.real_trades_executed_count,
+            "max_real_trades": real_settings.max_real_trades,
+        }

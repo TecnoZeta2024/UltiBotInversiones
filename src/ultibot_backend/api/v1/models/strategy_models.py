@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
+from uuid import UUID
 
 from pydantic import BaseModel, Field, validator
 
@@ -60,7 +61,7 @@ class CreateTradingStrategyRequest(BaseModel):
         None, 
         description="Risk parameter overrides"
     )
-    parent_config_id: Optional[str] = Field(
+    parent_config_id: Optional[UUID] = Field(
         None, 
         description="Parent configuration ID for versioning"
     )
@@ -128,7 +129,7 @@ class UpdateTradingStrategyRequest(BaseModel):
         None, 
         description="Risk parameter overrides"
     )
-    parent_config_id: Optional[str] = Field(
+    parent_config_id: Optional[UUID] = Field(
         None, 
         description="Parent configuration ID for versioning"
     )
@@ -162,8 +163,8 @@ class UpdateTradingStrategyRequest(BaseModel):
 class TradingStrategyResponse(BaseModel):
     """Response model for trading strategy configuration."""
     
-    id: str = Field(..., description="Unique strategy identifier")
-    user_id: str = Field(..., description="User identifier")
+    id: UUID = Field(..., description="Unique strategy identifier")
+    user_id: UUID = Field(..., description="User identifier")
     config_name: str = Field(..., description="Strategy name")
     base_strategy_type: BaseStrategyType = Field(..., description="Strategy type")
     description: Optional[str] = Field(None, description="Strategy description")
@@ -174,7 +175,7 @@ class TradingStrategyResponse(BaseModel):
     ai_analysis_profile_id: Optional[str] = Field(None, description="AI analysis profile reference")
     risk_parameters_override: Optional[RiskParametersOverride] = Field(None, description="Risk overrides")
     version: int = Field(..., description="Strategy version")
-    parent_config_id: Optional[str] = Field(None, description="Parent configuration ID")
+    parent_config_id: Optional[UUID] = Field(None, description="Parent configuration ID")
     performance_metrics: Optional[PerformanceMetrics] = Field(None, description="Performance metrics")
     market_condition_filters: Optional[List[MarketConditionFilter]] = Field(None, description="Market filters")
     activation_schedule: Optional[ActivationSchedule] = Field(None, description="Activation schedule")
@@ -186,35 +187,11 @@ class TradingStrategyResponse(BaseModel):
     class Config:
         """Pydantic model configuration."""
         use_enum_values = True
+        from_attributes = True  # Correct attribute for Pydantic v2
         json_encoders = {
-            datetime: lambda v: v.isoformat() if v else None
+            datetime: lambda v: v.isoformat() if v else None,
+            UUID: lambda v: str(v)
         }
-
-    @classmethod
-    def from_strategy_config(cls, strategy: TradingStrategyConfig) -> "TradingStrategyResponse":
-        """Create response model from TradingStrategyConfig."""
-        return cls(
-            id=strategy.id,
-            user_id=strategy.user_id,
-            config_name=strategy.config_name,
-            base_strategy_type=strategy.base_strategy_type,
-            description=strategy.description,
-            is_active_paper_mode=strategy.is_active_paper_mode,
-            is_active_real_mode=strategy.is_active_real_mode,
-            parameters=strategy.parameters,
-            applicability_rules=strategy.applicability_rules,
-            ai_analysis_profile_id=strategy.ai_analysis_profile_id,
-            risk_parameters_override=strategy.risk_parameters_override,
-            version=strategy.version,
-            parent_config_id=strategy.parent_config_id,
-            performance_metrics=strategy.performance_metrics,
-            market_condition_filters=strategy.market_condition_filters,
-            activation_schedule=strategy.activation_schedule,
-            depends_on_strategies=strategy.depends_on_strategies,
-            sharing_metadata=strategy.sharing_metadata,
-            created_at=strategy.created_at,
-            updated_at=strategy.updated_at,
-        )
 
 
 class StrategyListResponse(BaseModel):
@@ -246,7 +223,7 @@ class ActivateStrategyRequest(BaseModel):
 class StrategyActivationResponse(BaseModel):
     """Response model for strategy activation/deactivation."""
     
-    strategy_id: str = Field(..., description="Strategy identifier")
+    strategy_id: UUID = Field(..., description="Strategy identifier")
     mode: str = Field(..., description="Trading mode")
     is_active: bool = Field(..., description="New activation status")
     message: str = Field(..., description="Operation result message")

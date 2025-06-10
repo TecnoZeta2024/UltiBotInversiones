@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from uuid import UUID
 
 from src.shared.data_types import UserConfiguration
-from src.ultibot_backend.services.config_service import ConfigurationService
+from src.ultibot_backend.services.configuration_service import ConfigurationService
 from src.ultibot_backend.dependencies import get_config_service
 from src.ultibot_backend.core.exceptions import (
     ConfigurationError,
@@ -11,6 +11,7 @@ from src.ultibot_backend.core.exceptions import (
     RealTradeLimitReachedError,
     CredentialError,
 )
+from src.ultibot_backend.app_config import settings
 
 router = APIRouter()
 
@@ -22,7 +23,8 @@ async def get_user_config(
     Retorna la configuración actual del usuario.
     """
     try:
-        config = await config_service.get_user_configuration()
+        user_id = settings.FIXED_USER_ID
+        config = await config_service.get_user_configuration(user_id)
         if not config:
              raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User configuration not found.")
         return config
@@ -46,7 +48,8 @@ async def update_user_config(
     Permite actualizar parcialmente la configuración del usuario.
     """
     try:
-        existing_config = await config_service.get_user_configuration()
+        user_id = settings.FIXED_USER_ID
+        existing_config = await config_service.get_user_configuration(user_id)
         
         update_data = updated_config.model_dump(exclude_unset=True)
         
@@ -77,7 +80,8 @@ async def activate_real_trading_mode_endpoint(
     Intenta activar el modo de operativa real limitada para el usuario.
     """
     try:
-        await config_service.activate_real_trading_mode()
+        user_id = settings.FIXED_USER_ID
+        await config_service.activate_real_trading_mode(user_id)
         return {"message": "Modo de operativa real limitada activado exitosamente."}
     except RealTradeLimitReachedError as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=e.message)
@@ -96,7 +100,8 @@ async def deactivate_real_trading_mode_endpoint(
     Desactiva el modo de operativa real limitada para el usuario.
     """
     try:
-        await config_service.deactivate_real_trading_mode()
+        user_id = settings.FIXED_USER_ID
+        await config_service.deactivate_real_trading_mode(user_id)
         return {"message": "Modo de operativa real limitada desactivado."}
     except ConfigurationError as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error de configuración: {e}")
@@ -111,7 +116,8 @@ async def get_real_trading_mode_status_endpoint(
     Retorna el estado actual del modo de operativa real limitada y el contador para el usuario.
     """
     try:
-        status_data = await config_service.get_real_trading_status()
+        user_id = settings.FIXED_USER_ID
+        status_data = await config_service.get_real_trading_status(user_id)
         return status_data
     except ConfigurationError as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error de configuración: {e}")

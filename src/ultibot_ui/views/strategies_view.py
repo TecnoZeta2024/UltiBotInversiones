@@ -13,15 +13,17 @@ from PyQt5.QtCore import QTimer
 from src.ultibot_ui.models import BaseMainWindow
 from src.ultibot_ui.services.api_client import UltiBotAPIClient
 from src.ultibot_backend.core.domain_models.trading_strategy_models import TradingStrategyConfig
+from src.ultibot_ui.services.trading_mode_state import TradingModeStateManager, TradingMode
 
 logger = logging.getLogger(__name__)
 
 class StrategiesView(QWidget):
-    def __init__(self, user_id: UUID, main_window: BaseMainWindow, api_client: UltiBotAPIClient, loop: asyncio.AbstractEventLoop, parent: Optional[QWidget] = None):
+    def __init__(self, user_id: UUID, main_window: BaseMainWindow, api_client: UltiBotAPIClient, trading_mode_manager: TradingModeStateManager, loop: asyncio.AbstractEventLoop, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.user_id = user_id
         self.main_window = main_window
         self.api_client = api_client
+        self.trading_mode_manager = trading_mode_manager
         self.loop = loop
         self.is_active = False
         
@@ -71,33 +73,36 @@ class StrategiesView(QWidget):
         self.main_window.submit_task(coroutine_factory, self._handle_strategies_result, self._handle_strategies_error)
 
     @qasync.asyncSlot(object)
-    async def _handle_strategies_result(self, data: object):
+    async def _handle_strategies_result(self, data: Any):
         if not self.is_active:
             logger.info("StrategiesView no está activa, ignorando resultado.")
             return
-
-        # La respuesta de la API es un diccionario que contiene la lista de estrategias
-        if not isinstance(data, dict):
-            await self._handle_strategies_error(f"Invalid data format: Expected dict, got {type(data).__name__}")
+            
+        if not isinstance(data, dict) or 'strategies' not in data:
+            error_msg = f"Unexpected data type or format received: {type(data).__name__}"
+            logger.warning(f"Tipo de dato inesperado para _handle_strategies_result: {type(data)}. Data: {data}")
+            await self._handle_strategies_error(error_msg)
             return
-        
+
         strategies_data = data.get('strategies', [])
-        
         if not isinstance(strategies_data, list):
-            await self._handle_strategies_error(f"Invalid data format: 'strategies' key should be a list, got {type(strategies_data).__name__}")
+            error_msg = f"Invalid 'strategies' format: Expected list, got {type(strategies_data).__name__}"
+            logger.error(f"StrategiesView: {error_msg}")
+            await self._handle_strategies_error(error_msg)
             return
 
-        logger.info(f"Received {len(strategies_data)} strategies.")
-        self.status_label.setText(f"Loaded {len(strategies_data)} strategies successfully.")
+        try:
+            strategies = [TradingStrategyConfig(**strat) for strat in strategies_data]
+        except (TypeError, ValueError) as e:
+            error_msg = f"Data parsing error for strategies: {e}"
+            logger.error(f"StrategiesView: {error_msg}")
+            await self._handle_strategies_error(error_msg)
+            return
+
+        logger.info(f"Received {len(strategies)} strategies.")
+        self.status_label.setText(f"Loaded {len(strategies)} strategies successfully.")
         self.refresh_button.setEnabled(True)
         
-        try:
-            # Asumimos que la API devuelve diccionarios que se pueden convertir a nuestro modelo Pydantic
-            strategies = [TradingStrategyConfig(**s_data) for s_data in strategies_data]
-        except (TypeError, ValueError) as e:
-            await self._handle_strategies_error(f"Data parsing error: {e}")
-            return
-
         self.update_strategies_list(strategies)
 
     @qasync.asyncSlot(str)
@@ -122,9 +127,17 @@ class StrategiesView(QWidget):
             self.strategies_list_widget.addItem("No strategies configured.")
             return
             
+        current_mode = self.trading_mode_manager.current_mode
+
         for strategy in strategies:
-            status = "Active" if strategy.is_active else "Inactive"
-            item_text = f"{strategy.strategy_name} ({strategy.base_strategy_type.value}) - {status}"
+            is_active = False
+            if current_mode == TradingMode.PAPER:
+                is_active = strategy.is_active_paper_mode
+            elif current_mode == TradingMode.LIVE:
+                is_active = strategy.is_active_real_mode
+
+            status = "Active" if is_active else "Inactive"
+            item_text = f"{strategy.config_name} ({strategy.base_strategy_type.value}) - {status}"
             list_item = QListWidgetItem(item_text)
             self.strategies_list_widget.addItem(list_item)
         

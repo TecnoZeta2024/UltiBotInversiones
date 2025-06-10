@@ -101,6 +101,7 @@ class MainWindow(QMainWindow, BaseMainWindow):
         self,
         user_id: UUID,
         api_client: UltiBotAPIClient,
+        trading_mode_manager: TradingModeStateManager,
         loop: asyncio.AbstractEventLoop,
         parent: Optional[QWidget] = None,
     ):
@@ -111,7 +112,7 @@ class MainWindow(QMainWindow, BaseMainWindow):
         self.loop = loop
         
         self.task_manager = TaskManager(api_client=self.api_client, loop=self.loop, parent=self)
-        self.trading_mode_manager = TradingModeStateManager(api_client=self.api_client)
+        self.trading_mode_manager = trading_mode_manager
 
         self.setWindowTitle("UltiBotInversiones")
         self.setGeometry(100, 100, 1280, 720)
@@ -198,22 +199,22 @@ class MainWindow(QMainWindow, BaseMainWindow):
         main_layout.addWidget(self.stacked_widget, 1)
 
         # Inicialización de vistas
-        self.dashboard_view = DashboardView(self.user_id, self, self.api_client, self.loop)
+        self.dashboard_view = DashboardView(self.user_id, self, self.api_client, self.trading_mode_manager, self.loop)
         self.stacked_widget.addWidget(self.dashboard_view)
 
         self.opportunities_view = OpportunitiesView(self.user_id, self, self.api_client, self.loop)
         self.stacked_widget.addWidget(self.opportunities_view)
 
-        self.strategies_view = StrategiesView(self.api_client, self.user_id, self, self.loop)
+        self.strategies_view = StrategiesView(self.user_id, self, self.api_client, self.trading_mode_manager, self.loop)
         self.stacked_widget.addWidget(self.strategies_view)
 
-        self.portfolio_view = PortfolioView(self.user_id, self.api_client, self.loop, self)
+        self.portfolio_view = PortfolioView(self.user_id, self.api_client, self.trading_mode_manager, self.loop, self)
         self.stacked_widget.addWidget(self.portfolio_view)
 
         self.history_view = HistoryView(self.user_id, self, self.api_client, self.loop)
         self.stacked_widget.addWidget(self.history_view)
 
-        self.settings_view = SettingsView(str(self.user_id), self.api_client, self.loop)
+        self.settings_view = SettingsView(str(self.user_id), self.api_client, self.loop, self)
         self.stacked_widget.addWidget(self.settings_view)
 
         self.view_map = {
@@ -242,6 +243,10 @@ class MainWindow(QMainWindow, BaseMainWindow):
         """Cambia a la vista especificada."""
         index = self.view_map.get(view_name)
         if index is not None:
+            current_widget = self.stacked_widget.widget(self.stacked_widget.currentIndex())
+            if hasattr(current_widget, 'leave_view'):
+                current_widget.leave_view()
+
             self.stacked_widget.setCurrentIndex(index)
             view_widget = self.stacked_widget.widget(index)
             if hasattr(view_widget, 'enter_view'):
