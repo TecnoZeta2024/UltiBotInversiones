@@ -1,394 +1,203 @@
-2025-06-08 20:36:47,357 - src.ultibot_ui.workers - DEBUG - ApiWorker: run method finished.
-2025-06-08 20:37:01,229 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
-2025-06-08 20:37:01,229 - src.ultibot_ui.workers - DEBUG - ApiWorker initialized with coroutine_factory: set
-2025-06-08 20:37:01,230 - src.ultibot_ui.workers - DEBUG - ApiWorker: run method started.
-2025-06-08 20:37:01,230 - asyncio - DEBUG - Using selector: SelectSelector
-2025-06-08 20:37:01,408 - src.ultibot_ui.services.api_client - DEBUG - API base URL set to: http://127.0.0.1:8000
-2025-06-08 20:37:01,408 - src.ultibot_ui.workers - DEBUG - ApiWorker: Creating coroutine from factory.
-2025-06-08 20:37:01,409 - src.ultibot_ui.workers - DEBUG - ApiWorker: Coroutine created: <coroutine object PortfolioWidget._start_update_worker.<locals>.fetch_data_coroutine at 0x000001C1E6746840>. Running in event loop.
-2025-06-08 20:37:01,409 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - PortfolioWidget: Iniciando fetch_data_coroutine para modo paper.
-2025-06-08 20:37:01,409 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 86e5f6c7-02a0-475b-b277-1fccbf23aa56, modo: paper
-2025-06-08 20:37:01,409 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request invocado para GET /api/v1/portfolio/snapshot
-2025-06-08 20:37:01,409 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'limit': 100, 'offset': 0, 'status': 'open'}
-2025-06-08 20:37:01,410 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request invocado para GET /api/v1/trades
-2025-06-08 20:37:01,410 - httpcore.connection - DEBUG - connect_tcp.started host='127.0.0.1' port=8000 local_address=None timeout=30.0 socket_options=None
-2025-06-08 20:37:01,410 - httpcore.connection - DEBUG - connect_tcp.started host='127.0.0.1' port=8000 local_address=None timeout=30.0 socket_options=None
-2025-06-08 20:37:01,411 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001C1E66E1CD0>
-2025-06-08 20:37:01,411 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001C1E66E1850>
-2025-06-08 20:37:01,411 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
-2025-06-08 20:37:01,411 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
-2025-06-08 20:37:01,412 - httpcore.http11 - DEBUG - send_request_headers.complete
-2025-06-08 20:37:01,412 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
-2025-06-08 20:37:01,412 - httpcore.http11 - DEBUG - send_request_body.complete
-2025-06-08 20:37:01,412 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
-2025-06-08 20:37:01,412 - httpcore.http11 - DEBUG - send_request_headers.complete
-2025-06-08 20:37:01,412 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
-2025-06-08 20:37:01,412 - httpcore.http11 - DEBUG - send_request_body.complete
-2025-06-08 20:37:01,412 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
-2025-06-08 20:37:01,418 - src.ultibot_ui.views.opportunities_view - INFO - Fetching Gemini IA opportunities.
-2025-06-08 20:37:01,418 - src.ultibot_ui.views.opportunities_view - DEBUG - Creating ApiWorker.
-2025-06-08 20:37:01,418 - src.ultibot_ui.workers - DEBUG - ApiWorker initialized with coroutine_factory: set
-2025-06-08 20:37:01,700 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Mon, 09 Jun 2025 00:37:00 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
-2025-06-08 20:37:01,700 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open "HTTP/1.1 200 OK"
-2025-06-08 20:37:01,700 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open "HTTP/1.1 200 OK"
-2025-06-08 20:37:01,700 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
-2025-06-08 20:37:01,700 - httpcore.http11 - DEBUG - receive_response_body.complete
-2025-06-08 20:37:01,700 - httpcore.http11 - DEBUG - response_closed.started
-2025-06-08 20:37:01,701 - httpcore.http11 - DEBUG - response_closed.complete
-2025-06-08 20:37:01,701 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/trades "HTTP/HTTP/1.1 200 OK"
-2025-06-08 20:37:02,405 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Mon, 09 Jun 2025 00:37:00 GMT'), (b'server', b'uvicorn'), (b'content-length', b'363'), (b'content-type', b'application/json')])
-2025-06-08 20:37:02,405 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/portfolio/snapshot?user_id=86e5f6c7-02a0-475b-b277-1fccbf23aa56&trading_mode=paper "HTTP/1.1 200 OK"
-2025-06-08 20:37:02,405 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/portfolio/snapshot?user_id=86e5f6c7-02a0-475b-b277-1fccbf23aa56&trading_mode=paper "HTTP/1.1 200 OK"
-2025-06-08 20:37:02,405 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
-2025-06-08 20:37:02,405 - httpcore.http11 - DEBUG - receive_response_body.complete
-2025-06-08 20:37:02,406 - httpcore.http11 - DEBUG - response_closed.started
-2025-06-08 20:37:02,406 - httpcore.http11 - DEBUG - response_closed.complete
-2025-06-08 20:37:02,406 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/portfolio/snapshot "HTTP/HTTP/1.1 200 OK"
-2025-06-08 20:37:02,406 - httpcore.connection - DEBUG - close.started
-2025-06-08 20:37:02,406 - httpcore.connection - DEBUG - close.complete
-2025-06-08 20:37:02,406 - httpcore.connection - DEBUG - close.started
-2025-06-08 20:37:02,407 - httpcore.connection - DEBUG - close.complete
-2025-06-08 20:37:02,407 - src.ultibot_ui.workers - DEBUG - ApiWorker: Coroutine finished. Result: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-09T00:37:02.403807'}, 'open_trades': [], 'trading_mode': 'paper'}
-2025-06-08 20:37:02,407 - src.ultibot_ui.workers - DEBUG - ApiWorker: result_ready signal emitted.
-2025-06-08 20:37:02,407 - src.ultibot_ui.widgets.portfolio_widget - INFO - DATOS COMPLETOS RECIBIDOS EN HANDLER: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-09T00:37:02.403807'}, 'open_trades': [], 'trading_mode': 'paper'}
-2025-06-08 20:37:02,407 - src.ultibot_ui.workers - DEBUG - ApiWorker: Event loop will not be closed by the worker.
-2025-06-08 20:37:02,407 - src.ultibot_ui.workers - DEBUG - ApiWorker: run method finished.
-2025-06-08 20:37:16,226 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
-2025-06-08 20:37:16,227 - src.ultibot_ui.workers - DEBUG - ApiWorker initialized with coroutine_factory: set
-2025-06-08 20:37:16,228 - src.ultibot_ui.workers - DEBUG - ApiWorker: run method started.
-2025-06-08 20:37:16,228 - asyncio - DEBUG - Using selector: SelectSelector
-2025-06-08 20:37:16,407 - src.ultibot_ui.services.api_client - DEBUG - API base URL set to: http://127.0.0.1:8000
-2025-06-08 20:37:16,407 - src.ultibot_ui.workers - DEBUG - ApiWorker: Creating coroutine from factory.
-2025-06-08 20:37:16,407 - src.ultibot_ui.workers - DEBUG - ApiWorker: Coroutine created: <coroutine object PortfolioWidget._start_update_worker.<locals>.fetch_data_coroutine at 0x000001C1E6746F40>. Running in event loop.
-2025-06-08 20:37:16,407 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - PortfolioWidget: Iniciando fetch_data_coroutine para modo paper.
-2025-06-08 20:37:16,408 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 86e5f6c7-02a0-475b-b277-1fccbf23aa56, modo: paper
-2025-06-08 20:37:16,408 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request invocado para GET /api/v1/portfolio/snapshot
-2025-06-08 20:37:16,408 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'limit': 100, 'offset': 0, 'status': 'open'}
-2025-06-08 20:37:16,409 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request invocado para GET /api/v1/trades
-2025-06-08 20:37:16,410 - httpcore.connection - DEBUG - connect_tcp.started host='127.0.0.1' port=8000 local_address=None timeout=30.0 socket_options=None
-2025-06-08 20:37:16,410 - httpcore.connection - DEBUG - connect_tcp.started host='127.0.0.1' port=8000 local_address=None timeout=30.0 socket_options=None
-2025-06-08 20:37:16,411 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001C1E67507E0>
-2025-06-08 20:37:16,411 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001C1E6750940>
-2025-06-08 20:37:16,411 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
-2025-06-08 20:37:16,412 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
-2025-06-08 20:37:16,412 - httpcore.http11 - DEBUG - send_request_headers.complete
-2025-06-08 20:37:16,412 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
-2025-06-08 20:37:16,412 - httpcore.http11 - DEBUG - send_request_body.complete
-2025-06-08 20:37:16,412 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
-2025-06-08 20:37:16,412 - httpcore.http11 - DEBUG - send_request_headers.complete
-2025-06-08 20:37:16,412 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
-2025-06-08 20:37:16,413 - httpcore.http11 - DEBUG - send_request_body.complete
-2025-06-08 20:37:16,413 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
-2025-06-08 20:37:16,720 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Mon, 09 Jun 2025 00:37:16 GMT'), (b'server', b'uvicorn'), (b'content-length', b'363'), (b'content-type', b'application/json')])
-2025-06-08 20:37:16,720 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/portfolio/snapshot?user_id=86e5f6c7-02a0-475b-b277-1fccbf23aa56&trading_mode=paper "HTTP/1.1 200 OK"
-2025-06-08 20:37:16,720 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/portfolio/snapshot?user_id=86e5f6c7-02a0-475b-b277-1fccbf23aa56&trading_mode=paper "HTTP/1.1 200 OK"
-2025-06-08 20:37:16,720 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
-2025-06-08 20:37:16,721 - httpcore.http11 - DEBUG - receive_response_body.complete
-2025-06-08 20:37:16,721 - httpcore.http11 - DEBUG - response_closed.started
-2025-06-08 20:37:16,721 - httpcore.http11 - DEBUG - response_closed.complete
-2025-06-08 20:37:16,721 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/portfolio/snapshot "HTTP/HTTP/1.1 200 OK"
-2025-06-08 20:37:17,432 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Mon, 09 Jun 2025 00:37:16 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
-2025-06-08 20:37:17,433 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open "HTTP/1.1 200 OK"
-2025-06-08 20:37:17,433 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open "HTTP/1.1 200 OK"
-2025-06-08 20:37:17,433 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
-2025-06-08 20:37:17,433 - httpcore.http11 - DEBUG - receive_response_body.complete
-2025-06-08 20:37:17,433 - httpcore.http11 - DEBUG - response_closed.started
-2025-06-08 20:37:17,433 - httpcore.http11 - DEBUG - response_closed.complete
-2025-06-08 20:37:17,433 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/trades "HTTP/HTTP/1.1 200 OK"
-2025-06-08 20:37:17,434 - httpcore.connection - DEBUG - close.started
-2025-06-08 20:37:17,434 - httpcore.connection - DEBUG - close.complete
-2025-06-08 20:37:17,434 - httpcore.connection - DEBUG - close.started
-2025-06-08 20:37:17,434 - httpcore.connection - DEBUG - close.complete
-2025-06-08 20:37:17,434 - src.ultibot_ui.workers - DEBUG - ApiWorker: Coroutine finished. Result: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-09T00:37:16.719475'}, 'open_trades': [], 'trading_mode': 'paper'}
-2025-06-08 20:37:17,434 - src.ultibot_ui.workers - DEBUG - ApiWorker: result_ready signal emitted.
-2025-06-08 20:37:17,434 - src.ultibot_ui.widgets.portfolio_widget - INFO - DATOS COMPLETOS RECIBIDOS EN HANDLER: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-09T00:37:16.719475'}, 'open_trades': [], 'trading_mode': 'paper'}
-2025-06-08 20:37:17,434 - src.ultibot_ui.workers - DEBUG - ApiWorker: Event loop will not be closed by the worker.
-2025-06-08 20:37:17,435 - src.ultibot_ui.workers - DEBUG - ApiWorker: run method finished.
-2025-06-08 20:37:31,245 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
-2025-06-08 20:37:31,245 - src.ultibot_ui.workers - DEBUG - ApiWorker initialized with coroutine_factory: set
-2025-06-08 20:37:31,246 - src.ultibot_ui.workers - DEBUG - ApiWorker: run method started.
-2025-06-08 20:37:31,246 - asyncio - DEBUG - Using selector: SelectSelector
-2025-06-08 20:37:31,419 - src.ultibot_ui.views.opportunities_view - INFO - Fetching Gemini IA opportunities.
-2025-06-08 20:37:31,419 - src.ultibot_ui.views.opportunities_view - DEBUG - Creating ApiWorker.
-2025-06-08 20:37:31,419 - src.ultibot_ui.workers - DEBUG - ApiWorker initialized with coroutine_factory: set
-2025-06-08 20:37:31,422 - src.ultibot_ui.services.api_client - DEBUG - API base URL set to: http://127.0.0.1:8000
-2025-06-08 20:37:31,422 - src.ultibot_ui.workers - DEBUG - ApiWorker: Creating coroutine from factory.
-2025-06-08 20:37:31,422 - src.ultibot_ui.workers - DEBUG - ApiWorker: Coroutine created: <coroutine object PortfolioWidget._start_update_worker.<locals>.fetch_data_coroutine at 0x000001C1E6746E40>. Running in event loop.
-2025-06-08 20:37:31,423 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - PortfolioWidget: Iniciando fetch_data_coroutine para modo paper.
-2025-06-08 20:37:31,423 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 86e5f6c7-02a0-475b-b277-1fccbf23aa56, modo: paper
-2025-06-08 20:37:31,423 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request invocado para GET /api/v1/portfolio/snapshot
-2025-06-08 20:37:31,423 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'limit': 100, 'offset': 0, 'status': 'open'}
-2025-06-08 20:37:31,423 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request invocado para GET /api/v1/trades
-2025-06-08 20:37:31,424 - httpcore.connection - DEBUG - connect_tcp.started host='127.0.0.1' port=8000 local_address=None timeout=30.0 socket_options=None
-2025-06-08 20:37:31,424 - httpcore.connection - DEBUG - connect_tcp.started host='127.0.0.1' port=8000 local_address=None timeout=30.0 socket_options=None
-2025-06-08 20:37:31,425 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001C1E6721310>
-2025-06-08 20:37:31,425 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001C1E6720730>
-2025-06-08 20:37:31,425 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
-2025-06-08 20:37:31,426 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
-2025-06-08 20:37:31,426 - httpcore.http11 - DEBUG - send_request_headers.complete
-2025-06-08 20:37:31,426 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
-2025-06-08 20:37:31,426 - httpcore.http11 - DEBUG - send_request_body.complete
-2025-06-08 20:37:31,426 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
-2025-06-08 20:37:31,427 - httpcore.http11 - DEBUG - send_request_headers.complete
-2025-06-08 20:37:31,427 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
-2025-06-08 20:37:31,427 - httpcore.http11 - DEBUG - send_request_body.complete
-2025-06-08 20:37:31,427 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
-2025-06-08 20:37:31,733 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Mon, 09 Jun 2025 00:37:30 GMT'), (b'server', b'uvicorn'), (b'content-length', b'363'), (b'content-type', b'application/json')])
-2025-06-08 20:37:31,733 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/portfolio/snapshot?user_id=86e5f6c7-02a0-475b-b277-1fccbf23aa56&trading_mode=paper "HTTP/1.1 200 OK"
-2025-06-08 20:37:31,733 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/portfolio/snapshot?user_id=86e5f6c7-02a0-475b-b277-1fccbf23aa56&trading_mode=paper "HTTP/1.1 200 OK"
-2025-06-08 20:37:31,734 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
-2025-06-08 20:37:31,734 - httpcore.http11 - DEBUG - receive_response_body.complete
-2025-06-08 20:37:31,734 - httpcore.http11 - DEBUG - response_closed.started
-2025-06-08 20:37:31,734 - httpcore.http11 - DEBUG - response_closed.complete
-2025-06-08 20:37:31,734 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/portfolio/snapshot "HTTP/HTTP/1.1 200 OK"
-2025-06-08 20:37:32,381 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Mon, 09 Jun 2025 00:37:30 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
-2025-06-08 20:37:32,381 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open "HTTP/1.1 200 OK"
-2025-06-08 20:37:32,381 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open "HTTP/1.1 200 OK"
-2025-06-08 20:37:32,381 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
-2025-06-08 20:37:32,382 - httpcore.http11 - DEBUG - receive_response_body.complete
-2025-06-08 20:37:32,382 - httpcore.http11 - DEBUG - response_closed.started
-2025-06-08 20:37:32,382 - httpcore.http11 - DEBUG - response_closed.complete
-2025-06-08 20:37:32,382 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/trades "HTTP/HTTP/1.1 200 OK"
-2025-06-08 20:37:32,382 - httpcore.connection - DEBUG - close.started
-2025-06-08 20:37:32,382 - httpcore.connection - DEBUG - close.complete
-2025-06-08 20:37:32,382 - httpcore.connection - DEBUG - close.started
-2025-06-08 20:37:32,382 - httpcore.connection - DEBUG - close.complete
-2025-06-08 20:37:32,383 - src.ultibot_ui.workers - DEBUG - ApiWorker: Coroutine finished. Result: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-09T00:37:31.732265'}, 'open_trades': [], 'trading_mode': 'paper'}
-2025-06-08 20:37:32,383 - src.ultibot_ui.workers - DEBUG - ApiWorker: result_ready signal emitted.
-2025-06-08 20:37:32,383 - src.ultibot_ui.widgets.portfolio_widget - INFO - DATOS COMPLETOS RECIBIDOS EN HANDLER: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-09T00:37:31.732265'}, 'open_trades': [], 'trading_mode': 'paper'}
-2025-06-08 20:37:32,383 - src.ultibot_ui.workers - DEBUG - ApiWorker: Event loop will not be closed by the worker.
-2025-06-08 20:37:32,383 - src.ultibot_ui.workers - DEBUG - ApiWorker: run method finished.
-2025-06-08 20:37:46,258 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
-2025-06-08 20:37:46,259 - src.ultibot_ui.workers - DEBUG - ApiWorker initialized with coroutine_factory: set
-2025-06-08 20:37:46,259 - src.ultibot_ui.workers - DEBUG - ApiWorker: run method started.
-2025-06-08 20:37:46,259 - asyncio - DEBUG - Using selector: SelectSelector
-2025-06-08 20:37:46,433 - src.ultibot_ui.services.api_client - DEBUG - API base URL set to: http://127.0.0.1:8000
-2025-06-08 20:37:46,434 - src.ultibot_ui.workers - DEBUG - ApiWorker: Creating coroutine from factory.
-2025-06-08 20:37:46,434 - src.ultibot_ui.workers - DEBUG - ApiWorker: Coroutine created: <coroutine object PortfolioWidget._start_update_worker.<locals>.fetch_data_coroutine at 0x000001C1E6746E40>. Running in event loop.
-2025-06-08 20:37:46,434 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - PortfolioWidget: Iniciando fetch_data_coroutine para modo paper.
-2025-06-08 20:37:46,435 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 86e5f6c7-02a0-475b-b277-1fccbf23aa56, modo: paper
-2025-06-08 20:37:46,435 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request invocado para GET /api/v1/portfolio/snapshot
-2025-06-08 20:37:46,435 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'limit': 100, 'offset': 0, 'status': 'open'}
-2025-06-08 20:37:46,436 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request invocado para GET /api/v1/trades
-2025-06-08 20:37:46,436 - httpcore.connection - DEBUG - connect_tcp.started host='127.0.0.1' port=8000 local_address=None timeout=30.0 socket_options=None
-2025-06-08 20:37:46,436 - httpcore.connection - DEBUG - connect_tcp.started host='127.0.0.1' port=8000 local_address=None timeout=30.0 socket_options=None
-2025-06-08 20:37:46,437 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001C1E66048C0>
-2025-06-08 20:37:46,438 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001C1E6710250>
-2025-06-08 20:37:46,438 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
-2025-06-08 20:37:46,438 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
-2025-06-08 20:37:46,438 - httpcore.http11 - DEBUG - send_request_headers.complete
-2025-06-08 20:37:46,438 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
-2025-06-08 20:37:46,438 - httpcore.http11 - DEBUG - send_request_body.complete
-2025-06-08 20:37:46,438 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
-2025-06-08 20:37:46,439 - httpcore.http11 - DEBUG - send_request_headers.complete
-2025-06-08 20:37:46,439 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
-2025-06-08 20:37:46,439 - httpcore.http11 - DEBUG - send_request_body.complete
-2025-06-08 20:37:46,439 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
-2025-06-08 20:37:46,732 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Mon, 09 Jun 2025 00:37:45 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
-2025-06-08 20:37:46,733 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open "HTTP/1.1 200 OK"
-2025-06-08 20:37:46,733 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open "HTTP/1.1 200 OK"
-2025-06-08 20:37:46,733 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
-2025-06-08 20:37:46,733 - httpcore.http11 - DEBUG - receive_response_body.complete
-2025-06-08 20:37:46,733 - httpcore.http11 - DEBUG - response_closed.started
-2025-06-08 20:37:46,733 - httpcore.http11 - DEBUG - response_closed.complete
-2025-06-08 20:37:46,733 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/trades "HTTP/HTTP/1.1 200 OK"
-2025-06-08 20:37:47,435 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Mon, 09 Jun 2025 00:37:45 GMT'), (b'server', b'uvicorn'), (b'content-length', b'363'), (b'content-type', b'application/json')])
-2025-06-08 20:37:47,436 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/portfolio/snapshot?user_id=86e5f6c7-02a0-475b-b277-1fccbf23aa56&trading_mode=paper "HTTP/1.1 200 OK"
-2025-06-08 20:37:47,436 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/portfolio/snapshot?user_id=86e5f6c7-02a0-475b-b277-1fccbf23aa56&trading_mode=paper "HTTP/1.1 200 OK"
-2025-06-08 20:37:47,436 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
-2025-06-08 20:37:47,436 - httpcore.http11 - DEBUG - receive_response_body.complete
-2025-06-08 20:37:47,436 - httpcore.http11 - DEBUG - response_closed.started
-2025-06-08 20:37:47,436 - httpcore.http11 - DEBUG - response_closed.complete
-2025-06-08 20:37:47,436 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/portfolio/snapshot "HTTP/HTTP/1.1 200 OK"
-2025-06-08 20:37:47,437 - httpcore.connection - DEBUG - close.started
-2025-06-08 20:37:47,437 - httpcore.connection - DEBUG - close.complete
-2025-06-08 20:37:47,437 - httpcore.connection - DEBUG - close.started
-2025-06-08 20:37:47,437 - httpcore.connection - DEBUG - close.complete
-2025-06-08 20:37:47,437 - src.ultibot_ui.workers - DEBUG - ApiWorker: Coroutine finished. Result: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-09T00:37:47.434673'}, 'open_trades': [], 'trading_mode': 'paper'}
-2025-06-08 20:37:47,438 - src.ultibot_ui.workers - DEBUG - ApiWorker: result_ready signal emitted.
-2025-06-08 20:37:47,438 - src.ultibot_ui.widgets.portfolio_widget - INFO - DATOS COMPLETOS RECIBIDOS EN HANDLER: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-09T00:37:47.434673'}, 'open_trades': [], 'trading_mode': 'paper'}
-2025-06-08 20:37:47,438 - src.ultibot_ui.workers - DEBUG - ApiWorker: Event loop will not be closed by the worker.
-2025-06-08 20:37:47,438 - src.ultibot_ui.workers - DEBUG - ApiWorker: run method finished.
-2025-06-08 20:38:00,091 - src.ultibot_ui.workers - DEBUG - ApiWorker initialized with coroutine_factory: set
-2025-06-08 20:38:01,270 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
-2025-06-08 20:38:01,270 - src.ultibot_ui.workers - DEBUG - ApiWorker initialized with coroutine_factory: set
-2025-06-08 20:38:01,270 - src.ultibot_ui.workers - DEBUG - ApiWorker: run method started.
-2025-06-08 20:38:01,271 - asyncio - DEBUG - Using selector: SelectSelector
-2025-06-08 20:38:01,410 - src.ultibot_ui.views.opportunities_view - INFO - Fetching Gemini IA opportunities.
-2025-06-08 20:38:01,410 - src.ultibot_ui.views.opportunities_view - DEBUG - Creating ApiWorker.
-2025-06-08 20:38:01,410 - src.ultibot_ui.workers - DEBUG - ApiWorker initialized with coroutine_factory: set
-2025-06-08 20:38:01,444 - src.ultibot_ui.services.api_client - DEBUG - API base URL set to: http://127.0.0.1:8000
-2025-06-08 20:38:01,445 - src.ultibot_ui.workers - DEBUG - ApiWorker: Creating coroutine from factory.
-2025-06-08 20:38:01,445 - src.ultibot_ui.workers - DEBUG - ApiWorker: Coroutine created: <coroutine object PortfolioWidget._start_update_worker.<locals>.fetch_data_coroutine at 0x000001C1E6746F40>. Running in event loop.
-2025-06-08 20:38:01,445 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - PortfolioWidget: Iniciando fetch_data_coroutine para modo paper.
-2025-06-08 20:38:01,445 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 86e5f6c7-02a0-475b-b277-1fccbf23aa56, modo: paper
-2025-06-08 20:38:01,445 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request invocado para GET /api/v1/portfolio/snapshot
-2025-06-08 20:38:01,445 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'limit': 100, 'offset': 0, 'status': 'open'}
-2025-06-08 20:38:01,446 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request invocado para GET /api/v1/trades
-2025-06-08 20:38:01,446 - httpcore.connection - DEBUG - connect_tcp.started host='127.0.0.1' port=8000 local_address=None timeout=30.0 socket_options=None
-2025-06-08 20:38:01,446 - httpcore.connection - DEBUG - connect_tcp.started host='127.0.0.1' port=8000 local_address=None timeout=30.0 socket_options=None
-2025-06-08 20:38:01,448 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001C1E674CBD0>
-2025-06-08 20:38:01,448 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001C1E66D1780>
-2025-06-08 20:38:01,448 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
-2025-06-08 20:38:01,448 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
-2025-06-08 20:38:01,449 - httpcore.http11 - DEBUG - send_request_headers.complete
-2025-06-08 20:38:01,449 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
-2025-06-08 20:38:01,449 - httpcore.http11 - DEBUG - send_request_body.complete
-2025-06-08 20:38:01,449 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
-2025-06-08 20:38:01,449 - httpcore.http11 - DEBUG - send_request_headers.complete
-2025-06-08 20:38:01,449 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
-2025-06-08 20:38:01,449 - httpcore.http11 - DEBUG - send_request_body.complete
-2025-06-08 20:38:01,450 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
-2025-06-08 20:38:01,738 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Mon, 09 Jun 2025 00:38:01 GMT'), (b'server', b'uvicorn'), (b'content-length', b'363'), (b'content-type', b'application/json')])
-2025-06-08 20:38:01,738 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/portfolio/snapshot?user_id=86e5f6c7-02a0-475b-b277-1fccbf23aa56&trading_mode=paper "HTTP/1.1 200 OK"
-2025-06-08 20:38:01,738 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/portfolio/snapshot?user_id=86e5f6c7-02a0-475b-b277-1fccbf23aa56&trading_mode=paper "HTTP/1.1 200 OK"
-2025-06-08 20:38:01,738 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
-2025-06-08 20:38:01,738 - httpcore.http11 - DEBUG - receive_response_body.complete
-2025-06-08 20:38:01,739 - httpcore.http11 - DEBUG - response_closed.started
-2025-06-08 20:38:01,739 - httpcore.http11 - DEBUG - response_closed.complete
-2025-06-08 20:38:01,739 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/portfolio/snapshot "HTTP/HTTP/1.1 200 OK"
-2025-06-08 20:38:02,450 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Mon, 09 Jun 2025 00:38:01 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
-2025-06-08 20:38:02,450 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open "HTTP/1.1 200 OK"
-2025-06-08 20:38:02,450 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open "HTTP/1.1 200 OK"
-2025-06-08 20:38:02,450 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
-2025-06-08 20:38:02,450 - httpcore.http11 - DEBUG - receive_response_body.complete
-2025-06-08 20:38:02,450 - httpcore.http11 - DEBUG - response_closed.started
-2025-06-08 20:38:02,451 - httpcore.http11 - DEBUG - response_closed.complete
-2025-06-08 20:38:02,451 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/trades "HTTP/HTTP/1.1 200 OK"
-2025-06-08 20:38:02,451 - httpcore.connection - DEBUG - close.started
-2025-06-08 20:38:02,451 - httpcore.connection - DEBUG - close.complete
-2025-06-08 20:38:02,451 - httpcore.connection - DEBUG - close.started
-2025-06-08 20:38:02,451 - httpcore.connection - DEBUG - close.complete
-2025-06-08 20:38:02,451 - src.ultibot_ui.workers - DEBUG - ApiWorker: Coroutine finished. Result: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-09T00:38:01.737235'}, 'open_trades': [], 'trading_mode': 'paper'}
-2025-06-08 20:38:02,452 - src.ultibot_ui.workers - DEBUG - ApiWorker: result_ready signal emitted.
-2025-06-08 20:38:02,452 - src.ultibot_ui.widgets.portfolio_widget - INFO - DATOS COMPLETOS RECIBIDOS EN HANDLER: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-09T00:38:01.737235'}, 'open_trades': [], 'trading_mode': 'paper'}
-2025-06-08 20:38:02,452 - src.ultibot_ui.workers - DEBUG - ApiWorker: Event loop will not be closed by the worker.
-2025-06-08 20:38:02,452 - src.ultibot_ui.workers - DEBUG - ApiWorker: run method finished.
-2025-06-08 20:38:14,845 - src.ultibot_ui.workers - DEBUG - ApiWorker initialized with coroutine_factory: set
-2025-06-08 20:38:16,269 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
-2025-06-08 20:38:16,269 - src.ultibot_ui.workers - DEBUG - ApiWorker initialized with coroutine_factory: set
-2025-06-08 20:38:16,269 - src.ultibot_ui.workers - DEBUG - ApiWorker: run method started.
-2025-06-08 20:38:16,270 - asyncio - DEBUG - Using selector: SelectSelector
-2025-06-08 20:38:16,442 - src.ultibot_ui.services.api_client - DEBUG - API base URL set to: http://127.0.0.1:8000
-2025-06-08 20:38:16,442 - src.ultibot_ui.workers - DEBUG - ApiWorker: Creating coroutine from factory.
-2025-06-08 20:38:16,442 - src.ultibot_ui.workers - DEBUG - ApiWorker: Coroutine created: <coroutine object PortfolioWidget._start_update_worker.<locals>.fetch_data_coroutine at 0x000001C1E6747940>. Running in event loop.
-2025-06-08 20:38:16,443 - src.ultibot_ui.widgets.portfolio_widget - DEBUG - PortfolioWidget: Iniciando fetch_data_coroutine para modo paper.
-2025-06-08 20:38:16,443 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 86e5f6c7-02a0-475b-b277-1fccbf23aa56, modo: paper
-2025-06-08 20:38:16,443 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request invocado para GET /api/v1/portfolio/snapshot
-2025-06-08 20:38:16,443 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'limit': 100, 'offset': 0, 'status': 'open'}
-2025-06-08 20:38:16,443 - src.ultibot_ui.services.api_client - DEBUG - APIClient: _make_request invocado para GET /api/v1/trades
-2025-06-08 20:38:16,443 - httpcore.connection - DEBUG - connect_tcp.started host='127.0.0.1' port=8000 local_address=None timeout=30.0 socket_options=None
-2025-06-08 20:38:16,444 - httpcore.connection - DEBUG - connect_tcp.started host='127.0.0.1' port=8000 local_address=None timeout=30.0 socket_options=None
-2025-06-08 20:38:16,444 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001C1E66D3540>
-2025-06-08 20:38:16,445 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001C1E676CCB0>
-2025-06-08 20:38:16,445 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
-2025-06-08 20:38:16,445 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
-2025-06-08 20:38:16,445 - httpcore.http11 - DEBUG - send_request_headers.complete
-2025-06-08 20:38:16,445 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
-2025-06-08 20:38:16,445 - httpcore.http11 - DEBUG - send_request_body.complete
-2025-06-08 20:38:16,445 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
-2025-06-08 20:38:16,446 - httpcore.http11 - DEBUG - send_request_headers.complete
-2025-06-08 20:38:16,446 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
-2025-06-08 20:38:16,446 - httpcore.http11 - DEBUG - send_request_body.complete
-2025-06-08 20:38:16,446 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
-2025-06-08 20:38:16,784 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Mon, 09 Jun 2025 00:38:16 GMT'), (b'server', b'uvicorn'), (b'content-length', b'2'), (b'content-type', b'application/json')])
-2025-06-08 20:38:16,785 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open "HTTP/1.1 200 OK"
-2025-06-08 20:38:16,785 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open "HTTP/1.1 200 OK"
-2025-06-08 20:38:16,785 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
-2025-06-08 20:38:16,785 - httpcore.http11 - DEBUG - receive_response_body.complete
-2025-06-08 20:38:16,785 - httpcore.http11 - DEBUG - response_closed.started
-2025-06-08 20:38:16,786 - httpcore.http11 - DEBUG - response_closed.complete
-2025-06-08 20:38:16,786 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/trades "HTTP/HTTP/1.1 200 OK"
-2025-06-08 20:38:17,490 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Mon, 09 Jun 2025 00:38:16 GMT'), (b'server', b'uvicorn'), (b'content-length', b'363'), (b'content-type', b'application/json')])
-2025-06-08 20:38:17,490 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/portfolio/snapshot?user_id=86e5f6c7-02a0-475b-b277-1fccbf23aa56&trading_mode=paper "HTTP/1.1 200 OK"
-2025-06-08 20:38:17,490 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/portfolio/snapshot?user_id=86e5f6c7-02a0-475b-b277-1fccbf23aa56&trading_mode=paper "HTTP/1.1 200 OK"
-2025-06-08 20:38:17,490 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
-2025-06-08 20:38:17,490 - httpcore.http11 - DEBUG - receive_response_body.complete
-2025-06-08 20:38:17,491 - httpcore.http11 - DEBUG - response_closed.started
-2025-06-08 20:38:17,491 - httpcore.http11 - DEBUG - response_closed.complete
-2025-06-08 20:38:17,491 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/portfolio/snapshot "HTTP/HTTP/1.1 200 OK"
-2025-06-08 20:38:17,491 - httpcore.connection - DEBUG - close.started
-2025-06-08 20:38:17,491 - httpcore.connection - DEBUG - close.complete
-2025-06-08 20:38:17,491 - httpcore.connection - DEBUG - close.started
-2025-06-08 20:38:17,491 - httpcore.connection - DEBUG - close.complete
-2025-06-08 20:38:17,492 - src.ultibot_ui.workers - DEBUG - ApiWorker: Coroutine finished. Result: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-09T00:38:17.489090'}, 'open_trades': [], 'trading_mode': 'paper'}
-2025-06-08 20:38:17,492 - src.ultibot_ui.workers - DEBUG - ApiWorker: result_ready signal emitted.
-2025-06-08 20:38:17,492 - src.ultibot_ui.widgets.portfolio_widget - INFO - DATOS COMPLETOS RECIBIDOS EN HANDLER: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-09T00:38:17.489090'}, 'open_trades': [], 'trading_mode': 'paper'}
-2025-06-08 20:38:17,492 - src.ultibot_ui.workers - DEBUG - ApiWorker: Event loop will not be closed by the worker.
-2025-06-08 20:38:17,492 - src.ultibot_ui.workers - DEBUG - ApiWorker: run method finished.
-2025-06-08 20:38:18,272 - src.ultibot_ui.windows.main_window - INFO - Cleaning up MainWindow resources. Stopping 15 active threads...
-2025-06-08 20:38:18,272 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: Iniciando limpieza de tareas.
-2025-06-08 20:38:18,272 - src.ultibot_ui.widgets.portfolio_widget - INFO - PortfolioWidget: Limpiando hilos y workers activos.
-2025-06-08 20:38:18,273 - src.ultibot_ui.widgets.portfolio_widget - INFO - PortfolioWidget: Limpieza completada.
-2025-06-08 20:38:18,273 - src.ultibot_ui.widgets.chart_widget - INFO - ChartWidget: Limpieza completada.
-2025-06-08 20:38:18,274 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: Limpieza completada.
-2025-06-08 20:38:18,274 - src.ultibot_ui.widgets.paper_trading_report_widget - INFO - PaperTradingReportWidget cleanup: No hay acciones que tomar.
-2025-06-08 20:38:18,274 - src.ultibot_ui.windows.history_view - INFO - HistoryView cleanup completado
-2025-06-08 20:38:18,274 - src.ultibot_ui.views.opportunities_view - INFO - Cleaning up OpportunitiesView...
-2025-06-08 20:38:18,274 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView cleanup finished.
-2025-06-08 20:38:18,274 - src.ultibot_ui.views.portfolio_view - INFO - PortfolioView: Cleaning up...
-2025-06-08 20:38:18,275 - src.ultibot_ui.views.portfolio_view - INFO - PortfolioView: Cleanup finished.
-2025-06-08 20:38:18,278 - src.ultibot_ui.windows.main_window - INFO - MainWindow cleanup finished.
-2025-06-08 20:38:18,297 - qasync._windows._EventPoller - DEBUG - Stopping worker thread...
-2025-06-08 20:38:18,311 - qasync._windows._EventWorker - DEBUG - Exiting thread
-2025-06-08 20:38:18,311 - __main__ - INFO - Application event loop stopped.
-2025-06-08 20:38:18,311 - src.ultibot_ui.windows.main_window - INFO - Cleaning up MainWindow resources. Stopping 0 active threads...
-2025-06-08 20:38:18,311 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: Iniciando limpieza de tareas.
-2025-06-08 20:38:18,311 - src.ultibot_ui.widgets.portfolio_widget - INFO - PortfolioWidget: Limpiando hilos y workers activos.
-2025-06-08 20:38:18,312 - src.ultibot_ui.widgets.portfolio_widget - INFO - PortfolioWidget: Limpieza completada.
-2025-06-08 20:38:18,312 - src.ultibot_ui.widgets.chart_widget - INFO - ChartWidget: Limpieza completada.
-2025-06-08 20:38:18,312 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: Limpieza completada.
-2025-06-08 20:38:18,312 - src.ultibot_ui.widgets.paper_trading_report_widget - INFO - PaperTradingReportWidget cleanup: No hay acciones que tomar.
-2025-06-08 20:38:18,312 - src.ultibot_ui.windows.history_view - INFO - HistoryView cleanup completado
-2025-06-08 20:38:18,312 - src.ultibot_ui.views.opportunities_view - INFO - Cleaning up OpportunitiesView...
-2025-06-08 20:38:18,312 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView cleanup finished.
-2025-06-08 20:38:18,312 - src.ultibot_ui.views.portfolio_view - INFO - PortfolioView: Cleaning up...
-2025-06-08 20:38:18,312 - src.ultibot_ui.views.portfolio_view - INFO - PortfolioView: Cleanup finished.
-2025-06-08 20:38:18,312 - src.ultibot_ui.windows.main_window - INFO - MainWindow cleanup finished.
-2025-06-08 20:38:18,313 - qasync._windows._IocpProactor - DEBUG - Closing
-2025-06-08 20:38:18,313 - __main__ - CRITICAL - Unhandled exception in main: unknown async library, or not in async context
+2025-06-09 21:27:01,712 - __main__ - INFO - El bucle de eventos de la aplicaciï¿½n ha terminado. Ejecutando limpieza final.
+2025-06-09 21:27:01,712 - __main__ - INFO - Cerrando cliente HTTP...
+2025-06-09 21:27:01,739 - __main__ - CRITICAL - Excepciï¿½n no controlada en el arranque de la aplicaciï¿½n: unknown async library, or not in async context
 Traceback (most recent call last):
-  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\main.py", line 104, in main
-    await event_loop.run_forever() # type: ignore
-    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TypeError: object int can't be used in 'await' expression
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\main.py", line 116, in <module>
-    asyncio.run(main())
-    ~~~~~~~~~~~^^^^^^^^
-  File "C:\Users\zamor\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\main.py", line 137, in <module>
+    qasync.run(main())
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\qasync\__init__.py", line 840, in run
+    return asyncio.run(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\runners.py", line 190, in run
     return runner.run(main)
-           ~~~~~~~~~~^^^^^^
-  File "C:\Users\zamor\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+           ^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\runners.py", line 118, in run
     return self._loop.run_until_complete(task)
-           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
-  File "C:\Users\zamor\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 725, in run_until_complete
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\qasync\__init__.py", line 409, in run_until_complete
     return future.result()
-           ~~~~~~~~~~~~~^^
-  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\main.py", line 78, in main
-    async with httpx.AsyncClient(timeout=30.0) as http_client:
-               ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_client.py", line 2062, in __aexit__
-    await self._transport.__aexit__(exc_type, exc_value, traceback)
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_transports\default.py", line 356, in __aexit__
-    await self._pool.__aexit__(exc_type, exc_value, traceback)
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpcore\_async\connection_pool.py", line 364, in __aexit__
-    await self.aclose()
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpcore\_async\connection_pool.py", line 353, in aclose
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\main.py", line 131, in main
+    await controller.cleanup()
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\main.py", line 93, in cleanup
+    await self.http_client.aclose()
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_client.py", line 2031, in aclose
+    await self._transport.aclose()
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpx\_transports\default.py", line 389, in aclose
+    await self._pool.aclose()
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpcore\_async\connection_pool.py", line 353, in aclose
     await self._close_connections(closing_connections)
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpcore\_async\connection_pool.py", line 343, in _close_connections
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpcore\_async\connection_pool.py", line 343, in _close_connections
     with AsyncShieldCancellation():
-         ~~~~~~~~~~~~~~~~~~~~~~~^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpcore\_synchronization.py", line 203, in __init__
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpcore\_synchronization.py", line 203, in __init__
     self._backend = current_async_library()
-                    ~~~~~~~~~~~~~~~~~~~~~^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpcore\_synchronization.py", line 30, in current_async_library
+                    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\httpcore\_synchronization.py", line 30, in current_async_library
     environment = sniffio.current_async_library()
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\sniffio\_impl.py", line 93, in current_async_library
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\sniffio\_impl.py", line 93, in current_async_library
     raise AsyncLibraryNotFoundError(
-        "unknown async library, or not in async context"
-    )
 sniffio._impl.AsyncLibraryNotFoundError: unknown async library, or not in async context
+2025-06-09 21:30:38,321 - __main__ - INFO - Stylesheet cargado exitosamente.
+2025-06-09 21:30:38,497 - __main__ - INFO - Iniciando inicializaciï¿½n asï¿½ncrona...
+2025-06-09 21:30:40,516 - src.ultibot_ui.services.api_client - INFO - Obteniendo configuraciï¿½n de usuario.
+2025-06-09 21:30:41,318 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/config "HTTP/1.1 200 OK"
+2025-06-09 21:30:41,318 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/config "HTTP/HTTP/1.1 200 OK"
+2025-06-09 21:30:41,318 - __main__ - INFO - Configuraciï¿½n recibida para el ID de usuario: 74f43bb3-eecc-4329-8a43-9fe9b73fb38b
+2025-06-09 21:30:41,335 - src.ultibot_ui.services.trading_mode_state - INFO - TradingModeStateManager initialized with mode: paper
+2025-06-09 21:30:41,335 - src.ultibot_ui.services.trading_mode_state - INFO - Created global trading mode state manager
+2025-06-09 21:30:41,541 - src.ultibot_ui.widgets.portfolio_widget - INFO - Timer de actualizaciï¿½n del portafolio iniciado.
+2025-06-09 21:30:41,547 - src.ultibot_ui.widgets.chart_widget - INFO - Solicitando datos para BTCUSDT - 1h usando ApiWorker
+2025-06-09 21:30:41,557 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: _initialize_async_components INVOCADO
+2025-06-09 21:30:41,751 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: __init__ called.
+2025-06-09 21:30:41,751 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: _load_initial_data called.
+2025-06-09 21:30:41,787 - src.ultibot_ui.windows.history_view - INFO - HistoryView inicializada para usuario 74f43bb3-eecc-4329-8a43-9fe9b73fb38b
+2025-06-09 21:30:41,791 - src.ultibot_ui.services.ui_strategy_service - INFO - UIStrategyService: Initiating fetch_strategies via ApiWorker.
+2025-06-09 21:30:41,792 - src.ultibot_ui.windows.main_window - INFO - MainWindow: Initiated strategy fetch via UIStrategyService.
+2025-06-09 21:30:41,792 - src.ultibot_ui.windows.main_window - INFO - Central widget y vistas configuradas.
+2025-06-09 21:30:41,814 - src.ultibot_ui.windows.main_window - INFO - MainWindow inicializada y visible.
+2025-06-09 21:30:41,917 - __main__ - INFO - Ventana principal mostrada.
+2025-06-09 21:30:41,998 - src.ultibot_ui.views.portfolio_view - INFO - PortfolioView: Fetching portfolio snapshot.
+2025-06-09 21:30:42,000 - src.ultibot_ui.windows.settings_view - INFO - SettingsView: Iniciando carga de datos iniciales (_load_initial_data).
+2025-06-09 21:30:42,001 - src.ultibot_ui.windows.settings_view - INFO - SettingsView: Solicitando configuraciï¿½n de usuario general.
+2025-06-09 21:30:42,001 - src.ultibot_ui.windows.settings_view - INFO - SettingsView: Solicitando estado de operativa real.
+2025-06-09 21:30:42,001 - src.ultibot_ui.views.opportunities_view - INFO - Fetching Gemini IA opportunities.
+2025-06-09 21:30:49,231 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
+2025-06-09 21:30:49,234 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 74f43bb3-eecc-4329-8a43-9fe9b73fb38b, modo: paper
+2025-06-09 21:30:49,234 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'status': 'open'}
+2025-06-09 21:30:50,271 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades?trading_mode=paper&status=open "HTTP/1.1 200 OK"
+2025-06-09 21:30:50,271 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trades "HTTP/HTTP/1.1 200 OK"
+2025-06-09 21:30:50,571 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot?user_id=74f43bb3-eecc-4329-8a43-9fe9b73fb38b&trading_mode=paper "HTTP/1.1 200 OK"
+2025-06-09 21:30:50,571 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/portfolio/snapshot "HTTP/HTTP/1.1 200 OK"
+2025-06-09 21:30:50,571 - src.ultibot_ui.widgets.portfolio_widget - INFO - DATOS COMPLETOS RECIBIDOS EN HANDLER: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-10T01:30:50.568421'}, 'open_trades': [], 'trading_mode': 'paper'}
+2025-06-09 21:30:56,241 - src.ultibot_ui.widgets.chart_widget - INFO - Solicitando datos para BTCUSDT - 15m usando ApiWorker
+2025-06-09 21:30:56,557 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
+2025-06-09 21:30:56,559 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 74f43bb3-eecc-4329-8a43-9fe9b73fb38b, modo: paper
+2025-06-09 21:30:56,559 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'status': 'open'}
+2025-06-09 21:30:57,231 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades?trading_mode=paper&status=open "HTTP/1.1 200 OK"
+2025-06-09 21:30:57,231 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trades "HTTP/HTTP/1.1 200 OK"
+2025-06-09 21:30:57,528 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot?user_id=74f43bb3-eecc-4329-8a43-9fe9b73fb38b&trading_mode=paper "HTTP/1.1 200 OK"
+2025-06-09 21:30:57,528 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/portfolio/snapshot "HTTP/HTTP/1.1 200 OK"
+2025-06-09 21:30:57,529 - src.ultibot_ui.widgets.portfolio_widget - INFO - DATOS COMPLETOS RECIBIDOS EN HANDLER: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-10T01:30:57.524987'}, 'open_trades': [], 'trading_mode': 'paper'}
+2025-06-09 21:31:05,334 - src.ultibot_ui.services.ui_strategy_service - INFO - UIStrategyService: Initiating fetch_strategies via ApiWorker.
+2025-06-09 21:31:05,335 - src.ultibot_ui.windows.main_window - INFO - MainWindow: Initiated strategy fetch via UIStrategyService.
+2025-06-09 21:31:11,562 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
+2025-06-09 21:31:11,563 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 74f43bb3-eecc-4329-8a43-9fe9b73fb38b, modo: paper
+2025-06-09 21:31:11,564 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'status': 'open'}
+2025-06-09 21:31:11,751 - src.ultibot_ui.views.opportunities_view - INFO - Fetching Gemini IA opportunities.
+2025-06-09 21:31:12,471 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades?trading_mode=paper&status=open "HTTP/1.1 200 OK"
+2025-06-09 21:31:12,471 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trades "HTTP/HTTP/1.1 200 OK"
+2025-06-09 21:31:13,217 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot?user_id=74f43bb3-eecc-4329-8a43-9fe9b73fb38b&trading_mode=paper "HTTP/1.1 200 OK"
+2025-06-09 21:31:13,217 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/portfolio/snapshot "HTTP/HTTP/1.1 200 OK"
+2025-06-09 21:31:13,217 - src.ultibot_ui.widgets.portfolio_widget - INFO - DATOS COMPLETOS RECIBIDOS EN HANDLER: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-10T01:31:13.211456'}, 'open_trades': [], 'trading_mode': 'paper'}
+2025-06-09 21:31:26,567 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
+2025-06-09 21:31:26,568 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 74f43bb3-eecc-4329-8a43-9fe9b73fb38b, modo: paper
+2025-06-09 21:31:26,569 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'status': 'open'}
+2025-06-09 21:31:27,171 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot?user_id=74f43bb3-eecc-4329-8a43-9fe9b73fb38b&trading_mode=paper "HTTP/1.1 200 OK"
+2025-06-09 21:31:27,171 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/portfolio/snapshot "HTTP/HTTP/1.1 200 OK"
+2025-06-09 21:31:27,581 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades?trading_mode=paper&status=open "HTTP/1.1 200 OK"
+2025-06-09 21:31:27,581 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trades "HTTP/HTTP/1.1 200 OK"
+2025-06-09 21:31:27,581 - src.ultibot_ui.widgets.portfolio_widget - INFO - DATOS COMPLETOS RECIBIDOS EN HANDLER: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-10T01:31:27.171482'}, 'open_trades': [], 'trading_mode': 'paper'}
+2025-06-09 21:31:29,084 - src.ultibot_ui.windows.main_window - INFO - Cleaning up MainWindow resources. Stopping 10 active threads...
+2025-06-09 21:31:29,084 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: Iniciando limpieza de tareas.
+2025-06-09 21:31:29,084 - src.ultibot_ui.widgets.portfolio_widget - INFO - PortfolioWidget: Limpiando hilos y workers activos.
+2025-06-09 21:31:29,087 - src.ultibot_ui.widgets.portfolio_widget - INFO - PortfolioWidget: Limpieza completada.
+2025-06-09 21:31:29,087 - src.ultibot_ui.widgets.chart_widget - INFO - ChartWidget: Limpieza completada.
+2025-06-09 21:31:29,087 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: Limpieza completada.
+2025-06-09 21:31:29,087 - src.ultibot_ui.widgets.paper_trading_report_widget - INFO - PaperTradingReportWidget cleanup: No hay acciones que tomar.
+2025-06-09 21:31:29,087 - src.ultibot_ui.windows.history_view - INFO - HistoryView cleanup completado
+2025-06-09 21:31:29,087 - src.ultibot_ui.views.opportunities_view - INFO - Cleaning up OpportunitiesView...
+2025-06-09 21:31:29,087 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView cleanup finished.
+2025-06-09 21:31:29,087 - src.ultibot_ui.views.portfolio_view - INFO - PortfolioView: Cleaning up...
+2025-06-09 21:31:29,087 - src.ultibot_ui.views.portfolio_view - INFO - PortfolioView: Cleanup finished.
+2025-06-09 21:31:29,091 - src.ultibot_ui.windows.main_window - INFO - MainWindow cleanup finished.
+2025-06-09 21:31:29,125 - __main__ - INFO - El bucle de eventos de la aplicaciï¿½n ha terminado. Ejecutando limpieza final.
+2025-06-09 21:31:29,125 - __main__ - INFO - Iniciando el proceso de cierre del cliente HTTP...
+2025-06-09 21:31:29,125 - __main__ - WARNING - El bucle de eventos no estï¿½ en ejecuciï¿½n, no se puede cerrar el cliente HTTP de forma asï¿½ncrona.
+2025-06-09 21:31:29,125 - __main__ - INFO - Limpieza final completada.
+2025-06-09 21:34:47,350 - __main__ - INFO - Stylesheet cargado exitosamente.
+2025-06-09 21:34:47,527 - __main__ - INFO - Iniciando inicialización asíncrona...
+2025-06-09 21:34:49,531 - src.ultibot_ui.services.api_client - INFO - Obteniendo configuración de usuario.
+2025-06-09 21:34:50,481 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/config "HTTP/1.1 200 OK"
+2025-06-09 21:34:50,481 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/config "HTTP/HTTP/1.1 200 OK"
+2025-06-09 21:34:50,481 - __main__ - INFO - Configuración recibida para el ID de usuario: 79e03200-81a9-4330-b2a1-a2109554002e
+2025-06-09 21:34:50,500 - src.ultibot_ui.services.trading_mode_state - INFO - TradingModeStateManager initialized with mode: paper
+2025-06-09 21:34:50,500 - src.ultibot_ui.services.trading_mode_state - INFO - Created global trading mode state manager
+2025-06-09 21:34:50,713 - src.ultibot_ui.widgets.portfolio_widget - INFO - Timer de actualización del portafolio iniciado.
+2025-06-09 21:34:50,719 - src.ultibot_ui.widgets.chart_widget - INFO - Solicitando datos para BTCUSDT - 1h usando ApiWorker
+2025-06-09 21:34:50,723 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: _initialize_async_components INVOCADO
+2025-06-09 21:34:50,931 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: __init__ called.
+2025-06-09 21:34:50,931 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: _load_initial_data called.
+2025-06-09 21:34:50,961 - src.ultibot_ui.windows.history_view - INFO - HistoryView inicializada para usuario 79e03200-81a9-4330-b2a1-a2109554002e
+2025-06-09 21:34:50,966 - src.ultibot_ui.services.ui_strategy_service - INFO - UIStrategyService: Initiating fetch_strategies via ApiWorker.
+2025-06-09 21:34:50,966 - src.ultibot_ui.windows.main_window - INFO - MainWindow: Initiated strategy fetch via UIStrategyService.
+2025-06-09 21:34:50,966 - src.ultibot_ui.windows.main_window - INFO - Central widget y vistas configuradas.
+2025-06-09 21:34:50,988 - src.ultibot_ui.windows.main_window - INFO - MainWindow inicializada y visible.
+2025-06-09 21:34:51,096 - __main__ - INFO - Ventana principal mostrada.
+2025-06-09 21:34:51,174 - src.ultibot_ui.views.portfolio_view - INFO - PortfolioView: Fetching portfolio snapshot.
+2025-06-09 21:34:51,176 - src.ultibot_ui.windows.settings_view - INFO - SettingsView: Iniciando carga de datos iniciales (_load_initial_data).
+2025-06-09 21:34:51,176 - src.ultibot_ui.windows.settings_view - INFO - SettingsView: Solicitando configuración de usuario general.
+2025-06-09 21:34:51,176 - src.ultibot_ui.windows.settings_view - INFO - SettingsView: Solicitando estado de operativa real.
+2025-06-09 21:34:51,177 - src.ultibot_ui.views.opportunities_view - INFO - Fetching Gemini IA opportunities.
+2025-06-09 21:35:05,720 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
+2025-06-09 21:35:05,722 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 79e03200-81a9-4330-b2a1-a2109554002e, modo: paper
+2025-06-09 21:35:05,722 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'status': 'open'}
+2025-06-09 21:35:06,705 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades?trading_mode=paper&status=open "HTTP/1.1 200 OK"
+2025-06-09 21:35:06,711 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trades "HTTP/HTTP/1.1 200 OK"
+2025-06-09 21:35:07,511 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot?user_id=79e03200-81a9-4330-b2a1-a2109554002e&trading_mode=paper "HTTP/1.1 200 OK"
+2025-06-09 21:35:07,511 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/portfolio/snapshot "HTTP/HTTP/1.1 200 OK"
+2025-06-09 21:35:07,511 - src.ultibot_ui.widgets.portfolio_widget - INFO - DATOS COMPLETOS RECIBIDOS EN HANDLER: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-10T01:35:07.507399'}, 'open_trades': [], 'trading_mode': 'paper'}
+2025-06-09 21:35:13,991 - src.ultibot_ui.services.ui_strategy_service - INFO - UIStrategyService: Initiating fetch_strategies via ApiWorker.
+2025-06-09 21:35:13,991 - src.ultibot_ui.windows.main_window - INFO - MainWindow: Initiated strategy fetch via UIStrategyService.
+2025-06-09 21:35:20,720 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
+2025-06-09 21:35:20,721 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 79e03200-81a9-4330-b2a1-a2109554002e, modo: paper
+2025-06-09 21:35:20,722 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'status': 'open'}
+2025-06-09 21:35:20,947 - src.ultibot_ui.views.opportunities_view - INFO - Fetching Gemini IA opportunities.
+2025-06-09 21:35:21,305 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades?trading_mode=paper&status=open "HTTP/1.1 200 OK"
+2025-06-09 21:35:21,305 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trades "HTTP/HTTP/1.1 200 OK"
+2025-06-09 21:35:21,573 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot?user_id=79e03200-81a9-4330-b2a1-a2109554002e&trading_mode=paper "HTTP/1.1 200 OK"
+2025-06-09 21:35:21,573 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/portfolio/snapshot "HTTP/HTTP/1.1 200 OK"
+2025-06-09 21:35:21,573 - src.ultibot_ui.widgets.portfolio_widget - INFO - DATOS COMPLETOS RECIBIDOS EN HANDLER: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-10T01:35:21.571633'}, 'open_trades': [], 'trading_mode': 'paper'}
+2025-06-09 21:35:22,311 - src.ultibot_ui.windows.settings_view - ERROR - SettingsView: No hay configuración actual para guardar. Operación cancelada.
+2025-06-09 21:35:26,711 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
+2025-06-09 21:35:26,711 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 79e03200-81a9-4330-b2a1-a2109554002e, modo: paper
+2025-06-09 21:35:26,711 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'status': 'open'}
+2025-06-09 21:35:27,338 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades?trading_mode=paper&status=open "HTTP/1.1 200 OK"
+2025-06-09 21:35:27,339 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trades "HTTP/HTTP/1.1 200 OK"
+2025-06-09 21:35:27,641 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot?user_id=79e03200-81a9-4330-b2a1-a2109554002e&trading_mode=paper "HTTP/1.1 200 OK"
+2025-06-09 21:35:27,641 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/portfolio/snapshot "HTTP/HTTP/1.1 200 OK"
+2025-06-09 21:35:27,641 - src.ultibot_ui.widgets.portfolio_widget - INFO - DATOS COMPLETOS RECIBIDOS EN HANDLER: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-10T01:35:27.641546'}, 'open_trades': [], 'trading_mode': 'paper'}
+2025-06-09 21:35:30,288 - src.ultibot_ui.widgets.chart_widget - INFO - Solicitando datos para BTCUSDT - 1H usando ApiWorker
+2025-06-09 21:35:35,721 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
+2025-06-09 21:35:35,722 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 79e03200-81a9-4330-b2a1-a2109554002e, modo: paper
+2025-06-09 21:35:35,725 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'status': 'open'}
+2025-06-09 21:35:36,339 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades?trading_mode=paper&status=open "HTTP/1.1 200 OK"
+2025-06-09 21:35:36,339 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trades "HTTP/HTTP/1.1 200 OK"
+2025-06-09 21:35:36,722 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot?user_id=79e03200-81a9-4330-b2a1-a2109554002e&trading_mode=paper "HTTP/1.1 200 OK"
+2025-06-09 21:35:36,722 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/portfolio/snapshot "HTTP/HTTP/1.1 200 OK"
+2025-06-09 21:35:36,722 - src.ultibot_ui.widgets.portfolio_widget - INFO - DATOS COMPLETOS RECIBIDOS EN HANDLER: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-10T01:35:36.711648'}, 'open_trades': [], 'trading_mode': 'paper'}
+2025-06-09 21:35:50,722 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
+2025-06-09 21:35:50,723 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 79e03200-81a9-4330-b2a1-a2109554002e, modo: paper
+2025-06-09 21:35:50,725 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'status': 'open'}
+2025-06-09 21:35:50,962 - src.ultibot_ui.views.opportunities_view - INFO - Fetching Gemini IA opportunities.
+2025-06-09 21:35:51,491 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades?trading_mode=paper&status=open "HTTP/1.1 200 OK"
+2025-06-09 21:35:51,491 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trades "HTTP/HTTP/1.1 200 OK"
+2025-06-09 21:35:52,257 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/portfolio/snapshot?user_id=79e03200-81a9-4330-b2a1-a2109554002e&trading_mode=paper "HTTP/1.1 200 OK"
+2025-06-09 21:35:52,261 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/portfolio/snapshot "HTTP/HTTP/1.1 200 OK"
+2025-06-09 21:35:52,261 - src.ultibot_ui.widgets.portfolio_widget - INFO - DATOS COMPLETOS RECIBIDOS EN HANDLER: {'portfolio_snapshot': {'paper_trading': {'available_balance_usdt': 10000.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 10000.0, 'assets': [], 'error_message': None}, 'real_trading': {'available_balance_usdt': 0.0, 'total_assets_value_usd': 0.0, 'total_portfolio_value_usd': 0.0, 'assets': [], 'error_message': 'Real trading data not requested'}, 'last_updated': '2025-06-10T01:35:52.257062'}, 'open_trades': [], 'trading_mode': 'paper'}
+2025-06-09 21:36:05,721 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
+2025-06-09 21:36:05,723 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 79e03200-81a9-4330-b2a1-a2109554002e, modo: paper
+2025-06-09 21:36:05,723 - src.ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'status': 'open'}
+2025-06-09 21:36:07,967 - src.ultibot_ui.windows.main_window - INFO - Cleaning up MainWindow resources. Stopping 11 active threads...
+2025-06-09 21:36:07,968 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: Iniciando limpieza de tareas.
+2025-06-09 21:36:07,968 - src.ultibot_ui.widgets.portfolio_widget - INFO - PortfolioWidget: Limpiando hilos y workers activos.
+2025-06-09 21:36:12,971 - src.ultibot_ui.widgets.portfolio_widget - INFO - PortfolioWidget: Limpieza completada.
+2025-06-09 21:36:12,971 - src.ultibot_ui.widgets.chart_widget - INFO - ChartWidget: Limpieza completada.
+2025-06-09 21:36:12,971 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: Limpieza completada.
+2025-06-09 21:36:12,971 - src.ultibot_ui.widgets.paper_trading_report_widget - INFO - PaperTradingReportWidget cleanup: No hay acciones que tomar.
+2025-06-09 21:36:12,971 - src.ultibot_ui.windows.history_view - INFO - HistoryView cleanup completado
+2025-06-09 21:36:12,971 - src.ultibot_ui.views.opportunities_view - INFO - Cleaning up OpportunitiesView...
+2025-06-09 21:36:12,971 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView cleanup finished.
+2025-06-09 21:36:12,971 - src.ultibot_ui.views.portfolio_view - INFO - PortfolioView: Cleaning up...
+2025-06-09 21:36:12,972 - src.ultibot_ui.views.portfolio_view - INFO - PortfolioView: Cleanup finished.
+2025-06-09 21:36:12,973 - src.ultibot_ui.windows.main_window - INFO - MainWindow cleanup finished.

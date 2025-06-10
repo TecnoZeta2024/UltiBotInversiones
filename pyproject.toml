@@ -23,9 +23,14 @@ cryptography = "^45.0.3"
 psycopg = {extras = ["binary", "pool"], version = "^3.2.9"}
 langchain-google-genai = "^2.1.5"
 pyparsing = "^3.2.3"
-PyQt5 = "^5.15.10"
-qdarkstyle = "^3.1"
 pyqtgraph = "^0.13.3"
+qdarkstyle = "^3.1"
+qasync = "*"
+mplfinance = "*"
+tenacity = "^8.3.0"
+asgi-correlation-id = "^4.3.1"
+python-binance = "*"
+aiohttp = "*"
 
 
 [tool.poetry.group.dev.dependencies]

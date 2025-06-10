@@ -18,12 +18,13 @@ from src.ultibot_ui.workers import ApiWorker
 logger = logging.getLogger(__name__)
 
 class OpportunitiesView(QWidget):
-    def __init__(self, user_id: UUID, main_window: BaseMainWindow, api_client: UltiBotAPIClient, parent=None): # Add api_client
+    def __init__(self, user_id: UUID, main_window: BaseMainWindow, api_client: UltiBotAPIClient, loop: asyncio.AbstractEventLoop, parent=None):
         super().__init__(parent)
         logger.info("OpportunitiesView: __init__ called.")
         self.user_id = user_id
         self.main_window = main_window
-        self.api_client = api_client # Store api_client
+        self.api_client = api_client
+        self.loop = loop
         logger.debug("OpportunitiesView initialized.")
 
         self._setup_ui()
@@ -112,15 +113,18 @@ class OpportunitiesView(QWidget):
         self.refresh_button.setEnabled(False)
         self.opportunities_table.setRowCount(0)
         
-        coro_factory = lambda api_client: api_client.get_gemini_opportunities()
+        coro_factory = lambda api_client: api_client.get_ai_opportunities()
         self._start_api_worker(coro_factory)
 
     def _start_api_worker(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine]):
         logger.debug("Creating ApiWorker.")
         
-        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory) # Pass api_client
+        worker = ApiWorker(
+            api_client=self.api_client, 
+            coroutine_factory=coroutine_factory,
+            loop=self.loop
+        )
         thread = QThread()
-        # Assuming main_window has add_thread method for tracking
         if hasattr(self.main_window, 'add_thread') and callable(getattr(self.main_window, 'add_thread')):
             self.main_window.add_thread(thread)
         else:
@@ -136,7 +140,8 @@ class OpportunitiesView(QWidget):
         
         thread.start()
 
-    def _handle_opportunities_result(self, opportunities: List[Opportunity]):
+    def _handle_opportunities_result(self, opportunities_data: List[Dict[str, Any]]):
+        opportunities = [Opportunity(**opp) for opp in opportunities_data]
         logger.info(f"Received {len(opportunities)} opportunities.")
         self.status_label.setText(f"Loaded {len(opportunities)} opportunities.")
         self.refresh_button.setEnabled(True)
@@ -158,7 +163,7 @@ class OpportunitiesView(QWidget):
             side = opp.predicted_direction or "N/A"
             entry_price = opp.predicted_price_target
             confidence_score = opp.confidence_score
-            strategy_id = "AI" # Placeholder, as strategy is not directly linked here
+            strategy_id = "AI"
             exchange = opp.exchange or "N/A"
             timestamp = opp.created_at.strftime('%Y-%m-%d %H:%M:%S') if opp.created_at else "N/A"
 

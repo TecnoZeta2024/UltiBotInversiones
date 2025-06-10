@@ -29,11 +29,8 @@ from src.ultibot_backend.core.domain_models.opportunity_models import (
     DataVerification,
     InitialSignal,
 )
-from src.ultibot_backend.services.ai_orchestrator_service import (
-    AIOrchestrator,
-    AIAnalysisResult,
-    OpportunityData,
-)
+from src.ultibot_backend.core.domain_models.ai import AIResponse
+from src.ultibot_backend.services.ai_orchestrator_service import AIOrchestratorService
 from src.ultibot_backend.core.domain_models.trade_models import (
     Trade,
     AIInfluenceDetails,
@@ -49,6 +46,7 @@ from src.ultibot_backend.services.unified_order_execution_service import Unified
 from src.ultibot_backend.services.credential_service import CredentialService
 from src.ultibot_backend.core.exceptions import MarketDataError, BinanceAPIError, OrderExecutionError
 from src.shared.data_types import ServiceName
+from src.ultibot_backend.app_config import AppSettings
 
 # Conditional imports for type checking to avoid circular dependencies
 if TYPE_CHECKING:
@@ -91,7 +89,7 @@ class TradingDecision:
         self.decision_id = str(UUID())
 
 
-class TradingEngine:
+class TradingEngineService:
     """Service for executing trading strategies with AI integration."""
     
     def __init__(
@@ -104,7 +102,8 @@ class TradingEngine:
         strategy_service: "StrategyService",
         configuration_service: "ConfigurationService",
         portfolio_service: "PortfolioService",
-        ai_orchestrator: Optional[AIOrchestrator] = None,
+        ai_orchestrator: Optional[AIOrchestratorService] = None,
+        app_settings: Optional[AppSettings] = None,
     ):
         self.persistence_service = persistence_service
         self.market_data_service = market_data_service
@@ -114,16 +113,25 @@ class TradingEngine:
         self.strategy_service = strategy_service
         self.configuration_service = configuration_service
         self.portfolio_service = portfolio_service
-        self.ai_orchestrator = ai_orchestrator or AIOrchestrator()
+        if ai_orchestrator:
+            self.ai_orchestrator = ai_orchestrator
+        elif app_settings:
+            self.ai_orchestrator = AIOrchestratorService(app_settings=app_settings)
+        else:
+            logger.warning("AIOrchestratorService not initialized because neither an instance nor app_settings were provided.")
+            self.ai_orchestrator = None
+
 
     async def execute_trade_from_confirmed_opportunity(self, opportunity: Opportunity) -> Optional[Trade]:
         logger.info(f"Executing trade directly from confirmed opportunity {opportunity.id}")
 
-        strategies = await self.strategy_service.get_active_strategies(str(opportunity.user_id), "real")
-        if not strategies:
+        strategies = await self.strategy_service.list_strategy_configs(UUID(opportunity.user_id))
+        active_strategies = [s for s in strategies if s.is_active_real_mode]
+
+        if not active_strategies:
             raise OrderExecutionError(f"No active real strategies found for user {opportunity.user_id} to execute confirmed opportunity {opportunity.id}")
         
-        strategy = strategies[0]
+        strategy = active_strategies[0]
         logger.warning(f"Using strategy '{strategy.config_name}' as context for confirmed opportunity {opportunity.id}")
 
         decision = TradingDecision(
@@ -181,13 +189,13 @@ class TradingEngine:
                     tp_price = float(tp_value)
 
             trade = Trade(
-                id=str(UUID()),
-                user_id=str(strategy.user_id),
+                id=UUID(),
+                user_id=UUID(strategy.user_id),
                 mode=actual_trade_mode,
                 symbol=opportunity.symbol,
                 side=actual_trade_side,
-                strategy_id=str(strategy.id),
-                opportunity_id=str(opportunity.id),
+                strategy_id=UUID(strategy.id),
+                opportunity_id=UUID(opportunity.id),
                 position_status=PositionStatus.PENDING_ENTRY_CONDITIONS,
                 entry_order=self._create_entry_order_from_decision(decision, opportunity),
                 ai_analysis_confidence=decision.confidence if decision.ai_analysis_used else None,
@@ -226,7 +234,7 @@ class TradingEngine:
 
             logger.info(f"Created trade {trade.id} from decision {decision.decision_id}")
             
-            await self.persistence_service.upsert_trade(UUID(trade.user_id), trade.model_dump())
+            await self.persistence_service.upsert_trade(trade.model_dump())
             logger.info(f"Trade {trade.id} persisted before execution.")
 
             return trade
@@ -240,31 +248,12 @@ class TradingEngine:
         quantity = params.get("position_size_percentage", 1.0)
 
         return TradeOrderDetails(
-            order_id_internal=str(UUID()),
+            order_id_internal=UUID(),
             type=OrderType.MARKET,
             status=OrderStatus.NEW,
             requested_price=float(entry_price) if entry_price else None,
             requested_quantity=float(quantity),
-            timestamp=datetime.now(timezone.utc),
-            order_id_exchange=None,
-            client_order_id_exchange=None,
-            exchange_status_raw=None,
-            rejection_reason_code=None,
-            rejection_reason_message=None,
-            stop_price=None,
-            executed_price=None,
-            slippage_amount=None,
-            slippage_percentage=None,
-            executed_quantity=None,
-            cumulative_quote_qty=None,
-            commissions=None,
-            submitted_at=None,
-            last_update_timestamp=None,
-            fill_timestamp=None,
-            trailing_stop_activation_price=None,
-            trailing_stop_callback_rate=None,
-            current_stop_price_tsl=None,
-            oco_group_id_exchange=None
+            timestamp=datetime.now(timezone.utc)
         )
 
     async def _update_opportunity_status(self, opportunity: Opportunity, status: OpportunityStatus, reason_code: str, reason_text: str) -> None:
@@ -274,9 +263,11 @@ class TradingEngine:
         opportunity.updated_at = datetime.now(timezone.utc)
         logger.info(f"Updated opportunity {opportunity.id} status to {status.value}: {reason_text}")
         try:
+            if opportunity.id is None:
+                logger.error("Cannot update opportunity status without an ID.")
+                return
             await self.persistence_service.update_opportunity_status(
-                opportunity_id=UUID(opportunity.id), 
-                user_id=UUID(opportunity.user_id), 
+                opportunity_id=UUID(opportunity.id),
                 new_status=status, 
                 status_reason=reason_text
             )

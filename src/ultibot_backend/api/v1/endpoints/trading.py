@@ -4,7 +4,7 @@ from typing import Annotated, Literal, Optional
 from pydantic import BaseModel, Field
 
 from src.shared.data_types import ConfirmRealTradeRequest, OpportunityStatus, Opportunity, TradeOrderDetails
-from src.ultibot_backend.services.trading_engine_service import TradingEngine
+from src.ultibot_backend.services.trading_engine_service import TradingEngineService
 from src.ultibot_backend.services.config_service import ConfigurationService
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 from src.ultibot_backend.services.unified_order_execution_service import UnifiedOrderExecutionService
@@ -17,7 +17,7 @@ router = APIRouter()
 async def confirm_real_opportunity(
     opportunity_id: UUID,
     request: ConfirmRealTradeRequest,
-    trading_engine_service: Annotated[TradingEngine, Depends(deps.get_trading_engine_service)],
+    trading_engine_service: Annotated[TradingEngineService, Depends(deps.get_trading_engine_service)],
     config_service: Annotated[ConfigurationService, Depends(deps.get_config_service)],
     persistence_service: Annotated[SupabasePersistenceService, Depends(deps.get_persistence_service)]
 ):

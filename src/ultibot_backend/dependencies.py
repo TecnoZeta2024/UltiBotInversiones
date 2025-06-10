@@ -3,20 +3,20 @@ from functools import lru_cache
 from typing import Optional
 
 import httpx
-from src.ultibot_backend.services.order_execution_service import PaperOrderExecutionService
+from src.ultibot_backend.app_config import settings
+from src.ultibot_backend.services.order_execution_service import PaperOrderExecutionService, OrderExecutionService
 from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
 from src.ultibot_backend.adapters.mobula_adapter import MobulaAdapter
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService as PersistenceService
-from src.ultibot_backend.services.ai_orchestrator_service import AIOrchestrator as AIOrchestratorService
+from src.ultibot_backend.services.ai_orchestrator_service import AIOrchestratorService
 from src.ultibot_backend.services.config_service import ConfigurationService
 from src.ultibot_backend.services.credential_service import CredentialService
 from src.ultibot_backend.services.market_data_service import MarketDataService
 from src.ultibot_backend.services.notification_service import NotificationService
-from src.ultibot_backend.services.order_execution_service import OrderExecutionService
 from src.ultibot_backend.services.performance_service import PerformanceService
 from src.ultibot_backend.services.portfolio_service import PortfolioService
 from src.ultibot_backend.services.strategy_service import StrategyService
-from src.ultibot_backend.services.trading_engine_service import TradingEngine as TradingEngineService
+from src.ultibot_backend.services.trading_engine_service import TradingEngineService
 from src.ultibot_backend.services.trading_report_service import TradingReportService
 from src.ultibot_backend.services.unified_order_execution_service import UnifiedOrderExecutionService
 
@@ -50,8 +50,21 @@ class DependencyContainer:
         # Level 0: No service dependencies
         self.persistence_service = PersistenceService()
         await self.persistence_service.connect()
-        self.binance_adapter = BinanceAdapter()
+        
+        binance_api_key = settings.BINANCE_API_KEY or ""
+        binance_api_secret = settings.BINANCE_API_SECRET or ""
+
+        self.binance_adapter = BinanceAdapter(
+            api_key=binance_api_key,
+            api_secret=binance_api_secret,
+            http_client=self.http_client
+        )
+        
         self.paper_order_execution_service = PaperOrderExecutionService()
+        
+        self.ai_orchestrator_service = AIOrchestratorService(
+            app_settings=settings
+        )
 
         # Level 1: Depend on Level 0
         self.credential_service = CredentialService(
@@ -83,9 +96,6 @@ class DependencyContainer:
         )
 
         # Level 3: Depend on Level 2
-        self.ai_orchestrator_service = AIOrchestratorService(
-            market_data_service=self.market_data_service
-        )
         self.portfolio_service = PortfolioService(
             persistence_service=self.persistence_service,
             market_data_service=self.market_data_service
@@ -98,11 +108,12 @@ class DependencyContainer:
             portfolio_service=self.portfolio_service,
             notification_service=self.notification_service
         )
+        self.config_service.set_notification_service(self.notification_service)
+
 
         # Level 5: Depend on previous levels
         self.strategy_service = StrategyService(
-            persistence_service=self.persistence_service,
-            configuration_service=self.config_service
+            persistence_service=self.persistence_service
         )
 
         # Level 6: Depend on previous levels (including StrategyService)
@@ -121,7 +132,8 @@ class DependencyContainer:
             strategy_service=self.strategy_service,
             configuration_service=self.config_service,
             portfolio_service=self.portfolio_service,
-            ai_orchestrator=self.ai_orchestrator_service
+            ai_orchestrator=self.ai_orchestrator_service,
+            app_settings=settings
         )
         logger.info("Dependency container initialized successfully.")
 

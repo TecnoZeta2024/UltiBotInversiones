@@ -32,10 +32,11 @@ class OrderFormWidget(QWidget):
     order_executed = pyqtSignal(object)
     order_failed = pyqtSignal(str)
     
-    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, parent: Optional[QWidget] = None):
+    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, loop: asyncio.AbstractEventLoop, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.user_id = user_id
         self.api_client = api_client
+        self.loop = loop
         self.active_api_workers = []
         
         self.trading_mode_manager: TradingModeStateManager = get_trading_mode_manager()
@@ -49,10 +50,10 @@ class OrderFormWidget(QWidget):
     def _run_api_worker_and_await_result(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine]) -> Any:
         import qasync
 
-        qasync_loop = asyncio.get_event_loop()
+        qasync_loop = self.loop
         future = qasync_loop.create_future()
 
-        worker = ApiWorker(coroutine_factory=coroutine_factory, api_client=self.api_client)
+        worker = ApiWorker(coroutine_factory=coroutine_factory, api_client=self.api_client, loop=self.loop)
         thread = QThread()
         self.active_api_workers.append((worker, thread))
 

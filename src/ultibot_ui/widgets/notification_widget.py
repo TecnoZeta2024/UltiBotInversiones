@@ -22,11 +22,12 @@ class NotificationWidget(QWidget):
     notification_dismissed = pyqtSignal(str)
     all_notifications_read = pyqtSignal()
 
-    def __init__(self, user_id: UUID, main_window: BaseMainWindow, api_client: UltiBotAPIClient, parent: Optional[QWidget] = None): # Add api_client
+    def __init__(self, user_id: UUID, main_window: BaseMainWindow, api_client: UltiBotAPIClient, loop: asyncio.AbstractEventLoop, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.user_id = user_id
         self.main_window = main_window
-        self.api_client = api_client # Store api_client
+        self.api_client = api_client
+        self.loop = loop
         self.notifications: List[Notification] = []
         self._is_fetching_notifications = False
         self.init_ui()
@@ -46,8 +47,9 @@ class NotificationWidget(QWidget):
         self._is_fetching_notifications = True
         
         worker = ApiWorker(
-            api_client=self.api_client, # Pass stored api_client
-            coroutine_factory=lambda client_in_lambda: client_in_lambda.get_notification_history(limit=20)
+            api_client=self.api_client,
+            coroutine_factory=lambda client_in_lambda: client_in_lambda.get_notification_history(limit=20),
+            loop=self.loop
         )
         thread = QThread()
         
@@ -323,8 +325,11 @@ if __name__ == '__main__':
             print(f"MockMainWindow: Thread '{thread.objectName()}' added for tracking.")
 
     mock_main_window = MockMainWindow()
+    
+    # Mock loop for testing purposes
+    test_loop = asyncio.get_event_loop()
 
-    notification_widget = NotificationWidget(user_id=test_user_id, main_window=mock_main_window)
+    notification_widget = NotificationWidget(user_id=test_user_id, main_window=mock_main_window, api_client=None, loop=test_loop)
     main_layout.addWidget(notification_widget)
     
     from datetime import timedelta

@@ -15,14 +15,16 @@ for /d /r . %%d in (__pycache__) do (
 )
 echo Limpieza de __pycache__ completada.
 
-echo Lanzando el backend con Uvicorn...
-start "UltiBot Backend" cmd /c "poetry run uvicorn src.ultibot_backend.main:app --host 0.0.0.0 --port 8000 --reload"
+echo Lanzando el backend con el método de módulo de Python...
+rem --- CORRECCIÓN ARQUITECTÓNICA: Lanzar como un módulo para resolver imports ---
+start "UltiBot Backend" cmd /c "poetry run python -m src.ultibot_backend"
 
 echo Dando 10 segundos al backend para que se inicie...
 timeout /t 10 /nobreak > nul
 
-echo Lanzando el frontend...
-start "UltiBot Frontend" cmd /c "poetry run python src/ultibot_ui/main.py"
+echo Lanzando el frontend con el método de módulo de Python...
+rem --- CORRECCIÓN ARQUITECTÓNICA: Lanzar como un módulo para consistencia y resolución de imports ---
+start "UltiBot Frontend" cmd /k "poetry run python -m src.ultibot_ui.main || (echo ERROR: El frontend ha fallado. Presiona cualquier tecla para cerrar esta ventana... && pause)"
 
 echo.
 echo UltiBotInversiones: Backend y Frontend lanzados en ventanas separadas.

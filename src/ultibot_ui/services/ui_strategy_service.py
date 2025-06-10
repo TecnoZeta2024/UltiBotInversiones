@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from typing import List, Dict, Any, Optional
 from PyQt5.QtCore import QObject, pyqtSignal, QThread
 from typing import List, Any # Added for type hinting
@@ -14,10 +15,11 @@ class UIStrategyService(QObject):
     strategies_updated = pyqtSignal(list) # List of AiStrategyConfiguration dicts or compatible structures
     error_occurred = pyqtSignal(str)
 
-    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent: Optional[QObject] = None):
+    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, loop: asyncio.AbstractEventLoop, parent: Optional[QObject] = None):
         super().__init__(parent)
         self.api_client = api_client # Store the shared API client
         self.main_window = main_window
+        self.loop = loop
 
     def fetch_strategies(self) -> None: # This method is not async, it starts a worker
         """
@@ -28,7 +30,8 @@ class UIStrategyService(QObject):
         # The coroutine_factory's argument 'client' will be self.api_client passed by the worker
         worker = ApiWorker(
             api_client=self.api_client,
-            coroutine_factory=lambda client: client.get_strategies()
+            coroutine_factory=lambda client: client.get_strategies(),
+            loop=self.loop
         )
         thread = QThread()
         # Ensure main_window has add_thread method.

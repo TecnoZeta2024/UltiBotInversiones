@@ -18,10 +18,11 @@ class SettingsView(QWidget):
     config_changed = pyqtSignal(UserConfiguration)
     real_trading_mode_status_changed = pyqtSignal(bool, int, int)
 
-    def __init__(self, user_id: str, api_client: UltiBotAPIClient, parent=None): # Add api_client
+    def __init__(self, user_id: str, api_client: UltiBotAPIClient, loop: asyncio.AbstractEventLoop, parent=None):
         super().__init__(parent)
         self.user_id = user_id
-        self.api_client = api_client # Store api_client
+        self.api_client = api_client
+        self.loop = loop
         self.current_config: Optional[UserConfiguration] = None
         self.real_trading_status: Dict[str, Any] = {"isActive": False, "executedCount": 0, "limit": 5}
         self.active_threads: List[QThread] = []
@@ -93,7 +94,7 @@ class SettingsView(QWidget):
         self._load_real_trading_status()
 
     def _start_api_worker(self, coroutine_factory, on_success, on_error):
-        worker = ApiWorker(coroutine_factory=coroutine_factory)
+        worker = ApiWorker(coroutine_factory=coroutine_factory, api_client=self.api_client, loop=self.loop)
         thread = QThread()
         self.active_threads.append(thread)
         worker.moveToThread(thread)
@@ -208,7 +209,7 @@ class SettingsView(QWidget):
             "Estás a punto de activar el MODO DE OPERATIVA REAL LIMITADA.\n"
             "Esto significa que las PRÓXIMAS OPERACIONES que cumplan los criterios de alta confianza "
             "utilizarán DINERO REAL de tu cuenta de Binance.\n\n"
-            "Asegúrate de entender los riesgos. ¿Deseas continuar?"
+"Asegúrate de entender los riesgos. ¿Deseas continuar?"
         )
         reply = QMessageBox.warning(
             self, 

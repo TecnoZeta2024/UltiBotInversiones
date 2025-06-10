@@ -26,10 +26,11 @@ class ChartWidget(QWidget):
     candlestick_data_fetched = pyqtSignal(list)
     api_error_occurred = pyqtSignal(str)
     
-    def __init__(self, main_window: BaseMainWindow, api_client: UltiBotAPIClient, parent: Optional[QWidget] = None): # Add api_client
+    def __init__(self, main_window: BaseMainWindow, api_client: UltiBotAPIClient, loop: asyncio.AbstractEventLoop, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.main_window = main_window
-        self.api_client = api_client # Store api_client
+        self.api_client = api_client
+        self.loop = loop
         self.current_symbol: Optional[str] = None
         self.current_interval: Optional[str] = "1h"
         self.candlestick_data: List[Kline] = []
@@ -108,12 +109,13 @@ class ChartWidget(QWidget):
                 return
 
             worker = ApiWorker(
-                api_client=self.api_client, # Pass stored api_client
-                coroutine_factory=lambda client_in_lambda: client_in_lambda.get_candlestick_data(
+                api_client=self.api_client,
+                coroutine_factory=lambda client_in_lambda: client_in_lambda.get_ohlcv_data(
                     symbol=current_symbol,
-                    interval=current_interval,
+                    timeframe=current_interval,
                     limit=200
-                )
+                ),
+                loop=self.loop
             )
             thread = QThread()
             self.main_window.add_thread(thread)
@@ -138,9 +140,8 @@ class ChartWidget(QWidget):
             return
 
         try:
-            # Convertir lista de objetos Kline a lista de diccionarios
-            data_for_df = [kline.model_dump() for kline in self.candlestick_data]
-            df = pd.DataFrame(data_for_df)
+            data_for_df = [Kline(**kline_data) for kline_data in self.candlestick_data]
+            df = pd.DataFrame([k.model_dump() for k in data_for_df])
 
             if 'open_time' not in df.columns:
                 logger.error("La columna 'open_time' no se encuentra en los datos del gráfico después de la conversión.")
