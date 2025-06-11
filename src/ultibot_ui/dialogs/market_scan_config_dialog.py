@@ -6,7 +6,7 @@ permitiendo a los usuarios crear, editar y ejecutar configuraciones personalizad
 """
 import logging
 import asyncio
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Callable, Coroutine
 from datetime import datetime
 
 from PyQt5.QtWidgets import (
@@ -20,39 +20,12 @@ from PyQt5.QtCore import Qt, pyqtSignal, QThread, QTimer
 from PyQt5.QtGui import QFont, QIcon
 
 from ..services.api_client import UltiBotAPIClient, APIError
+from ..models import BaseMainWindow
 from ...ultibot_backend.core.domain_models.user_configuration_models import (
     MarketScanConfiguration, VolumeFilter, MarketCapRange, TrendDirection
 )
 
 logger = logging.getLogger(__name__)
-
-class MarketScanWorker(QThread):
-    """Worker thread para ejecutar escaneos de mercado sin bloquear la UI."""
-    
-    scan_completed = pyqtSignal(list)  # Señal con resultados del escaneo
-    scan_error = pyqtSignal(str)       # Señal con mensaje de error
-    
-    def __init__(self, api_client: UltiBotAPIClient, scan_config: Dict[str, Any]):
-        super().__init__()
-        self.api_client = api_client
-        self.scan_config = scan_config
-        
-    def run(self):
-        """Ejecuta el escaneo en el hilo separado."""
-        try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            
-            result = loop.run_until_complete(
-                self.api_client.execute_market_scan(self.scan_config)
-            )
-            
-            self.scan_completed.emit(result)
-        except Exception as e:
-            logger.error(f"Error en worker de escaneo: {e}", exc_info=True)
-            self.scan_error.emit(str(e))
-        finally:
-            loop.close()
 
 class MarketScanConfigDialog(QDialog):
     """
@@ -66,15 +39,16 @@ class MarketScanConfigDialog(QDialog):
     - Ejecutar escaneos en tiempo real
     """
     
-    def __init__(self, api_client: UltiBotAPIClient, 
+    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, loop: asyncio.AbstractEventLoop,
                  scan_config: Optional[Dict[str, Any]] = None,
                  is_edit_mode: bool = False,
                  parent=None):
         super().__init__(parent)
         self.api_client = api_client
+        self.main_window = main_window
+        self.loop = loop
         self.scan_config = scan_config
         self.is_edit_mode = is_edit_mode
-        self.scan_worker = None
         
         self.setWindowTitle("Configuración Avanzada de Escaneo de Mercado")
         self.setMinimumSize(800, 700)
@@ -648,16 +622,17 @@ class MarketScanConfigDialog(QDialog):
         
         self.config_preview.setPlainText(preview_text)
         
+    def _submit_api_task(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine], on_success: Callable, on_error: Callable):
+        """Envía una tarea a la ventana principal para su ejecución."""
+        self.main_window.submit_task(coroutine_factory, on_success, on_error)
+
     def _validate_form_async(self):
         """Valida el formulario de forma asíncrona."""
         try:
             config_data = self._get_form_data()
             
-            # Crear worker para validación
-            self.validation_worker = MarketScanWorker(self.api_client, {})
-            self.validation_worker.finished.connect(lambda: self._perform_validation(config_data))
-            
-            # Ejecutar validación directa (sin worker para validación simple)
+            # Usar el API client para la validación del backend si es necesario
+            # Por ahora, solo validación del lado del cliente
             self._perform_validation(config_data)
             
         except Exception as e:
@@ -677,14 +652,17 @@ class MarketScanConfigDialog(QDialog):
         min_price_24h = config_data.get('min_price_change_24h_percent')
         max_price_24h = config_data.get('max_price_change_24h_percent')
         if (min_price_24h is not None and max_price_24h is not None and 
-            min_price_24h != -100 and max_price_24h != -100 and
+            min_price_24h != self.min_price_change_24h_spin.minimum() and 
+            max_price_24h != self.max_price_change_24h_spin.minimum() and
             min_price_24h >= max_price_24h):
             errors.append("El cambio mínimo de precio 24h debe ser menor al máximo")
             
         min_rsi = config_data.get('min_rsi')
         max_rsi = config_data.get('max_rsi')
         if (min_rsi is not None and max_rsi is not None and 
-            min_rsi > 0 and max_rsi > 0 and min_rsi >= max_rsi):
+            min_rsi != self.min_rsi_spin.minimum() and 
+            max_rsi != self.max_rsi_spin.minimum() and
+            min_rsi >= max_rsi):
             errors.append("El RSI mínimo debe ser menor al máximo")
             
         # Validaciones de advertencias
@@ -727,29 +705,18 @@ class MarketScanConfigDialog(QDialog):
         
     def _execute_test_scan(self):
         """Ejecuta un escaneo de prueba."""
-        try:
-            # Validar configuración primero
-            config_data = self._get_form_data()
-            if not config_data.get('name', '').strip():
-                QMessageBox.warning(self, "Configuración Incompleta", 
-                                  "Complete el nombre de la configuración antes de ejecutar.")
-                return
-                
-            # Mostrar progreso
-            self.progress_bar.setVisible(True)
-            self.progress_bar.setRange(0, 0)  # Indeterminate progress
-            self.test_scan_btn.setEnabled(False)
+        config_data = self._get_form_data()
+        if not config_data.get('name', '').strip():
+            QMessageBox.warning(self, "Configuración Incompleta", 
+                              "Complete el nombre de la configuración antes de ejecutar.")
+            return
             
-            # Crear y ejecutar worker
-            self.scan_worker = MarketScanWorker(self.api_client, config_data)
-            self.scan_worker.scan_completed.connect(self._on_scan_completed)
-            self.scan_worker.scan_error.connect(self._on_scan_error)
-            self.scan_worker.start()
-            
-        except Exception as e:
-            logger.error(f"Error al ejecutar escaneo de prueba: {e}", exc_info=True)
-            QMessageBox.critical(self, "Error", f"Error al ejecutar escaneo: {str(e)}")
-            self._reset_scan_ui()
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setRange(0, 0)  # Indeterminate progress
+        self.test_scan_btn.setEnabled(False)
+        
+        coroutine_factory = lambda client: client.execute_market_scan(config_data)
+        self._submit_api_task(coroutine_factory, self._on_scan_completed, self._on_scan_error)
             
     def _on_scan_completed(self, results: List[Dict[str, Any]]):
         """Maneja la finalización exitosa del escaneo."""
@@ -818,9 +785,6 @@ class MarketScanConfigDialog(QDialog):
         """Resetea la UI después del escaneo."""
         self.progress_bar.setVisible(False)
         self.test_scan_btn.setEnabled(True)
-        if self.scan_worker:
-            self.scan_worker.deleteLater()
-            self.scan_worker = None
             
     def _get_form_data(self) -> Dict[str, Any]:
         """Recoge los datos del formulario y los devuelve como diccionario."""
@@ -950,55 +914,31 @@ class MarketScanConfigDialog(QDialog):
             
     def _save_config(self):
         """Guarda la configuración."""
-        try:
-            # Validar configuración
-            config_data = self._get_form_data()
-            if not config_data.get('name', '').strip():
-                QMessageBox.warning(self, "Campo Requerido", 
-                                  "El nombre de la configuración es obligatorio.")
-                return
-                
-            # Ejecutar guardado asíncrono
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+        config_data = self._get_form_data()
+        if not config_data.get('name', '').strip():
+            QMessageBox.warning(self, "Campo Requerido", 
+                              "El nombre de la configuración es obligatorio.")
+            return
             
-            try:
-                if self.is_edit_mode:
-                    # Actualizar configuración existente
-                    config_id = self.scan_config.get('id')
-                    if not config_id:
-                        raise ValueError("ID de configuración faltante para edición")
-                    
-                    loop.run_until_complete(
-                        self.api_client.update_scan_configuration(config_id, config_data)
-                    )
-                    QMessageBox.information(self, "Éxito", 
-                                          f"Configuración '{config_data['name']}' actualizada correctamente.")
-                else:
-                    # Crear nueva configuración
-                    loop.run_until_complete(
-                        self.api_client.create_scan_configuration(config_data)
-                    )
-                    QMessageBox.information(self, "Éxito", 
-                                          f"Configuración '{config_data['name']}' creada correctamente.")
-                
-                self.accept()
-                
-            except APIError as e:
-                logger.error(f"Error de API al guardar configuración: {e}")
-                QMessageBox.critical(self, "Error de API", 
-                                   f"No se pudo guardar la configuración: {e.message}")
-            except Exception as e:
-                logger.error(f"Error inesperado al guardar configuración: {e}", exc_info=True)
-                QMessageBox.critical(self, "Error", f"Error inesperado: {str(e)}")
-            finally:
-                loop.close()
-                
-        except Exception as e:
-            logger.error(f"Error al guardar configuración: {e}", exc_info=True)
-            QMessageBox.critical(self, "Error", f"Error al guardar configuración: {str(e)}")
+        if self.is_edit_mode:
+            config_id = self.scan_config.get('id')
+            if not config_id:
+                QMessageBox.critical(self, "Error", "ID de configuración faltante para edición.")
+                return
+            coroutine_factory = lambda client: client.update_market_scan_configuration(config_id, config_data)
+            on_success = lambda _: QMessageBox.information(self, "Éxito", f"Configuración '{config_data['name']}' actualizada correctamente.")
+        else:
+            coroutine_factory = lambda client: client.create_market_scan_configuration(config_data)
+            on_success = lambda _: QMessageBox.information(self, "Éxito", f"Configuración '{config_data['name']}' creada correctamente.")
+        
+        self._submit_api_task(coroutine_factory, on_success, self._on_save_config_error)
 
-if __name__ == '__main__':
+    def _on_save_config_error(self, error_message: str):
+        logger.error(f"Error de API al guardar configuración: {error_message}")
+        QMessageBox.critical(self, "Error de API", f"No se pudo guardar la configuración: {error_message}")
+        
+def main():
+    """Función principal para testing del diálogo."""
     import sys
     from PyQt5.QtWidgets import QApplication
     
@@ -1024,16 +964,30 @@ if __name__ == '__main__':
                 }
             ]
         
-        async def create_scan_configuration(self, config):
+        async def create_market_scan_configuration(self, config):
             return {"id": "test-123", **config}
             
-        async def update_scan_configuration(self, config_id, config):
+        async def update_market_scan_configuration(self, config_id, config):
             return {"id": config_id, **config}
     
     app = QApplication(sys.argv)
     
     mock_client = MockAPIClient()
-    dialog = MarketScanConfigDialog(mock_client)
+    # Para pruebas, se necesita un mock de main_window que tenga submit_task
+    class MockMainWindow:
+        def submit_task(self, coroutine_factory, on_success, on_error):
+            async def run_mock_task():
+                try:
+                    result = await coroutine_factory(mock_client)
+                    on_success(result)
+                except Exception as e:
+                    on_error(str(e))
+            asyncio.create_task(run_mock_task())
+
+    mock_main_window = MockMainWindow()
+    # Pasar el loop real de qasync si se está ejecutando en un entorno qasync
+    # Para este mock, simplemente pasamos None o un loop dummy
+    dialog = MarketScanConfigDialog(mock_client, mock_main_window, asyncio.get_event_loop())
     
     if dialog.exec_():
         print("Configuración guardada:", dialog._get_form_data())

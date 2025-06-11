@@ -18,7 +18,7 @@ from asgi_correlation_id import CorrelationIdMiddleware, correlation_id, Correla
 
 from src.ultibot_backend.api.v1.endpoints import (
     config, market_data, market_configuration, notifications, opportunities,
-    performance, portfolio, reports, strategies, trades, trading, trading_mode
+    performance, portfolio, reports, strategies, trades, trading, trading_mode, ai_analysis
 )
 from src.ultibot_backend.dependencies import get_container
 from src.ultibot_backend.core.exceptions import UltiBotError
@@ -160,6 +160,7 @@ app.include_router(trading.router, prefix=f"{api_prefix}/trading", tags=["tradin
 app.include_router(market_data.router, prefix=f"{api_prefix}/market", tags=["market_data"])
 app.include_router(market_configuration.router, prefix=api_prefix, tags=["market_configuration"])
 app.include_router(trading_mode.router, prefix=api_prefix, tags=["trading_mode"])
+app.include_router(ai_analysis.router, prefix=api_prefix, tags=["ai_analysis"])
 logger.info("Todos los routers han sido registrados.")
 
 

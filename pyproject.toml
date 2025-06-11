@@ -32,6 +32,7 @@ asgi-correlation-id = "^4.3.1"
 python-binance = "*"
 aiohttp = "*"
 pyside6 = {version = ">=6.5.0,<6.10.0", python = ">=3.11,<3.14"}
+psutil = "^7.0.0"
 
 
 [tool.poetry.group.dev.dependencies]

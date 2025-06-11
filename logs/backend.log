@@ -1,143 +1,131 @@
 INFO:     Will watch for changes in these directories: ['C:\\Users\\zamor\\UltiBotInversiones']
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [28772] using WatchFiles
-2025-06-10 18:20:32,604 - src.ultibot_backend.services.simulated_portfolio_service - INFO - SimulatedPortfolioService initialized with initial balance: 100000.0
-2025-06-10 18:20:32,661 - ultibot_backend - INFO - [e4ec5de4524c] - MainThread - main.py:78 - Logging configurado exitosamente usando dictConfig.
-2025-06-10 18:20:32,662 - ultibot_backend - INFO - [9dee30f2c1bf] - MainThread - main.py:150 - Registrando routers de la API...
-2025-06-10 18:20:32,685 - ultibot_backend - INFO - [4533dd706da8] - MainThread - main.py:163 - Todos los routers han sido registrados.
-2025-06-10 18:20:32,688 - ultibot_backend - INFO - [b24c2eef3183] - MainThread - main.py:87 - Iniciando UltiBot Backend...
-2025-06-10 18:20:32,688 - ultibot_backend - INFO - [1a501c5b42c1] - MainThread - main.py:91 - LIFESPAN: Inicializando contenedor de dependencias...
-2025-06-10 18:20:32,688 - src.ultibot_backend.dependencies - INFO - [ffd7a6c92761] - MainThread - dependencies.py:58 - Initializing dependency container...
-2025-06-10 18:20:32,689 - httpx - DEBUG - [2778c1d12ff3] - MainThread - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
-2025-06-10 18:20:32,689 - httpx - DEBUG - [2e64c912abe9] - MainThread - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\AppData\\Local\\pypoetry\\Cache\\virtualenvs\\ultibotinversiones-UOQi1NQu-py3.11\\Lib\\site-packages\\certifi\\cacert.pem'
-2025-06-10 18:20:32,869 - src.ultibot_backend.adapters.persistence_service - INFO - [f6eeb883c9e1] - MainThread - persistence_service.py:68 - Pool de conexiones a Supabase (psycopg_pool) establecido exitosamente. Min: 2, Max: 10
-2025-06-10 18:20:32,883 - src.ultibot_backend.services.ai_orchestrator_service - INFO - [71d1b546a35a] - MainThread - ai_orchestrator_service.py:84 - AIOrchestrator initialized with models/gemini-1.5-pro-latest and PydanticOutputParser.
-2025-06-10 18:20:32,883 - src.ultibot_backend.services.simulated_order_execution_service - INFO - [f18ebe5ea0cf] - MainThread - simulated_order_execution_service.py:23 - SimulatedOrderExecutionService initialized.
-2025-06-10 18:20:32,883 - src.ultibot_backend.services.credential_service - INFO - [f8ff7d6cb444] - MainThread - credential_service.py:28 - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
-2025-06-10 18:20:32,883 - src.ultibot_backend.services.credential_service - INFO - [6fea081f6a0a] - MainThread - credential_service.py:34 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
-2025-06-10 18:20:32,884 - src.ultibot_backend.dependencies - INFO - [0ca1e714c006] - MainThread - dependencies.py:154 - Dependency container initialized successfully.
-2025-06-10 18:20:32,884 - ultibot_backend - INFO - [006a0c2b72aa] - MainThread - main.py:93 - LIFESPAN: Contenedor de dependencias inicializado.
-2025-06-10 18:20:32,884 - ultibot_backend - INFO - [e4b86d467c1c] - MainThread - main.py:100 - LIFESPAN: Aplicación iniciada correctamente, cediendo el control (yield).
-2025-06-10 18:20:43,123 - ultibot_backend - INFO - [9fcfc0e723d4] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/config
+INFO:     Started reloader process [2856] using WatchFiles
+2025-06-10 21:21:16,230 - src.ultibot_backend.services.simulated_portfolio_service - INFO - SimulatedPortfolioService initialized with initial balance: 100000.0
+2025-06-10 21:21:16,297 - ultibot_backend - INFO - [9a69b23795d5] - MainThread - main.py:78 - Logging configurado exitosamente usando dictConfig.
+2025-06-10 21:21:16,297 - ultibot_backend - INFO - [3f33e49582b0] - MainThread - main.py:150 - Registrando routers de la API...
+2025-06-10 21:21:16,321 - ultibot_backend - INFO - [41f3547347a5] - MainThread - main.py:164 - Todos los routers han sido registrados.
+2025-06-10 21:21:16,321 - ultibot_backend - INFO - [0a26c71d26aa] - MainThread - main.py:87 - Iniciando UltiBot Backend...
+2025-06-10 21:21:16,321 - ultibot_backend - INFO - [54e00d8d7702] - MainThread - main.py:91 - LIFESPAN: Inicializando contenedor de dependencias...
+2025-06-10 21:21:16,321 - src.ultibot_backend.dependencies - INFO - [191369d138de] - MainThread - dependencies.py:58 - Initializing dependency container...
+2025-06-10 21:21:16,321 - httpx - DEBUG - [147ad2563237] - MainThread - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-10 21:21:16,321 - httpx - DEBUG - [f93b7ca81c71] - MainThread - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\AppData\\Local\\pypoetry\\Cache\\virtualenvs\\ultibotinversiones-UOQi1NQu-py3.11\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-10 21:21:16,506 - src.ultibot_backend.adapters.persistence_service - INFO - [afb450f1cb97] - MainThread - persistence_service.py:69 - Pool de conexiones a Supabase (psycopg_pool) establecido exitosamente. Min: 2, Max: 10
+2025-06-10 21:21:16,522 - src.ultibot_backend.services.ai_orchestrator_service - INFO - [8b0bab11e591] - MainThread - ai_orchestrator_service.py:114 - AIOrchestrator initialized with models/gemini-1.5-pro-latest and PydanticOutputParser.
+2025-06-10 21:21:16,522 - src.ultibot_backend.services.simulated_order_execution_service - INFO - [b615e7c36a91] - MainThread - simulated_order_execution_service.py:23 - SimulatedOrderExecutionService initialized.
+2025-06-10 21:21:16,522 - src.ultibot_backend.services.credential_service - INFO - [59ca6726076a] - MainThread - credential_service.py:28 - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
+2025-06-10 21:21:16,522 - src.ultibot_backend.services.credential_service - INFO - [1e64e9d36089] - MainThread - credential_service.py:34 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-10 21:21:16,522 - src.ultibot_backend.dependencies - INFO - [8ad62a134879] - MainThread - dependencies.py:154 - Dependency container initialized successfully.
+2025-06-10 21:21:16,522 - ultibot_backend - INFO - [826914fc4aa4] - MainThread - main.py:93 - LIFESPAN: Contenedor de dependencias inicializado.
+2025-06-10 21:21:16,522 - ultibot_backend - INFO - [60485794e87d] - MainThread - main.py:100 - LIFESPAN: Aplicación iniciada correctamente, cediendo el control (yield).
+2025-06-10 21:21:16,594 - ultibot_backend - INFO - [2198e1a40a35] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /health
+2025-06-10 21:21:16,594 - ultibot_backend - DEBUG - [2506bbf260b44b9d9dad2fcacc3b1573] - AnyIO worker thread - main.py:170 - Health check solicitado.
+2025-06-10 21:21:16,594 - ultibot_backend - INFO - [611de0cb499a] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-10 21:21:16,594 - uvicorn.access - INFO - [db297a5cb33a] - MainThread - httptools_impl.py:481 - 127.0.0.1:55886 - "GET /health HTTP/1.1" 200
+2025-06-10 21:21:21,271 - ultibot_backend - INFO - [cdba18844ed4] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/config
 C:\Users\zamor\AppData\Local\pypoetry\Cache\virtualenvs\ultibotinversiones-UOQi1NQu-py3.11\Lib\site-packages\psycopg_pool\pool_async.py:142: RuntimeWarning: opening the async pool AsyncConnectionPool in the constructor is deprecated and will not be supported anymore in a future release. Please use `await pool.open()`, or use the pool as context manager using: `async with AsyncConnectionPool(...) as pool: `...
   warnings.warn(
-2025-06-10 18:20:43,640 - ultibot_backend - INFO - [684a8a0fd753] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/config - Status: 200
-2025-06-10 18:20:43,640 - uvicorn.access - INFO - [af7e37289922] - MainThread - httptools_impl.py:481 - 127.0.0.1:51969 - "GET /api/v1/config HTTP/1.1" 200
-2025-06-10 18:20:43,650 - ultibot_backend - INFO - [32dd82669098] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/trading-mode
-2025-06-10 18:20:43,650 - ultibot_backend - INFO - [a421b105f9b2] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/trading-mode - Status: 200
-2025-06-10 18:20:43,650 - uvicorn.access - INFO - [68d786814301] - MainThread - httptools_impl.py:481 - 127.0.0.1:51969 - "GET /api/v1/trading-mode HTTP/1.1" 200
-2025-06-10 18:20:44,549 - ultibot_backend - INFO - [e1e1ea876598] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/market/klines
-2025-06-10 18:20:44,549 - src.ultibot_backend.adapters.binance_adapter - INFO - [78153aa1eb2d4f929f6f3a9d024f3a7a] - MainThread - binance_adapter.py:44 - Binance AsyncClient and SocketManager initialized.
-2025-06-10 18:20:44,808 - ultibot_backend - INFO - [b6f29719467c] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/trading-mode
-2025-06-10 18:20:44,808 - ultibot_backend - INFO - [d5d4ccdbe273] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/trades
-2025-06-10 18:20:44,809 - ultibot_backend - INFO - [e997fc7ee251] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/performance/metrics
-2025-06-10 18:20:44,809 - ultibot_backend - INFO - [4eabf13a649b] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/strategies/strategies
-2025-06-10 18:20:44,809 - src.ultibot_backend.services.performance_service - INFO - [e2e595b29aca42a8a20d69a79fc6c75a] - MainThread - performance_service.py:39 - Fetching trade performance metrics for user 00000000-0000-0000-0000-000000000001, mode: paper
-2025-06-10 18:20:44,809 - src.ultibot_backend.api.v1.endpoints.strategies - INFO - [e30bfbfd743a44e3942fdc57aa991583] - MainThread - strategies.py:76 - Listing strategies for user 00000000-0000-0000-0000-000000000001
-2025-06-10 18:20:44,809 - ultibot_backend - INFO - [99ec37e7e407] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/trades
-2025-06-10 18:20:44,809 - ultibot_backend - INFO - [57fc7845bbba] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/trading-mode - Status: 200
-2025-06-10 18:20:44,809 - uvicorn.access - INFO - [be31592dec4f] - MainThread - httptools_impl.py:481 - 127.0.0.1:51977 - "GET /api/v1/trading-mode HTTP/1.1" 200
-2025-06-10 18:20:45,111 - ultibot_backend - INFO - [0f8ee1e28d1e] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/performance/metrics - Status: 200
-2025-06-10 18:20:45,111 - uvicorn.access - INFO - [832684ad7c66] - MainThread - httptools_impl.py:481 - 127.0.0.1:51979 - "GET /api/v1/performance/metrics?trading_mode=paper&date_from=2025-05-11&date_to=2025-06-10 HTTP/1.1" 200
-2025-06-10 18:20:45,179 - src.ultibot_backend.api.v1.endpoints.strategies - INFO - [e30bfbfd743a44e3942fdc57aa991583] - MainThread - strategies.py:88 - Retrieved 2 strategies
-2025-06-10 18:20:45,179 - ultibot_backend - INFO - [c7f6e0b88037] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/strategies/strategies - Status: 200
-2025-06-10 18:20:45,179 - uvicorn.access - INFO - [c68ffefa0b8e] - MainThread - httptools_impl.py:481 - 127.0.0.1:51978 - "GET /api/v1/strategies/strategies HTTP/1.1" 200
-2025-06-10 18:20:45,260 - ultibot_backend - INFO - [d4f8a232dbb6] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
-2025-06-10 18:20:45,260 - uvicorn.access - INFO - [fe4d80dcfbea] - MainThread - httptools_impl.py:481 - 127.0.0.1:51980 - "GET /api/v1/trades?trading_mode=paper&date_from=2025-05-11&date_to=2025-06-10&limit=500&offset=0 HTTP/1.1" 200
-2025-06-10 18:20:45,329 - ultibot_backend - INFO - [518e86349284] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
-2025-06-10 18:20:45,329 - uvicorn.access - INFO - [4c3dbe0a300d] - MainThread - httptools_impl.py:481 - 127.0.0.1:51981 - "GET /api/v1/trades?trading_mode=both HTTP/1.1" 200
-2025-06-10 18:20:45,329 - ultibot_backend - INFO - [2b35f22af6b8] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
-2025-06-10 18:20:45,339 - ultibot_backend - INFO - [3b19d0377fec] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/trades
-2025-06-10 18:20:45,573 - src.ultibot_backend.adapters.persistence_service - INFO - [78153aa1eb2d4f929f6f3a9d024f3a7a] - MainThread - persistence_service.py:114 - Se guardaron 100 registros de datos de mercado.
-2025-06-10 18:20:45,573 - src.ultibot_backend.services.market_data_service - INFO - [78153aa1eb2d4f929f6f3a9d024f3a7a] - MainThread - market_data_service.py:285 - 100 registros de velas para BTCUSDT-1h guardados en la base de datos.
-2025-06-10 18:20:45,573 - src.ultibot_backend.services.market_data_service - INFO - [78153aa1eb2d4f929f6f3a9d024f3a7a] - MainThread - market_data_service.py:287 - Datos de velas para BTCUSDT-1h obtenidos y procesados.
-2025-06-10 18:20:45,573 - ultibot_backend - INFO - [9c9996b6503c] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/market/klines - Status: 200
-2025-06-10 18:20:45,573 - uvicorn.access - INFO - [70df65cefed7] - MainThread - httptools_impl.py:481 - 127.0.0.1:51969 - "GET /api/v1/market/klines?symbol=BTCUSDT&interval=1h&limit=100 HTTP/1.1" 200
-2025-06-10 18:20:45,621 - ultibot_backend - INFO - [d54a973236a4] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
-2025-06-10 18:20:45,621 - uvicorn.access - INFO - [806ddd8be478] - MainThread - httptools_impl.py:481 - 127.0.0.1:51980 - "GET /api/v1/trades?trading_mode=paper&status=open HTTP/1.1" 200
-2025-06-10 18:20:45,757 - src.ultibot_backend.services.portfolio_service - INFO - [50d0152dda164263b82918599fa5fae8] - MainThread - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
-2025-06-10 18:20:45,757 - ultibot_backend - INFO - [a23d64e07f80] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
-2025-06-10 18:20:45,757 - uvicorn.access - INFO - [d46202d00fbf] - MainThread - httptools_impl.py:481 - 127.0.0.1:51979 - "GET /api/v1/portfolio/snapshot?user_id=6891d984-ac25-4fa9-b0f9-3ed6965cf3d0&trading_mode=paper HTTP/1.1" 200
-2025-06-10 18:20:48,976 - ultibot_backend - INFO - [639b63d80b47] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/notifications/history
-2025-06-10 18:20:49,557 - src.ultibot_backend.services.notification_service - INFO - [ff2347ccc06f44f2980e273e2e09df91] - MainThread - notification_service.py:58 - Historial de notificaciones recuperado.
-2025-06-10 18:20:49,559 - ultibot_backend - INFO - [ee9451479899] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/notifications/history - Status: 200
-2025-06-10 18:20:49,559 - uvicorn.access - INFO - [aab9501c4ab8] - MainThread - httptools_impl.py:481 - 127.0.0.1:51969 - "GET /api/v1/notifications/history?limit=20 HTTP/1.1" 200
-2025-06-10 18:20:53,984 - ultibot_backend - INFO - [4d668e29a373] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/notifications/history
-2025-06-10 18:20:54,644 - src.ultibot_backend.services.notification_service - INFO - [26b50b1950cc41ee8f1fc6b64ed8a8b1] - MainThread - notification_service.py:58 - Historial de notificaciones recuperado.
-2025-06-10 18:20:54,644 - ultibot_backend - INFO - [2f4f7280d12e] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/notifications/history - Status: 200
-2025-06-10 18:20:54,649 - uvicorn.access - INFO - [dc413ef43aba] - MainThread - httptools_impl.py:481 - 127.0.0.1:51969 - "GET /api/v1/notifications/history?limit=20 HTTP/1.1" 200
-2025-06-10 18:20:58,992 - ultibot_backend - INFO - [90f4a668911b] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/notifications/history
-2025-06-10 18:20:59,249 - ultibot_backend - INFO - [01780c4411bc] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/trades
-2025-06-10 18:20:59,249 - ultibot_backend - INFO - [dcf7df017f05] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
-2025-06-10 18:20:59,869 - ultibot_backend - INFO - [c3dd699d42ea] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
-2025-06-10 18:20:59,869 - uvicorn.access - INFO - [b62f6c038fc1] - MainThread - httptools_impl.py:481 - 127.0.0.1:51990 - "GET /api/v1/trades?trading_mode=paper&status=open HTTP/1.1" 200
-2025-06-10 18:21:00,069 - src.ultibot_backend.services.portfolio_service - INFO - [058e8686f6fe4c1dac563a75492fafe1] - MainThread - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
-2025-06-10 18:21:00,069 - ultibot_backend - INFO - [9506f20ad4ab] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
-2025-06-10 18:21:00,069 - uvicorn.access - INFO - [c298c14b723e] - MainThread - httptools_impl.py:481 - 127.0.0.1:51991 - "GET /api/v1/portfolio/snapshot?user_id=6891d984-ac25-4fa9-b0f9-3ed6965cf3d0&trading_mode=paper HTTP/1.1" 200
-2025-06-10 18:21:00,959 - ultibot_backend - INFO - [4b7b1dd81a74] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/market-configuration/presets
-2025-06-10 18:21:00,959 - src.ultibot_backend.api.v1.endpoints.market_configuration - INFO - [be03334e38d143eab1ea0f893905a81f] - MainThread - market_configuration.py:132 - Listing scan presets for user default_user
-2025-06-10 18:21:00,959 - src.ultibot_backend.api.v1.endpoints.market_configuration - ERROR - [be03334e38d143eab1ea0f893905a81f] - MainThread - market_configuration.py:155 - Failed to list scan presets: 'SupabasePersistenceService' object has no attribute 'list_scan_presets'
-2025-06-10 18:21:00,959 - ultibot_backend - INFO - [38e4491b7503] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/market-configuration/presets - Status: 500
-2025-06-10 18:21:00,959 - uvicorn.access - INFO - [0f0c71889c35] - MainThread - httptools_impl.py:481 - 127.0.0.1:51991 - "GET /api/v1/market-configuration/presets?include_system=true HTTP/1.1" 500
-2025-06-10 18:21:01,095 - src.ultibot_backend.services.notification_service - INFO - [911817dafead4f9dbe27c8ecfe84730b] - MainThread - notification_service.py:58 - Historial de notificaciones recuperado.
-2025-06-10 18:21:01,095 - ultibot_backend - INFO - [4aac2a6f49c5] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/notifications/history - Status: 200
-2025-06-10 18:21:01,095 - uvicorn.access - INFO - [d8da72a2311a] - MainThread - httptools_impl.py:481 - 127.0.0.1:51969 - "GET /api/v1/notifications/history?limit=20 HTTP/1.1" 200
-2025-06-10 18:21:03,989 - ultibot_backend - INFO - [82cf9c108d56] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/notifications/history
-2025-06-10 18:21:04,879 - src.ultibot_backend.services.notification_service - INFO - [de400aee1cdb4ba883e69b8a262f42f7] - MainThread - notification_service.py:58 - Historial de notificaciones recuperado.
-2025-06-10 18:21:04,879 - ultibot_backend - INFO - [de2868c08f7f] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/notifications/history - Status: 200
-2025-06-10 18:21:04,879 - uvicorn.access - INFO - [cba6426ac7b4] - MainThread - httptools_impl.py:481 - 127.0.0.1:51969 - "GET /api/v1/notifications/history?limit=20 HTTP/1.1" 200
-2025-06-10 18:21:08,985 - ultibot_backend - INFO - [8236e6bb5809] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/notifications/history
-2025-06-10 18:21:09,855 - src.ultibot_backend.services.notification_service - INFO - [19edfe9ccc8d45b9a91b60946f349513] - MainThread - notification_service.py:58 - Historial de notificaciones recuperado.
-2025-06-10 18:21:09,855 - ultibot_backend - INFO - [4cf3d5b67f76] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/notifications/history - Status: 200
-2025-06-10 18:21:09,855 - uvicorn.access - INFO - [3004c2e2cc3e] - MainThread - httptools_impl.py:481 - 127.0.0.1:51969 - "GET /api/v1/notifications/history?limit=20 HTTP/1.1" 200
-2025-06-10 18:21:13,988 - ultibot_backend - INFO - [b1ba84b0d3b7] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/notifications/history
-2025-06-10 18:21:14,237 - ultibot_backend - INFO - [c26fe3669ea6] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
-2025-06-10 18:21:14,239 - ultibot_backend - INFO - [1b0af22ab6a0] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/trades
-2025-06-10 18:21:14,509 - ultibot_backend - INFO - [fe4e8553a325] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
-2025-06-10 18:21:14,509 - uvicorn.access - INFO - [30908dd4af14] - MainThread - httptools_impl.py:481 - 127.0.0.1:52001 - "GET /api/v1/trades?trading_mode=paper&status=open HTTP/1.1" 200
-2025-06-10 18:21:14,659 - src.ultibot_backend.services.portfolio_service - INFO - [0c051c57910f4998b63a5885a233a393] - MainThread - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
-2025-06-10 18:21:14,659 - ultibot_backend - INFO - [1d33678f4207] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
-2025-06-10 18:21:14,659 - uvicorn.access - INFO - [de8493edb9e3] - MainThread - httptools_impl.py:481 - 127.0.0.1:52000 - "GET /api/v1/portfolio/snapshot?user_id=6891d984-ac25-4fa9-b0f9-3ed6965cf3d0&trading_mode=paper HTTP/1.1" 200
-2025-06-10 18:21:14,971 - src.ultibot_backend.services.notification_service - INFO - [64e9e4a8f6d94e85bf1f77d40bda61e7] - MainThread - notification_service.py:58 - Historial de notificaciones recuperado.
-2025-06-10 18:21:14,971 - ultibot_backend - INFO - [bd02e33a676e] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/notifications/history - Status: 200
-2025-06-10 18:21:14,971 - uvicorn.access - INFO - [7113dff8717c] - MainThread - httptools_impl.py:481 - 127.0.0.1:51969 - "GET /api/v1/notifications/history?limit=20 HTTP/1.1" 200
-2025-06-10 18:21:18,984 - ultibot_backend - INFO - [17302b046560] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/notifications/history
-2025-06-10 18:21:19,940 - src.ultibot_backend.services.notification_service - INFO - [ec86eb9336aa43b5923ff6db3c423127] - MainThread - notification_service.py:58 - Historial de notificaciones recuperado.
-2025-06-10 18:21:19,947 - ultibot_backend - INFO - [9963b6b65cdc] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/notifications/history - Status: 200
-2025-06-10 18:21:19,947 - uvicorn.access - INFO - [3d02c35faa5c] - MainThread - httptools_impl.py:481 - 127.0.0.1:51969 - "GET /api/v1/notifications/history?limit=20 HTTP/1.1" 200
-2025-06-10 18:21:23,989 - ultibot_backend - INFO - [00d02bfe9f3a] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/notifications/history
-2025-06-10 18:21:24,944 - src.ultibot_backend.services.notification_service - INFO - [4f4250ba201d4545a467c28ce096f899] - MainThread - notification_service.py:58 - Historial de notificaciones recuperado.
-2025-06-10 18:21:24,944 - ultibot_backend - INFO - [4cad8fd06e6e] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/notifications/history - Status: 200
-2025-06-10 18:21:24,944 - uvicorn.access - INFO - [cf0970331de8] - MainThread - httptools_impl.py:481 - 127.0.0.1:51969 - "GET /api/v1/notifications/history?limit=20 HTTP/1.1" 200
-2025-06-10 18:21:28,980 - ultibot_backend - INFO - [ef5184ce341b] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/notifications/history
-2025-06-10 18:21:29,251 - ultibot_backend - INFO - [61fa87c0757e] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
-2025-06-10 18:21:29,252 - ultibot_backend - INFO - [46649b79895b] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/trades
-2025-06-10 18:21:29,505 - ultibot_backend - INFO - [1daf2412421e] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
-2025-06-10 18:21:29,505 - uvicorn.access - INFO - [f30fa9a403d6] - MainThread - httptools_impl.py:481 - 127.0.0.1:52007 - "GET /api/v1/trades?trading_mode=paper&status=open HTTP/1.1" 200
-2025-06-10 18:21:29,669 - src.ultibot_backend.services.portfolio_service - INFO - [1ac22a500db04b32aa3764269d8eb713] - MainThread - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
-2025-06-10 18:21:29,669 - ultibot_backend - INFO - [33a2fc593d0c] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
-2025-06-10 18:21:29,669 - uvicorn.access - INFO - [d888cb628633] - MainThread - httptools_impl.py:481 - 127.0.0.1:52006 - "GET /api/v1/portfolio/snapshot?user_id=6891d984-ac25-4fa9-b0f9-3ed6965cf3d0&trading_mode=paper HTTP/1.1" 200
-2025-06-10 18:21:29,939 - src.ultibot_backend.services.notification_service - INFO - [38ab3e257b204443b16f95b5a9662609] - MainThread - notification_service.py:58 - Historial de notificaciones recuperado.
-2025-06-10 18:21:29,939 - ultibot_backend - INFO - [580fd7f8dabb] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/notifications/history - Status: 200
-2025-06-10 18:21:29,939 - uvicorn.access - INFO - [a6c0145f2eee] - MainThread - httptools_impl.py:481 - 127.0.0.1:51969 - "GET /api/v1/notifications/history?limit=20 HTTP/1.1" 200
-2025-06-10 18:21:33,979 - ultibot_backend - INFO - [c43bd222d784] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/notifications/history
-2025-06-10 18:21:34,959 - src.ultibot_backend.services.notification_service - INFO - [0f40951089d24a339029ea9becb71393] - MainThread - notification_service.py:58 - Historial de notificaciones recuperado.
-2025-06-10 18:21:34,959 - ultibot_backend - INFO - [76ce87a22a76] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/notifications/history - Status: 200
-2025-06-10 18:21:34,959 - uvicorn.access - INFO - [c567c55b602f] - MainThread - httptools_impl.py:481 - 127.0.0.1:51969 - "GET /api/v1/notifications/history?limit=20 HTTP/1.1" 200
-2025-06-10 18:21:35,203 - ultibot_backend - INFO - [18d1d76e0889] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/opportunities/real-trading-candidates
-2025-06-10 18:21:38,286 - ultibot_backend - INFO - [4792b46db79c] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/strategies/strategies
-2025-06-10 18:21:38,288 - src.ultibot_backend.api.v1.endpoints.strategies - INFO - [89b0f9d402d24c8bb9847a056e00a74f] - MainThread - strategies.py:76 - Listing strategies for user 00000000-0000-0000-0000-000000000001
-2025-06-10 18:21:38,758 - ultibot_backend - INFO - [f987247022f7] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/opportunities/real-trading-candidates - Status: 200
-2025-06-10 18:21:38,758 - uvicorn.access - INFO - [a3c25b3b0427] - MainThread - httptools_impl.py:481 - 127.0.0.1:52009 - "GET /api/v1/opportunities/real-trading-candidates HTTP/1.1" 200
-2025-06-10 18:21:38,990 - ultibot_backend - INFO - [8f09ecc349e9] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/notifications/history
-2025-06-10 18:21:39,539 - src.ultibot_backend.api.v1.endpoints.strategies - INFO - [89b0f9d402d24c8bb9847a056e00a74f] - MainThread - strategies.py:88 - Retrieved 2 strategies
-2025-06-10 18:21:39,539 - ultibot_backend - INFO - [f24c1724b0d3] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/strategies/strategies - Status: 200
-2025-06-10 18:21:39,539 - uvicorn.access - INFO - [169904eed67a] - MainThread - httptools_impl.py:481 - 127.0.0.1:51969 - "GET /api/v1/strategies/strategies HTTP/1.1" 200
-2025-06-10 18:21:39,865 - ultibot_backend - INFO - [3ea8bd90c93c] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/strategies/strategies
-2025-06-10 18:21:39,865 - src.ultibot_backend.api.v1.endpoints.strategies - INFO - [ff33c9b1679741599e4cda93996c38f9] - MainThread - strategies.py:76 - Listing strategies for user 00000000-0000-0000-0000-000000000001
-2025-06-10 18:21:39,902 - src.ultibot_backend.services.notification_service - INFO - [7123196a4e9f4b7db42978b111bb22e5] - MainThread - notification_service.py:58 - Historial de notificaciones recuperado.
-2025-06-10 18:21:39,902 - ultibot_backend - INFO - [302f606062dd] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/notifications/history - Status: 200
-2025-06-10 18:21:39,902 - uvicorn.access - INFO - [c7dcb268ea06] - MainThread - httptools_impl.py:481 - 127.0.0.1:52009 - "GET /api/v1/notifications/history?limit=20 HTTP/1.1" 200
-2025-06-10 18:21:40,875 - src.ultibot_backend.api.v1.endpoints.strategies - INFO - [ff33c9b1679741599e4cda93996c38f9] - MainThread - strategies.py:88 - Retrieved 2 strategies
-2025-06-10 18:21:40,875 - ultibot_backend - INFO - [3216d5900861] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/strategies/strategies - Status: 200
-2025-06-10 18:21:40,875 - uvicorn.access - INFO - [eab8aea7e1e3] - MainThread - httptools_impl.py:481 - 127.0.0.1:51969 - "GET /api/v1/strategies/strategies HTTP/1.1" 200
+2025-06-10 21:21:21,804 - ultibot_backend - INFO - [7ef81b5cde53] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/config - Status: 200
+2025-06-10 21:21:21,804 - uvicorn.access - INFO - [0b2cb99df964] - MainThread - httptools_impl.py:481 - 127.0.0.1:55923 - "GET /api/v1/config HTTP/1.1" 200
+2025-06-10 21:21:21,804 - ultibot_backend - INFO - [1f9281bd61a3] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/trading-mode
+2025-06-10 21:21:21,810 - ultibot_backend - INFO - [165d794c256d] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/trading-mode - Status: 200
+2025-06-10 21:21:21,810 - uvicorn.access - INFO - [1f3e0071ccab] - MainThread - httptools_impl.py:481 - 127.0.0.1:55923 - "GET /api/v1/trading-mode HTTP/1.1" 200
+2025-06-10 21:21:22,630 - ultibot_backend - INFO - [cdc46a049afd] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/market/klines
+2025-06-10 21:21:22,631 - src.ultibot_backend.adapters.binance_adapter - INFO - [0db1dce078db46b39e6eb9baa257b121] - MainThread - binance_adapter.py:44 - Binance AsyncClient and SocketManager initialized.
+2025-06-10 21:21:22,892 - ultibot_backend - INFO - [2dbc30b0b363] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-10 21:21:22,892 - ultibot_backend - INFO - [361102ad8a16] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/performance/metrics
+2025-06-10 21:21:22,892 - src.ultibot_backend.services.performance_service - INFO - [df4a9cd7119e488fab5109515200f25c] - MainThread - performance_service.py:39 - Fetching trade performance metrics for user 00000000-0000-0000-0000-000000000001, mode: paper
+2025-06-10 21:21:22,892 - ultibot_backend - INFO - [db5c6d3145fd] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-10 21:21:22,892 - ultibot_backend - INFO - [b3f4ff62cbd0] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/trading-mode
+2025-06-10 21:21:22,892 - ultibot_backend - INFO - [e7aebfee098a] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/strategies/strategies
+2025-06-10 21:21:22,892 - src.ultibot_backend.api.v1.endpoints.strategies - INFO - [42e9191730fa44b6b45d5ff3332aba63] - MainThread - strategies.py:76 - Listing strategies for user 00000000-0000-0000-0000-000000000001
+2025-06-10 21:21:22,892 - ultibot_backend - INFO - [6bbd56656610] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/trading-mode - Status: 200
+2025-06-10 21:21:22,892 - uvicorn.access - INFO - [46858f7b8d9b] - MainThread - httptools_impl.py:481 - 127.0.0.1:55933 - "GET /api/v1/trading-mode HTTP/1.1" 200
+2025-06-10 21:21:23,206 - ultibot_backend - INFO - [6ff03ecbf2d8] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/performance/metrics - Status: 200
+2025-06-10 21:21:23,206 - uvicorn.access - INFO - [8f7e6a406407] - MainThread - httptools_impl.py:481 - 127.0.0.1:55931 - "GET /api/v1/performance/metrics?trading_mode=paper&date_from=2025-05-11&date_to=2025-06-10 HTTP/1.1" 200
+2025-06-10 21:21:23,280 - ultibot_backend - INFO - [4a61e402014a] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
+2025-06-10 21:21:23,280 - uvicorn.access - INFO - [3cb96bbc5f7c] - MainThread - httptools_impl.py:481 - 127.0.0.1:55932 - "GET /api/v1/trades?trading_mode=paper&date_from=2025-05-11&date_to=2025-06-10&limit=500&offset=0 HTTP/1.1" 200
+2025-06-10 21:21:23,330 - src.ultibot_backend.api.v1.endpoints.strategies - INFO - [42e9191730fa44b6b45d5ff3332aba63] - MainThread - strategies.py:88 - Retrieved 2 strategies
+2025-06-10 21:21:23,330 - ultibot_backend - INFO - [b0f21b5503eb] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/strategies/strategies - Status: 200
+2025-06-10 21:21:23,330 - uvicorn.access - INFO - [1b5c666c6bd3] - MainThread - httptools_impl.py:481 - 127.0.0.1:55934 - "GET /api/v1/strategies/strategies HTTP/1.1" 200
+2025-06-10 21:21:23,439 - ultibot_backend - INFO - [871baec3d31a] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
+2025-06-10 21:21:23,440 - uvicorn.access - INFO - [6847f935bd3d] - MainThread - httptools_impl.py:481 - 127.0.0.1:55935 - "GET /api/v1/trades?trading_mode=both HTTP/1.1" 200
+2025-06-10 21:21:23,443 - ultibot_backend - INFO - [5ee643ac01a5] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
+2025-06-10 21:21:23,443 - ultibot_backend - INFO - [72ba93b504c9] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-10 21:21:23,443 - ultibot_backend - INFO - [28d538ca7a5d] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 422
+2025-06-10 21:21:23,443 - uvicorn.access - INFO - [177d1cf8a958] - MainThread - httptools_impl.py:481 - 127.0.0.1:55935 - "GET /api/v1/portfolio/snapshot?user_id=22c5a278-da81-4fc5-8296-92cdb59670e3&trading_mode=PAPER HTTP/1.1" 422
+2025-06-10 21:21:23,443 - ultibot_backend - INFO - [95aac3d7bf4c] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 422
+2025-06-10 21:21:23,443 - uvicorn.access - INFO - [480546e75133] - MainThread - httptools_impl.py:481 - 127.0.0.1:55934 - "GET /api/v1/trades?trading_mode=PAPER&status=open HTTP/1.1" 422
+2025-06-10 21:21:23,590 - src.ultibot_backend.adapters.persistence_service - INFO - [0db1dce078db46b39e6eb9baa257b121] - MainThread - persistence_service.py:115 - Se guardaron 100 registros de datos de mercado.
+2025-06-10 21:21:23,590 - src.ultibot_backend.services.market_data_service - INFO - [0db1dce078db46b39e6eb9baa257b121] - MainThread - market_data_service.py:285 - 100 registros de velas para BTCUSDT-1h guardados en la base de datos.
+2025-06-10 21:21:23,590 - src.ultibot_backend.services.market_data_service - INFO - [0db1dce078db46b39e6eb9baa257b121] - MainThread - market_data_service.py:287 - Datos de velas para BTCUSDT-1h obtenidos y procesados.
+2025-06-10 21:21:23,590 - ultibot_backend - INFO - [e75da49ce8dd] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/market/klines - Status: 200
+2025-06-10 21:21:23,590 - uvicorn.access - INFO - [6b802e6aabce] - MainThread - httptools_impl.py:481 - 127.0.0.1:55923 - "GET /api/v1/market/klines?symbol=BTCUSDT&interval=1h&limit=100 HTTP/1.1" 200
+2025-06-10 21:21:27,117 - ultibot_backend - INFO - [db6cfd6c3d05] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/notifications/history
+2025-06-10 21:21:27,640 - src.ultibot_backend.services.notification_service - INFO - [c83f6b3f956442028a4bf22cc90d0029] - MainThread - notification_service.py:58 - Historial de notificaciones recuperado.
+2025-06-10 21:21:27,640 - ultibot_backend - INFO - [a8385a548b13] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/notifications/history - Status: 200
+2025-06-10 21:21:27,640 - uvicorn.access - INFO - [2518d34bc58f] - MainThread - httptools_impl.py:481 - 127.0.0.1:55923 - "GET /api/v1/notifications/history?limit=20 HTTP/1.1" 200
+2025-06-10 21:21:32,125 - ultibot_backend - INFO - [f4696c411670] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/notifications/history
+2025-06-10 21:21:33,038 - ultibot_backend - INFO - [f524ca73dd97] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/strategies/strategies
+2025-06-10 21:21:33,039 - src.ultibot_backend.api.v1.endpoints.strategies - INFO - [c9db6d15cad44141bc1a1f3a48a2c11e] - MainThread - strategies.py:76 - Listing strategies for user 00000000-0000-0000-0000-000000000001
+2025-06-10 21:21:33,390 - src.ultibot_backend.services.notification_service - INFO - [a47575d7d9bf48b48273dced44ff56ec] - MainThread - notification_service.py:58 - Historial de notificaciones recuperado.
+2025-06-10 21:21:33,390 - ultibot_backend - INFO - [3528417cc5d4] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/notifications/history - Status: 200
+2025-06-10 21:21:33,391 - uvicorn.access - INFO - [e1a6fee14587] - MainThread - httptools_impl.py:481 - 127.0.0.1:55923 - "GET /api/v1/notifications/history?limit=20 HTTP/1.1" 200
+2025-06-10 21:21:33,883 - src.ultibot_backend.api.v1.endpoints.strategies - INFO - [c9db6d15cad44141bc1a1f3a48a2c11e] - MainThread - strategies.py:88 - Retrieved 2 strategies
+2025-06-10 21:21:33,883 - ultibot_backend - INFO - [96bb2fc291b3] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/strategies/strategies - Status: 200
+2025-06-10 21:21:33,883 - uvicorn.access - INFO - [8be14c5a6ba3] - MainThread - httptools_impl.py:481 - 127.0.0.1:55944 - "GET /api/v1/strategies/strategies HTTP/1.1" 200
+2025-06-10 21:21:37,113 - ultibot_backend - INFO - [e29fe401435b] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
+2025-06-10 21:21:37,113 - ultibot_backend - INFO - [6577a3491285] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-10 21:21:37,113 - ultibot_backend - INFO - [2fb27a22ad87] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 422
+2025-06-10 21:21:37,113 - uvicorn.access - INFO - [dcc1329f76d4] - MainThread - httptools_impl.py:481 - 127.0.0.1:55923 - "GET /api/v1/portfolio/snapshot?user_id=22c5a278-da81-4fc5-8296-92cdb59670e3&trading_mode=PAPER HTTP/1.1" 422
+2025-06-10 21:21:37,113 - ultibot_backend - INFO - [8b3b82f2be09] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 422
+2025-06-10 21:21:37,113 - uvicorn.access - INFO - [433b8f8fe098] - MainThread - httptools_impl.py:481 - 127.0.0.1:55944 - "GET /api/v1/trades?trading_mode=PAPER&status=open HTTP/1.1" 422
+2025-06-10 21:21:37,125 - ultibot_backend - INFO - [874d8fa44da4] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/notifications/history
+2025-06-10 21:21:38,502 - src.ultibot_backend.services.notification_service - INFO - [5dbee5afe69e46f5adbc5565d93ec249] - MainThread - notification_service.py:58 - Historial de notificaciones recuperado.
+2025-06-10 21:21:38,502 - ultibot_backend - INFO - [6932efb19a1c] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/notifications/history - Status: 200
+2025-06-10 21:21:38,502 - uvicorn.access - INFO - [783f1ddfae32] - MainThread - httptools_impl.py:481 - 127.0.0.1:55923 - "GET /api/v1/notifications/history?limit=20 HTTP/1.1" 200
+2025-06-10 21:21:42,125 - ultibot_backend - INFO - [a796678d6bf9] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/notifications/history
+2025-06-10 21:21:42,920 - src.ultibot_backend.services.notification_service - INFO - [1601a0927c6a4ea882b65312f5ef763f] - MainThread - notification_service.py:58 - Historial de notificaciones recuperado.
+2025-06-10 21:21:42,920 - ultibot_backend - INFO - [491c70adf223] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/notifications/history - Status: 200
+2025-06-10 21:21:42,920 - uvicorn.access - INFO - [7d8a1ca99f7e] - MainThread - httptools_impl.py:481 - 127.0.0.1:55923 - "GET /api/v1/notifications/history?limit=20 HTTP/1.1" 200
+2025-06-10 21:21:47,120 - ultibot_backend - INFO - [0d81f184bba3] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/notifications/history
+2025-06-10 21:21:48,005 - src.ultibot_backend.services.notification_service - INFO - [dfc552be7e084e949981266b4e20063f] - MainThread - notification_service.py:58 - Historial de notificaciones recuperado.
+2025-06-10 21:21:48,005 - ultibot_backend - INFO - [b1b11ad81d62] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/notifications/history - Status: 200
+2025-06-10 21:21:48,005 - uvicorn.access - INFO - [b61f9b98de04] - MainThread - httptools_impl.py:481 - 127.0.0.1:55923 - "GET /api/v1/notifications/history?limit=20 HTTP/1.1" 200
+2025-06-10 21:21:48,350 - ultibot_backend - INFO - [f7a0251eaab9] - MainThread - main.py:127 - Middleware: Solicitud entrante: POST /api/v1/market-configuration/configurations
+2025-06-10 21:21:48,360 - src.ultibot_backend.api.v1.endpoints.market_configuration - INFO - [6cbb2b1c833e4a38bf70f4678f8e2c15] - MainThread - market_configuration.py:88 - Creating market scan configuration '1' for user default_user
+2025-06-10 21:21:48,360 - src.ultibot_backend.api.v1.endpoints.market_configuration - ERROR - [6cbb2b1c833e4a38bf70f4678f8e2c15] - MainThread - market_configuration.py:102 - Failed to create market scan configuration: SupabasePersistenceService.upsert_market_scan_configuration() takes 2 positional arguments but 3 were given
+2025-06-10 21:21:48,360 - ultibot_backend - INFO - [3ffc191f4ba9] - MainThread - main.py:129 - Middleware: Solicitud procesada: POST /api/v1/market-configuration/configurations - Status: 500
+2025-06-10 21:21:48,360 - uvicorn.access - INFO - [b73938ff6623] - MainThread - httptools_impl.py:481 - 127.0.0.1:55923 - "POST /api/v1/market-configuration/configurations HTTP/1.1" 500
+2025-06-10 21:21:52,110 - ultibot_backend - INFO - [1e8dadd60642] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
+2025-06-10 21:21:52,110 - ultibot_backend - INFO - [1234cdbf6835] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 422
+2025-06-10 21:21:52,110 - uvicorn.access - INFO - [8b94fa598711] - MainThread - httptools_impl.py:481 - 127.0.0.1:55923 - "GET /api/v1/portfolio/snapshot?user_id=22c5a278-da81-4fc5-8296-92cdb59670e3&trading_mode=PAPER HTTP/1.1" 422
+2025-06-10 21:21:52,130 - ultibot_backend - INFO - [75ccbf1d3dfc] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/notifications/history
+2025-06-10 21:21:52,360 - ultibot_backend - INFO - [1c837c43bffe] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-10 21:21:52,360 - ultibot_backend - INFO - [eed9a590bd3e] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 422
+2025-06-10 21:21:52,360 - uvicorn.access - INFO - [bdd434963d9b] - MainThread - httptools_impl.py:481 - 127.0.0.1:55951 - "GET /api/v1/trades?trading_mode=PAPER&status=open HTTP/1.1" 422
+2025-06-10 21:21:53,663 - src.ultibot_backend.services.notification_service - INFO - [bf304ed6142f4e2f80f7bc673700d117] - MainThread - notification_service.py:58 - Historial de notificaciones recuperado.
+2025-06-10 21:21:53,670 - ultibot_backend - INFO - [c21ce76b82bc] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/notifications/history - Status: 200
+2025-06-10 21:21:53,670 - uvicorn.access - INFO - [aa9e8d3cb29c] - MainThread - httptools_impl.py:481 - 127.0.0.1:55923 - "GET /api/v1/notifications/history?limit=20 HTTP/1.1" 200
+2025-06-10 21:21:56,288 - ultibot_backend - INFO - [994c9a018b47] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/opportunities/real-trading-candidates
+2025-06-10 21:21:57,132 - ultibot_backend - INFO - [569b7cf0e821] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/notifications/history
+2025-06-10 21:21:57,960 - src.ultibot_backend.services.notification_service - INFO - [6c7156951070437a8db9d7d0d90833a3] - MainThread - notification_service.py:58 - Historial de notificaciones recuperado.
+2025-06-10 21:21:57,960 - ultibot_backend - INFO - [b0ad9a393017] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/notifications/history - Status: 200
+2025-06-10 21:21:57,960 - uvicorn.access - INFO - [e34b0900d7ee] - MainThread - httptools_impl.py:481 - 127.0.0.1:55951 - "GET /api/v1/notifications/history?limit=20 HTTP/1.1" 200
+2025-06-10 21:22:02,164 - ultibot_backend - INFO - [24563994106b] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/notifications/history
+2025-06-10 21:22:02,820 - src.ultibot_backend.services.notification_service - INFO - [1a943a5b230f4dc98a90af282d941be8] - MainThread - notification_service.py:58 - Historial de notificaciones recuperado.
+2025-06-10 21:22:02,820 - ultibot_backend - INFO - [0788e39a3bce] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/notifications/history - Status: 200
+2025-06-10 21:22:02,820 - uvicorn.access - INFO - [542c0fea6f0f] - MainThread - httptools_impl.py:481 - 127.0.0.1:55951 - "GET /api/v1/notifications/history?limit=20 HTTP/1.1" 200
+2025-06-10 21:22:03,830 - ultibot_backend - INFO - [9848d39525df] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/opportunities/real-trading-candidates - Status: 200
+2025-06-10 21:22:03,830 - uvicorn.access - INFO - [191618b4334c] - MainThread - httptools_impl.py:481 - 127.0.0.1:55923 - "GET /api/v1/opportunities/real-trading-candidates HTTP/1.1" 200
+2025-06-10 21:22:07,110 - ultibot_backend - INFO - [11d378dd893c] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/portfolio/snapshot
+2025-06-10 21:22:07,110 - ultibot_backend - INFO - [5d99d06d01eb] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-10 21:22:07,110 - ultibot_backend - INFO - [42f45f4ef82a] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 422
+2025-06-10 21:22:07,110 - uvicorn.access - INFO - [b575d3c777f7] - MainThread - httptools_impl.py:481 - 127.0.0.1:55923 - "GET /api/v1/portfolio/snapshot?user_id=22c5a278-da81-4fc5-8296-92cdb59670e3&trading_mode=PAPER HTTP/1.1" 422
+2025-06-10 21:22:07,110 - ultibot_backend - INFO - [1322817be2dc] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 422
+2025-06-10 21:22:07,110 - uvicorn.access - INFO - [a80036163299] - MainThread - httptools_impl.py:481 - 127.0.0.1:55951 - "GET /api/v1/trades?trading_mode=PAPER&status=open HTTP/1.1" 422
+2025-06-10 21:22:07,156 - ultibot_backend - INFO - [ef17172339bb] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/notifications/history
+2025-06-10 21:22:08,160 - src.ultibot_backend.services.notification_service - INFO - [9de4fbcac90a400b8b65875c00db1420] - MainThread - notification_service.py:58 - Historial de notificaciones recuperado.
+2025-06-10 21:22:08,160 - ultibot_backend - INFO - [0c70b94c51d3] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/notifications/history - Status: 200
+2025-06-10 21:22:08,160 - uvicorn.access - INFO - [c7e7040b2cf2] - MainThread - httptools_impl.py:481 - 127.0.0.1:55923 - "GET /api/v1/notifications/history?limit=20 HTTP/1.1" 200
+^C^C

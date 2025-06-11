@@ -23,7 +23,6 @@ from ..adapters.persistence_service import SupabasePersistenceService
 
 logger = logging.getLogger(__name__)
 
-
 class MarketScanService:
     """Service for market scanning and filtering operations."""
     
@@ -150,6 +149,32 @@ class MarketScanService:
         
         return preset
     
+    async def create_market_scan_configuration(
+        self,
+        config: MarketScanConfiguration,
+        user_id: str
+    ) -> MarketScanConfiguration:
+        """Create a new market scan configuration.
+        
+        Args:
+            config: The configuration to create.
+            user_id: User identifier.
+            
+        Returns:
+            The created configuration with generated ID and timestamps.
+        """
+        if not config.id:
+            config.id = str(uuid4())
+        
+        config.created_at = datetime.utcnow()
+        config.updated_at = config.created_at
+        
+        await self.persistence_service.upsert_market_scan_configuration(config.__dict__, user_id)
+        
+        logger.info(f"Created market scan configuration '{config.name}' (ID: {config.id}) for user {user_id}")
+        
+        return config
+
     async def update_scan_preset(
         self, 
         preset: ScanPreset, 

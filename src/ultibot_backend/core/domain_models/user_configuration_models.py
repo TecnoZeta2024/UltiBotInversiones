@@ -211,7 +211,7 @@ class ConfidenceThresholds(BaseModel):
 class MarketScanConfiguration(BaseModel):
     """Configuration for market scanning and filtering criteria."""
     
-    id: str = Field(..., description="Unique identifier for this scan configuration")
+    id: Optional[str] = Field(None, description="Unique identifier for this scan configuration")
     name: str = Field(..., description="Descriptive name for this scan configuration")
     description: Optional[str] = Field(None, description="Optional description")
     

@@ -65,6 +65,46 @@ async def execute_market_scan(
             detail=f"Market scan failed: {str(e)}"
         )
 
+@router.post("/configurations", response_model=MarketScanConfiguration)
+async def create_market_scan_configuration(
+    config: MarketScanConfiguration,
+    market_scan_service: MarketScanService = Depends(get_market_scan_service),
+    user_id: str = Depends(get_current_user_id)
+):
+    """Create a new market scan configuration.
+    
+    Args:
+        config: Market scan configuration to create.
+        market_scan_service: Injected market scan service.
+        user_id: Current user identifier.
+        
+    Returns:
+        Created market scan configuration with generated ID and timestamps.
+        
+    Raises:
+        HTTPException: If creation fails.
+    """
+    try:
+        logger.info(f"Creating market scan configuration '{config.name}' for user {user_id}")
+        
+        created_config = await market_scan_service.create_market_scan_configuration(config, user_id)
+        
+        return JSONResponse(
+            status_code=status.HTTP_201_CREATED,
+            content={
+                "status": "success",
+                "data": created_config.dict(),
+                "message": f"Market scan configuration '{created_config.name}' created successfully"
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to create market scan configuration: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create configuration: {str(e)}"
+        )
+
 @router.post("/scan/preset/{preset_id}/execute", response_model=List[Dict[str, Any]])
 async def execute_preset_scan(
     preset_id: str,

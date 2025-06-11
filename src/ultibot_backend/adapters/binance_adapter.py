@@ -80,6 +80,21 @@ class BinanceAdapter:
             raise BinanceAPIError(message=e.message, status_code=e.status_code, response_data=e.response.json() if e.response else None, original_exception=e)
 
     @binance_api_retry
+    async def get_24hr_ticker_data(self) -> List[Dict[str, Any]]:
+        """Obtiene estadísticas de 24 horas para todos los tickers.
+        
+        Returns:
+            List of 24hr ticker statistics including price change, volume, etc.
+        """
+        await self.initialize()
+        try:
+            ticker_data = await self.client.get_ticker()
+            return ticker_data
+        except BinanceLibAPIError as e:
+            logger.error(f"Binance API error getting 24hr ticker data: {e}", exc_info=True)
+            raise BinanceAPIError(message=e.message, status_code=e.status_code, response_data=e.response.json() if e.response else None, original_exception=e)
+
+    @binance_api_retry
     async def get_candlestick_data(self, symbol: str, interval: str, limit: int, start_time: Optional[int] = None, end_time: Optional[int] = None) -> List[List[Any]]:
         """Obtiene datos de velas para un símbolo."""
         await self.initialize()

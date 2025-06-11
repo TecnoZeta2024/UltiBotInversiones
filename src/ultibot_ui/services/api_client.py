@@ -2,7 +2,7 @@ import logging
 from typing import Any, Dict, Optional, List
 from uuid import UUID
 import httpx
-from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
+from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type, wait_exponential
 
 from src.shared.data_types import PerformanceMetrics, Trade
 
@@ -87,8 +87,8 @@ class UltiBotAPIClient:
         return await self._make_request("POST", "/api/v1/trading-mode", json={"mode": mode})
 
     @retry(
-        stop=stop_after_attempt(5),
-        wait=wait_fixed(2),
+        stop=stop_after_attempt(10),
+        wait=wait_exponential(multiplier=1, min=1, max=10),
         retry=retry_if_exception_type(APIError),
         before_sleep=lambda retry_state: logger.info(f"Reintentando conexión al backend... intento {retry_state.attempt_number}")
     )
@@ -269,6 +269,87 @@ class UltiBotAPIClient:
         response = await self._make_request(
             "GET", 
             "/api/v1/market-configuration/system-presets"
+        )
+        return response.get("data", [])
+
+    # Market Scan Configuration Methods (non-preset)
+    async def get_market_scan_configuration(self, config_id: UUID) -> Dict[str, Any]:
+        """Obtiene una configuración de escaneo de mercado por ID.
+        
+        Args:
+            config_id: ID de la configuración a obtener.
+            
+        Returns:
+            Datos de la configuración solicitada.
+        """
+        logger.info(f"Obteniendo configuración de escaneo de mercado '{config_id}'.")
+        response = await self._make_request(
+            "GET", 
+            f"/api/v1/market-configuration/configurations/{config_id}"
+        )
+        return response.get("data", {})
+
+    async def create_market_scan_configuration(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Crea una nueva configuración de escaneo de mercado.
+        
+        Args:
+            config: Datos de la configuración a crear.
+            
+        Returns:
+            Configuración creada con ID y timestamps generados.
+        """
+        logger.info(f"Creando configuración de escaneo de mercado '{config.get('name', 'sin nombre')}'.")
+        response = await self._make_request(
+            "POST", 
+            "/api/v1/market-configuration/configurations", 
+            json=config
+        )
+        return response.get("data", {})
+
+    async def update_market_scan_configuration(self, config_id: UUID, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Actualiza una configuración de escaneo de mercado existente.
+        
+        Args:
+            config_id: ID de la configuración a actualizar.
+            config: Datos actualizados de la configuración.
+            
+        Returns:
+            Configuración actualizada.
+        """
+        logger.info(f"Actualizando configuración de escaneo de mercado '{config_id}'.")
+        response = await self._make_request(
+            "PUT", 
+            f"/api/v1/market-configuration/configurations/{config_id}", 
+            json=config
+        )
+        return response.get("data", {})
+
+    async def delete_market_scan_configuration(self, config_id: UUID) -> bool:
+        """Elimina una configuración de escaneo de mercado.
+        
+        Args:
+            config_id: ID de la configuración a eliminar.
+            
+        Returns:
+            True si se eliminó exitosamente.
+        """
+        logger.info(f"Eliminando configuración de escaneo de mercado '{config_id}'.")
+        response = await self._make_request(
+            "DELETE", 
+            f"/api/v1/market-configuration/configurations/{config_id}"
+        )
+        return response.get("status") == "success"
+
+    async def list_market_scan_configurations(self) -> List[Dict[str, Any]]:
+        """Lista todas las configuraciones de escaneo de mercado del usuario.
+        
+        Returns:
+            Lista de configuraciones de escaneo de mercado.
+        """
+        logger.info("Listando configuraciones de escaneo de mercado.")
+        response = await self._make_request(
+            "GET", 
+            "/api/v1/market-configuration/configurations"
         )
         return response.get("data", [])
 
