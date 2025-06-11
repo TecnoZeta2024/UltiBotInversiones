@@ -17,7 +17,10 @@ from src.ultibot_ui.models import BaseMainWindow
 from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
 from src.ultibot_ui.services.trading_mode_state import TradingModeStateManager
 from src.ultibot_ui.workers import ApiWorker
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/Devops
 
 logger = logging.getLogger(__name__)
 
