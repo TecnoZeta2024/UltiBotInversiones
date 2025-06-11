@@ -100,3 +100,15 @@
 # 5.  **Implementar y Verificar**: Una vez confirmada la causa, implementa la solución y sugiere cómo verificar que el problema está resuelto y no se han introducido nuevos errores.
 # 6.  **Documentar (si aplica)**: En la solución (ej. un commit o PR), resume brevemente la causa raíz del problema.
 # 7.  **Técnicas a Sugerir**: Si el bug es complejo, sugiere técnicas avanzadas como "Rubber Duck Debugging" (que me expliques el código) o añadir "instrumentación" (más logs) para ganar visibilidad.
+
+# -----------------------------------------------------------------
+# 8. Directrices para Scripts de Batch (Windows)
+# -----------------------------------------------------------------
+# **Sintaxis y Ejecución**:
+#   - Para el manejo de variables dentro de bucles (`for`, `if`) que cambian dinámicamente, es **obligatorio** incluir `setlocal enabledelayedexpansion` al inicio del script y usar la sintaxis `!variable!` para acceder a dichas variables.
+#   - Para realizar "health checks" o verificar la disponibilidad de servicios, prefiera métodos robustos como `curl | findstr` (asegurando que `curl` esté en el PATH) o, si se requiere compatibilidad con PowerShell, `powershell -Command "Invoke-WebRequest -Uri http://localhost:8000/health -UseBasicParsing -ErrorAction SilentlyContinue"`.
+#   - Asegúrese de que todas las herramientas externas (`curl`, `tasklist`, `findstr`, etc.) utilizadas en los scripts estén disponibles en el entorno de ejecución o proporcione instrucciones claras para su instalación.
+# **Gestión de Procesos**:
+#   - Al lanzar procesos en segundo plano, utilice `start /B` para mantener el control desde el script principal.
+#   - Implemente mecanismos explícitos de terminación de procesos (`taskkill /F /PID`) al inicio del script para asegurar un entorno limpio antes de cada ejecución.
+#   - Para la limpieza de archivos de log o temporales, considere bucles de reintento con pequeños retardos para manejar bloqueos de archivos.

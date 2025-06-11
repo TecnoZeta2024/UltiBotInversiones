@@ -18,15 +18,205 @@
 2025-06-10 21:21:21,810 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trading-mode "HTTP/HTTP/1.1 200 OK"
 2025-06-10 21:21:21,810 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
 2025-06-10 21:21:21,810 - src.ultibot_ui.windows.main_window - INFO - TaskManager inicializado con un máximo de 10 hilos.
+QPropertyAnimation: you're trying to animate a non-existing property hover_progress of your QObject
+QPropertyAnimation: you're trying to animate a non-existing property glow_opacity of your QObject
+Unknown property box-shadow
+QPropertyAnimation: you're trying to animate a non-existing property hover_progress of your QObject
+QPropertyAnimation: you're trying to animate a non-existing property glow_opacity of your QObject
+Unknown property box-shadow
+QPropertyAnimation: you're trying to animate a non-existing property hover_progress of your QObject
+QPropertyAnimation: you're trying to animate a non-existing property glow_opacity of your QObject
+Unknown property box-shadow
+QPropertyAnimation: you're trying to animate a non-existing property hover_progress of your QObject
+QPropertyAnimation: you're trying to animate a non-existing property glow_opacity of your QObject
+Unknown property box-shadow
+QPropertyAnimation: you're trying to animate a non-existing property hover_progress of your QObject
+QPropertyAnimation: you're trying to animate a non-existing property glow_opacity of your QObject
+Unknown property box-shadow
+QPropertyAnimation: you're trying to animate a non-existing property hover_progress of your QObject
+QPropertyAnimation: you're trying to animate a non-existing property glow_opacity of your QObject
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+QPropertyAnimation: you're trying to animate a non-existing property glow_opacity of your QObject
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+QPropertyAnimation: you're trying to animate a non-existing property spotlight_opacity of your QObject
+QPropertyAnimation: you're trying to animate a non-existing property spotlight_opacity of your QObject
+QPropertyAnimation: you're trying to animate a non-existing property spotlight_opacity of your QObject
 2025-06-10 21:21:22,102 - src.ultibot_ui.widgets.portfolio_widget - INFO - Timer de actualización del portafolio iniciado.
 2025-06-10 21:21:22,102 - src.ultibot_ui.widgets.chart_widget - INFO - Solicitando datos para BTCUSDT - 1h usando TaskManager
 2025-06-10 21:21:22,110 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: _initialize_async_components INVOCADO
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property -webkit-background-clip
+Unknown property -webkit-background-clip
+Unknown property backdrop-filter
+Unknown property box-shadow
+Unknown property backdrop-filter
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property backdrop-filter
+Unknown property backdrop-filter
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property backdrop-filter
+Unknown property backdrop-filter
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
 2025-06-10 21:21:22,123 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: __init__ called.
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
 2025-06-10 21:21:22,150 - src.ultibot_ui.windows.history_view - INFO - HistoryView inicializada para usuario 22c5a278-da81-4fc5-8296-92cdb59670e3
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
 2025-06-10 21:21:22,157 - src.ultibot_ui.services.ui_strategy_service - INFO - UIStrategyService: Iniciando fetch_strategies a través de TaskManager.
 2025-06-10 21:21:22,157 - src.ultibot_ui.windows.main_window - INFO - MainWindow: Iniciada la obtención de estrategias.
 2025-06-10 21:21:22,157 - src.ultibot_ui.windows.main_window - INFO - Central widget y vistas configuradas.
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property -webkit-background-clip
+Unknown property -webkit-background-clip
+Unknown property -webkit-background-clip
+Unknown property backdrop-filter
+Unknown property backdrop-filter
+Unknown property box-shadow
+Unknown property backdrop-filter
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property backdrop-filter
+Unknown property backdrop-filter
+Unknown property backdrop-filter
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property backdrop-filter
+Unknown property backdrop-filter
+Unknown property backdrop-filter
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property -webkit-background-clip
+Unknown property -webkit-background-clip
+Unknown property -webkit-background-clip
+Unknown property backdrop-filter
+Unknown property backdrop-filter
+Unknown property box-shadow
+Unknown property backdrop-filter
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property backdrop-filter
+Unknown property backdrop-filter
+Unknown property backdrop-filter
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property backdrop-filter
+Unknown property backdrop-filter
+Unknown property backdrop-filter
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
 2025-06-10 21:21:22,192 - src.ultibot_ui.windows.main_window - INFO - MainWindow inicializada y visible.
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
 2025-06-10 21:21:22,565 - __main__ - INFO - Ventana principal mostrada.
 2025-06-10 21:21:22,617 - src.ultibot_ui.views.portfolio_view - INFO - PortfolioView: Fetching portfolio snapshot.
 2025-06-10 21:21:22,618 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/market/klines
@@ -116,11 +306,29 @@ src.ultibot_ui.services.api_client.APIError: Error de API (422): [{'type': 'lite
 2025-06-10 21:21:23,595 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/market/klines?symbol=BTCUSDT&interval=1h&limit=100 "HTTP/1.1 200 OK"
 2025-06-10 21:21:23,595 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/market/klines "HTTP/HTTP/1.1 200 OK"
 2025-06-10 21:21:23,595 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
+QPropertyAnimation: you're trying to animate a non-existing property spotlight_opacity of your QObject
+QPropertyAnimation: you're trying to animate a non-existing property spotlight_opacity of your QObject
 2025-06-10 21:21:27,115 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
 2025-06-10 21:21:27,640 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
 2025-06-10 21:21:27,640 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
 2025-06-10 21:21:27,640 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
+QPropertyAnimation: you're trying to animate a non-existing property spotlight_opacity of your QObject
+QPropertyAnimation: you're trying to animate a non-existing property hover_progress of your QObject
+Unknown property box-shadow
+QPropertyAnimation: you're trying to animate a non-existing property hover_progress of your QObject
+QPropertyAnimation: you're trying to animate a non-existing property glow_opacity of your QObject
+Unknown property box-shadow
 2025-06-10 21:21:32,123 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
+QPropertyAnimation: you're trying to animate a non-existing property hover_progress of your QObject
+QPropertyAnimation: you're trying to animate a non-existing property glow_opacity of your QObject
+Unknown property box-shadow
+QPropertyAnimation: you're trying to animate a non-existing property hover_progress of your QObject
+QPropertyAnimation: you're trying to animate a non-existing property glow_opacity of your QObject
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+QPropertyAnimation: you're trying to animate a non-existing property glow_opacity of your QObject
+QPropertyAnimation: you're trying to animate a non-existing property glow_opacity of your QObject
 2025-06-10 21:21:32,767 - src.ultibot_ui.views.strategies_view - INFO - StrategiesView: Entrando a la vista.
 2025-06-10 21:21:32,767 - src.ultibot_ui.widgets.sidebar_navigation_widget - INFO - Navigation requested: strategies
 2025-06-10 21:21:32,767 - src.ultibot_ui.views.strategies_view - INFO - Fetching strategies.
@@ -189,14 +397,40 @@ src.ultibot_ui.services.api_client.APIError: Error de API (422): [{'type': 'lite
 2025-06-10 21:21:38,503 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
 2025-06-10 21:21:38,503 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
 2025-06-10 21:21:38,503 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
+Unknown property box-shadow
 2025-06-10 21:21:42,120 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
 2025-06-10 21:21:42,920 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
 2025-06-10 21:21:42,920 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
 2025-06-10 21:21:42,920 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
+Unknown property box-shadow
+Unknown property box-shadow
 2025-06-10 21:21:47,120 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/notifications/history
 2025-06-10 21:21:48,010 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
 2025-06-10 21:21:48,010 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
 2025-06-10 21:21:48,010 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
+Unknown property box-shadow
 2025-06-10 21:21:48,350 - src.ultibot_ui.services.api_client - INFO - Creando configuración de escaneo de mercado '1'.
 2025-06-10 21:21:48,350 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/market-configuration/configurations
 2025-06-10 21:21:48,360 - httpx - INFO - HTTP Request: POST http://localhost:8000/api/v1/market-configuration/configurations "HTTP/1.1 500 Internal Server Error"
@@ -231,6 +465,8 @@ Traceback (most recent call last):
     raise APIError(
 src.ultibot_ui.services.api_client.APIError: Error de API (500): Failed to create configuration: SupabasePersistenceService.upsert_market_scan_configuration() takes 2 positional arguments but 3 were given
 2025-06-10 21:21:48,360 - src.ultibot_ui.dialogs.market_scan_config_dialog - ERROR - Error de API al guardar configuración: Error de API (500): Failed to create configuration: SupabasePersistenceService.upsert_market_scan_configuration() takes 2 positional arguments but 3 were given
+Unknown property box-shadow
+Unknown property box-shadow
 2025-06-10 21:21:52,110 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: PAPER
 2025-06-10 21:21:52,110 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 22c5a278-da81-4fc5-8296-92cdb59670e3, modo: PAPER
 2025-06-10 21:21:52,110 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/portfolio/snapshot
@@ -287,7 +523,10 @@ src.ultibot_ui.services.api_client.APIError: Error de API (422): [{'type': 'lite
 2025-06-10 21:21:53,671 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/notifications/history?limit=20 "HTTP/1.1 200 OK"
 2025-06-10 21:21:53,671 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/notifications/history "HTTP/HTTP/1.1 200 OK"
 2025-06-10 21:21:53,671 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
+Unknown property box-shadow
 2025-06-10 21:21:55,190 - src.ultibot_ui.windows.main_window - INFO - Diálogo de configuración de escaneo de mercado cerrado
+Unknown property box-shadow
+Unknown property box-shadow
 2025-06-10 21:21:56,264 - src.ultibot_ui.views.strategies_view - INFO - StrategiesView: Saliendo de la vista.
 2025-06-10 21:21:56,264 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: Entrando a la vista.
 2025-06-10 21:21:56,265 - src.ultibot_ui.widgets.sidebar_navigation_widget - INFO - Navigation requested: opportunities
@@ -383,3 +622,4 @@ src.ultibot_ui.services.api_client.APIError: Error de API (422): [{'type': 'lite
 2025-06-10 21:22:09,703 - src.ultibot_ui.windows.main_window - INFO - Cerrando el pool de hilos del TaskManager...
 2025-06-10 21:22:09,703 - src.ultibot_ui.windows.main_window - INFO - El pool de hilos del TaskManager ha sido cerrado.
 2025-06-10 21:22:09,703 - src.ultibot_ui.windows.main_window - INFO - Limpieza de MainWindow finalizada.
+Unhandled Python exception

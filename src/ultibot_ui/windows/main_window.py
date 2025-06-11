@@ -77,7 +77,7 @@ class TaskManager(QObject):
 
     def submit(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine], on_success: Callable, on_error: Callable):
         """
-        Crea un ApiWorker, lo envuelve en un QRunnable y lo envía al pool de hilos.
+        Delega la ejecución de una factoría de corutinas al gestor de tareas central.
         """
         api_worker_instance = ApiWorker(
             api_client=self.api_client,
@@ -301,9 +301,10 @@ class MainWindow(QMainWindow, BaseMainWindow):
     def open_market_scan_config(self):
         """Abre el diálogo de configuración de escaneo de mercado."""
         try:
-            # TODO: Refactorizar este diálogo para usar el TaskManager central
             dialog = MarketScanConfigDialog(
                 api_client=self.api_client,
+                main_window=self,
+                loop=self.loop,
                 parent=self
             )
             dialog.exec_()

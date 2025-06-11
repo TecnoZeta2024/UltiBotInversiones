@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 class TradingMode(str, Enum):
     """Enum for trading modes, aligned with backend."""
-    LIVE = "live"
-    PAPER = "paper"
+    LIVE = "LIVE"
+    PAPER = "PAPER"
 
     @property
     def display_name(self) -> str:
@@ -56,8 +56,8 @@ class TradingModeStateManager(QObject):
         logger.info("Syncing trading mode with backend...")
         try:
             response = await self._api_client.get_trading_mode()
-            # Convert received mode to lowercase for robust validation
-            mode_from_backend = response.get("mode", "").lower()
+            # Convert received mode to uppercase for robust validation
+            mode_from_backend = response.get("mode", "").upper()
             mode = TradingMode(mode_from_backend)
             
             if mode != self._current_mode:

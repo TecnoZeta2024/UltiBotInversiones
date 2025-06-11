@@ -6,7 +6,7 @@ import logging
 import os
 from urllib.parse import urlparse, unquote
 from typing import Optional, List, Dict, Any, TYPE_CHECKING
-from uuid import UUID
+from uuid import UUID, uuid4
 from datetime import datetime, timezone
 from psycopg.rows import dict_row
 from psycopg.sql import SQL, Identifier, Literal, Composed, Composable
@@ -23,6 +23,7 @@ from src.ultibot_backend.core.domain_models.opportunity_models import Opportunit
 from src.ultibot_backend.core.domain_models.trade_models import Trade, TradeOrderDetails
 from src.ultibot_backend.core.domain_models.trading_strategy_models import TradingStrategyConfig
 from src.shared.data_types import APICredential, ServiceName, Notification, MarketData
+from src.ultibot_backend.core.domain_models.user_configuration_models import ScanPreset, MarketScanConfiguration
 
 logger = logging.getLogger(__name__)
 
@@ -835,4 +836,257 @@ class SupabasePersistenceService:
                     return [Trade(**record) for record in records]
         except Exception as e:
             logger.error(f"Error al obtener trades con filtros {filters}: {e}", exc_info=True)
+            raise
+
+    # --- Métodos para Scan Presets ---
+    async def list_scan_presets(self, include_system: bool = True) -> List[Dict[str, Any]]:
+        await self._check_pool()
+        assert self.pool is not None
+
+        query_parts = [SQL("SELECT * FROM scan_presets WHERE user_id = %s")]
+        params = [self.fixed_user_id]
+
+        if include_system:
+            query_parts.append(SQL("OR is_system_preset = TRUE"))
+        
+        final_query = SQL(" ").join(query_parts) + SQL(" ORDER BY created_at DESC;")
+
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(final_query, tuple(params))
+                    records = await cur.fetchall()
+                    return [dict(record) for record in records]
+        except Exception as e:
+            logger.error(f"Error al listar presets de escaneo para usuario {self.fixed_user_id}: {e}", exc_info=True)
+            raise
+
+    async def create_scan_preset(self, preset_data: Dict[str, Any]) -> Dict[str, Any]:
+        await self._check_pool()
+        assert self.pool is not None
+
+        # Asegurarse de que el ID se genere si no está presente
+        if 'id' not in preset_data or not preset_data['id']:
+            preset_data['id'] = str(UUID(int=0)) # Placeholder, Supabase debería generar uno real
+
+        query = """
+        INSERT INTO scan_presets (
+            id, user_id, name, description, category, recommended_strategies,
+            market_scan_configuration, is_system_preset, is_active,
+            usage_count, success_rate, created_at, updated_at
+        ) VALUES (
+            %(id)s, %(user_id)s, %(name)s, %(description)s, %(category)s, %(recommended_strategies)s,
+            %(market_scan_configuration)s, %(is_system_preset)s, %(is_active)s,
+            %(usage_count)s, %(success_rate)s, %(created_at)s, %(updated_at)s
+        ) RETURNING *;
+        """
+        
+        # Preparar datos para la inserción
+        data_to_insert = preset_data.copy()
+        data_to_insert['user_id'] = self.fixed_user_id
+        data_to_insert['market_scan_configuration'] = Jsonb(data_to_insert.get('market_scan_configuration', {}))
+        data_to_insert['recommended_strategies'] = data_to_insert.get('recommended_strategies')
+        data_to_insert['created_at'] = datetime.now(timezone.utc)
+        data_to_insert['updated_at'] = datetime.now(timezone.utc)
+        data_to_insert['usage_count'] = data_to_insert.get('usage_count', 0)
+        data_to_insert['success_rate'] = data_to_insert.get('success_rate')
+
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(SQL(query), data_to_insert)
+                    record = await cur.fetchone()
+                    if record:
+                        return dict(record)
+            raise ValueError("No se pudo crear el preset de escaneo.")
+        except Exception as e:
+            logger.error(f"Error al crear preset de escaneo: {e}", exc_info=True)
+            raise
+
+    async def update_scan_preset(self, preset_id: str, preset_data: Dict[str, Any]) -> Dict[str, Any]:
+        await self._check_pool()
+        assert self.pool is not None
+
+        query = """
+        UPDATE scan_presets
+        SET
+            name = %(name)s,
+            description = %(description)s,
+            category = %(category)s,
+            recommended_strategies = %(recommended_strategies)s,
+            market_scan_configuration = %(market_scan_configuration)s,
+            is_system_preset = %(is_system_preset)s,
+            is_active = %(is_active)s,
+            usage_count = %(usage_count)s,
+            success_rate = %(success_rate)s,
+            updated_at = timezone('utc'::text, now())
+        WHERE id = %(id)s AND user_id = %(user_id)s
+        RETURNING *;
+        """
+        
+        data_to_update = preset_data.copy()
+        data_to_update['id'] = preset_id
+        data_to_update['user_id'] = self.fixed_user_id
+        data_to_update['market_scan_configuration'] = Jsonb(data_to_update.get('market_scan_configuration', {}))
+        data_to_update['recommended_strategies'] = data_to_update.get('recommended_strategies')
+        data_to_update['usage_count'] = data_to_update.get('usage_count', 0)
+        data_to_update['success_rate'] = data_to_update.get('success_rate')
+
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(SQL(query), data_to_update)
+                    record = await cur.fetchone()
+                    if record:
+                        return dict(record)
+            raise ValueError(f"No se pudo actualizar el preset de escaneo con ID {preset_id}.")
+        except Exception as e:
+            logger.error(f"Error al actualizar preset de escaneo {preset_id}: {e}", exc_info=True)
+            raise
+
+    async def delete_scan_preset(self, preset_id: str) -> bool:
+        await self._check_pool()
+        assert self.pool is not None
+
+        query = SQL("DELETE FROM scan_presets WHERE id = %s AND user_id = %s AND is_system_preset = FALSE;")
+        
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor() as cur:
+                    await cur.execute(query, (preset_id, self.fixed_user_id))
+                    return cur.rowcount > 0
+        except Exception as e:
+            logger.error(f"Error al eliminar preset de escaneo {preset_id}: {e}", exc_info=True)
+            raise
+
+    async def get_scan_preset_by_id(self, preset_id: str) -> Optional[Dict[str, Any]]:
+        await self._check_pool()
+        assert self.pool is not None
+
+        query = SQL("SELECT * FROM scan_presets WHERE id = %s AND (user_id = %s OR is_system_preset = TRUE);")
+        
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, (preset_id, self.fixed_user_id))
+                    record = await cur.fetchone()
+                    if record:
+                        return dict(record)
+            return None
+        except Exception as e:
+            logger.error(f"Error al obtener preset de escaneo por ID {preset_id}: {e}", exc_info=True)
+            raise
+
+    # --- Métodos para Market Scan Configurations (no presets) ---
+    async def get_market_scan_configuration(self, config_id: UUID) -> Optional[Dict[str, Any]]:
+        await self._check_pool()
+        assert self.pool is not None
+        query = SQL("SELECT * FROM market_scan_configurations WHERE id = %s AND user_id = %s;")
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, (config_id, self.fixed_user_id))
+                    record = await cur.fetchone()
+                    if record:
+                        return dict(record)
+            return None
+        except Exception as e:
+            logger.error(f"Error al obtener configuración de escaneo de mercado por ID {config_id}: {e}", exc_info=True)
+            raise
+
+    async def upsert_market_scan_configuration(self, config_data: Dict[str, Any]) -> Dict[str, Any]:
+        await self._check_pool()
+        assert self.pool is not None
+
+        config_id = config_data.get('id')
+        is_update = bool(config_id)
+
+        if is_update:
+            # Lógica de actualización
+            query = """
+            UPDATE market_scan_configurations SET
+                name = %(name)s,
+                description = %(description)s,
+                min_price_change_24h_percent = %(min_price_change_24h_percent)s,
+                max_price_change_24h_percent = %(max_price_change_24h_percent)s,
+                volume_filter_type = %(volume_filter_type)s,
+                min_volume_24h_usd = %(min_volume_24h_usd)s,
+                market_cap_ranges = %(market_cap_ranges)s,
+                trend_direction = %(trend_direction)s,
+                min_rsi = %(min_rsi)s,
+                max_rsi = %(max_rsi)s,
+                max_results = %(max_results)s,
+                scan_interval_minutes = %(scan_interval_minutes)s,
+                allowed_quote_currencies = %(allowed_quote_currencies)s,
+                is_active = %(is_active)s,
+                updated_at = timezone('utc'::text, now())
+            WHERE id = %(id)s AND user_id = %(user_id)s
+            RETURNING *;
+            """
+        else:
+            # Lógica de inserción
+            config_data['id'] = str(uuid4())
+            query = """
+            INSERT INTO market_scan_configurations (
+                id, user_id, name, description, min_price_change_24h_percent,
+                max_price_change_24h_percent, volume_filter_type, min_volume_24h_usd,
+                market_cap_ranges, trend_direction, min_rsi, max_rsi,
+                max_results, scan_interval_minutes, allowed_quote_currencies,
+                is_active, created_at, updated_at
+            ) VALUES (
+                %(id)s, %(user_id)s, %(name)s, %(description)s, %(min_price_change_24h_percent)s,
+                %(max_price_change_24h_percent)s, %(volume_filter_type)s, %(min_volume_24h_usd)s,
+                %(market_cap_ranges)s, %(trend_direction)s, %(min_rsi)s, %(max_rsi)s,
+                %(max_results)s, %(scan_interval_minutes)s, %(allowed_quote_currencies)s,
+                %(is_active)s, %(created_at)s, %(updated_at)s
+            ) RETURNING *;
+            """
+            config_data['created_at'] = datetime.now(timezone.utc)
+
+        data_to_process = config_data.copy()
+        data_to_process['user_id'] = self.fixed_user_id
+        data_to_process['updated_at'] = datetime.now(timezone.utc)
+        
+        # Convertir listas a JSONB si es necesario
+        for key in ['market_cap_ranges', 'allowed_quote_currencies']:
+            if key in data_to_process and isinstance(data_to_process[key], list):
+                data_to_process[key] = json.dumps(data_to_process[key])
+
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(SQL(query), data_to_process)
+                    record = await cur.fetchone()
+                    if record:
+                        return dict(record)
+            raise ValueError("No se pudo guardar/actualizar la configuración de escaneo de mercado.")
+        except Exception as e:
+            logger.error(f"Error al guardar/actualizar configuración de escaneo de mercado: {e}", exc_info=True)
+            raise
+
+    async def delete_market_scan_configuration(self, config_id: UUID) -> bool:
+        await self._check_pool()
+        assert self.pool is not None
+        query = SQL("DELETE FROM market_scan_configurations WHERE id = %s AND user_id = %s;")
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor() as cur:
+                    await cur.execute(query, (config_id, self.fixed_user_id))
+                    return cur.rowcount > 0
+        except Exception as e:
+            logger.error(f"Error al eliminar configuración de escaneo de mercado {config_id}: {e}", exc_info=True)
+            raise
+
+    async def list_market_scan_configurations(self) -> List[Dict[str, Any]]:
+        await self._check_pool()
+        assert self.pool is not None
+        query = SQL("SELECT * FROM market_scan_configurations WHERE user_id = %s ORDER BY created_at DESC;")
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, (self.fixed_user_id,))
+                    records = await cur.fetchall()
+                    return [dict(record) for record in records]
+        except Exception as e:
+            logger.error(f"Error al listar configuraciones de escaneo de mercado para usuario {self.fixed_user_id}: {e}", exc_info=True)
             raise
