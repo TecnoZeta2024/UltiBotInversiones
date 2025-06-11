@@ -17,7 +17,7 @@ INFO:     Started reloader process [17880] using WatchFiles
 2025-06-11 07:46:36,159 - src.ultibot_backend.services.credential_service - INFO - [9b3a389796bc] - MainThread - credential_service.py:34 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
 2025-06-11 07:46:36,159 - src.ultibot_backend.dependencies - INFO - [52e64198557b] - MainThread - dependencies.py:154 - Dependency container initialized successfully.
 2025-06-11 07:46:36,159 - ultibot_backend - INFO - [115eb148bf9c] - MainThread - main.py:93 - LIFESPAN: Contenedor de dependencias inicializado.
-2025-06-11 07:46:36,159 - ultibot_backend - INFO - [dab360846bed] - MainThread - main.py:100 - LIFESPAN: Aplicación iniciada correctamente, cediendo el control (yield).
+2025-06-11 07:46:36,159 - ultibot_backend - INFO - [dab360846bed] - MainThread - main.py:100 - LIFESPAN: Aplicaciï¿½n iniciada correctamente, cediendo el control (yield).
 2025-06-11 07:46:37,569 - ultibot_backend - INFO - [49f46ed4ac9d] - MainThread - main.py:127 - Middleware: Solicitud entrante: GET /health
 2025-06-11 07:46:37,571 - ultibot_backend - DEBUG - [15a318240de843e9bc0ce905b82e4c8c] - AnyIO worker thread - main.py:170 - Health check solicitado.
 2025-06-11 07:46:37,571 - ultibot_backend - INFO - [a4b10d6f33be] - MainThread - main.py:129 - Middleware: Solicitud procesada: GET /health - Status: 200

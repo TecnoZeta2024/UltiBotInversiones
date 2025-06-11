@@ -3,28 +3,28 @@
 2025-06-11 07:46:42,219 - STDERR - ERROR -   class AppController(QObject):
 2025-06-11 07:46:42,262 - __main__ - INFO - Stylesheet cargado exitosamente.
 2025-06-11 07:46:42,437 - src.ultibot_ui.services.trading_mode_state - INFO - TradingModeStateManager initialized with mode: PAPER
-2025-06-11 07:46:42,439 - __main__ - INFO - Iniciando inicialización asíncrona...
-2025-06-11 07:46:44,448 - src.ultibot_ui.services.api_client - INFO - Obteniendo configuración de usuario.
-2025-06-11 07:46:44,450 - STDOUT - INFO - Solicitando configuración de usuario al backend...
+2025-06-11 07:46:42,439 - __main__ - INFO - Iniciando inicializaciï¿½n asï¿½ncrona...
+2025-06-11 07:46:44,448 - src.ultibot_ui.services.api_client - INFO - Obteniendo configuraciï¿½n de usuario.
+2025-06-11 07:46:44,450 - STDOUT - INFO - Solicitando configuraciï¿½n de usuario al backend...
 2025-06-11 07:46:44,450 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/config
 2025-06-11 07:46:45,262 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/config "HTTP/1.1 200 OK"
 2025-06-11 07:46:45,263 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/config "HTTP/HTTP/1.1 200 OK"
 2025-06-11 07:46:45,263 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-11 07:46:45,263 - __main__ - INFO - Configuración recibida para el ID de usuario: edbfcda3-2c8f-4845-927a-20579c9d5a31
+2025-06-11 07:46:45,263 - __main__ - INFO - Configuraciï¿½n recibida para el ID de usuario: edbfcda3-2c8f-4845-927a-20579c9d5a31
 2025-06-11 07:46:45,263 - src.ultibot_ui.services.trading_mode_state - INFO - Syncing trading mode with backend...
 2025-06-11 07:46:45,263 - src.ultibot_ui.services.api_client - INFO - Getting trading mode from backend.
 2025-06-11 07:46:45,263 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/trading-mode
 2025-06-11 07:46:45,266 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trading-mode "HTTP/1.1 200 OK"
 2025-06-11 07:46:45,267 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trading-mode "HTTP/HTTP/1.1 200 OK"
 2025-06-11 07:46:45,267 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-11 07:46:45,274 - src.ultibot_ui.windows.main_window - INFO - TaskManager inicializado con un máximo de 10 hilos.
-2025-06-11 07:46:45,711 - src.ultibot_ui.widgets.portfolio_widget - INFO - Timer de actualización del portafolio iniciado.
+2025-06-11 07:46:45,274 - src.ultibot_ui.windows.main_window - INFO - TaskManager inicializado con un mï¿½ximo de 10 hilos.
+2025-06-11 07:46:45,711 - src.ultibot_ui.widgets.portfolio_widget - INFO - Timer de actualizaciï¿½n del portafolio iniciado.
 2025-06-11 07:46:45,715 - src.ultibot_ui.widgets.chart_widget - INFO - Solicitando datos para BTCUSDT - 1h usando TaskManager
 2025-06-11 07:46:45,723 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: _initialize_async_components INVOCADO
 2025-06-11 07:46:45,745 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: __init__ called.
 2025-06-11 07:46:45,787 - src.ultibot_ui.windows.history_view - INFO - HistoryView inicializada para usuario edbfcda3-2c8f-4845-927a-20579c9d5a31
-2025-06-11 07:46:45,792 - src.ultibot_ui.services.ui_strategy_service - INFO - UIStrategyService: Iniciando fetch_strategies a través de TaskManager.
-2025-06-11 07:46:45,792 - src.ultibot_ui.windows.main_window - INFO - MainWindow: Iniciada la obtención de estrategias.
+2025-06-11 07:46:45,792 - src.ultibot_ui.services.ui_strategy_service - INFO - UIStrategyService: Iniciando fetch_strategies a travï¿½s de TaskManager.
+2025-06-11 07:46:45,792 - src.ultibot_ui.windows.main_window - INFO - MainWindow: Iniciada la obtenciï¿½n de estrategias.
 2025-06-11 07:46:45,792 - src.ultibot_ui.windows.main_window - INFO - Central widget y vistas configuradas.
 2025-06-11 07:46:45,822 - src.ultibot_ui.windows.main_window - INFO - MainWindow inicializada y visible.
 2025-06-11 07:46:46,192 - __main__ - INFO - Ventana principal mostrada.
@@ -51,8 +51,8 @@
 2025-06-11 07:46:46,921 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/trades?trading_mode=both "HTTP/1.1 200 OK"
 2025-06-11 07:46:46,922 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/trades "HTTP/HTTP/1.1 200 OK"
 2025-06-11 07:46:46,922 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-11 07:46:46,922 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: 0 trades cargados para el análisis de desempeño.
-2025-06-11 07:46:46,922 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: Inicialización de componentes asíncronos completada.
+2025-06-11 07:46:46,922 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: 0 trades cargados para el anï¿½lisis de desempeï¿½o.
+2025-06-11 07:46:46,922 - src.ultibot_ui.windows.dashboard_view - INFO - DashboardView: Inicializaciï¿½n de componentes asï¿½ncronos completada.
 2025-06-11 07:46:46,922 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: PAPER
 2025-06-11 07:46:46,925 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para edbfcda3-2c8f-4845-927a-20579c9d5a31, modo: PAPER
 2025-06-11 07:46:46,925 - STDOUT - INFO - Intentando conectar a: http://localhost:8000/api/v1/portfolio/snapshot
@@ -112,7 +112,7 @@ src.ultibot_ui.services.api_client.APIError: Error de API (422): [{'type': 'lite
 2025-06-11 07:46:47,095 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/performance/metrics?trading_mode=paper&date_from=2025-05-12&date_to=2025-06-11 "HTTP/1.1 200 OK"
 2025-06-11 07:46:47,095 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/performance/metrics "HTTP/HTTP/1.1 200 OK"
 2025-06-11 07:46:47,095 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-11 07:46:47,096 - src.ultibot_ui.widgets.paper_trading_report_widget - INFO - Métricas de rendimiento cargadas exitosamente
+2025-06-11 07:46:47,096 - src.ultibot_ui.widgets.paper_trading_report_widget - INFO - Mï¿½tricas de rendimiento cargadas exitosamente
 2025-06-11 07:46:47,257 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/market/klines?symbol=BTCUSDT&interval=1h&limit=100 "HTTP/1.1 200 OK"
 2025-06-11 07:46:47,258 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/market/klines "HTTP/HTTP/1.1 200 OK"
 2025-06-11 07:46:47,258 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
@@ -201,14 +201,14 @@ src.ultibot_ui.services.api_client.APIError: Error de API (422): [{'type': 'lite
 2025-06-11 07:47:11,861 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/opportunities/real-trading-candidates "HTTP/1.1 200 OK"
 2025-06-11 07:47:11,861 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/opportunities/real-trading-candidates "HTTP/HTTP/1.1 200 OK"
 2025-06-11 07:47:11,862 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-11 07:47:11,862 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView no está activa, ignorando resultado.
+2025-06-11 07:47:11,862 - src.ultibot_ui.views.opportunities_view - INFO - OpportunitiesView no estï¿½ activa, ignorando resultado.
 2025-06-11 07:47:12,112 - src.ultibot_ui.views.strategies_view - INFO - StrategiesView: Saliendo de la vista.
 2025-06-11 07:47:12,114 - src.ultibot_ui.widgets.sidebar_navigation_widget - INFO - Navigation requested: history
 2025-06-11 07:47:12,403 - httpx - INFO - HTTP Request: GET http://localhost:8000/api/v1/strategies/strategies "HTTP/1.1 200 OK"
 2025-06-11 07:47:12,403 - src.ultibot_ui.services.api_client - INFO - HTTP Request: GET /api/v1/strategies/strategies "HTTP/HTTP/1.1 200 OK"
 2025-06-11 07:47:12,403 - STDOUT - INFO - Respuesta recibida: Estado 200 OK
-2025-06-11 07:47:12,403 - src.ultibot_ui.views.strategies_view - INFO - StrategiesView no está activa, ignorando resultado.
-2025-06-11 07:47:12,772 - src.ultibot_ui.windows.settings_view - INFO - Entrando a la vista de configuración. Sincronizando estado.
+2025-06-11 07:47:12,403 - src.ultibot_ui.views.strategies_view - INFO - StrategiesView no estï¿½ activa, ignorando resultado.
+2025-06-11 07:47:12,772 - src.ultibot_ui.windows.settings_view - INFO - Entrando a la vista de configuraciï¿½n. Sincronizando estado.
 2025-06-11 07:47:12,773 - src.ultibot_ui.widgets.sidebar_navigation_widget - INFO - Navigation requested: settings
 2025-06-11 07:47:15,699 - src.ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: PAPER
 2025-06-11 07:47:15,700 - src.ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para edbfcda3-2c8f-4845-927a-20579c9d5a31, modo: PAPER
