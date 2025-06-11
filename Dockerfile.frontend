@@ -1,0 +1,66 @@
+# Dockerfile para el frontend PyQt5 de UltiBot con TightVNC
+FROM python:3.11.9-slim-bullseye
+
+WORKDIR /app
+
+# Instala dependencias del sistema necesarias para PyQt5 y TightVNC
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    libgl1-mesa-glx libglib2.0-0 \
+    xfce4 xfce4-goodies \
+    tightvncserver \
+    dbus-x11 x11-xserver-utils \
+    tini supervisor \
+    libxkbcommon-x11-0 libxcb-xinerama0 libxcb-cursor0 libxrender1 libsm6 libxext6 \
+    curl netcat xterm xfonts-base xfonts-75dpi xfonts-100dpi fonts-dejavu \
+    nano wget procps psmisc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Instala Poetry y configura para no crear entornos virtuales dentro del contenedor
+RUN pip install poetry && \
+    poetry config virtualenvs.create false && \
+    pip install PyQt5 PyQtChart requests
+
+# Crea los directorios necesarios
+RUN mkdir -p /app/logs /root/.vnc /app/.config && \
+    chmod 777 /app/logs
+
+# Configuración de supervisord
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Copia pyproject.toml y poetry.lock (si existe) para instalar dependencias
+COPY pyproject.toml poetry.lock* ./
+
+# Instala todas las dependencias necesarias para el frontend
+RUN poetry install --no-root --no-interaction && rm -rf /root/.cache/pypoetry
+
+# Copia el código fuente necesario para el frontend
+COPY src/ultibot_ui /app/src/ultibot_ui
+COPY src/shared /app/src/shared
+COPY src/ultibot_backend /app/src/ultibot_backend
+COPY src/__init__.py /app/src/__init__.py
+
+# Copia los scripts de configuración y inicio
+COPY docker/frontend-entrypoint.sh /app/entrypoint.sh
+COPY docker/vnc-startup.sh /app/vnc-startup.sh
+COPY docker/xfce-startup.sh /app/xfce-startup.sh
+COPY docker/wait-for-it.sh /app/wait-for-it.sh
+
+# Asigna permisos de ejecución a los scripts
+RUN chmod +x /app/entrypoint.sh /app/vnc-startup.sh /app/xfce-startup.sh /app/wait-for-it.sh
+
+# Expone el puerto VNC
+EXPOSE 5900
+
+ENV PYTHONPATH=/app \
+    PYTHONUNBUFFERED=1 \
+    DISPLAY=:1 \
+    BACKEND_URL=http://backend:8000 \
+    VNC_RESOLUTION=1280x800 \
+    VNC_DEPTH=24 \
+    NO_VNC_PORT=6080 \
+    HOME=/root \
+    TERM=xterm
+
+ENTRYPOINT ["tini", "--"]
+CMD ["/app/entrypoint.sh"]

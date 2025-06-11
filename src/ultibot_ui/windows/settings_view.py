@@ -1,31 +1,50 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QLineEdit, QPushButton, QGroupBox, QDoubleSpinBox, QMessageBox
-from PyQt5.QtCore import Qt, pyqtSignal
-import logging
-from typing import Optional, Dict, Any
-from uuid import UUID
 import asyncio
+import logging
+from typing import Optional
+from uuid import UUID
 
-from src.ultibot_ui.services.api_client import UltiBotAPIClient # Importar UltiBotAPIClient
-from src.shared.data_types import UserConfiguration, RealTradingSettings # Importar RealTradingSettings
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QGroupBox,
+    QMessageBox, QRadioButton, QButtonGroup
+)
+
+from src.ultibot_ui.services.api_client import UltiBotAPIClient
+from src.ultibot_ui.services.trading_mode_state import TradingMode, TradingModeStateManager
+from src.ultibot_ui.dialogs.confirmation_dialog import ConfirmationDialog
+from src.ultibot_ui.models import BaseMainWindow
 
 logger = logging.getLogger(__name__)
 
 class SettingsView(QWidget):
     """
-    Vista de configuración para el usuario, incluyendo opciones de Paper Trading y Operativa Real Limitada.
+    Vista de configuración para gestionar el modo de operativa del bot.
     """
-    config_changed = pyqtSignal(UserConfiguration)
-    real_trading_mode_status_changed = pyqtSignal(bool, int, int) # isActive, executedCount, limit
 
-    def __init__(self, user_id: str, api_client: UltiBotAPIClient, parent=None):
+    def __init__(
+        self,
+        user_id: str,
+        api_client: UltiBotAPIClient,
+        loop: asyncio.AbstractEventLoop,
+        parent: Optional[BaseMainWindow] = None,
+    ):
         super().__init__(parent)
         self.user_id = user_id
         self.api_client = api_client
-        self.current_config: Optional[UserConfiguration] = None
-        self.real_trading_status: Dict[str, Any] = {"isActive": False, "executedCount": 0, "limit": 5}
+        self.loop = loop
+        self.main_window = parent
+        
+        # Acceder al trading_mode_manager desde la ventana principal
+        if hasattr(self.main_window, 'trading_mode_manager'):
+            self.trading_mode_manager: TradingModeStateManager = self.main_window.trading_mode_manager
+        else:
+            # Fallback por si se instancia sin una main_window completa (ej. en tests)
+            self.trading_mode_manager = TradingModeStateManager(api_client)
+            logger.warning("SettingsView initialized without a main_window. TradingModeStateManager may not be shared.")
 
         self._setup_ui()
-        asyncio.create_task(self._load_initial_data())
+        self.trading_mode_manager.trading_mode_changed.connect(self._update_ui_from_state)
+        self._update_ui_from_state(self.trading_mode_manager.current_mode.value)
 
     def _setup_ui(self):
         main_layout = QVBoxLayout(self)
@@ -33,186 +52,102 @@ class SettingsView(QWidget):
         main_layout.setContentsMargins(20, 20, 20, 20)
         main_layout.setSpacing(15)
 
-        title_label = QLabel("Configuración General")
+        title_label = QLabel("Configuración de Operativa")
         title_label.setObjectName("settingsTitleLabel")
         title_label.setStyleSheet("font-size: 24px; font-weight: bold;")
         main_layout.addWidget(title_label)
 
-        # Grupo para Paper Trading
-        paper_trading_group = QGroupBox("Modo Paper Trading")
-        paper_trading_layout = QVBoxLayout(paper_trading_group)
-        paper_trading_layout.setContentsMargins(10, 10, 10, 10)
-        paper_trading_layout.setSpacing(10)
+        mode_group = QGroupBox("Modo de Operativa")
+        mode_layout = QVBoxLayout(mode_group)
+        
+        self.mode_button_group = QButtonGroup(self)
+        
+        self.paper_mode_radio = QRadioButton(TradingMode.PAPER.display_name)
+        self.paper_mode_radio.setStyleSheet("font-size: 16px;")
+        self.mode_button_group.addButton(self.paper_mode_radio)
+        mode_layout.addWidget(self.paper_mode_radio)
 
-        self.paper_trading_checkbox = QCheckBox("Activar Paper Trading")
-        self.paper_trading_checkbox.setStyleSheet("font-size: 16px;")
-        paper_trading_layout.addWidget(self.paper_trading_checkbox)
+        self.live_mode_radio = QRadioButton(TradingMode.LIVE.display_name)
+        self.live_mode_radio.setStyleSheet("font-size: 16px;")
+        self.mode_button_group.addButton(self.live_mode_radio)
+        mode_layout.addWidget(self.live_mode_radio)
+        
+        main_layout.addWidget(mode_group)
 
-        capital_layout = QHBoxLayout()
-        capital_label = QLabel("Capital Virtual Inicial (USDT):")
-        capital_label.setStyleSheet("font-size: 14px;")
-        self.initial_capital_spinbox = QDoubleSpinBox()
-        self.initial_capital_spinbox.setRange(0.0, 10000000.0)
-        self.initial_capital_spinbox.setSingleStep(100.0)
-        self.initial_capital_spinbox.setDecimals(2)
-        self.initial_capital_spinbox.setStyleSheet("font-size: 14px; padding: 5px;")
-        capital_layout.addWidget(capital_label)
-        capital_layout.addWidget(self.initial_capital_spinbox)
-        capital_layout.addStretch(1)
-        paper_trading_layout.addLayout(capital_layout)
-
-        main_layout.addWidget(paper_trading_group)
-
-        # Grupo para Operativa Real Limitada
-        real_trading_group = QGroupBox("Modo de Operativa Real Limitada")
-        real_trading_layout = QVBoxLayout(real_trading_group)
-        real_trading_layout.setContentsMargins(10, 10, 10, 10)
-        real_trading_layout.setSpacing(10)
-
-        self.real_trading_checkbox = QCheckBox("Activar Operativa Real Limitada")
-        self.real_trading_checkbox.setStyleSheet("font-size: 16px;")
-        self.real_trading_checkbox.stateChanged.connect(self._handle_real_trading_checkbox_state_changed)
-        real_trading_layout.addWidget(self.real_trading_checkbox)
-
-        self.real_trades_count_label = QLabel("Operaciones Reales Disponibles: 0/5")
-        self.real_trades_count_label.setStyleSheet("font-size: 14px; font-weight: bold;")
-        real_trading_layout.addWidget(self.real_trades_count_label)
-
-        main_layout.addWidget(real_trading_group)
-
-        save_button = QPushButton("Guardar Cambios")
+        save_button = QPushButton("Aplicar Cambio de Modo")
         save_button.setStyleSheet("padding: 10px 20px; font-size: 16px; font-weight: bold;")
         save_button.clicked.connect(self._handle_save_button_clicked)
         main_layout.addWidget(save_button)
 
         main_layout.addStretch(1)
 
-    async def _load_initial_data(self):
-        """Carga la configuración inicial y el estado del modo real."""
-        await self._load_config_into_ui()
-        await self._load_real_trading_status()
+    def enter_view(self):
+        """Llamado cuando la vista se vuelve activa."""
+        logger.info("Entrando a la vista de configuración. Sincronizando estado.")
+        self._update_ui_from_state(self.trading_mode_manager.current_mode.value)
 
-    async def _load_config_into_ui(self):
-        """Carga la configuración general del usuario y la muestra en la UI."""
+    def _update_ui_from_state(self, mode_str: str):
+        """Actualiza la selección del radio button según el estado actual."""
         try:
-            config_data = await self.api_client.get_user_configuration()
-            self.current_config = UserConfiguration(**config_data) # Convertir a UserConfiguration
-            assert self.current_config is not None # Asegurar a Pylance que no es None
-            
-            self.paper_trading_checkbox.setChecked(self.current_config.paperTradingActive or False)
-            self.initial_capital_spinbox.setValue(self.current_config.defaultPaperTradingCapital or 10000.0)
-            logger.info("Configuración de usuario general cargada en la UI de Settings.")
-        except Exception as e:
-            logger.error(f"Error al cargar la configuración general en la UI de Settings: {e}", exc_info=True)
-            QMessageBox.critical(self, "Error de Carga", f"No se pudo cargar la configuración general: {e}")
-
-    async def _load_real_trading_status(self):
-        """Carga el estado del modo de operativa real limitada y actualiza la UI."""
-        try:
-            status_data = await self.api_client.get_real_trading_mode_status()
-            self.real_trading_status = status_data
-            self._update_real_trading_ui()
-            logger.info(f"Estado de operativa real cargado: {status_data}")
-        except Exception as e:
-            logger.error(f"Error al cargar el estado de operativa real: {e}", exc_info=True)
-            QMessageBox.critical(self, "Error de Carga", f"No se pudo cargar el estado del modo real: {e}")
-
-    def _update_real_trading_ui(self):
-        """Actualiza los widgets de UI relacionados con el modo de operativa real."""
-        is_active = self.real_trading_status.get("isActive", False)
-        executed_count = self.real_trading_status.get("executedCount", 0)
-        limit = self.real_trading_status.get("limit", 5)
-
-        self.real_trading_checkbox.setChecked(is_active)
-        self.real_trades_count_label.setText(f"Operaciones Reales Disponibles: {limit - executed_count}/{limit}")
-
-        # AC5: Bloqueo Post-Límite
-        if executed_count >= limit:
-            self.real_trading_checkbox.setEnabled(False)
-            self.real_trades_count_label.setText(f"Límite de operaciones reales alcanzado: {executed_count}/{limit}")
-            QMessageBox.information(self, "Límite Alcanzado", "Has alcanzado el límite de operaciones reales permitidas. El modo real ha sido deshabilitado.")
-        else:
-            self.real_trading_checkbox.setEnabled(True) # Asegurarse de que esté habilitado si hay cupos
-
-        self.real_trading_mode_status_changed.emit(is_active, executed_count, limit)
-
+            mode = TradingMode(mode_str)
+            if mode == TradingMode.PAPER:
+                self.paper_mode_radio.setChecked(True)
+            elif mode == TradingMode.LIVE:
+                self.live_mode_radio.setChecked(True)
+        except ValueError:
+            logger.error(f"Estado de modo inválido recibido: {mode_str}")
 
     def _handle_save_button_clicked(self):
-        """Slot síncrono para manejar el clic del botón Guardar. Crea una tarea para guardar la configuración."""
-        asyncio.create_task(self._save_config())
+        """Maneja el clic en el botón de guardar."""
+        selected_mode = TradingMode.LIVE if self.live_mode_radio.isChecked() else TradingMode.PAPER
+        current_mode = self.trading_mode_manager.current_mode
 
-    async def _save_config(self):
-        """Guarda los cambios de configuración general desde la UI al backend."""
-        if not self.current_config:
-            logger.warning("No hay configuración actual para guardar. Recargando y reintentando.")
-            await self._load_config_into_ui()
-            if not self.current_config:
-                QMessageBox.critical(self, "Error", "No se pudo cargar la configuración para guardar.")
-                return
+        if selected_mode == current_mode:
+            QMessageBox.information(self, "Sin Cambios", "El modo seleccionado ya está activo.")
+            return
 
-        try:
-            # Crear una nueva instancia de UserConfiguration con los cambios
-            updated_config_data = {
-                "paperTradingActive": self.paper_trading_checkbox.isChecked(),
-                "defaultPaperTradingCapital": self.initial_capital_spinbox.value(),
-                # realTradingSettings se gestiona por separado con sus propios endpoints
-            }
-            # Usar model_copy para crear una nueva instancia con los cambios
-            updated_config_model = self.current_config.model_copy(update=updated_config_data)
-            
-            # Convertir el modelo Pydantic a un diccionario para el API client
-            await self.api_client.update_user_configuration(updated_config_model.model_dump(mode='json', by_alias=True, exclude_none=True))
-            logger.info("Configuración de usuario general guardada exitosamente desde la UI de Settings.")
-            self.config_changed.emit(updated_config_model)
-            QMessageBox.information(self, "Éxito", "Configuración guardada exitosamente.")
-        except Exception as e:
-            logger.error(f"Error al guardar la configuración general desde la UI de Settings: {e}", exc_info=True)
-            QMessageBox.critical(self, "Error al Guardar", f"No se pudo guardar la configuración general: {e}")
-
-    def _handle_real_trading_checkbox_state_changed(self, state: int):
-        """Maneja el cambio de estado del checkbox de Operativa Real Limitada."""
-        if state == Qt.CheckState.Checked: # Corregido: Usar Qt.CheckState.Checked
-            asyncio.create_task(self._activate_real_trading_mode())
-        else:
-            asyncio.create_task(self._deactivate_real_trading_mode())
-
-    async def _activate_real_trading_mode(self):
-        """Llama al endpoint para activar el modo de operativa real limitada."""
-        try:
-            # AC6: Advertencia y Confirmación Adicional
-            warning_message = (
+        if selected_mode == TradingMode.LIVE:
+            confirmed = ConfirmationDialog.ask(
+                "Confirmar Activación de Modo LIVE",
                 "¡ADVERTENCIA CRÍTICA!\n\n"
-                "Estás a punto de activar el MODO DE OPERATIVA REAL LIMITADA.\n"
-                "Esto significa que las PRÓXIMAS OPERACIONES que cumplan los criterios de alta confianza "
-                "utilizarán DINERO REAL de tu cuenta de Binance.\n\n"
-                "Asegúrate de entender los riesgos. ¿Deseas continuar?"
+                "Estás a punto de activar el MODO LIVE. "
+                "Las operaciones utilizarán DINERO REAL de tu cuenta.\n\n"
+                "Asegúrate de entender todos los riesgos. ¿Deseas continuar?",
+                self
             )
-            reply = QMessageBox.warning(
-                self, 
-                "Confirmar Activación de Modo Real", 
-                warning_message, 
-                QMessageBox.Yes | QMessageBox.No, 
-                QMessageBox.No
+            if not confirmed:
+                self.paper_mode_radio.setChecked(True) # Revertir selección
+                logger.info("Activación del modo LIVE cancelada por el usuario.")
+                return
+        
+        self._set_new_mode(selected_mode)
+
+    def _set_new_mode(self, mode: TradingMode):
+        """Llama al state manager para cambiar el modo y maneja la respuesta."""
+        logger.info(f"Solicitando cambio de modo a {mode.value}")
+        
+        # Usar el task_manager de la ventana principal para ejecutar la corutina
+        if self.main_window:
+            self.main_window.submit_task(
+                lambda client: self.trading_mode_manager.set_trading_mode(mode),
+                self._handle_set_mode_success,
+                self._handle_set_mode_error
             )
+        else:
+            logger.error("No se puede cambiar el modo: main_window no está disponible.")
 
-            if reply == QMessageBox.Yes:
-                await self.api_client.activate_real_trading_mode()
-                QMessageBox.information(self, "Éxito", "Modo de Operativa Real Limitada activado.")
-                await self._load_real_trading_status() # Recargar estado para actualizar UI
-            else:
-                self.real_trading_checkbox.setChecked(False) # Revertir el checkbox si el usuario cancela
-        except Exception as e:
-            logger.error(f"Error al activar el modo de operativa real: {e}", exc_info=True)
-            QMessageBox.critical(self, "Error de Activación", f"No se pudo activar el modo real: {e}")
-            self.real_trading_checkbox.setChecked(False) # Revertir el checkbox en caso de error
+    def _handle_set_mode_success(self, result: bool):
+        if result:
+            QMessageBox.information(self, "Éxito", "El modo de operativa ha sido actualizado.")
+            logger.info("El modo de operativa se actualizó correctamente.")
+        else:
+            # El error ya fue logueado en el state manager, aquí solo informamos al usuario
+            QMessageBox.critical(self, "Error", "No se pudo actualizar el modo de operativa. Revisa los logs.")
+            # Revertir la UI al estado actual del manager
+            self._update_ui_from_state(self.trading_mode_manager.current_mode.value)
 
-    async def _deactivate_real_trading_mode(self):
-        """Llama al endpoint para desactivar el modo de operativa real limitada."""
-        try:
-            await self.api_client.deactivate_real_trading_mode()
-            QMessageBox.information(self, "Éxito", "Modo de Operativa Real Limitada desactivado.")
-            await self._load_real_trading_status() # Recargar estado para actualizar UI
-        except Exception as e:
-            logger.error(f"Error al desactivar el modo de operativa real: {e}", exc_info=True)
-            QMessageBox.critical(self, "Error de Desactivación", f"No se pudo desactivar el modo real: {e}")
-            self.real_trading_checkbox.setChecked(True) # Revertir el checkbox en caso de error
+    def _handle_set_mode_error(self, error_message: str):
+        QMessageBox.critical(self, "Error de Comunicación", f"No se pudo cambiar el modo: {error_message}")
+        logger.error(f"Error de comunicación al cambiar de modo: {error_message}")
+        # Revertir la UI al estado actual del manager
+        self._update_ui_from_state(self.trading_mode_manager.current_mode.value)

@@ -1,13 +1,17 @@
 import logging
 from typing import List, Optional, Dict, Set, Callable, Any
 from uuid import UUID
+from fastapi import Depends
+from datetime import timedelta
 
-from src.shared.data_types import AssetBalance, ServiceName, BinanceConnectionStatus
+from src.shared.data_types import AssetBalance, ServiceName, BinanceConnectionStatus, MarketData
 from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
 from src.ultibot_backend.services.credential_service import CredentialService
-from src.ultibot_backend.core.exceptions import BinanceAPIError, CredentialError, UltiBotError, ExternalAPIError, MarketDataError # Importar MarketDataError
-from datetime import datetime
-import asyncio # Necesario para asyncio.Task y asyncio.create_task
+from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from src.ultibot_backend.core.exceptions import BinanceAPIError, CredentialError, UltiBotError, ExternalAPIError, MarketDataError
+from src.ultibot_backend.app_config import settings
+from datetime import datetime, timezone
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -15,13 +19,21 @@ class MarketDataService:
     """
     Servicio para obtener datos de mercado, incluyendo balances de exchanges y streams en tiempo real.
     """
-    def __init__(self, credential_service: CredentialService, binance_adapter: BinanceAdapter):
+    def __init__(self, 
+                 credential_service: CredentialService, 
+                 binance_adapter: BinanceAdapter,
+                 persistence_service: SupabasePersistenceService
+                 ):
         self.credential_service = credential_service
         self.binance_adapter = binance_adapter
-        self._active_websocket_tasks: Dict[str, asyncio.Task] = {} # Para mantener un registro de las tareas WebSocket
-        self._closed = False # Flag para indicar si el servicio ha sido cerrado
+        self.persistence_service = persistence_service
+        self._active_websocket_tasks: Dict[str, asyncio.Task] = {}
+        self._closed = False
+        self._invalid_symbols_cache: Set[str] = set()
+        self._cache_expiration = {}
+        self._historical_data_tasks: Dict[str, asyncio.Task] = {}
 
-    async def get_binance_connection_status(self, user_id: UUID) -> BinanceConnectionStatus:
+    async def get_binance_connection_status(self) -> BinanceConnectionStatus:
         """
         Verifica el estado de la conexión con Binance y devuelve un objeto BinanceConnectionStatus.
         """
@@ -32,51 +44,47 @@ class MarketDataService:
         account_permissions = None
 
         try:
-            # Intentar obtener la credencial de Binance Spot
             binance_credential = await self.credential_service.get_credential(
-                user_id=user_id,
                 service_name=ServiceName.BINANCE_SPOT,
-                credential_label="default" # Asumimos una etiqueta por defecto para la credencial principal
+                credential_label="default"
             )
 
             if not binance_credential:
                 status_message = "Credenciales de Binance no encontradas. Por favor, configúrelas."
-                logger.warning(f"Usuario {user_id}: {status_message}")
+                logger.warning(status_message)
                 return BinanceConnectionStatus(
                     is_connected=False,
                     status_message=status_message,
                     status_code="CREDENTIALS_NOT_FOUND",
-                    last_verified_at=None, # Añadir explícitamente None
-                    account_permissions=None # Añadir explícitamente None
+                    last_verified_at=None,
+                    account_permissions=None
                 )
             
-            # La verificación de la credencial ya actualiza su estado en la BD
             is_connected = await self.credential_service.verify_credential(binance_credential)
             
-            # Después de verify_credential, binance_credential.last_verified_at y .permissions ya deberían estar actualizados
             last_verified_at = binance_credential.last_verified_at
             account_permissions = binance_credential.permissions
 
             if not is_connected:
                 status_message = "Fallo en la verificación de conexión con Binance. Revise sus credenciales y permisos."
                 status_code = "VERIFICATION_FAILED"
-                logger.error(f"Usuario {user_id}: {status_message}")
+                logger.error(status_message)
             else:
                 status_message = "Conexión con Binance exitosa."
-                logger.info(f"Usuario {user_id}: {status_message}")
+                logger.info(status_message)
 
         except CredentialError as e:
             status_message = f"Error al acceder a las credenciales de Binance: {e}"
             status_code = "CREDENTIAL_ERROR"
-            logger.error(f"Usuario {user_id}: {status_message}", exc_info=True)
+            logger.error(status_message, exc_info=True)
         except BinanceAPIError as e:
             status_message = f"Error de la API de Binance: {e}"
             status_code = e.code if e.code else "BINANCE_API_ERROR"
-            logger.error(f"Usuario {user_id}: {status_message}", exc_info=True)
+            logger.error(status_message, exc_info=True)
         except Exception as e:
             status_message = f"Error inesperado al verificar conexión con Binance: {e}"
             status_code = "UNEXPECTED_ERROR"
-            logger.critical(f"Usuario {user_id}: {status_message}", exc_info=True)
+            logger.critical(status_message, exc_info=True)
         
         return BinanceConnectionStatus(
             is_connected=is_connected,
@@ -86,15 +94,14 @@ class MarketDataService:
             account_permissions=account_permissions
         )
 
-    async def get_binance_spot_balances(self, user_id: UUID) -> List[AssetBalance]:
+    async def get_binance_spot_balances(self) -> List[AssetBalance]:
         """
-        Obtiene los balances de Spot de Binance para un usuario.
+        Obtiene los balances de Spot de Binance para el usuario.
         """
         if self._closed:
             logger.warning("MarketDataService está cerrado. No se pueden obtener balances.")
             return []
         binance_credential = await self.credential_service.get_credential(
-            user_id=user_id,
             service_name=ServiceName.BINANCE_SPOT,
             credential_label="default"
         )
@@ -102,28 +109,24 @@ class MarketDataService:
         if not binance_credential:
             raise CredentialError("Credenciales de Binance no encontradas para obtener balances.")
 
-        # Las credenciales ya están desencriptadas en el objeto binance_credential
-        # si get_credential no lanzó un error.
         decrypted_api_key = binance_credential.encrypted_api_key
         decrypted_api_secret = binance_credential.encrypted_api_secret
 
-        # Aunque get_credential ya lanza CredentialError si la desencriptación falla,
-        # añadimos una comprobación explícita aquí para mayor robustez y claridad.
-        if decrypted_api_key is None or decrypted_api_secret is None:
+        if not decrypted_api_key or not decrypted_api_secret:
+            logger.error("Credenciales de Binance inválidas o ausentes.")
             raise CredentialError("Las credenciales de Binance (API Key o Secret) no están disponibles o no son válidas.")
-
         try:
             balances = await self.binance_adapter.get_spot_balances(decrypted_api_key, decrypted_api_secret)
-            logger.info(f"Balances de Binance obtenidos para el usuario {user_id}.")
+            logger.info("Balances de Binance obtenidos.")
             return balances
         except BinanceAPIError as e:
-            logger.error(f"Error al obtener balances de Binance para el usuario {user_id}: {e}")
+            logger.error(f"Error de la API de Binance al obtener balances: {e}")
             raise UltiBotError(f"No se pudieron obtener los balances de Binance: {e}")
         except Exception as e:
-            logger.critical(f"Error inesperado al obtener balances de Binance para el usuario {user_id}: {e}", exc_info=True)
+            logger.critical(f"Error inesperado al obtener balances de Binance: {e}", exc_info=True)
             raise UltiBotError(f"Error inesperado al obtener balances de Binance: {e}")
 
-    async def get_market_data_rest(self, user_id: UUID, symbols: List[str]) -> Dict[str, Any]:
+    async def get_market_data_rest(self, symbols: List[str]) -> Dict[str, Any]:
         """
         Obtiene datos de mercado (precio actual, cambio 24h, volumen 24h) para una lista de símbolos
         usando la API REST de Binance.
@@ -131,23 +134,49 @@ class MarketDataService:
         if self._closed:
             logger.warning("MarketDataService está cerrado. No se pueden obtener datos de mercado REST.")
             return {s: {"error": "Servicio cerrado"} for s in symbols}
+            
+        current_time = datetime.now().timestamp()
+        expired_symbols = [symbol for symbol, expiry_time in self._cache_expiration.items() if current_time > expiry_time]
+        for symbol in expired_symbols:
+            if symbol in self._invalid_symbols_cache:
+                self._invalid_symbols_cache.remove(symbol)
+                del self._cache_expiration[symbol]
+                
         market_data = {}
-        for symbol in symbols:
+        for original_symbol in symbols:
             try:
-                # Los endpoints de ticker 24hr no requieren API Key ni Secret
-                ticker_data = await self.binance_adapter.get_ticker_24hr(symbol)
-                market_data[symbol] = {
+                if original_symbol in self._invalid_symbols_cache:
+                    logger.debug(f"Símbolo inválido (en caché): {original_symbol}. Saltando solicitud a Binance API.")
+                    market_data[original_symbol] = {"error": "Símbolo inválido (caché)"}
+                    continue
+                
+                binance_formatted_symbol = self.binance_adapter.normalize_symbol(original_symbol)
+                
+                ticker_data = await self.binance_adapter.get_ticker_24hr(binance_formatted_symbol)
+                market_data[original_symbol] = {
                     "lastPrice": float(ticker_data.get("lastPrice", 0)),
                     "priceChangePercent": float(ticker_data.get("priceChangePercent", 0)),
                     "quoteVolume": float(ticker_data.get("quoteVolume", 0))
                 }
-                logger.info(f"Datos REST de {symbol} obtenidos para el usuario {user_id}.")
+                logger.info(f"Datos REST de {original_symbol} (consultado como {binance_formatted_symbol}) obtenidos.")
+            except ValueError as ve:
+                logger.error(f"Símbolo inválido recibido: {original_symbol} - {ve}")
+                market_data[original_symbol] = {"error": f"Símbolo inválido: {ve}"}
+                self._invalid_symbols_cache.add(original_symbol)
+                self._cache_expiration[original_symbol] = current_time + 86400
             except BinanceAPIError as e:
-                logger.error(f"Error al obtener datos REST de {symbol} para el usuario {user_id}: {e}")
-                market_data[symbol] = {"error": str(e)}
+                error_msg = str(e)
+                if "Invalid symbol" in error_msg:
+                    logger.warning(f"Símbolo inválido detectado: {original_symbol}. Agregando a caché.")
+                    self._invalid_symbols_cache.add(original_symbol)
+                    current_time = datetime.now().timestamp()
+                    self._cache_expiration[original_symbol] = current_time + 86400
+                else:
+                    logger.error(f"Error al obtener datos REST de {original_symbol}: {e}")
+                market_data[original_symbol] = {"error": error_msg}
             except Exception as e:
-                logger.critical(f"Error inesperado al obtener datos REST de {symbol} para el usuario {user_id}: {e}", exc_info=True)
-                market_data[symbol] = {"error": "Error inesperado"}
+                logger.critical(f"Error inesperado al obtener datos REST de {original_symbol}: {e}", exc_info=True)
+                market_data[original_symbol] = {"error": "Error inesperado"}
         return market_data
 
     async def get_latest_price(self, symbol: str) -> float:
@@ -171,25 +200,23 @@ class MarketDataService:
             logger.critical(f"Error inesperado al obtener el último precio para {symbol}: {e}", exc_info=True)
             raise MarketDataError(f"Error inesperado al obtener el último precio para {symbol}: {e}") from e
 
-    async def subscribe_to_market_data_websocket(self, user_id: UUID, symbol: str, callback: Callable):
+    async def subscribe_to_market_data_websocket(self, symbol: str, callback: Callable):
         """
         Suscribe a un stream de ticker de 24 horas para un símbolo específico vía WebSocket.
-        La función de callback recibirá los datos del ticker en tiempo real.
         """
         if symbol in self._active_websocket_tasks:
-            logger.warning(f"Usuario {user_id}: Ya suscrito al stream de WebSocket para {symbol}. Ignorando solicitud.")
+            logger.warning(f"Ya suscrito al stream de WebSocket para {symbol}. Ignorando solicitud.")
             return
 
-        logger.info(f"Usuario {user_id}: Suscribiéndose al stream de WebSocket para {symbol}.")
+        logger.info(f"Suscribiéndose al stream de WebSocket para {symbol}.")
         try:
-            # La API Key y Secret no son necesarios para streams públicos de WebSocket
             task = asyncio.create_task(self.binance_adapter.subscribe_to_ticker_stream(symbol, callback))
             self._active_websocket_tasks[symbol] = task
         except ExternalAPIError as e:
-            logger.error(f"Usuario {user_id}: Error al suscribirse al WebSocket para {symbol}: {e}")
+            logger.error(f"Error al suscribirse al WebSocket para {symbol}: {e}")
             raise UltiBotError(f"No se pudo suscribir al stream de WebSocket para {symbol}: {e}")
         except Exception as e:
-            logger.critical(f"Usuario {user_id}: Error inesperado al suscribirse al WebSocket para {symbol}: {e}", exc_info=True)
+            logger.critical(f"Error inesperado al suscribirse al WebSocket para {symbol}: {e}", exc_info=True)
             raise UltiBotError(f"Error inesperado al suscribirse al stream de WebSocket para {symbol}: {e}")
 
     async def unsubscribe_from_market_data_websocket(self, symbol: str):
@@ -200,7 +227,7 @@ class MarketDataService:
             task = self._active_websocket_tasks.pop(symbol)
             task.cancel()
             try:
-                await task # Esperar a que la tarea se cancele
+                await task
                 logger.info(f"Suscripción a WebSocket para {symbol} cancelada exitosamente.")
             except asyncio.CancelledError:
                 logger.info(f"Tarea de WebSocket para {symbol} cancelada.")
@@ -209,17 +236,15 @@ class MarketDataService:
         else:
             logger.warning(f"No hay una suscripción activa a WebSocket para {symbol}.")
 
-    async def get_candlestick_data(self, user_id: UUID, symbol: str, interval: str, limit: int = 200, start_time: Optional[int] = None, end_time: Optional[int] = None) -> List[Dict[str, Any]]:
+    async def get_candlestick_data(self, symbol: str, interval: str, limit: int = 200, start_time: Optional[int] = None, end_time: Optional[int] = None) -> List[Dict[str, Any]]:
         """
-        Obtiene datos históricos de velas (OHLCV) para un par y temporalidad dados,
-        procesándolos para ser consumidos por el frontend.
+        Obtiene datos históricos de velas (OHLCV) y los persiste en la base de datos.
         """
         if self._closed:
             logger.warning(f"MarketDataService está cerrado. No se pueden obtener datos de velas para {symbol}-{interval}.")
             return []
         try:
-            # No se requieren credenciales para este endpoint público
-            klines_data = await self.binance_adapter.get_klines(
+            klines_data = await self.binance_adapter.get_candlestick_data(
                 symbol=symbol,
                 interval=interval,
                 start_time=start_time,
@@ -227,24 +252,10 @@ class MarketDataService:
                 limit=limit
             )
 
+            market_data_to_save = []
             processed_data = []
             for kline in klines_data:
-                # Formato de kline:
-                # [
-                #   1499040000000,      // Open time
-                #   "0.01634790",       // Open
-                #   "0.80000000",       // High
-                #   "0.01575800",       // Low
-                #   "0.01577100",       // Close
-                #   "148976.11427815",  // Volume
-                #   1499644799999,      // Close time
-                #   "2434.19055334",    // Quote asset volume
-                #   308,                // Number of trades
-                #   "1756.87402397",    // Taker buy base asset volume
-                #   "28.46694368",      // Taker buy quote asset volume
-                #   "1792.34210000"     // Ignore
-                # ]
-                processed_data.append({
+                kline_dict = {
                     "open_time": kline[0],
                     "open": float(kline[1]),
                     "high": float(kline[2]),
@@ -256,26 +267,280 @@ class MarketDataService:
                     "number_of_trades": kline[8],
                     "taker_buy_base_asset_volume": float(kline[9]),
                     "taker_buy_quote_asset_volume": float(kline[10])
-                })
-            logger.info(f"Datos de velas para {symbol}-{interval} obtenidos y procesados para el usuario {user_id}.")
+                }
+                processed_data.append(kline_dict)
+                
+                market_data_to_save.append(MarketData(
+                    symbol=symbol,
+                    timestamp=datetime.fromtimestamp(kline[0] / 1000, tz=timezone.utc),
+                    open=float(kline[1]),
+                    high=float(kline[2]),
+                    low=float(kline[3]),
+                    close=float(kline[4]),
+                    volume=float(kline[5])
+                ))
+
+            if market_data_to_save:
+                await self.persistence_service.save_market_data(market_data_to_save)
+                logger.info(f"{len(market_data_to_save)} registros de velas para {symbol}-{interval} guardados en la base de datos.")
+
+            logger.info(f"Datos de velas para {symbol}-{interval} obtenidos y procesados.")
             return processed_data
         except BinanceAPIError as e:
-            logger.error(f"Error al obtener datos de velas para {symbol}-{interval} para el usuario {user_id}: {e}")
+            logger.error(f"Error al obtener datos de velas para {symbol}-{interval}: {e}")
             raise UltiBotError(f"No se pudieron obtener los datos de velas de Binance para {symbol}-{interval}: {e}")
         except Exception as e:
-            logger.critical(f"Error inesperado al obtener datos de velas para {symbol}-{interval} para el usuario {user_id}: {e}", exc_info=True)
+            logger.critical(f"Error inesperado al obtener datos de velas para {symbol}-{interval}: {e}", exc_info=True)
             raise UltiBotError(f"Error inesperado al obtener datos de velas de Binance para {symbol}-{interval}: {e}")
+
+    async def get_historical_market_data(self, symbol: str, interval: str, limit: int = 1000) -> List[MarketData]:
+        """
+        Obtiene datos de mercado históricos desde la base de datos.
+        """
+        if self._closed:
+            logger.warning(f"MarketDataService está cerrado. No se pueden obtener datos históricos para {symbol}-{interval}.")
+            return []
+        try:
+            logger.info(f"Obteniendo datos históricos para {symbol}-{interval} desde la base de datos.")
+            # Aquí asumimos que el persistence_service tendrá un método para obtener los datos.
+            # Este método necesita ser creado en SupabasePersistenceService.
+            historical_data = await self.persistence_service.get_market_data_from_db(
+                symbol=symbol,
+                limit=limit
+            )
+            logger.info(f"Se obtuvieron {len(historical_data)} registros históricos para {symbol}-{interval} desde la base de datos.")
+            return historical_data
+        except Exception as e:
+            logger.critical(f"Error inesperado al obtener datos históricos desde la base de datos para {symbol}-{interval}: {e}", exc_info=True)
+            raise UltiBotError(f"Error inesperado al obtener datos históricos para {symbol}-{interval}: {e}")
+
+
+    async def fetch_and_store_historical_data(self, symbol: str, interval: str = '1h', days_back: int = 30):
+        """
+        Fetches historical data for a symbol going back a specified number of days
+        and stores it in the database.
+        
+        Args:
+            symbol: The trading pair symbol (e.g., 'BTCUSDT')
+            interval: Candlestick interval (e.g., '1h', '4h', '1d')
+            days_back: Number of days of historical data to fetch
+        """
+        if self._closed:
+            logger.warning(f"MarketDataService está cerrado. No se pueden obtener datos históricos para {symbol}-{interval}.")
+            return
+        
+        logger.info(f"Iniciando descarga de datos históricos para {symbol} (intervalo: {interval}, días: {days_back})")
+        
+        end_time = int(datetime.now().timestamp() * 1000)
+        start_time = int((datetime.now() - timedelta(days=days_back)).timestamp() * 1000)
+        
+        # Determine the appropriate limit and number of iterations based on the interval
+        limit_per_call = 1000  # Maximum allowed by Binance API
+        total_candles_needed = days_back * 24  # Aproximación para intervalo '1h'
+        
+        if interval == '15m':
+            total_candles_needed = days_back * 24 * 4
+        elif interval == '30m':
+            total_candles_needed = days_back * 24 * 2
+        elif interval == '4h':
+            total_candles_needed = days_back * 6
+        elif interval == '1d':
+            total_candles_needed = days_back
+        
+        iterations = (total_candles_needed + limit_per_call - 1) // limit_per_call
+        
+        total_candles_stored = 0
+        current_end_time = end_time
+        
+        try:
+            for _ in range(iterations):
+                klines = await self.binance_adapter.get_candlestick_data(
+                    symbol=symbol,
+                    interval=interval,
+                    start_time=start_time,
+                    end_time=current_end_time,
+                    limit=limit_per_call
+                )
+                
+                if not klines:
+                    break
+                
+                market_data_to_save = []
+                for kline in klines:
+                    market_data_to_save.append(MarketData(
+                        symbol=symbol,
+                        timestamp=datetime.fromtimestamp(kline[0] / 1000, tz=timezone.utc),
+                        open=float(kline[1]),
+                        high=float(kline[2]),
+                        low=float(kline[3]),
+                        close=float(kline[4]),
+                        volume=float(kline[5])
+                    ))
+                
+                # Save the data to the database
+                if market_data_to_save:
+                    await self.persistence_service.save_market_data(market_data_to_save)
+                    total_candles_stored += len(market_data_to_save)
+                    
+                    # Update the end time for the next iteration
+                    current_end_time = klines[0][0] - 1  # Use the earliest timestamp from this batch - 1ms
+                
+                # API Rate limiting: Sleep to prevent hitting Binance API rate limits
+                await asyncio.sleep(1)
+            
+            logger.info(f"Completada la descarga histórica para {symbol}-{interval}. "
+                        f"Se almacenaron {total_candles_stored} velas en la base de datos.")
+                        
+        except Exception as e:
+            logger.error(f"Error al obtener datos históricos para {symbol}-{interval}: {e}", exc_info=True)
+            raise
+
+    async def start_continuous_historical_data_collection(self, symbols: List[str], intervals: List[str] = ['1h']):
+        """
+        Starts continuous collection of historical data for a list of symbols and intervals.
+        
+        Args:
+            symbols: List of trading pair symbols to monitor
+            intervals: List of candlestick intervals to collect
+        """
+        if self._closed:
+            logger.warning("MarketDataService está cerrado. No se puede iniciar la colección de datos históricos.")
+            return
+            
+        logger.info(f"Iniciando colección continua de datos históricos para {len(symbols)} símbolos.")
+        
+        # Initial historical data fetch
+        for symbol in symbols:
+            for interval in intervals:
+                task_key = f"{symbol}_{interval}_historical"
+                if task_key in self._historical_data_tasks and not self._historical_data_tasks[task_key].done():
+                    logger.warning(f"Ya existe una tarea de recolección para {symbol}-{interval}. Ignorando.")
+                    continue
+                
+                logger.info(f"Iniciando tarea de recolección de datos históricos para {symbol}-{interval}.")
+                # First, fetch historical data going back 30 days
+                await self.fetch_and_store_historical_data(symbol, interval, days_back=30)
+                
+                # Then start a continuous task to keep the data updated
+                self._historical_data_tasks[task_key] = asyncio.create_task(
+                    self._continuous_data_collection(symbol, interval)
+                )
+
+    async def _continuous_data_collection(self, symbol: str, interval: str):
+        """
+        Continuously collects recent data for a symbol at specified interval.
+        This runs as a background task.
+        
+        Args:
+            symbol: The trading pair symbol
+            interval: Candlestick interval
+        """
+        try:
+            update_frequency = 300  # 5 minutes in seconds
+            
+            # Adjust update frequency based on interval
+            if interval == '1m':
+                update_frequency = 60  # 1 minute
+            elif interval == '5m':
+                update_frequency = 60 * 5  # 5 minutes
+            elif interval == '15m':
+                update_frequency = 60 * 15  # 15 minutes
+            elif interval == '30m':
+                update_frequency = 60 * 30  # 30 minutes
+            elif interval == '1h':
+                update_frequency = 60 * 60  # 1 hour
+            elif interval == '4h':
+                update_frequency = 60 * 60 * 4  # 4 hours
+            elif interval == '1d':
+                update_frequency = 60 * 60 * 24  # 24 hours
+                
+            logger.info(f"Iniciando colección continua para {symbol}-{interval} (frecuencia: {update_frequency}s)")
+            
+            while not self._closed:
+                try:
+                    # Get only the last 5 candles to keep data up to date
+                    klines = await self.binance_adapter.get_candlestick_data(
+                        symbol=symbol,
+                        interval=interval,
+                        limit=5
+                    )
+                    
+                    if klines:
+                        market_data_to_save = []
+                        for kline in klines:
+                            market_data_to_save.append(MarketData(
+                                symbol=symbol,
+                                timestamp=datetime.fromtimestamp(kline[0] / 1000, tz=timezone.utc),
+                                open=float(kline[1]),
+                                high=float(kline[2]),
+                                low=float(kline[3]),
+                                close=float(kline[4]),
+                                volume=float(kline[5])
+                            ))
+                        
+                        # Save recent data to database with upsert logic
+                        await self.persistence_service.save_market_data(market_data_to_save)
+                        logger.debug(f"Actualizados {len(market_data_to_save)} puntos de datos para {symbol}-{interval}")
+                        
+                except Exception as e:
+                    logger.error(f"Error en la colección continua de datos para {symbol}-{interval}: {e}", exc_info=True)
+                
+                # Sleep until next update
+                await asyncio.sleep(update_frequency)
+        except asyncio.CancelledError:
+            logger.info(f"Tarea de colección continua cancelada para {symbol}-{interval}")
+        except Exception as e:
+            logger.error(f"Error fatal en la tarea de colección continua para {symbol}-{interval}: {e}", exc_info=True)
+
+    async def stop_continuous_data_collection(self, symbol: Optional[str] = None, interval: Optional[str] = None):
+        """
+        Stops the continuous data collection tasks.
+        
+        Args:
+            symbol: If provided, only stops the task for this symbol
+            interval: If provided with symbol, stops the specific symbol-interval task
+        """
+        tasks_to_cancel = []
+        
+        if symbol and interval:
+            task_key = f"{symbol}_{interval}_historical"
+            if task_key in self._historical_data_tasks:
+                tasks_to_cancel.append((task_key, self._historical_data_tasks[task_key]))
+        elif symbol:
+            for key, task in self._historical_data_tasks.items():
+                if key.startswith(f"{symbol}_"):
+                    tasks_to_cancel.append((key, task))
+        else:
+            tasks_to_cancel = list(self._historical_data_tasks.items())
+            
+        for task_key, task in tasks_to_cancel:
+            if not task.done():
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    logger.info(f"Tarea de colección de datos {task_key} cancelada correctamente.")
+                except Exception as e:
+                    logger.error(f"Error al cancelar tarea {task_key}: {e}")
+                    
+            del self._historical_data_tasks[task_key]
+            
+        if not symbol and not interval:
+            self._historical_data_tasks.clear()
+            
+        logger.info(f"Se han detenido {len(tasks_to_cancel)} tareas de colección de datos.")
 
     async def close(self):
         """
         Cierra el cliente HTTP y cancela todas las tareas WebSocket activas.
         """
         if self._closed:
-            return # Ya está cerrado o en proceso de cierre
+            return
         
         self._closed = True
         logger.info("MarketDataService: Iniciando cierre...")
 
+        # Cancel websocket tasks
         for symbol, task in list(self._active_websocket_tasks.items()):
             task.cancel()
             try:
@@ -286,94 +551,8 @@ class MarketDataService:
                 logger.error(f"MarketDataService: Error al cancelar la tarea de WebSocket para {symbol} durante el cierre: {e}")
         self._active_websocket_tasks.clear()
         
+        # Cancel historical data collection tasks
+        await self.stop_continuous_data_collection()
+        
         await self.binance_adapter.close()
         logger.info("MarketDataService: Cierre completado.")
-
-# Ejemplo de uso (para pruebas locales)
-async def main():
-    # Configurar un logger básico para el ejemplo
-    logging.basicConfig(level=logging.INFO)
-
-    # Necesitarás configurar la variable de entorno CREDENTIAL_ENCRYPTION_KEY
-    # y tener una credencial de Binance en tu base de datos Supabase para que esto funcione.
-    # Para pruebas, puedes simular el CredentialService y BinanceAdapter.
-
-    # Ejemplo de inicialización de servicios (simplificado para el ejemplo)
-    # En una aplicación real, estos serían inyectados por un framework (FastAPI Depends)
-    from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-    from src.ultibot_backend.app_config import settings # Asegúrate de que settings esté configurado
-
-    # Configurar una URL de BD de prueba o mockear SupabasePersistenceService
-    # settings.DATABASE_URL = "postgresql://..." 
-
-    # persistence_service = SupabasePersistenceService() # No es necesario para este ejemplo
-    # await persistence_service.connect() # No es necesario para este ejemplo
-
-    credential_service = CredentialService()
-    binance_adapter = BinanceAdapter() 
-
-    market_data_service = MarketDataService(credential_service, binance_adapter)
-
-    # ID de usuario de prueba (debe coincidir con el user_id de la credencial en la BD)
-    test_user_id = UUID("a1b2c3d4-e5f6-7890-1234-567890abcdef") 
-
-    try:
-        print("Verificando estado de conexión con Binance...")
-        status = await market_data_service.get_binance_connection_status(test_user_id)
-        print(f"Estado de conexión: {status.is_connected}, Mensaje: {status.status_message}, Permisos: {status.account_permissions}")
-
-        if status.is_connected:
-            print("\nObteniendo balances de Spot de Binance...")
-            try:
-                balances = await market_data_service.get_binance_spot_balances(test_user_id)
-                for balance in balances:
-                    print(f"  {balance.asset}: Free={balance.free}, Locked={balance.locked}, Total={balance.total}")
-            except UltiBotError as e:
-                print(f"Error al obtener balances: {e}")
-        else:
-            print("No se pueden obtener balances sin una conexión exitosa a Binance.")
-
-        print("\nObteniendo datos de mercado REST para BTCUSDT y ETHUSDT...")
-        symbols_to_fetch = ["BTCUSDT", "ETHUSDT"]
-        rest_data = await market_data_service.get_market_data_rest(test_user_id, symbols_to_fetch)
-        for symbol, data in rest_data.items():
-            if "error" in data:
-                print(f"  Error para {symbol}: {data['error']}")
-            else:
-                print(f"  {symbol}: Precio={data['lastPrice']}, Cambio 24h={data['priceChangePercent']}%, Volumen={data['quoteVolume']}")
-
-        # Función de callback para el stream de WebSocket
-        async def handle_ws_data(data: Dict[str, Any]):
-            event_type = data.get('e')
-            if event_type == '24hrTicker':
-                symbol = data.get('s')
-                last_price = data.get('c')
-                price_change_percent = data.get('P')
-                quote_volume = data.get('q')
-                print(f"  WS Ticker Update: {symbol} - Precio: {last_price}, Cambio 24h: {price_change_percent}%, Volumen: {quote_volume}")
-            else:
-                print(f"  WS Raw Data: {data}")
-
-        print("\nSuscribiéndose al stream de WebSocket para BTCUSDT y ETHUSDT...")
-        await market_data_service.subscribe_to_market_data_websocket(test_user_id, "BTCUSDT", handle_ws_data)
-        await market_data_service.subscribe_to_market_data_websocket(test_user_id, "ETHUSDT", handle_ws_data)
-
-        print("Manteniendo la conexión WebSocket abierta por 45 segundos. Presiona Ctrl+C para salir.")
-        await asyncio.sleep(45)
-
-        print("\nCancelando suscripción a ETHUSDT...")
-        await market_data_service.unsubscribe_from_market_data_websocket("ETHUSDT")
-        print("Esperando 15 segundos más para ver si BTCUSDT sigue recibiendo datos...")
-        await asyncio.sleep(15)
-
-    except UltiBotError as e:
-        print(f"Error de UltiBot: {e}")
-    except Exception as e:
-        print(f"Error inesperado en el main: {e}")
-    finally:
-        print("\nCerrando servicios...")
-        await market_data_service.close()
-
-if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())

@@ -5,10 +5,12 @@ proporcionando la interfaz de usuario principal con navegación lateral y vistas
 intercambiables para diferentes funcionalidades del bot de trading.
 """
 
+import asyncio
 import logging
+from typing import Optional, Callable, Coroutine
 from uuid import UUID
 
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QObject, pyqtSignal, QRunnable, QThreadPool, pyqtSlot
 from PyQt5.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -16,313 +18,366 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QStackedWidget,
     QStatusBar,
-    QWidget,
+    QAction,
+    QTextEdit,
+    QVBoxLayout,
+    QMenuBar,
+    QWidget
 )
 
-from src.shared.data_types import UserConfiguration
-from src.ultibot_backend.services.config_service import ConfigService
-from src.ultibot_backend.services.market_data_service import MarketDataService
-from src.ultibot_backend.services.notification_service import NotificationService
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from src.ultibot_ui.models import BaseMainWindow
 from src.ultibot_ui.widgets.sidebar_navigation_widget import SidebarNavigationWidget
 from src.ultibot_ui.windows.dashboard_view import DashboardView
 from src.ultibot_ui.windows.history_view import HistoryView
 from src.ultibot_ui.windows.settings_view import SettingsView
-from src.ultibot_ui.services.api_client import UltiBotAPIClient # Importar UltiBotAPIClient
+from src.ultibot_ui.services.api_client import UltiBotAPIClient
+from src.ultibot_ui.services.ui_strategy_service import UIStrategyService
+from src.ultibot_ui.views.strategies_view import StrategiesView
+from src.ultibot_ui.views.opportunities_view import OpportunitiesView
+from src.ultibot_ui.views.portfolio_view import PortfolioView
+from src.ultibot_ui.workers import ApiWorker
+from src.ultibot_ui.services.trading_mode_state import TradingModeStateManager, TradingMode
 
+# Importar diálogos de configuración avanzada
+from src.ultibot_ui.dialogs.market_scan_config_dialog import MarketScanConfigDialog
+from src.ultibot_ui.dialogs.preset_management_dialog import PresetManagementDialog
+from src.ultibot_ui.dialogs.asset_config_dialog import AssetTradingParametersDialog
 
-class MainWindow(QMainWindow):
-    """Ventana principal de la aplicación UltiBotInversiones.
+logger = logging.getLogger(__name__)
 
-    Proporciona la interfaz de usuario principal con navegación lateral,
-    barra de estado y vistas intercambiables para las diferentes
-    funcionalidades del sistema de trading.
+class RunnableApiWorker(QRunnable):
     """
+    Wrapper QRunnable para un ApiWorker para ser usado con QThreadPool.
+    Conecta las señales del worker a los callbacks apropiados.
+    """
+    def __init__(self, worker: ApiWorker, on_success: Callable, on_error: Callable):
+        super().__init__()
+        self.worker = worker
+        # Conectar señales a los callbacks proporcionados
+        self.worker.result_ready.connect(on_success)
+        self.worker.error_occurred.connect(on_error)
+
+    @pyqtSlot()
+    def run(self):
+        """Ejecuta el método run del ApiWorker."""
+        self.worker.run()
+
+
+class TaskManager(QObject):
+    """
+    Gestiona un QThreadPool para ejecutar tareas ApiWorker de forma asíncrona y centralizada.
+    """
+    def __init__(self, api_client: UltiBotAPIClient, loop: asyncio.AbstractEventLoop, parent: Optional[QObject] = None):
+        super().__init__(parent)
+        self.api_client = api_client
+        self.loop = loop
+        self.thread_pool = QThreadPool()
+        self.thread_pool.setMaxThreadCount(10) # Límite razonable de hilos
+        logger.info(f"TaskManager inicializado con un máximo de {self.thread_pool.maxThreadCount()} hilos.")
+
+    def submit(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine], on_success: Callable, on_error: Callable):
+        """
+        Delega la ejecución de una factoría de corutinas al gestor de tareas central.
+        """
+        api_worker_instance = ApiWorker(
+            api_client=self.api_client,
+            coroutine_factory=coroutine_factory,
+            loop=self.loop
+        )
+        runnable_worker = RunnableApiWorker(
+            worker=api_worker_instance,
+            on_success=on_success,
+            on_error=on_error
+        )
+        self.thread_pool.start(runnable_worker)
+        logger.debug("Tarea ApiWorker enviada al pool de hilos.")
+
+    def cleanup(self):
+        """Limpia el pool de hilos, esperando a que las tareas terminen."""
+        logger.info("Cerrando el pool de hilos del TaskManager...")
+        self.thread_pool.waitForDone()
+        logger.info("El pool de hilos del TaskManager ha sido cerrado.")
+
+
+class MainWindow(QMainWindow, BaseMainWindow):
+    """Ventana principal de la aplicación UltiBotInversiones."""
 
     def __init__(
         self,
         user_id: UUID,
-        market_data_service: MarketDataService,
-        config_service: ConfigService,
-        notification_service: NotificationService,
-        persistence_service: SupabasePersistenceService,
-        parent=None,
+        api_client: UltiBotAPIClient,
+        trading_mode_manager: TradingModeStateManager,
+        loop: asyncio.AbstractEventLoop,
+        parent: Optional[QWidget] = None,
     ):
-        """Inicializa la ventana principal con los servicios requeridos.
-
-        Args:
-            user_id: Identificador único del usuario
-            market_data_service: Servicio de datos de mercado
-            config_service: Servicio de configuración
-            notification_service: Servicio de notificaciones
-            persistence_service: Servicio de persistencia de datos
-            parent: Widget padre opcional
-
-        """
+        """Inicializa la ventana principal."""
         super().__init__(parent)
         self.user_id = user_id
-        self.market_data_service = market_data_service
-        self.config_service = config_service
-        self.notification_service = notification_service
-        self.persistence_service = persistence_service
-
-        # Inicializar el cliente API para el frontend
-        self.api_client = UltiBotAPIClient()
-
-        # Variables para rastrear el estado de inicialización
-        self._initialization_complete = False
+        self.api_client = api_client
+        self.loop = loop
+        
+        self.task_manager = TaskManager(api_client=self.api_client, loop=self.loop, parent=self)
+        self.trading_mode_manager = trading_mode_manager
 
         self.setWindowTitle("UltiBotInversiones")
-        self.setGeometry(100, 100, 1200, 800)
+        self.setGeometry(100, 100, 1280, 720)
+        self.setMinimumSize(1024, 600)
 
-        self._create_status_bar()
-        self._setup_central_widget()
+        self.setMenuBar(self._create_menu_bar())
+        self._setup_status_bar()
 
-        # Conectar la señal de cambio de configuración de SettingsView
-        self.settings_view.config_changed.connect(
-            self._update_paper_trading_status_display
-        )
-        # Conectar la nueva señal de cambio de estado del modo real
-        self.settings_view.real_trading_mode_status_changed.connect(
-            self._update_real_trading_status_display
-        )
-
-        # Usar QTimer para cargar el estado inicial de forma asíncrona segura
-        self._init_timer = QTimer()
-        self._init_timer.singleShot(100, self._schedule_initial_load)
-
-    def _schedule_initial_load(self):
-        """Programa la carga inicial del estado de Paper Trading y Real Trading.
-
-        Utiliza qasync para ejecutar código asíncrono de forma segura
-        en el contexto de Qt.
-        """
-        import asyncio
-
-        try:
-            loop = asyncio.get_event_loop()
-            # Crear tareas para cargar ambos estados iniciales
-            task_paper = loop.create_task(self._load_initial_paper_trading_status())
-            task_real = loop.create_task(self._load_initial_real_trading_status())
-            
-            # Configurar callback para marcar la inicialización como completa después de ambas tareas
-            async def wait_for_all_initial_loads():
-                await asyncio.gather(task_paper, task_real)
-                self._initialization_complete = True
-                logging.info("Inicialización completa de los estados de trading.")
-
-            loop.create_task(wait_for_all_initial_loads())
-
-        except Exception as e:
-            logging.error(f"Error al programar carga inicial: {e}", exc_info=True)
-            self.paper_trading_status_label.setText("Modo: Error de Inicialización")
-            self.paper_trading_status_label.setStyleSheet("font-weight: bold; color: red;")
-            self.real_trading_status_label.setText("Modo Real: Error")
-            self.real_trading_status_label.setStyleSheet("font-weight: bold; color: red;")
-
-
-    def _create_status_bar(self):
-        """Crea y configura la barra de estado de la ventana principal."""
-        self.statusBar = QStatusBar()
-        self.setStatusBar(self.statusBar)
-
-        # Etiqueta para el estado de conexión general
-        self.connection_status_label = QLabel("Estado de Conexión: Desconectado")
-        self.statusBar.addPermanentWidget(self.connection_status_label)
-
-        # Etiqueta para el modo Paper Trading
-        self.paper_trading_status_label = QLabel("Modo: Real")
-        self.paper_trading_status_label.setStyleSheet(
-            "font-weight: bold; color: green;"
-        )
-        self.statusBar.addPermanentWidget(self.paper_trading_status_label)
-
-        # Etiqueta para el modo de Operativa Real Limitada (NUEVO)
-        self.real_trading_status_label = QLabel("Modo Real: Inactivo")
-        self.real_trading_status_label.setStyleSheet(
-            "font-weight: bold; color: gray;"
-        )
-        self.statusBar.addPermanentWidget(self.real_trading_status_label)
-
-        self.statusBar.showMessage("Listo")
-
-    async def _load_initial_paper_trading_status(self):
-        """Carga el estado inicial del modo Paper Trading y actualiza la UI.
-
-        Esta función se ejecuta de forma asíncrona para obtener la configuración
-        del usuario y actualizar el estado del modo Paper Trading en la interfaz.
-        """
-        try:
-            user_config = await self.config_service.get_user_configuration(self.user_id)
-            self._update_paper_trading_status_label(
-                user_config.paperTradingActive or False
-            )
-        except Exception as e:
-            self.paper_trading_status_label.setText("Modo: Error")
-            self.paper_trading_status_label.setStyleSheet("font-weight: bold; color: red;")
-            self.statusBar.showMessage(f"Error al cargar modo Paper: {e}")
-            logging.error(
-                f"Error al cargar el estado inicial del Paper Trading: {e}",
-                exc_info=True,
-            )
-
-    async def _load_initial_real_trading_status(self):
-        """Carga el estado inicial del modo de Operativa Real Limitada y actualiza la UI."""
-        try:
-            status_data = await self.api_client.get_real_trading_mode_status()
-            self._update_real_trading_status_label(
-                status_data.get("isActive", False),
-                status_data.get("executedCount", 0),
-                status_data.get("limit", 5)
-            )
-        except Exception as e:
-            self.real_trading_status_label.setText("Modo Real: Error")
-            self.real_trading_status_label.setStyleSheet("font-weight: bold; color: red;")
-            self.statusBar.showMessage(f"Error al cargar modo Real: {e}")
-            logging.error(
-                f"Error al cargar el estado inicial del Real Trading: {e}",
-                exc_info=True,
-            )
-
-    def _update_paper_trading_status_display(self, config: UserConfiguration):
-        """Actualiza la visualización del modo Paper Trading en la barra de estado.
-
-        Args:
-            config: Configuración de usuario actualizada
-
-        """
-        self._update_paper_trading_status_label(config.paperTradingActive or False)
-        self.statusBar.showMessage("Configuración de Paper Trading actualizada.")
-
-    def _update_paper_trading_status_label(self, is_paper_trading_active: bool):
-        """Actualiza el texto y estilo de la etiqueta del modo Paper Trading.
-
-        Args:
-            is_paper_trading_active: True si el modo Paper Trading está activo
-
-        """
-        if is_paper_trading_active:
-            self.paper_trading_status_label.setText("Modo: PAPER TRADING")
-            self.paper_trading_status_label.setStyleSheet(
-                "font-weight: bold; color: orange;"
-            )
-        else:
-            self.paper_trading_status_label.setText("Modo: Real")
-            self.paper_trading_status_label.setStyleSheet(
-                "font-weight: bold; color: green;"
-            )
-
-    def _update_real_trading_status_display(self, is_active: bool, executed_count: int, limit: int):
-        """Actualiza la visualización del modo de Operativa Real Limitada en la barra de estado.
-
-        Args:
-            is_active: True si el modo real está activo
-            executed_count: Número de operaciones reales ejecutadas
-            limit: Límite de operaciones reales
-        """
-        if is_active:
-            self.real_trading_status_label.setText(f"MODO REAL LIMITADO ACTIVO ({executed_count}/{limit})")
-            self.real_trading_status_label.setStyleSheet("font-weight: bold; color: red;")
-        else:
-            self.real_trading_status_label.setText("Modo Real: Inactivo")
-            self.real_trading_status_label.setStyleSheet("font-weight: bold; color: gray;")
-        self.statusBar.showMessage("Estado de Operativa Real actualizado.")
-
-
-    def _setup_central_widget(self):
-        """Configura el widget central con la navegación lateral y las vistas."""
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        main_layout = QHBoxLayout(central_widget)
-        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout = QHBoxLayout()
+        main_layout.setContentsMargins(0,0,0,0)
         main_layout.setSpacing(0)
+        self._setup_central_widget(main_layout)
 
-        # Sidebar de navegación
+        central_widget = QWidget()
+        central_widget.setLayout(main_layout)
+        self.setCentralWidget(central_widget)
+
+        self.trading_mode_manager.trading_mode_changed.connect(self.update_trading_mode_indicator)
+        self._sync_initial_trading_mode()
+
+        logger.info("MainWindow inicializada y visible.")
+
+    def _setup_status_bar(self):
+        """Configura la barra de estado, incluyendo el indicador de modo de trading."""
+        status_bar = QStatusBar(self)
+        self.setStatusBar(status_bar)
+        
+        self.trading_mode_label = QLabel("Syncing mode...")
+        self.trading_mode_label.setStyleSheet("padding: 2px 5px; border-radius: 3px;")
+        status_bar.addPermanentWidget(self.trading_mode_label)
+        
+        status_bar.showMessage("Listo")
+
+    def _sync_initial_trading_mode(self):
+        """Inicia la sincronización del modo de trading con el backend."""
+        self.submit_task(
+            lambda client: self.trading_mode_manager.sync_with_backend(),
+            on_success=lambda: logger.info("Initial trading mode synced successfully."),
+            on_error=lambda err: logger.error(f"Failed to sync initial trading mode: {err}")
+        )
+
+    @pyqtSlot(str)
+    def update_trading_mode_indicator(self, mode_str: str):
+        """Actualiza el indicador visual del modo de trading en la barra de estado."""
+        try:
+            mode = TradingMode(mode_str)
+            self.trading_mode_label.setText(f"MODE: {mode.display_name}")
+            self.trading_mode_label.setStyleSheet(
+                f"background-color: {mode.color}; color: white; padding: 2px 5px; border-radius: 3px; font-weight: bold;"
+            )
+            logger.info(f"Trading mode indicator updated to {mode.value}")
+        except ValueError:
+            logger.error(f"Invalid mode string received: {mode_str}")
+            self.trading_mode_label.setText("Mode: Unknown")
+            self.trading_mode_label.setStyleSheet("background-color: #777; color: white;")
+
+    def submit_task(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine], on_success: Callable, on_error: Callable):
+        """
+        Delega la ejecución de una factoría de corutinas al gestor de tareas central.
+        """
+        self.task_manager.submit(coroutine_factory, on_success, on_error)
+
+    def get_loop(self) -> asyncio.AbstractEventLoop:
+        return self.loop
+
+    def _create_menu_bar(self) -> QMenuBar:
+        """Crea y devuelve la barra de menú principal."""
+        menu_bar = QMenuBar(self)
+        
+        # Menú Archivo
+        file_menu = menu_bar.addMenu("&Archivo")
+        
+        exit_action = QAction("&Salir", self)
+        exit_action.setShortcut("Ctrl+Q")
+        exit_action.triggered.connect(self.close)
+        file_menu.addAction(exit_action)
+        
+        # Menú Configuración Avanzada
+        config_menu = menu_bar.addMenu("&Configuración Avanzada")
+        
+        # Acción para Configuración de Escaneo de Mercado
+        market_scan_action = QAction("&Escaneo de Mercado...", self)
+        market_scan_action.setShortcut("Ctrl+M")
+        market_scan_action.setStatusTip("Configurar parámetros de escaneo de mercado")
+        market_scan_action.triggered.connect(self.open_market_scan_config)
+        config_menu.addAction(market_scan_action)
+        
+        # Acción para Gestión de Presets
+        preset_mgmt_action = QAction("&Gestión de Presets...", self)
+        preset_mgmt_action.setShortcut("Ctrl+P")
+        preset_mgmt_action.setStatusTip("Crear y gestionar presets de configuración")
+        preset_mgmt_action.triggered.connect(self.open_preset_management)
+        config_menu.addAction(preset_mgmt_action)
+        
+        config_menu.addSeparator()
+        
+        # Acción para Parámetros de Trading por Activo
+        asset_config_action = QAction("&Parámetros por Activo...", self)
+        asset_config_action.setShortcut("Ctrl+A")
+        asset_config_action.setStatusTip("Configurar parámetros de trading específicos por activo")
+        asset_config_action.triggered.connect(self.open_asset_trading_parameters)
+        config_menu.addAction(asset_config_action)
+        
+        # Menú Ayuda
+        help_menu = menu_bar.addMenu("&Ayuda")
+        
+        about_action = QAction("&Acerca de", self)
+        about_action.triggered.connect(self._show_about_dialog)
+        help_menu.addAction(about_action)
+        
+        return menu_bar
+
+    def _log_debug(self, msg: str):
+        """Agrega un mensaje al logger."""
+        logger.info(msg)
+
+    def _setup_central_widget(self, main_layout: QHBoxLayout):
+        """Configura el widget central con navegación y vistas."""
         self.sidebar = SidebarNavigationWidget()
-        self.sidebar.setFixedWidth(200)  # Ancho fijo para la barra lateral
+        self.sidebar.setFixedWidth(200)
         self.sidebar.navigation_requested.connect(self._switch_view)
         main_layout.addWidget(self.sidebar)
 
-        # Contenedor de vistas principales
         self.stacked_widget = QStackedWidget()
-        main_layout.addWidget(self.stacked_widget)
+        main_layout.addWidget(self.stacked_widget, 1)
 
-        # Añadir vistas al stacked widget
-        self.dashboard_view = DashboardView(
-            self.user_id,
-            self.market_data_service,
-            self.config_service,
-            self.notification_service,
-            self.persistence_service,
-            self.api_client,  # Agregar el parámetro faltante
-        )
-        self.stacked_widget.addWidget(self.dashboard_view)  # Índice 0
+        # Inicialización de vistas
+        self.dashboard_view = DashboardView(self.user_id, self, self.api_client, self.trading_mode_manager, self.loop)
+        self.stacked_widget.addWidget(self.dashboard_view)
 
-        # Placeholder para otras vistas
-        self.opportunities_view = QLabel("Vista de Oportunidades (Placeholder)")
-        self.opportunities_view.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.stacked_widget.addWidget(self.opportunities_view)  # Índice 1
+        self.opportunities_view = OpportunitiesView(self.user_id, self, self.api_client, self.loop)
+        self.stacked_widget.addWidget(self.opportunities_view)
 
-        self.strategies_view = QLabel("Vista de Estrategias (Placeholder)")
-        self.strategies_view.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.stacked_widget.addWidget(self.strategies_view)  # Índice 2
+        self.strategies_view = StrategiesView(self.user_id, self, self.api_client, self.trading_mode_manager, self.loop)
+        self.stacked_widget.addWidget(self.strategies_view)
 
-        # Vista de historial con el widget de paper trading report
-        self.history_view = HistoryView(self.user_id)
-        self.stacked_widget.addWidget(self.history_view)  # Índice 3
+        self.portfolio_view = PortfolioView(self.user_id, self.api_client, self.trading_mode_manager, self.loop, self)
+        self.stacked_widget.addWidget(self.portfolio_view)
 
-        self.settings_view = SettingsView(str(self.user_id), self.api_client) # Pasar api_client
-        self.stacked_widget.addWidget(self.settings_view)  # Índice 4
+        self.history_view = HistoryView(self.user_id, self, self.api_client, self.loop)
+        self.stacked_widget.addWidget(self.history_view)
 
-        # Mapeo de nombres a índices del stacked widget
+        self.settings_view = SettingsView(str(self.user_id), self.api_client, self.loop, self)
+        self.stacked_widget.addWidget(self.settings_view)
+
         self.view_map = {
-            "dashboard": 0,
-            "opportunities": 1,
-            "strategies": 2,
-            "history": 3,
-            "settings": 4,
+            "dashboard": 0, "opportunities": 1, "strategies": 2,
+            "portfolio": 3, "history": 4, "settings": 5,
         }
 
-        # Seleccionar la vista inicial (Dashboard)
+        self.strategy_service = UIStrategyService(self.api_client, self, self.loop)
+        self.strategy_service.strategies_updated.connect(self.strategies_view.update_strategies_list)
+        self.strategy_service.error_occurred.connect(lambda msg: self._log_debug(f"[STRATEGY_SVC_ERR] {msg}"))
+        
+        self._fetch_strategies()
+
         dashboard_button = self.sidebar.findChild(QPushButton, "navButton_dashboard")
         if dashboard_button:
             dashboard_button.setChecked(True)
         self.stacked_widget.setCurrentIndex(self.view_map["dashboard"])
+        self._log_debug("Central widget y vistas configuradas.")
 
-    def _switch_view(self, view_name):
-        """Cambia a la vista especificada.
+    def _fetch_strategies(self):
+        """Inicia la obtención de estrategias."""
+        self.strategy_service.fetch_strategies()
+        self._log_debug("MainWindow: Iniciada la obtención de estrategias.")
 
-        Args:
-            view_name: Nombre de la vista a mostrar
-
-        """
+    def _switch_view(self, view_name: str):
+        """Cambia a la vista especificada."""
         index = self.view_map.get(view_name)
         if index is not None:
+            current_widget = self.stacked_widget.widget(self.stacked_widget.currentIndex())
+            if hasattr(current_widget, 'leave_view'):
+                current_widget.leave_view()
+
             self.stacked_widget.setCurrentIndex(index)
+            view_widget = self.stacked_widget.widget(index)
+            if hasattr(view_widget, 'enter_view'):
+                view_widget.enter_view()
+
+    def open_market_scan_config(self):
+        """Abre el diálogo de configuración de escaneo de mercado."""
+        try:
+            dialog = MarketScanConfigDialog(
+                api_client=self.api_client,
+                main_window=self,
+                loop=self.loop,
+                parent=self
+            )
+            dialog.exec_()
+            logger.info("Diálogo de configuración de escaneo de mercado cerrado")
+        except Exception as e:
+            logger.error(f"Error al abrir el diálogo de configuración de escaneo: {str(e)}")
+            self.statusBar().showMessage(f"Error: {str(e)}", 5000)
+
+    def open_preset_management(self):
+        """Abre el diálogo de gestión de presets."""
+        try:
+            dialog = PresetManagementDialog(
+                api_client=self.api_client,
+                main_window=self,
+                loop=self.loop,
+                parent=self
+            )
+            dialog.exec_()
+            logger.info("Diálogo de gestión de presets cerrado")
+        except Exception as e:
+            logger.error(f"Error al abrir el diálogo de gestión de presets: {str(e)}")
+            self.statusBar().showMessage(f"Error: {str(e)}", 5000)
+
+    def open_asset_trading_parameters(self):
+        """Abre el diálogo de configuración de parámetros de trading por activo."""
+        try:
+            # TODO: Refactorizar este diálogo para usar el TaskManager central
+            dialog = AssetTradingParametersDialog(
+                api_client=self.api_client,
+                parent=self
+            )
+            dialog.exec_()
+            logger.info("Diálogo de parámetros de trading por activo cerrado")
+        except Exception as e:
+            logger.error(f"Error al abrir el diálogo de parámetros de trading: {str(e)}")
+            self.statusBar().showMessage(f"Error: {str(e)}", 5000)
+
+    def _show_about_dialog(self):
+        """Muestra el diálogo 'Acerca de'."""
+        from PyQt5.QtWidgets import QMessageBox
+        
+        about_text = """
+        <h2>UltiBotInversiones</h2>
+        <p><b>Sistema Avanzado de Trading Automatizado</b></p>
+        <p>Versión 1.0.0</p>
+        <p>
+        UltiBotInversiones es una plataforma completa de trading automatizado 
+        que combina análisis de mercado, inteligencia artificial y estrategias 
+        personalizables para optimizar las inversiones.
+        </p>
+        <p><b>Características principales:</b></p>
+        <ul>
+        <li>Sistema de configuración avanzada de escaneo de mercado</li>
+        <li>Gestión de presets personalizables</li>
+        <li>Parámetros de trading específicos por activo</li>
+        <li>Integración con múltiples exchanges</li>
+        <li>Análisis técnico y fundamental automatizado</li>
+        </ul>
+        """
+        
+        QMessageBox.about(self, "Acerca de UltiBotInversiones", about_text)
+
+    def cleanup(self):
+        """Limpia los recursos de la ventana."""
+        self._log_debug("Limpiando recursos de MainWindow...")
+        for i in range(self.stacked_widget.count()):
+            view_widget = self.stacked_widget.widget(i)
+            if hasattr(view_widget, "cleanup"):
+                view_widget.cleanup()
+        self.task_manager.cleanup()
+        self._log_debug("Limpieza de MainWindow finalizada.")
 
     def closeEvent(self, event):
-        """Maneja el evento de cierre de la ventana principal.
-
-        Asegura que los recursos de los widgets hijos se limpien apropiadamente
-        antes de cerrar la aplicación.
-
-        Args:
-            event: Evento de cierre de Qt
-
-        """
-        print("MainWindow: closeEvent triggered.")
-        # Llamar a métodos de limpieza en las vistas/widgets que lo necesiten
-        if hasattr(self.dashboard_view, "cleanup") and callable(
-            self.dashboard_view.cleanup
-        ):
-            print("MainWindow: Calling cleanup on dashboard_view.")
-            self.dashboard_view.cleanup()
-
-        # Limpiar la vista de historial
-        if hasattr(self.history_view, "cleanup") and callable(
-            self.history_view.cleanup
-        ):
-            print("MainWindow: Calling cleanup on history_view.")
-            self.history_view.cleanup()
-
-        super().closeEvent(event)  # Aceptar el evento de cierre
+        """Maneja el evento de cierre de la ventana."""
+        self.cleanup()
+        super().closeEvent(event)

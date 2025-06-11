@@ -1,0 +1,32 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+*.egg-info/
+.env
+.env.*
+!/.env.example # Keep .env.example if it's used as a template
+
+# IDE / Editor specific
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker
+Dockerfile # Usually not needed inside the image itself unless multi-stage builds reference it
+
+# Other
+*.log
+*.db
+*.sqlite3
+tests/
+# Add any other project-specific files/directories that shouldn't be in the image

@@ -2,15 +2,18 @@ from typing import Optional, Dict, Any
 
 class UltiBotError(Exception):
     """Excepción base para errores de UltiBotInversiones."""
-    def __init__(self, message: str, code: Optional[str] = None, details: Optional[Dict[str, Any]] = None):
+    def __init__(self, message: str, status_code: int = 500, code: Optional[str] = None, details: Optional[Dict[str, Any]] = None):
         super().__init__(message)
-        self.message = message  # Asegurar que el mensaje sea accesible como atributo
+        self.message = message
+        self.status_code = status_code
         self.code = code
         self.details = details if details is not None else {}
 
 class CredentialError(UltiBotError):
     """Excepción para errores relacionados con credenciales."""
-    pass
+    def __init__(self, message: str, code: Optional[str] = "CREDENTIAL_ERROR", details: Optional[Dict[str, Any]] = None):
+        super().__init__(message, status_code=401, code=code, details=details)
+
 
 class NotificationError(UltiBotError):
     """Excepción base para errores en el servicio de notificaciones."""
@@ -19,16 +22,17 @@ class NotificationError(UltiBotError):
 class TelegramNotificationError(NotificationError):
     """Excepción específica para errores al enviar notificaciones de Telegram."""
     def __init__(self, message: str, code: Optional[str] = None, telegram_response: Optional[Dict[str, Any]] = None, original_exception: Optional[Exception] = None):
-        super().__init__(message, code)
+        super().__init__(message, code=code)
         self.telegram_response = telegram_response
         self.original_exception = original_exception
 
 class ExternalAPIError(UltiBotError):
     """Excepción para errores al interactuar con APIs externas."""
     def __init__(self, message: str, service_name: str, status_code: Optional[int] = None, response_data: Optional[Dict[str, Any]] = None, original_exception: Optional[Exception] = None):
-        super().__init__(message, code=f"{service_name.upper()}_API_ERROR")
+        # Aseguramos que siempre se pase un int a la clase base
+        final_status_code = status_code if status_code is not None else 502
+        super().__init__(message, status_code=final_status_code, code=f"{service_name.upper()}_API_ERROR")
         self.service_name = service_name
-        self.status_code = status_code
         self.response_data = response_data
         self.original_exception = original_exception
 
@@ -39,11 +43,15 @@ class BinanceAPIError(ExternalAPIError):
 
 class ConfigurationError(UltiBotError):
     """Excepción para errores relacionados con la configuración de la aplicación."""
-    pass
+    def __init__(self, message: str, code: Optional[str] = "CONFIG_ERROR", details: Optional[Dict[str, Any]] = None):
+        super().__init__(message, status_code=400, code=code, details=details)
+
 
 class OrderExecutionError(UltiBotError):
     """Excepción para errores durante la ejecución de órdenes de trading."""
-    pass
+    def __init__(self, message: str, code: Optional[str] = "ORDER_EXECUTION_ERROR", details: Optional[Dict[str, Any]] = None):
+        super().__init__(message, status_code=400, code=code, details=details)
+
 
 class MCPError(ExternalAPIError):
     """Excepción específica para errores al interactuar con un Servidor de Contexto de Modelo (MCP)."""
@@ -55,17 +63,21 @@ class MCPError(ExternalAPIError):
 class AIAnalysisError(UltiBotError):
     """Excepción para errores durante el proceso de análisis de IA (ej. con Gemini)."""
     def __init__(self, message: str, llm_provider: Optional[str] = "GEMINI", details: Optional[Dict[str, Any]] = None, original_exception: Optional[Exception] = None):
-        super().__init__(message, code=f"{llm_provider.upper()}_ANALYSIS_ERROR" if llm_provider else "AI_ANALYSIS_ERROR", details=details)
+        super().__init__(message, status_code=500, code=f"{llm_provider.upper()}_ANALYSIS_ERROR" if llm_provider else "AI_ANALYSIS_ERROR", details=details)
         self.llm_provider = llm_provider
         self.original_exception = original_exception
 
 class MarketDataError(UltiBotError):
     """Excepción para errores al obtener datos de mercado."""
-    pass
+    def __init__(self, message: str, code: Optional[str] = "MARKET_DATA_ERROR", details: Optional[Dict[str, Any]] = None):
+        super().__init__(message, status_code=502, code=code, details=details)
+
 
 class PortfolioError(UltiBotError):
     """Excepción para errores relacionados con la gestión del portafolio."""
-    pass
+    def __init__(self, message: str, code: Optional[str] = "PORTFOLIO_ERROR", details: Optional[Dict[str, Any]] = None):
+        super().__init__(message, status_code=400, code=code, details=details)
+
 
 class InsufficientUSDTBalanceError(PortfolioError):
     """Excepción para cuando el saldo de USDT es insuficiente para una operación."""
@@ -98,4 +110,5 @@ class MobulaAPIError(ExternalAPIError):
 
 class ReportError(UltiBotError):
     """Excepción para errores relacionados con la generación o procesamiento de reportes."""
-    pass
+    def __init__(self, message: str, code: Optional[str] = "REPORT_ERROR", details: Optional[Dict[str, Any]] = None):
+        super().__init__(message, status_code=500, code=code, details=details)

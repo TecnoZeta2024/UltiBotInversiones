@@ -1,0 +1,5 @@
+https://github.com/armorwallet/armor-crypto-mcp
+https://github.com/ariadng/metatrader-mcp-server
+https://github.com/aaronjmars/web3-research-mcp
+https://github.com/ferdousbhai/investor-agent
+https://github.com/doggybee/mcp-server-ccxt

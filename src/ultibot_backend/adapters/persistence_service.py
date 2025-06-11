@@ -1,82 +1,206 @@
+import asyncio
+import sys
 import psycopg
-from psycopg.rows import dict_row # Usar dict_row, se aplica al cursor
-from psycopg.conninfo import make_conninfo
-from src.ultibot_backend.app_config import settings
+from psycopg_pool import AsyncConnectionPool
 import logging
-import os # Importar os
+import os
 from urllib.parse import urlparse, unquote
 from typing import Optional, List, Dict, Any, TYPE_CHECKING
-from uuid import UUID
-from src.shared.data_types import APICredential, ServiceName, Notification, Opportunity, OpportunityStatus, Trade, TradeOrderDetails # Importar Trade y TradeOrderDetails
+from uuid import UUID, uuid4
 from datetime import datetime, timezone
-from psycopg.sql import SQL, Identifier, Literal, Composed # Importar SQL y otros componentes necesarios
+from psycopg.rows import dict_row
+from psycopg.sql import SQL, Identifier, Literal, Composed, Composable
+from psycopg.conninfo import make_conninfo
+from psycopg.types.json import Jsonb
+import json
+
+# Solución para Windows ProactorEventLoop con psycopg
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+from src.ultibot_backend.app_config import settings
+from src.ultibot_backend.core.domain_models.opportunity_models import Opportunity, OpportunityStatus
+from src.ultibot_backend.core.domain_models.trade_models import Trade, TradeOrderDetails
+from src.ultibot_backend.core.domain_models.trading_strategy_models import TradingStrategyConfig
+from src.shared.data_types import APICredential, ServiceName, Notification, MarketData
+from src.ultibot_backend.core.domain_models.user_configuration_models import ScanPreset, MarketScanConfiguration
 
 logger = logging.getLogger(__name__)
 
-if TYPE_CHECKING: # Bloque para type hints que evitan importaciones circulares en runtime
+if TYPE_CHECKING:
     pass
-    
+
 # Definir type hints para uso en el módulo
 OpportunityTypeHint = Opportunity
 OpportunityStatusTypeHint = OpportunityStatus
 
+
 class SupabasePersistenceService:
     def __init__(self):
-        self.connection: Optional[psycopg.AsyncConnection] = None
-        pass
-
+        self.pool: Optional[AsyncConnectionPool] = None
+        self.db_url: Optional[str] = os.getenv("DATABASE_URL")
+        if not self.db_url:
+            logger.error("DATABASE_URL no se encontró en las variables de entorno durante la inicialización.")
+        self.fixed_user_id = settings.FIXED_USER_ID
 
     async def connect(self):
+        if self.pool and not self.pool.closed:
+            logger.info("El pool de conexiones ya está activo.")
+            return
+
+        if not self.db_url:
+            logger.error("DATABASE_URL no está configurada. No se puede inicializar el pool de conexiones.")
+            raise ValueError("DATABASE_URL no está configurada en las variables de entorno.")
+
         try:
-            if self.connection and not self.connection.closed:
-                logger.info("Ya existe una conexión activa.")
-                return
-
-            current_database_url = os.getenv("DATABASE_URL")
-            if not current_database_url:
-                logger.error("DATABASE_URL no se encontró en las variables de entorno al intentar conectar.")
-                raise ValueError("DATABASE_URL no está configurada en las variables de entorno.")
-
-            self.connection = await psycopg.AsyncConnection.connect(
-                current_database_url,
-                sslmode='verify-full',
-                sslrootcert='supabase/prod-ca-2021.crt'
+            min_size = getattr(settings, "DB_POOL_MIN_SIZE", 2)
+            max_size = getattr(settings, "DB_POOL_MAX_SIZE", 10)
+            
+            # CORRECTO: Los parámetros de SSL deben ser parte de la cadena de conexión.
+            conn_str = f"{self.db_url}?sslmode=verify-full&sslrootcert=supabase/prod-ca-2021.crt"
+            
+            self.pool = AsyncConnectionPool(
+                conninfo=conn_str,
+                min_size=min_size,
+                max_size=max_size,
+                name="supabase_pool"
             )
-            logger.info("Conexión a la base de datos Supabase (psycopg) establecida exitosamente usando DSN directo.")
+            await self.pool.open()
+            logger.info(f"Pool de conexiones a Supabase (psycopg_pool) establecido exitosamente. Min: {min_size}, Max: {max_size}")
         except Exception as e:
-            logger.error(f"Error al conectar a la base de datos Supabase (psycopg): {e}")
-            if isinstance(e, psycopg.Error) and e.diag:
+            logger.error(f"Error al establecer el pool de conexiones a Supabase (psycopg_pool): {e}")
+            if isinstance(e, psycopg.Error) and hasattr(e, 'diag') and e.diag:
                  logger.error(f"Detalles del error de PSQL (diag): {e.diag.message_primary}")
+            self.pool = None
             raise
 
     async def disconnect(self):
-        if self.connection and not self.connection.closed:
-            await self.connection.close()
-            logger.info("Conexión a la base de datos Supabase (psycopg) cerrada.")
+        if self.pool and not self.pool.closed:
+            await self.pool.close()
+            logger.info("Pool de conexiones a Supabase (psycopg_pool) cerrado.")
+            self.pool = None
 
-    async def _ensure_connection(self):
-        if not self.connection or self.connection.closed:
+    async def _check_pool(self):
+        """Verifica la salud del pool y lo reconecta si es necesario."""
+        if not self.pool or self.pool.closed:
+            logger.warning("El pool de conexiones está cerrado o no existe. Intentando reconectar...")
             await self.connect()
-
-    async def test_connection(self) -> bool:
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
+        
+        assert self.pool is not None, "Fallo crítico al reconectar el pool."
+        
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(SQL("SELECT 1 AS result;"))
-                result = await cur.fetchone()
-                if result and result.get('result') == 1:
-                    logger.info("Conexión de prueba a la base de datos Supabase (psycopg) exitosa.")
-                    return True
-                logger.warning(f"Conexión de prueba a Supabase (psycopg) devolvió: {result}")
-                return False
+            await self.pool.check()
         except Exception as e:
-            logger.error(f"Error en la conexión de prueba a la base de datos Supabase (psycopg): {e}")
-            return False
+            logger.error(f"Fallo en la comprobación de salud del pool. Intentando reconectar. Error: {e}")
+            await self.disconnect()
+            await self.connect()
+            assert self.pool is not None, "Fallo crítico al reconectar el pool después de un check fallido."
 
+    async def save_market_data(self, market_data_list: List[MarketData]):
+        await self._check_pool()
+        assert self.pool is not None
+
+        query = SQL("COPY market_data (symbol, timestamp, open, high, low, close, volume) FROM STDIN")
+
+        async def data_generator():
+            for data in market_data_list:
+                yield f"{data.symbol}\t{data.timestamp.isoformat()}\t{data.open}\t{data.high}\t{data.low}\t{data.close}\t{data.volume}\n".encode('utf-8')
+
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor() as cur:
+                    async with cur.copy(query) as copy:
+                        async for chunk in data_generator():
+                            await copy.write(chunk)
+            logger.info(f"Se guardaron {len(market_data_list)} registros de datos de mercado.")
+        except Exception as e:
+            logger.error(f"Error al guardar datos de mercado con COPY: {e}", exc_info=True)
+            raise
+
+    async def get_market_data(self, symbol: str, start_date: datetime, end_date: datetime) -> List[MarketData]:
+        await self._check_pool()
+        assert self.pool is not None
+
+        query = SQL("SELECT * FROM market_data WHERE symbol = %s AND timestamp >= %s AND timestamp <= %s ORDER BY timestamp ASC;")
+
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, (symbol, start_date, end_date))
+                    records = await cur.fetchall()
+                    return [MarketData(**record) for record in records]
+        except Exception as e:
+            logger.error(f"Error al obtener datos de mercado para {symbol}: {e}", exc_info=True)
+            raise
+
+    async def get_market_data_from_db(self, symbol: str, limit: int) -> List[MarketData]:
+        """
+        Obtiene los últimos N registros de datos de mercado para un símbolo desde la BD.
+        """
+        await self._check_pool()
+        assert self.pool is not None
+
+        query = SQL("""
+            SELECT * FROM market_data 
+            WHERE symbol = %s 
+            ORDER BY timestamp DESC 
+            LIMIT %s;
+        """)
+
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, (symbol, limit))
+                    records = await cur.fetchall()
+                    # Los datos se devuelven en orden descendente, los invertimos para que el más antiguo sea el primero
+                    return [MarketData(**record) for record in reversed(records)]
+        except Exception as e:
+            logger.error(f"Error al obtener datos de mercado desde la BD para {symbol}: {e}", exc_info=True)
+            raise
+
+    async def get_opportunity_by_id(self, opportunity_id: UUID) -> Optional[Opportunity]:
+        await self._check_pool()
+        assert self.pool is not None
+
+        query = SQL("SELECT * FROM opportunities WHERE id = %s AND user_id = %s;")
+
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, (opportunity_id, self.fixed_user_id))
+                    record = await cur.fetchone()
+                
+                if record:
+                    return Opportunity(**record)
+                return None
+        except Exception as e:
+            logger.error(f"Error al obtener oportunidad por ID {opportunity_id} (psycopg_pool): {e}", exc_info=True)
+            raise
+
+    async def update_opportunity_status(self, opportunity_id: UUID, new_status: OpportunityStatus, status_reason: Optional[str] = None) -> Optional[Opportunity]:
+        await self._check_pool()
+        assert self.pool is not None
+        query_str: str = """
+        UPDATE opportunities
+        SET status = %s, status_reason = %s, updated_at = timezone('utc'::text, now())
+        WHERE id = %s AND user_id = %s
+        RETURNING *;
+        """
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(SQL(query_str), (new_status.value, status_reason, opportunity_id, self.fixed_user_id))
+                    record = await cur.fetchone()
+                    if record:
+                        return Opportunity(**record)
+            return None
+        except Exception as e:
+            logger.error(f"Error al actualizar estado de oportunidad {opportunity_id} (psycopg_pool): {e}", exc_info=True)
+            raise
+    
     async def save_credential(self, credential: APICredential) -> APICredential:
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
+        await self._check_pool()
+        assert self.pool is not None
         query_str: str = """
         INSERT INTO api_credentials (
             id, user_id, service_name, credential_label, 
@@ -106,131 +230,127 @@ class SupabasePersistenceService:
         RETURNING *;
         """
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(
-                    SQL(query_str),
-                    (
-                        credential.id, credential.user_id, credential.service_name.value, credential.credential_label, # Usar .value para el Enum
-                        credential.encrypted_api_key, credential.encrypted_api_secret, credential.encrypted_other_details,
-                        credential.status, credential.last_verified_at, credential.permissions, credential.permissions_checked_at,
-                        credential.expires_at, credential.rotation_reminder_policy_days, credential.usage_count, credential.last_used_at,
-                        credential.purpose_description, credential.tags, credential.notes, credential.created_at, credential.updated_at
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(
+                        SQL(query_str),
+                        (
+                            credential.id, self.fixed_user_id, credential.service_name.value, credential.credential_label,
+                            credential.encrypted_api_key, credential.encrypted_api_secret, credential.encrypted_other_details,
+                            credential.status, credential.last_verified_at, credential.permissions, credential.permissions_checked_at,
+                            credential.expires_at, credential.rotation_reminder_policy_days, credential.usage_count, credential.last_used_at,
+                            credential.purpose_description, credential.tags, credential.notes, credential.created_at, credential.updated_at
+                        )
                     )
-                )
-                record = await cur.fetchone()
-                await self.connection.commit()
-                if record:
-                    return APICredential(**record)
-            raise ValueError("No se pudo guardar/actualizar la credencial y obtener el registro de retorno (psycopg).")
+                    record = await cur.fetchone()
+                    if record:
+                        return APICredential(**record)
+            raise ValueError("No se pudo guardar/actualizar la credencial y obtener el registro de retorno (psycopg_pool).")
         except Exception as e:
-            logger.error(f"Error al guardar/actualizar credencial (psycopg): {e}")
-            if self.connection and not self.connection.closed:
-                await self.connection.rollback()
+            logger.error(f"Error al guardar/actualizar credencial (psycopg_pool): {e}")
             raise
 
-    async def get_credentials_by_service(self, user_id: UUID, service_name: ServiceName) -> List[APICredential]:
-        """Recupera todas las credenciales para un usuario y servicio específicos."""
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
+    async def get_credentials_by_service(self, service_name: ServiceName) -> List[APICredential]:
+        await self._check_pool()
+        assert self.pool is not None
         query = SQL("SELECT * FROM api_credentials WHERE user_id = %s AND service_name = %s ORDER BY created_at ASC;")
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(query, (user_id, service_name.value))
-                records = await cur.fetchall()
-                return [APICredential(**record) for record in records]
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, (self.fixed_user_id, service_name.value))
+                    records = await cur.fetchall()
+                    return [APICredential(**record) for record in records]
         except Exception as e:
-            logger.error(f"Error al obtener credenciales por servicio para usuario {user_id} y servicio {service_name.value} (psycopg): {e}")
+            logger.error(f"Error al obtener credenciales por servicio para usuario {self.fixed_user_id} y servicio {service_name.value} (psycopg_pool): {e}")
             raise
 
     async def get_credential_by_id(self, credential_id: UUID) -> Optional[APICredential]:
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
-        query = SQL("SELECT * FROM api_credentials WHERE id = %s;")
+        await self._check_pool()
+        assert self.pool is not None
+        query = SQL("SELECT * FROM api_credentials WHERE id = %s AND user_id = %s;")
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(query, (credential_id,))
-                record = await cur.fetchone()
-                if record:
-                    return APICredential(**record)
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, (credential_id, self.fixed_user_id))
+                    record = await cur.fetchone()
+                    if record:
+                        return APICredential(**record)
             return None
         except Exception as e:
-            logger.error(f"Error al obtener credencial por ID (psycopg): {e}")
+            logger.error(f"Error al obtener credencial por ID {credential_id} para usuario {self.fixed_user_id} (psycopg_pool): {e}")
             raise
 
-    async def get_credential_by_service_label(self, user_id: UUID, service_name: ServiceName, credential_label: str) -> Optional[APICredential]:
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
-        query = SQL("""
-        SELECT * FROM api_credentials 
-        WHERE user_id = %s AND service_name = %s AND credential_label = %s;
-        """)
+    async def get_credential_by_service_label(self, service_name: ServiceName, credential_label: str) -> Optional[APICredential]:
+        await self._check_pool()
+        assert self.pool is not None
+        query = SQL("SELECT * FROM api_credentials WHERE user_id = %s AND service_name = %s AND credential_label = %s;")
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(query, (user_id, service_name.value, credential_label))
-                record = await cur.fetchone()
-                if record:
-                    return APICredential(**record)
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, (self.fixed_user_id, service_name.value, credential_label))
+                    record = await cur.fetchone()
+                    if record:
+                        return APICredential(**record)
             return None
         except Exception as e:
-            logger.error(f"Error al obtener credencial por servicio y etiqueta (psycopg): {e}")
+            logger.error(f"Error al obtener credencial por servicio y etiqueta (psycopg_pool): {e}")
             raise
 
     async def update_credential_status(self, credential_id: UUID, new_status: str, last_verified_at: Optional[datetime] = None) -> Optional[APICredential]:
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
+        await self._check_pool()
+        assert self.pool is not None
         query = SQL("""
         UPDATE api_credentials 
         SET status = %s, last_verified_at = %s, updated_at = timezone('utc'::text, now())
-        WHERE id = %s
+        WHERE id = %s AND user_id = %s
         RETURNING *;
         """)
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(query, (new_status, last_verified_at, credential_id))
-                record = await cur.fetchone()
-                await self.connection.commit()
-                if record:
-                    return APICredential(**record)
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, (new_status, last_verified_at, credential_id, self.fixed_user_id))
+                    record = await cur.fetchone()
+                    if record:
+                        return APICredential(**record)
             return None
         except Exception as e:
-            logger.error(f"Error al actualizar estado de credencial (psycopg): {e}")
-            if self.connection and not self.connection.closed:
-                await self.connection.rollback()
+            logger.error(f"Error al actualizar estado de credencial {credential_id} para usuario {self.fixed_user_id} (psycopg_pool): {e}")
             raise
 
     async def delete_credential(self, credential_id: UUID) -> bool:
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
-        query = SQL("DELETE FROM api_credentials WHERE id = %s;")
+        await self._check_pool()
+        assert self.pool is not None
+        query = SQL("DELETE FROM api_credentials WHERE id = %s AND user_id = %s;")
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(query, (credential_id,))
-                await self.connection.commit()
-                return cur.rowcount > 0
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, (credential_id, self.fixed_user_id))
+                    return cur.rowcount > 0
         except Exception as e:
-            logger.error(f"Error al eliminar credencial (psycopg): {e}")
-            if self.connection and not self.connection.closed:
-                await self.connection.rollback()
+            logger.error(f"Error al eliminar credencial {credential_id} para usuario {self.fixed_user_id} (psycopg_pool): {e}")
             raise
 
     async def get_user_configuration(self, user_id: UUID) -> Optional[Dict[str, Any]]:
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
+        await self._check_pool()
+        assert self.pool is not None
         query = SQL("SELECT * FROM user_configurations WHERE user_id = %s;")
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(query, (user_id,))
-                record = await cur.fetchone()
-                if record:
-                    return dict(record)
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, (user_id,))
+                    record = await cur.fetchone()
+                    if record:
+                        return dict(record)
             return None
         except Exception as e:
-            logger.error(f"Error al obtener configuración de usuario para {user_id} (psycopg): {e}", exc_info=True)
+            logger.error(f"Error al obtener configuración de usuario para {user_id} (psycopg_pool): {e}", exc_info=True)
             raise
 
-    async def upsert_user_configuration(self, user_id: UUID, config_data: Dict[str, Any]):
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
+    async def upsert_user_configuration(self, config_data: Dict[str, Any]):
+        await self._check_pool()
+        assert self.pool is not None
+        from psycopg import sql
+        import json
         
         config_to_save = config_data.copy()
         config_to_save.pop('id', None)
@@ -240,7 +360,7 @@ class SupabasePersistenceService:
         db_columns_map = {
             "telegramChatId": "telegram_chat_id", "notificationPreferences": "notification_preferences",
             "enableTelegramNotifications": "enable_telegram_notifications", "defaultPaperTradingCapital": "default_paper_trading_capital",
-            "paperTradingActive": "paper_trading_active", # Nuevo campo
+            "paperTradingActive": "paper_trading_active",
             "watchlists": "watchlists", "favoritePairs": "favorite_pairs", "riskProfile": "risk_profile",
             "riskProfileSettings": "risk_profile_settings", "realTradingSettings": "real_trading_settings",
             "aiStrategyConfigurations": "ai_strategy_configurations", "aiAnalysisConfidenceThresholds": "ai_analysis_confidence_thresholds",
@@ -248,70 +368,81 @@ class SupabasePersistenceService:
             "dashboardLayoutProfiles": "dashboard_layout_profiles", "activeDashboardLayoutProfileId": "active_dashboard_layout_profile_id",
             "dashboardLayoutConfig": "dashboard_layout_config", "cloudSyncPreferences": "cloud_sync_preferences",
         }
-        
-        insert_values_dict = {db_columns_map.get(k, k): v for k, v in config_to_save.items()}
-        insert_values_dict['user_id'] = user_id
 
-        columns = [Identifier(col) for col in insert_values_dict.keys()]
-        
+        def serialize_if_needed(value):
+            if value is None:
+                return None
+            if isinstance(value, (dict, list)):
+                return json.dumps(value)
+            return value
+
+        insert_values_dict = {db_columns_map.get(k, k): serialize_if_needed(v) for k, v in config_to_save.items()}
+        insert_values_dict['user_id'] = self.fixed_user_id
+
+        json_columns = [
+            "notification_preferences", "watchlists", "favorite_pairs", "risk_profile_settings",
+            "real_trading_settings", "ai_strategy_configurations", "ai_analysis_confidence_thresholds",
+            "mcp_server_preferences", "dashboard_layout_profiles", "dashboard_layout_config", "cloud_sync_preferences"
+        ]
+
+        for col in json_columns:
+            if col in insert_values_dict and insert_values_dict[col] is not None and not isinstance(insert_values_dict[col], str):
+                insert_values_dict[col] = json.dumps(insert_values_dict[col])
+
+        columns = [sql.Identifier(col) for col in insert_values_dict.keys()]
+        placeholders = [sql.Placeholder() for _ in insert_values_dict]
         update_set_parts = [
-            SQL("{} = EXCLUDED.{}").format(Identifier(col), Identifier(col))
+            sql.SQL("{} = EXCLUDED.{}" ).format(sql.Identifier(col), sql.Identifier(col))
             for col in insert_values_dict if col != 'user_id'
         ]
-        update_set_str = SQL(", ").join(update_set_parts)
+        update_set_str = sql.SQL(", ").join(update_set_parts)
 
-        query: str = """
-        INSERT INTO user_configurations ({})
-        VALUES ({})
-        ON CONFLICT (user_id) DO UPDATE SET
-            {},
-            updated_at = timezone('utc'::text, now())
-        RETURNING *;
-        """
+        query = sql.SQL("""
+            INSERT INTO user_configurations ({columns})
+            VALUES ({placeholders})
+            ON CONFLICT (user_id) DO UPDATE SET
+                {update_set},
+                updated_at = timezone('utc'::text, now())
+            RETURNING *;
+        """).format(
+            columns=sql.SQL(', ').join(columns),
+            placeholders=sql.SQL(', ').join(placeholders),
+            update_set=update_set_str
+        )
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(
-                    SQL(query).format(
-                        SQL(", ").join(columns),
-                        SQL(", ").join(SQL("%s") for _ in insert_values_dict),
-                        update_set_str
-                    ),
-                    tuple(insert_values_dict.values())
-                )
-                await self.connection.commit()
-            logger.info(f"Configuración de usuario para {user_id} guardada/actualizada exitosamente (psycopg).")
+            values = tuple(insert_values_dict.values())
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, values)
+            logger.info(f"Configuración de usuario para {self.fixed_user_id} guardada/actualizada exitosamente (psycopg_pool).")
         except Exception as e:
-            logger.error(f"Error al guardar/actualizar configuración de usuario para {user_id} (psycopg): {e}", exc_info=True)
-            if self.connection and not self.connection.closed:
-                await self.connection.rollback()
+            logger.error(f"Error al guardar/actualizar configuración de usuario para {self.fixed_user_id} (psycopg_pool): {e}", exc_info=True)
             raise
 
     async def update_credential_permissions(self, credential_id: UUID, permissions: List[str], permissions_checked_at: datetime) -> Optional[APICredential]:
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
+        await self._check_pool()
+        assert self.pool is not None
         query = SQL("""
         UPDATE api_credentials 
         SET permissions = %s, permissions_checked_at = %s, updated_at = timezone('utc'::text, now())
-        WHERE id = %s
+        WHERE id = %s AND user_id = %s
         RETURNING *;
         """)
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(query, (permissions, permissions_checked_at, credential_id))
-                record = await cur.fetchone()
-                await self.connection.commit()
-                if record:
-                    return APICredential(**record)
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, (permissions, permissions_checked_at, credential_id, self.fixed_user_id))
+                    record = await cur.fetchone()
+                    if record:
+                        return APICredential(**record)
             return None
         except Exception as e:
-            logger.error(f"Error al actualizar permisos de credencial (psycopg): {e}")
-            if self.connection and not self.connection.closed:
-                await self.connection.rollback()
+            logger.error(f"Error al actualizar permisos de credencial {credential_id} para usuario {self.fixed_user_id} (psycopg_pool): {e}")
             raise
 
     async def save_notification(self, notification: Notification) -> Notification:
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
+        await self._check_pool()
+        assert self.pool is not None
         query: str = """
         INSERT INTO notifications (
             id, user_id, event_type, channel, title_key, message_key, message_params,
@@ -329,539 +460,225 @@ class SupabasePersistenceService:
             actions = EXCLUDED.actions, correlation_id = EXCLUDED.correlation_id, is_summary = EXCLUDED.is_summary,
             summarized_notification_ids = EXCLUDED.summarized_notification_ids, read_at = EXCLUDED.read_at,
             sent_at = EXCLUDED.sent_at, status_history = EXCLUDED.status_history, generated_by = EXCLUDED.generated_by,
-            created_at = EXCLUDED.created_at -- Asegurarse de que created_at se actualice si es parte del EXCLUDED
+            created_at = EXCLUDED.created_at
         RETURNING *;
         """
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(
-                    SQL(query),
-                    (
-                        notification.id, notification.userId, notification.eventType,
-                        notification.channel,
-                        notification.titleKey, notification.messageKey, notification.messageParams,
-                        notification.title, notification.message,
-                        notification.priority,
-                        notification.status,
-                        notification.snoozedUntil, notification.dataPayload, notification.actions,
-                        notification.correlationId, notification.isSummary, notification.summarizedNotificationIds,
-                        notification.createdAt, notification.readAt, notification.sentAt,
-                        notification.statusHistory, notification.generatedBy
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(
+                        SQL(query),
+                        (
+                            notification.id, self.fixed_user_id, notification.eventType,
+                            notification.channel,
+                            notification.titleKey, notification.messageKey, notification.messageParams,
+                            notification.title, notification.message,
+                            notification.priority,
+                            notification.status,
+                            notification.snoozedUntil, notification.dataPayload, notification.actions,
+                            notification.correlationId, notification.isSummary, notification.summarizedNotificationIds,
+                            notification.createdAt, notification.readAt, notification.sentAt,
+                            notification.statusHistory, notification.generatedBy
+                        )
                     )
-                )
-                record = await cur.fetchone()
-                await self.connection.commit()
-                if record:
-                    return Notification(**record)
-            raise ValueError("No se pudo guardar/actualizar la notificación y obtener el registro de retorno (psycopg).")
+                    record = await cur.fetchone()
+                    if record:
+                        return Notification(**record)
+            raise ValueError("No se pudo guardar/actualizar la notificación y obtener el registro de retorno (psycopg_pool).")
         except Exception as e:
-            logger.error(f"Error al guardar/actualizar notificación (psycopg): {e}")
-            if self.connection and not self.connection.closed:
-                await self.connection.rollback()
+            logger.error(f"Error al guardar/actualizar notificación (psycopg_pool): {e}")
             raise
 
-    async def get_notification_history(self, user_id: UUID, limit: int = 50) -> List[Notification]:
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
-        query = SQL("""
-        SELECT * FROM notifications
-        WHERE user_id = %s
-        ORDER BY created_at DESC
-        LIMIT %s;
-        """)
+    async def get_notification_history(self, limit: int = 50) -> List[Notification]:
+        await self._check_pool()
+        assert self.pool is not None
+        query = SQL("SELECT * FROM notifications WHERE user_id = %s ORDER BY created_at DESC LIMIT %s;")
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(query, (user_id, limit))
-                records = await cur.fetchall()
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, (self.fixed_user_id, limit))
+                    records = await cur.fetchall()
             return [Notification(**record) for record in records]
         except Exception as e:
-            logger.error(f"Error al obtener historial de notificaciones para el usuario {user_id} (psycopg): {e}")
+            logger.error(f"Error al obtener historial de notificaciones para el usuario {self.fixed_user_id} (psycopg_pool): {e}")
             raise
 
-    async def mark_notification_as_read(self, notification_id: UUID, user_id: UUID) -> Optional[Notification]:
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
-        query = SQL("""
-        UPDATE notifications
-        SET status = 'read', read_at = timezone('utc'::text, now())
-        WHERE id = %s AND user_id = %s
-        RETURNING *;
-        """)
+    async def mark_notification_as_read(self, notification_id: UUID) -> Optional[Notification]:
+        await self._check_pool()
+        assert self.pool is not None
+        query = SQL("UPDATE notifications SET status = 'read', read_at = timezone('utc'::text, now()) WHERE id = %s AND user_id = %s RETURNING *;")
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(query, (notification_id, user_id))
-                record = await cur.fetchone()
-                await self.connection.commit()
-                if record:
-                    return Notification(**record)
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, (notification_id, self.fixed_user_id))
+                    record = await cur.fetchone()
+                    if record:
+                        return Notification(**record)
             return None
         except Exception as e:
-            logger.error(f"Error al marcar notificación {notification_id} como leída para el usuario {user_id} (psycopg): {e}")
-            if self.connection and not self.connection.closed:
-                await self.connection.rollback()
+            logger.error(f"Error al marcar notificación {notification_id} como leída para el usuario {self.fixed_user_id} (psycopg_pool): {e}")
             raise
 
-    # Métodos específicos de los tests que necesitan ser adaptados
-    async def execute_test_delete(self, user_id_str: str):
-        """Método de ayuda para eliminar datos de prueba, usado en test_persistence_connection.py"""
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
-        try:
-            user_uuid = UUID(user_id_str)
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(SQL("DELETE FROM user_configurations WHERE user_id = %s;"), (user_uuid,))
-                await self.connection.commit()
-            logger.info(f"Datos de prueba para user_id {user_id_str} eliminados (psycopg).")
-        except Exception as e:
-            logger.error(f"Error al eliminar datos de prueba para user_id {user_id_str} (psycopg): {e}")
-            if self.connection and not self.connection.closed:
-                await self.connection.rollback() # Asegurar rollback en caso de error
-            # No relanzar para no interrumpir la limpieza en finally, pero loggear es importante.
-
-    async def execute_test_insert(self, user_id_str: str, theme: str):
-        """Método de ayuda para insertar datos de prueba, usado en test_persistence_connection.py"""
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
-        try:
-            user_uuid = UUID(user_id_str)
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(
-                    SQL("""
-                    INSERT INTO user_configurations (user_id, selected_theme)
-                    VALUES (%s, %s);
-                    """),
-                    (user_uuid, theme)
-                )
-                await self.connection.commit()
-            logger.info(f"Inserción de prueba para user_id {user_id_str} exitosa (psycopg).")
-        except Exception as e:
-            logger.error(f"Error en inserción de prueba para user_id {user_id_str} (psycopg): {e}")
-            if self.connection and not self.connection.closed:
-                await self.connection.rollback()
-            raise # Relanzar para que el test falle si la inserción falla
-
-    async def fetchrow_test_select(self, user_id_str: str) -> Optional[Dict[str, Any]]:
-        """Método de ayuda para leer datos de prueba, usado en test_persistence_connection.py"""
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
-        try:
-            user_uuid = UUID(user_id_str)
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(
-                    SQL("SELECT user_id, selected_theme FROM user_configurations WHERE user_id = %s;"),
-                    (user_uuid,)
-                )
-                record = await cur.fetchone()
-                return record
-        except Exception as e:
-            logger.error(f"Error en lectura de prueba para user_id {user_id_str} (psycopg): {e}")
-            raise
-            
-    # Adaptación de los métodos de test_persistence.py
-    async def execute_test_insert_config(self, params: tuple):
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
-        insert_query = SQL("""
-        INSERT INTO user_configurations (user_id, selected_theme, enable_telegram_notifications, default_paper_trading_capital, notification_preferences)
-        VALUES (%s, %s, %s, %s, %s::jsonb)
-        RETURNING id, user_id, selected_theme;
-        """)
-        try:
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(insert_query, params)
-                record = await cur.fetchone()
-                await self.connection.commit()
-                return record
-        except Exception as e:
-            logger.error(f"Error en execute_test_insert_config (psycopg): {e}")
-            if self.connection and not self.connection.closed:
-                await self.connection.rollback()
-            raise
-
-    async def fetchrow_test_select_config(self, user_id_str: str) -> Optional[Dict[str, Any]]:
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
-        select_query = SQL("SELECT user_id, selected_theme, default_paper_trading_capital FROM user_configurations WHERE user_id = %s;")
-        try:
-            user_uuid = UUID(user_id_str)
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(select_query, (user_uuid,))
-                record = await cur.fetchone()
-                return record
-        except Exception as e:
-            logger.error(f"Error en fetchrow_test_select_config (psycopg): {e}")
-            raise
-
-    async def execute_raw_sql(self, query: str, params: Optional[tuple] = None):
-        """ Ejecuta una consulta SQL cruda. Usado para limpieza en tests. """
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
+    async def upsert_opportunity(self, opportunity_data: Dict[str, Any]) -> Opportunity:
+        await self._check_pool()
+        assert self.pool is not None
         
-        try:
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(SQL(query), params)
-                await self.connection.commit()
-        except Exception as e:
-            logger.error(f"Error ejecutando SQL crudo (psycopg): {query} con params {params} - {e}")
-            if self.connection and not self.connection.closed:
-                await self.connection.rollback()
-            raise
-
-    async def upsert_opportunity(self, user_id: UUID, opportunity_data: Dict[str, Any]) -> OpportunityTypeHint:
-        """Guarda una nueva oportunidad o actualiza una existente."""
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
-        
-        # Asegurarse de que los campos de fecha y UUID estén en el formato correcto para la BD
-        opportunity_data_copy = opportunity_data.copy()
-        opportunity_data_copy['id'] = str(opportunity_data_copy['id'])
-        opportunity_data_copy['user_id'] = str(opportunity_data_copy['user_id'])
-
-        # Convertir objetos datetime a strings ISO 8601 si no lo están ya
-        for key in ['created_at', 'updated_at', 'expires_at', 'executed_at']:
-            if key in opportunity_data_copy and isinstance(opportunity_data_copy[key], datetime):
-                opportunity_data_copy[key] = opportunity_data_copy[key].isoformat()
-        
-        # Mapeo de nombres de campos de Pydantic a nombres de columnas de BD (snake_case)
-        db_columns_map = {
-            "source_type": "source_type", "source_name": "source_name", "source_data": "source_data",
-            "status": "status", "status_reason": "status_reason", "symbol": "symbol",
-            "asset_type": "asset_type", "exchange": "exchange", "predicted_direction": "predicted_direction",
-            "predicted_price_target": "predicted_price_target", "predicted_stop_loss": "predicted_stop_loss",
-            "prediction_timeframe": "prediction_timeframe", "ai_analysis": "ai_analysis",
-            "confidence_score": "confidence_score", "suggested_action": "suggested_action",
-            "ai_model_used": "ai_model_used", "executed_at": "executed_at",
-            "executed_price": "executed_price", "executed_quantity": "executed_quantity",
-            "related_order_id": "related_order_id", "created_at": "created_at",
-            "updated_at": "updated_at", "expires_at": "expires_at"
-        }
-
-        insert_values_dict = {db_columns_map.get(k, k): v for k, v in opportunity_data_copy.items() if k not in ['id', 'user_id']}
-        insert_values_dict['id'] = opportunity_data_copy['id']
-        insert_values_dict['user_id'] = opportunity_data_copy['user_id']
-        
-        columns = [Identifier(col) for col in insert_values_dict.keys()]
-        
-        update_set_parts = [
-            SQL("{} = EXCLUDED.{}").format(Identifier(col), Identifier(col))
-            for col in insert_values_dict if col not in ['id', 'user_id'] # No actualizar el ID ni user_id en el UPDATE
-        ]
-        update_set_str = SQL(", ").join(update_set_parts)
-
         query_str: str = """
-        INSERT INTO opportunities ({})
-        VALUES ({})
+        INSERT INTO opportunities (id, user_id, data)
+        VALUES (%s, %s, %s)
         ON CONFLICT (id) DO UPDATE SET
-            {},
+            data = EXCLUDED.data,
             updated_at = timezone('utc'::text, now())
         RETURNING *;
         """
         try:
-            record = None # Inicializar record
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(
-                    SQL(query_str).format(
-                        SQL(", ").join(columns),
-                        SQL(", ").join(SQL("%s") for _ in insert_values_dict),
-                        update_set_str
-                    ),
-                    tuple(insert_values_dict.values())
-                )
-                record = await cur.fetchone()
-                await self.connection.commit()
-                if record:
-                    return Opportunity(**record)
-            raise ValueError("No se pudo guardar/actualizar la oportunidad y obtener el registro de retorno.")
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(SQL(query_str), (opportunity_data['id'], self.fixed_user_id, Jsonb(opportunity_data)))
+                    record = await cur.fetchone()
+                    if record:
+                        return Opportunity(**record['data'])
+            raise ValueError("No se pudo guardar/actualizar la oportunidad.")
         except Exception as e:
-            logger.error(f"Error al guardar/actualizar oportunidad: {e}", exc_info=True)
-            if self.connection and not self.connection.closed:
-                await self.connection.rollback()
+            logger.error(f"Error al guardar/actualizar oportunidad (psycopg_pool): {e}", exc_info=True)
             raise
 
-    async def update_opportunity_status(self, opportunity_id: UUID, new_status: OpportunityStatusTypeHint, status_reason: Optional[str] = None) -> Optional[OpportunityTypeHint]:
-        """Actualiza el estado y la razón del estado de una oportunidad."""
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
-        # Opportunity y OpportunityStatus ya están importados a nivel de módulo para type hints
+    async def get_open_paper_trades(self) -> List[Trade]:
+        return await self._get_trades_by_status_and_mode('open', 'paper')
 
-        query_str: str = """
-        UPDATE opportunities
-        SET status = %s, status_reason = %s, updated_at = timezone('utc'::text, now())
-        WHERE id = %s
-        RETURNING *;
-        """
+    async def get_open_real_trades(self) -> List[Trade]:
+        return await self._get_trades_by_status_and_mode('open', 'real')
+
+    async def _get_trades_by_status_and_mode(self, status: str, mode: str) -> List[Trade]:
+        await self._check_pool()
+        assert self.pool is not None
+
+        query = SQL("SELECT * FROM trades WHERE user_id = %s AND position_status = %s AND mode = %s;")
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(SQL(query_str), (new_status.value, status_reason, opportunity_id))
-                record = await cur.fetchone()
-                await self.connection.commit()
-                if record:
-                    return Opportunity(**record)
-            return None
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, (self.fixed_user_id, status, mode))
+                    records = await cur.fetchall()
+                    return [Trade(**record) for record in records]
         except Exception as e:
-            logger.error(f"Error al actualizar estado de oportunidad {opportunity_id}: {e}", exc_info=True)
-            if self.connection and not self.connection.closed:
-                await self.connection.rollback()
+            logger.error(f"Error al obtener trades para usuario {self.fixed_user_id} con estado {status} y modo {mode}: {e}", exc_info=True)
             raise
 
-    async def get_open_paper_trades(self) -> List['Trade']:
-        """
-        Recupera todos los trades abiertos en modo 'paper'.
-        """
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
+    async def upsert_trade(self, trade_data: Dict[str, Any]):
+        await self._check_pool()
+        assert self.pool is not None
         
-        # Importar Trade aquí para evitar importación circular a nivel de módulo
-        from src.shared.data_types import Trade 
-
-        query = SQL("""
-            SELECT * FROM trades
-            WHERE mode = 'paper' AND position_status = 'open';
-        """)
-        try:
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(query)
-                records = await cur.fetchall()
-                
-                trades = []
-                for record in records:
-                    # Convertir los campos JSONB de la BD a objetos Python
-                    # Asegurarse de que los UUIDs y datetimes se manejen correctamente
-                    record_copy = record.copy()
-                    record_copy['id'] = UUID(record_copy['id'])
-                    record_copy['user_id'] = UUID(record_copy['user_id'])
-                    if record_copy.get('opportunity_id'):
-                        record_copy['opportunity_id'] = UUID(record_copy['opportunity_id'])
-                    
-                    # Convertir entry_order y exit_orders de dict a TradeOrderDetails
-                    if 'entry_order' in record_copy and record_copy['entry_order']:
-                        record_copy['entryOrder'] = TradeOrderDetails(**record_copy.pop('entry_order'))
-                    if 'exit_orders' in record_copy and record_copy['exit_orders']:
-                        record_copy['exitOrders'] = [TradeOrderDetails(**eo) for eo in record_copy.pop('exit_orders')]
-                    else:
-                        record_copy['exitOrders'] = [] # Asegurar que sea una lista vacía si no hay
-
-                    # Convertir timestamps de string ISO a datetime
-                    for key in ['created_at', 'opened_at', 'updated_at', 'closed_at']:
-                        if key in record_copy and isinstance(record_copy[key], str):
-                            record_copy[key] = datetime.fromisoformat(record_copy[key])
-                    
-                    # Mapear nombres de columnas de BD (snake_case) a nombres de campos de Pydantic (camelCase/PascalCase)
-                    # Esto es crucial para que Pydantic pueda instanciar el modelo correctamente
-                    pydantic_fields_map = {
-                        "position_status": "positionStatus",
-                        "opportunity_id": "opportunityId", 
-                        "ai_analysis_confidence": "aiAnalysisConfidence",
-                        "pnl_usd": "pnl_usd",
-                        "pnl_percentage": "pnl_percentage",
-                        "closing_reason": "closingReason",
-                        "take_profit_price": "takeProfitPrice",
-                        "trailing_stop_activation_price": "trailingStopActivationPrice",
-                        "trailing_stop_callback_rate": "trailingStopCallbackRate",
-                        "current_stop_price_tsl": "currentStopPrice_tsl",
-                        "risk_reward_adjustments": "riskRewardAdjustments",
-                    }
-                    
-                    # Mapear campos específicos de TradeOrderDetails dentro de entryOrder y exitOrders
-                    if 'entry_order' in record_copy and record_copy['entry_order']:
-                        entry_order_data = record_copy.pop('entry_order')
-                        # Asegurarse de que los campos de TradeOrderDetails se mapeen correctamente
-                        entry_order_data['orderCategory'] = entry_order_data.get('order_category')
-                        entry_order_data['ocoOrderListId'] = entry_order_data.get('oco_order_list_id')
-                        record_copy['entryOrder'] = TradeOrderDetails(**entry_order_data)
-                    
-                    if 'exit_orders' in record_copy and record_copy['exit_orders']:
-                        exit_orders_list = []
-                        for eo_data in record_copy.pop('exit_orders'):
-                            eo_data['orderCategory'] = eo_data.get('order_category')
-                            eo_data['ocoOrderListId'] = eo_data.get('oco_order_list_id')
-                            exit_orders_list.append(TradeOrderDetails(**eo_data))
-                        record_copy['exitOrders'] = exit_orders_list
-                    else:
-                        record_copy['exitOrders'] = [] # Asegurar que sea una lista vacía si no hay
-
-                    for db_col, pydantic_field in pydantic_fields_map.items():
-                        if db_col in record_copy:
-                            record_copy[pydantic_field] = record_copy.pop(db_col)
-
-                    trades.append(Trade(**record_copy))
-                return trades
-        except Exception as e:
-            logger.error(f"Error al obtener trades abiertos en paper trading (psycopg): {e}", exc_info=True)
-            raise
-
-    async def get_open_real_trades(self) -> List['Trade']:
-        """
-        Recupera todos los trades abiertos en modo 'real'.
-        """
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
-        
-        # Importar Trade aquí para evitar importación circular a nivel de módulo
-        from src.shared.data_types import Trade 
-
-        query = SQL("""
-            SELECT * FROM trades
-            WHERE mode = 'real' AND position_status = 'open';
-        """)
-        try:
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(query)
-                records = await cur.fetchall()
-                
-                trades = []
-                for record in records:
-                    # Convertir los campos JSONB de la BD a objetos Python
-                    # Asegurarse de que los UUIDs y datetimes se manejen correctamente
-                    record_copy = record.copy()
-                    record_copy['id'] = UUID(record_copy['id'])
-                    record_copy['user_id'] = UUID(record_copy['user_id'])
-                    if record_copy.get('opportunity_id'):
-                        record_copy['opportunity_id'] = UUID(record_copy['opportunity_id'])
-                    
-                    # Convertir entry_order y exit_orders de dict a TradeOrderDetails
-                    if 'entry_order' in record_copy and record_copy['entry_order']:
-                        entry_order_data = record_copy.pop('entry_order')
-                        # Asegurarse de que los campos de TradeOrderDetails se mapeen correctamente
-                        entry_order_data['orderCategory'] = entry_order_data.get('order_category')
-                        entry_order_data['ocoOrderListId'] = entry_order_data.get('oco_order_list_id')
-                        record_copy['entryOrder'] = TradeOrderDetails(**entry_order_data)
-                    
-                    if 'exit_orders' in record_copy and record_copy['exit_orders']:
-                        exit_orders_list = []
-                        for eo_data in record_copy.pop('exit_orders'):
-                            eo_data['orderCategory'] = eo_data.get('order_category')
-                            eo_data['ocoOrderListId'] = eo_data.get('oco_order_list_id')
-                            exit_orders_list.append(TradeOrderDetails(**eo_data))
-                        record_copy['exitOrders'] = exit_orders_list
-                    else:
-                        record_copy['exitOrders'] = [] # Asegurar que sea una lista vacía si no hay
-
-                    # Convertir timestamps de string ISO a datetime
-                    for key in ['created_at', 'opened_at', 'updated_at', 'closed_at']:
-                        if key in record_copy and isinstance(record_copy[key], str):
-                            record_copy[key] = datetime.fromisoformat(record_copy[key])
-                    
-                    # Mapear nombres de columnas de BD (snake_case) a nombres de campos de Pydantic (camelCase/PascalCase)
-                    # Esto es crucial para que Pydantic pueda instanciar el modelo correctamente
-                    pydantic_fields_map = {
-                        "position_status": "positionStatus",
-                        "opportunity_id": "opportunityId", 
-                        "ai_analysis_confidence": "aiAnalysisConfidence",
-                        "pnl_usd": "pnl_usd",
-                        "pnl_percentage": "pnl_percentage",
-                        "closing_reason": "closingReason",
-                        "take_profit_price": "takeProfitPrice",
-                        "trailing_stop_activation_price": "trailingStopActivationPrice",
-                        "trailing_stop_callback_rate": "trailingStopCallbackRate",
-                        "current_stop_price_tsl": "currentStopPrice_tsl",
-                        "risk_reward_adjustments": "riskRewardAdjustments",
-                    }
-                    for db_col, pydantic_field in pydantic_fields_map.items():
-                        if db_col in record_copy:
-                            record_copy[pydantic_field] = record_copy.pop(db_col)
-
-                    trades.append(Trade(**record_copy))
-                return trades
-        except Exception as e:
-            logger.error(f"Error al obtener trades abiertos en real trading (psycopg): {e}", exc_info=True)
-            raise
-
-    async def upsert_trade(self, user_id: UUID, trade_data: Dict[str, Any]):
-        """
-        Inserta un nuevo trade o actualiza uno existente.
-        """
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
-
-        # Asegurarse de que los campos de fecha y UUID estén en el formato correcto para la BD
-        trade_data_copy = trade_data.copy()
-        trade_data_copy['id'] = str(trade_data_copy['id'])
-        trade_data_copy['user_id'] = str(trade_data_copy['user_id'])
-        if trade_data_copy.get('opportunityId'):
-            trade_data_copy['opportunityId'] = str(trade_data_copy['opportunityId'])
-
-        # Convertir objetos datetime a strings ISO 8601 si no lo están ya
-        for key in ['created_at', 'opened_at', 'updated_at', 'closed_at']:
-            if key in trade_data_copy and isinstance(trade_data_copy[key], datetime):
-                trade_data_copy[key] = trade_data_copy[key].isoformat()
-        
-        # Manejar entryOrder y exitOrders
-        if 'entryOrder' in trade_data_copy and isinstance(trade_data_copy['entryOrder'], dict):
-            if 'timestamp' in trade_data_copy['entryOrder'] and isinstance(trade_data_copy['entryOrder']['timestamp'], datetime):
-                trade_data_copy['entryOrder']['timestamp'] = trade_data_copy['entryOrder']['timestamp'].isoformat()
-            trade_data_copy['entry_order'] = trade_data_copy.pop('entryOrder') # Mapear a snake_case para BD
-        
-        if 'exitOrders' in trade_data_copy and isinstance(trade_data_copy['exitOrders'], list):
-            processed_exit_orders = []
-            for eo in trade_data_copy['exitOrders']:
-                if isinstance(eo, dict) and 'timestamp' in eo and isinstance(eo['timestamp'], datetime):
-                    eo['timestamp'] = eo['timestamp'].isoformat()
-                processed_exit_orders.append(eo)
-            trade_data_copy['exit_orders'] = processed_exit_orders # Mapear a snake_case para BD
-            trade_data_copy.pop('exitOrders') # Eliminar el campo original
-
-        # Mapeo de nombres de campos de Pydantic a nombres de columnas de BD (snake_case)
-        db_columns_map = {
-            "user_id": "user_id", "mode": "mode", "symbol": "symbol", "side": "side",
-            "positionStatus": "position_status", "opportunityId": "opportunity_id",
-            "aiAnalysisConfidence": "ai_analysis_confidence", "pnl_usd": "pnl_usd",
-            "pnl_percentage": "pnl_percentage", "closingReason": "closing_reason",
-            "takeProfitPrice": "take_profit_price", "trailingStopActivationPrice": "trailing_stop_activation_price",
-            "trailingStopCallbackRate": "trailing_stop_callback_rate", "currentStopPrice_tsl": "current_stop_price_tsl",
-            "riskRewardAdjustments": "risk_reward_adjustments",
-            "created_at": "created_at", "opened_at": "opened_at", "updated_at": "updated_at", "closed_at": "closed_at"
-        }
-
-        insert_values_dict = {db_columns_map.get(k, k): v for k, v in trade_data_copy.items()}
-        
-        columns = [Identifier(col) for col in insert_values_dict.keys()]
-        
-        update_set_parts = [
-            SQL("{} = EXCLUDED.{}").format(Identifier(col), Identifier(col))
-            for col in insert_values_dict if col != 'id' # No actualizar el ID en el UPDATE
-        ]
-        update_set_str = SQL(", ").join(update_set_parts)
-
         query: str = """
-        INSERT INTO trades ({})
-        VALUES ({})
+        INSERT INTO trades (id, user_id, data)
+        VALUES (%s, %s, %s)
         ON CONFLICT (id) DO UPDATE SET
-            {},
+            data = EXCLUDED.data,
             updated_at = timezone('utc'::text, now())
         RETURNING *;
         """
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(
-                    SQL(query).format(
-                        SQL(", ").join(columns),
-                        SQL(", ").join(SQL("%s") for _ in insert_values_dict),
-                        update_set_str
-                    ),
-                    tuple(insert_values_dict.values())
-                )
-                await self.connection.commit()
-            logger.info(f"Trade {trade_data_copy['id']} guardado/actualizado exitosamente (psycopg).")
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(SQL(query), (trade_data['id'], self.fixed_user_id, Jsonb(trade_data)))
+            logger.info(f"Trade {trade_data['id']} guardado/actualizado exitosamente.")
         except Exception as e:
-            logger.error(f"Error al guardar/actualizar trade {trade_data_copy['id']} (psycopg): {e}", exc_info=True)
-            if self.connection and not self.connection.closed:
-                await self.connection.rollback()
+            logger.error(f"Error al guardar/actualizar trade {trade_data['id']}: {e}", exc_info=True)
             raise
 
-    async def update_opportunity_analysis(
-        self, 
-        opportunity_id: UUID, 
-        status: OpportunityStatusTypeHint, 
-        ai_analysis: Optional[str] = None, # JSON string
-        confidence_score: Optional[float] = None,
-        suggested_action: Optional[str] = None,
-        status_reason: Optional[str] = None
-    ) -> Optional[OpportunityTypeHint]:
-        """Actualiza los campos relacionados con el análisis de IA de una oportunidad."""
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
-        # Opportunity y OpportunityStatus ya están importados a nivel de módulo para type hints
+    async def get_closed_trades_count(self, is_real_trade: bool) -> int:
+        await self._check_pool()
+        assert self.pool is not None
+
+        query = SQL("SELECT COUNT(*) FROM trades WHERE user_id = %s AND position_status = 'closed' AND mode = %s;")
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, (self.fixed_user_id, 'real' if is_real_trade else 'paper'))
+                    record = await cur.fetchone()
+                    if record:
+                        return record['count']
+                return 0
+        except Exception as e:
+            logger.error(f"Error al contar trades cerrados para user {self.fixed_user_id}, real_trade={is_real_trade} (psycopg_pool): {e}", exc_info=True)
+            raise
+
+    async def get_opportunities_by_status(self, status: OpportunityStatus) -> List[Opportunity]:
+        await self._check_pool()
+        assert self.pool is not None
+
+        query = SQL("SELECT * FROM opportunities WHERE user_id = %s AND status = %s;")
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, (self.fixed_user_id, status.value))
+                    records = await cur.fetchall()
+                
+                return [Opportunity(**record) for record in records]
+        except Exception as e:
+            logger.error(f"Error al obtener oportunidades por estado para user {self.fixed_user_id}, status={status.value} (psycopg_pool): {e}", exc_info=True)
+            raise
+
+    async def get_all_trades_for_user(self, mode: Optional[str] = None) -> List[Trade]:
+        await self._check_pool()
+        assert self.pool is not None
+
+        query_base = SQL("SELECT * FROM trades WHERE user_id = %s")
+        params_list: List[Any] = [self.fixed_user_id]
+        
+        if mode:
+            query_base = Composed([query_base, SQL(" AND mode = %s")])
+            params_list.append(mode)
+            
+        final_query = Composed([query_base, SQL(" ORDER BY created_at DESC;")])
+        
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(final_query, tuple(params_list))
+                    records = await cur.fetchall()
+                return [Trade(**record) for record in records]
+        except Exception as e:
+            logger.error(f"Error al obtener todos los trades para el usuario {self.fixed_user_id} (psycopg_pool): {e}", exc_info=True)
+            raise
+
+    async def get_closed_trades(self, filters: Dict[str, Any], start_date: Optional[datetime] = None, end_date: Optional[datetime] = None, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+        await self._check_pool()
+        assert self.pool is not None
+        
+        params: List[Any] = [self.fixed_user_id]
+        query_parts = [SQL("SELECT * FROM trades WHERE user_id = %s AND position_status = 'closed'")]
+
+        if "mode" in filters:
+            query_parts.append(SQL("AND mode = %s"))
+            params.append(filters["mode"])
+        if "symbol" in filters and filters["symbol"]:
+            query_parts.append(SQL("AND symbol = %s"))
+            params.append(filters["symbol"])
+        if start_date:
+            query_parts.append(SQL("AND closed_at >= %s"))
+            params.append(start_date)
+        if end_date:
+            query_parts.append(SQL("AND closed_at <= %s"))
+            params.append(end_date)
+            
+        query_parts.append(SQL("ORDER BY closed_at DESC LIMIT %s OFFSET %s;"))
+        params.extend([limit, offset])
+        
+        final_query = SQL(" ").join(query_parts)
+
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(final_query, tuple(params))
+                    records = await cur.fetchall()
+                return [dict(record) for record in records]
+        except Exception as e:
+            logger.error(f"Error al obtener trades cerrados con filtros {filters} (psycopg_pool): {e}", exc_info=True)
+            raise
+
+    async def update_opportunity_analysis(self, opportunity_id: UUID, status: OpportunityStatus, ai_analysis: Optional[str] = None, confidence_score: Optional[float] = None, suggested_action: Optional[str] = None, status_reason: Optional[str] = None) -> Optional[Opportunity]:
+        await self._check_pool()
+        assert self.pool is not None
 
         query_str: str = """
         UPDATE opportunities
@@ -871,272 +688,405 @@ class SupabasePersistenceService:
             suggested_action = %s,
             status_reason = %s,
             updated_at = timezone('utc'::text, now())
-        WHERE id = %s
+        WHERE id = %s AND user_id = %s
         RETURNING *;
         """
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(SQL(query_str), (
-                    status.value, ai_analysis, confidence_score, suggested_action, status_reason, opportunity_id
-                ))
-                record = await cur.fetchone()
-                await self.connection.commit()
-                if record:
-                    return Opportunity(**record)
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(SQL(query_str), (
+                        status.value, ai_analysis, confidence_score, suggested_action, status_reason, opportunity_id, self.fixed_user_id
+                    ))
+                    record = await cur.fetchone()
+                    if record:
+                        return Opportunity(**record)
             return None
         except Exception as e:
-            logger.error(f"Error al actualizar análisis de IA para oportunidad {opportunity_id}: {e}", exc_info=True)
-            if self.connection and not self.connection.closed:
-                await self.connection.rollback()
+            logger.error(f"Error al actualizar análisis de IA para oportunidad {opportunity_id} (psycopg_pool): {e}", exc_info=True)
             raise
 
-    async def get_closed_trades(
-        self, 
-        filters: Dict[str, str], 
-        start_date: Optional[datetime] = None, 
-        end_date: Optional[datetime] = None, 
-        limit: int = 100, 
-        offset: int = 0
-    ) -> List[Dict[str, Any]]:
+    async def upsert_strategy_config(self, strategy_data: Dict[str, Any]) -> None:
+        await self._check_pool()
+        assert self.pool is not None
+        
+        query = """
+        INSERT INTO trading_strategy_configs (
+            id, user_id, config_name, base_strategy_type, description,
+            is_active_paper_mode, is_active_real_mode, parameters,
+            applicability_rules, ai_analysis_profile_id, risk_parameters_override,
+            version, parent_config_id, performance_metrics, market_condition_filters,
+            activation_schedule, depends_on_strategies, sharing_metadata,
+            created_at, updated_at
+        ) VALUES (
+            %(id)s, %(user_id)s, %(config_name)s, %(base_strategy_type)s, %(description)s,
+            %(is_active_paper_mode)s, %(is_active_real_mode)s, %(parameters)s,
+            %(applicability_rules)s, %(ai_analysis_profile_id)s, %(risk_parameters_override)s,
+            %(version)s, %(parent_config_id)s, %(performance_metrics)s, %(market_condition_filters)s,
+            %(activation_schedule)s, %(depends_on_strategies)s, %(sharing_metadata)s,
+            %(created_at)s, %(updated_at)s
+        )
+        ON CONFLICT (id) DO UPDATE SET
+            config_name = EXCLUDED.config_name,
+            base_strategy_type = EXCLUDED.base_strategy_type,
+            description = EXCLUDED.description,
+            is_active_paper_mode = EXCLUDED.is_active_paper_mode,
+            is_active_real_mode = EXCLUDED.is_active_real_mode,
+            parameters = EXCLUDED.parameters,
+            applicability_rules = EXCLUDED.applicability_rules,
+            ai_analysis_profile_id = EXCLUDED.ai_analysis_profile_id,
+            risk_parameters_override = EXCLUDED.risk_parameters_override,
+            version = EXCLUDED.version,
+            parent_config_id = EXCLUDED.parent_config_id,
+            performance_metrics = EXCLUDED.performance_metrics,
+            market_condition_filters = EXCLUDED.market_condition_filters,
+            activation_schedule = EXCLUDED.activation_schedule,
+            depends_on_strategies = EXCLUDED.depends_on_strategies,
+            sharing_metadata = EXCLUDED.sharing_metadata,
+            updated_at = EXCLUDED.updated_at;
         """
-        Obtiene una lista de trades cerrados con capacidad de filtrado.
         
-        Args:
-            filters: Diccionario con filtros básicos (user_id, mode, positionStatus, symbol)
-            start_date: Fecha de inicio para filtrar por closed_at (opcional)
-            end_date: Fecha de fin para filtrar por closed_at (opcional)
-            limit: Número máximo de trades a devolver
-            offset: Número de trades a saltar (para paginación)
-            
-        Returns:
-            Lista de diccionarios con datos de trades que cumplen los filtros
-        """
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
-        
-        # Construir la query SQL base
-        # Construir la query SQL base usando psycopg.sql componentes
-        query_parts = [
-            SQL("SELECT * FROM trades WHERE user_id = {} AND mode = {} AND position_status = {}").format(
-                Literal(str(UUID(filters["user_id"]))), # Convertir UUID a string
-                Literal(filters["mode"]),
-                Literal(filters["positionStatus"])
-            )
-        ]
-        
-        # Añadir filtro por símbolo si está presente
-        if "symbol" in filters and filters["symbol"]:
-            query_parts.append(Composed([SQL(" AND symbol = "), Literal(filters["symbol"])]))
-            
-        # Añadir filtro por fechas si están presentes
-        if start_date:
-            query_parts.append(Composed([SQL(" AND closed_at >= "), Literal(start_date)]))
-            
-        if end_date:
-            query_parts.append(Composed([SQL(" AND closed_at <= "), Literal(end_date)]))
-            
-        # Añadir ordenamiento, límite y offset
-        query_parts.append(Composed([SQL(" ORDER BY closed_at DESC LIMIT "), Literal(limit), SQL(" OFFSET "), Literal(offset), SQL(";")]))
-        
-        final_query = Composed(query_parts)
-
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(final_query)
-                records = await cur.fetchall()
-                
-                # Convertir a lista de diccionarios con el formato esperado por TradingReportService
-                processed_records = []
-                for record in records:
-                    record_copy = dict(record)
-                    
-                    # Convertir UUIDs de string a UUID objects
-                    if 'id' in record_copy:
-                        record_copy['id'] = UUID(record_copy['id'])
-                    if 'user_id' in record_copy:
-                        record_copy['user_id'] = UUID(record_copy['user_id'])
-                    if 'opportunity_id' in record_copy and record_copy['opportunity_id']:
-                        record_copy['opportunity_id'] = UUID(record_copy['opportunity_id'])
-                    
-                    # Mapear nombres de columnas de BD (snake_case) a nombres de campos de Pydantic
-                    field_mappings = {
-                        "position_status": "positionStatus",
-                        "opportunity_id": "opportunityId", 
-                        "ai_analysis_confidence": "aiAnalysisConfidence",
-                        "pnl_usd": "pnl_usd",
-                        "pnl_percentage": "pnl_percentage",
-                        "closing_reason": "closingReason",
-                        "entry_order": "entryOrder",
-                        "exit_orders": "exitOrders",
-                        "take_profit_price": "takeProfitPrice",
-                        "trailing_stop_activation_price": "trailingStopActivationPrice",
-                        "trailing_stop_callback_rate": "trailingStopCallbackRate",
-                        "current_stop_price_tsl": "currentStopPrice_tsl",
-                        "risk_reward_adjustments": "riskRewardAdjustments",
-                    }
-                    
-                    for db_field, pydantic_field in field_mappings.items():
-                        if db_field in record_copy:
-                            record_copy[pydantic_field] = record_copy.pop(db_field)
-                    
-                    # Convertir timestamps ISO a datetime si son strings
-                    datetime_fields = ['created_at', 'opened_at', 'updated_at', 'closed_at']
-                    for field in datetime_fields:
-                        if field in record_copy and isinstance(record_copy[field], str):
-                            try:
-                                record_copy[field] = datetime.fromisoformat(record[field])
-                            except (ValueError, TypeError):
-                                logger.warning(f"No se pudo convertir campo datetime {field}: {record_copy[field]}")
-                                record_copy[field] = None
-                    
-                    processed_records.append(record_copy)
-                
-                logger.info(f"Obtenidos {len(processed_records)} trades cerrados con filtros: {filters}")
-                return processed_records
-                
+            async with self.pool.connection() as conn:
+                async with conn.cursor() as cur:
+                    strategy_data['user_id'] = self.fixed_user_id
+                    await cur.execute(SQL(query), strategy_data)
         except Exception as e:
-            logger.error(f"Error al obtener trades cerrados con filtros {filters}: {e}", exc_info=True)
+            logger.error(f"Database error saving strategy: {e}")
             raise
 
-    async def get_closed_trades_count(self, user_id: UUID, is_real_trade: bool) -> int:
-        """
-        Cuenta el número de trades cerrados para un usuario, filtrando por si es una operación real o no.
-        """
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
-
-        query = SQL("""
-            SELECT COUNT(*) FROM trades
-            WHERE user_id = {} AND position_status = 'closed' AND mode = {};
-        """).format(
-            Literal(user_id),
-            Literal('real' if is_real_trade else 'paper')
-        )
+    async def get_strategy_config_by_id(self, strategy_id: UUID) -> Optional[Dict[str, Any]]:
+        await self._check_pool()
+        assert self.pool is not None
+        
+        query = SQL("SELECT * FROM trading_strategy_configs WHERE id = %s AND user_id = %s;")
+        
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(query)
-                record = await cur.fetchone()
-                if record:
-                    return record['count']
-                return 0
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, (strategy_id, self.fixed_user_id))
+                    return await cur.fetchone()
         except Exception as e:
-            logger.error(f"Error al contar trades cerrados para user {user_id}, real_trade={is_real_trade}: {e}", exc_info=True)
-            raise # Re-lanzar la excepción para que el llamador pueda manejarla
+            logger.error(f"Database error getting strategy {strategy_id}: {e}")
+            raise
 
-    async def get_opportunity_by_id(self, opportunity_id: UUID) -> Optional[OpportunityTypeHint]:
-        """
-        Recupera una oportunidad por su ID.
-        """
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
-
-        query = SQL("""
-            SELECT * FROM opportunities
-            WHERE id = {};
-        """).format(
-            Literal(opportunity_id)
-        )
+    async def list_strategy_configs_by_user(self) -> List[Dict[str, Any]]:
+        await self._check_pool()
+        assert self.pool is not None
+        
+        query = SQL("SELECT * FROM trading_strategy_configs WHERE user_id = %s ORDER BY created_at DESC;")
+        
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(query)
-                record = await cur.fetchone()
-                
-                if record:
-                    # Convertir UUIDs de string a UUID objects
-                    if 'id' in record:
-                        record['id'] = UUID(record['id'])
-                    if 'user_id' in record:
-                        record['user_id'] = UUID(record['user_id'])
-                    
-                    # Convertir timestamps ISO a datetime si son strings
-                    datetime_fields = ['created_at', 'updated_at', 'expires_at', 'executed_at']
-                    for field in datetime_fields:
-                        if field in record and isinstance(record[field], str):
-                            try:
-                                record[field] = datetime.fromisoformat(record[field])
-                            except (ValueError, TypeError):
-                                logger.warning(f"No se pudo convertir campo datetime {field}: {record[field]}")
-                                record[field] = None
-                    
-                    # Mapear nombres de columnas de BD (snake_case) a nombres de campos de Pydantic
-                    field_mappings = {
-                        "source_type": "sourceType", "source_name": "sourceName", "source_data": "sourceData",
-                        "status_reason": "statusReason", "asset_type": "assetType",
-                        "predicted_direction": "predictedDirection", "predicted_price_target": "predictedPriceTarget",
-                        "predicted_stop_loss": "predictedStopLoss", "prediction_timeframe": "predictionTimeframe",
-                        "ai_analysis": "aiAnalysis", "confidence_score": "confidenceScore",
-                        "suggested_action": "suggestedAction", "ai_model_used": "aiModelUsed",
-                        "executed_at": "executedAt", "executed_price": "executedPrice",
-                        "executed_quantity": "executedQuantity", "related_order_id": "relatedOrderId",
-                    }
-                    
-                    for db_field, pydantic_field in field_mappings.items():
-                        if db_field in record:
-                            record[pydantic_field] = record.pop(db_field)
-                    
-                    return Opportunity(**record)
-                return None
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, (self.fixed_user_id,))
+                    return await cur.fetchall()
         except Exception as e:
-            logger.error(f"Error al obtener oportunidad por ID {opportunity_id}: {e}", exc_info=True)
-            raise # Re-lanzar la excepción para que el llamador pueda manejarla
+            logger.error(f"Database error listing strategies for user {self.fixed_user_id}: {e}")
+            raise
 
-    async def get_opportunities_by_status(self, user_id: UUID, status: OpportunityStatusTypeHint) -> List[OpportunityTypeHint]:
-        """
-        Recupera oportunidades para un usuario con un estado específico.
-        """
-        await self._ensure_connection()
-        assert self.connection is not None, "Connection must be established by _ensure_connection"
-
-        query = SQL("""
-            SELECT * FROM opportunities
-            WHERE user_id = {} AND status = {};
-        """).format(
-            Literal(user_id),
-            Literal(status.value)
-        )
+    async def delete_strategy_config(self, strategy_id: UUID) -> bool:
+        await self._check_pool()
+        assert self.pool is not None
+        
+        query = SQL("DELETE FROM trading_strategy_configs WHERE id = %s AND user_id = %s;")
+        
         try:
-            async with self.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(query)
-                records = await cur.fetchall()
-                
-                opportunities = []
-                for record in records:
-                    # Convertir UUIDs de string a UUID objects
-                    if 'id' in record:
-                        record['id'] = UUID(str(record['id']))
-                    if 'user_id' in record:
-                        record['user_id'] = UUID(str(record['user_id']))
-                    
-                    # Convertir timestamps ISO a datetime si son strings
-                    datetime_fields = ['created_at', 'updated_at', 'expires_at', 'executed_at']
-                    for field in datetime_fields:
-                        if field in record and isinstance(record[field], str):
-                            try:
-                                record[field] = datetime.fromisoformat(record[field])
-                            except (ValueError, TypeError):
-                                logger.warning(f"No se pudo convertir campo datetime {field}: {record[field]}")
-                                record[field] = None
-                    
-                    # Mapear nombres de columnas de BD (snake_case) a nombres de campos de Pydantic
-                    field_mappings = {
-                        "source_type": "sourceType", "source_name": "sourceName", "source_data": "sourceData",
-                        "status_reason": "statusReason", "asset_type": "assetType",
-                        "predicted_direction": "predictedDirection", "predicted_price_target": "predictedPriceTarget",
-                        "predicted_stop_loss": "predictedStopLoss", "prediction_timeframe": "predictionTimeframe",
-                        "ai_analysis": "aiAnalysis", "confidence_score": "confidenceScore",
-                        "suggested_action": "suggestedAction", "ai_model_used": "aiModelUsed",
-                        "executed_at": "executedAt", "executed_price": "executedPrice",
-                        "executed_quantity": "executedQuantity", "related_order_id": "relatedOrderId",
-                    }
-                    
-                    for db_field, pydantic_field in field_mappings.items():
-                        if db_field in record:
-                            record[pydantic_field] = record.pop(db_field)
-                    
-                    opportunities.append(Opportunity(**record))
-                
-                logger.info(f"Obtenidas {len(opportunities)} oportunidades con estado {status.value} para user {user_id}")
-                return opportunities
+            async with self.pool.connection() as conn:
+                async with conn.cursor() as cur:
+                    await cur.execute(query, (strategy_id, self.fixed_user_id))
+                    return cur.rowcount > 0
         except Exception as e:
-            logger.error(f"Error al obtener oportunidades por estado para user {user_id}, status={status.value}: {e}", exc_info=True)
-            raise # Re-lanzar la excepción para que el llamador pueda manejarla
+            logger.error(f"Database error deleting strategy {strategy_id}: {e}")
+            raise
+
+    async def get_trades_with_filters(self, filters: Dict[str, Any], limit: int, offset: int) -> List[Trade]:
+        await self._check_pool()
+        assert self.pool is not None
+
+        query_parts: List[Composable] = [SQL("SELECT * FROM trades")]
+        where_clauses: List[Composable] = []
+        params: List[Any] = []
+
+        for key, value in filters.items():
+            if value is not None:
+                if key.endswith("_gte"):
+                    where_clauses.append(SQL("{} >= %s").format(Identifier(key[:-4])))
+                    params.append(value)
+                elif key.endswith("_lte"):
+                    where_clauses.append(SQL("{} <= %s").format(Identifier(key[:-4])))
+                    params.append(value)
+                else:
+                    where_clauses.append(SQL("{} = %s").format(Identifier(key)))
+                    params.append(value)
+        
+        if where_clauses:
+            query_parts.append(SQL("WHERE"))
+            query_parts.append(SQL(" AND ").join(where_clauses))
+
+        query_parts.append(SQL("ORDER BY created_at DESC LIMIT %s OFFSET %s"))
+        params.extend([limit, offset])
+
+        final_query = SQL(" ").join(query_parts)
+
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(final_query, tuple(params))
+                    records = await cur.fetchall()
+                    return [Trade(**record) for record in records]
+        except Exception as e:
+            logger.error(f"Error al obtener trades con filtros {filters}: {e}", exc_info=True)
+            raise
+
+    # --- Métodos para Scan Presets ---
+    async def list_scan_presets(self, include_system: bool = True) -> List[Dict[str, Any]]:
+        await self._check_pool()
+        assert self.pool is not None
+
+        query_parts = [SQL("SELECT * FROM scan_presets WHERE user_id = %s")]
+        params = [self.fixed_user_id]
+
+        if include_system:
+            query_parts.append(SQL("OR is_system_preset = TRUE"))
+        
+        final_query = SQL(" ").join(query_parts) + SQL(" ORDER BY created_at DESC;")
+
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(final_query, tuple(params))
+                    records = await cur.fetchall()
+                    return [dict(record) for record in records]
+        except Exception as e:
+            logger.error(f"Error al listar presets de escaneo para usuario {self.fixed_user_id}: {e}", exc_info=True)
+            raise
+
+    async def create_scan_preset(self, preset_data: Dict[str, Any]) -> Dict[str, Any]:
+        await self._check_pool()
+        assert self.pool is not None
+
+        # Asegurarse de que el ID se genere si no está presente
+        if 'id' not in preset_data or not preset_data['id']:
+            preset_data['id'] = str(UUID(int=0)) # Placeholder, Supabase debería generar uno real
+
+        query = """
+        INSERT INTO scan_presets (
+            id, user_id, name, description, category, recommended_strategies,
+            market_scan_configuration, is_system_preset, is_active,
+            usage_count, success_rate, created_at, updated_at
+        ) VALUES (
+            %(id)s, %(user_id)s, %(name)s, %(description)s, %(category)s, %(recommended_strategies)s,
+            %(market_scan_configuration)s, %(is_system_preset)s, %(is_active)s,
+            %(usage_count)s, %(success_rate)s, %(created_at)s, %(updated_at)s
+        ) RETURNING *;
+        """
+        
+        # Preparar datos para la inserción
+        data_to_insert = preset_data.copy()
+        data_to_insert['user_id'] = self.fixed_user_id
+        data_to_insert['market_scan_configuration'] = Jsonb(data_to_insert.get('market_scan_configuration', {}))
+        data_to_insert['recommended_strategies'] = data_to_insert.get('recommended_strategies')
+        data_to_insert['created_at'] = datetime.now(timezone.utc)
+        data_to_insert['updated_at'] = datetime.now(timezone.utc)
+        data_to_insert['usage_count'] = data_to_insert.get('usage_count', 0)
+        data_to_insert['success_rate'] = data_to_insert.get('success_rate')
+
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(SQL(query), data_to_insert)
+                    record = await cur.fetchone()
+                    if record:
+                        return dict(record)
+            raise ValueError("No se pudo crear el preset de escaneo.")
+        except Exception as e:
+            logger.error(f"Error al crear preset de escaneo: {e}", exc_info=True)
+            raise
+
+    async def update_scan_preset(self, preset_id: str, preset_data: Dict[str, Any]) -> Dict[str, Any]:
+        await self._check_pool()
+        assert self.pool is not None
+
+        query = """
+        UPDATE scan_presets
+        SET
+            name = %(name)s,
+            description = %(description)s,
+            category = %(category)s,
+            recommended_strategies = %(recommended_strategies)s,
+            market_scan_configuration = %(market_scan_configuration)s,
+            is_system_preset = %(is_system_preset)s,
+            is_active = %(is_active)s,
+            usage_count = %(usage_count)s,
+            success_rate = %(success_rate)s,
+            updated_at = timezone('utc'::text, now())
+        WHERE id = %(id)s AND user_id = %(user_id)s
+        RETURNING *;
+        """
+        
+        data_to_update = preset_data.copy()
+        data_to_update['id'] = preset_id
+        data_to_update['user_id'] = self.fixed_user_id
+        data_to_update['market_scan_configuration'] = Jsonb(data_to_update.get('market_scan_configuration', {}))
+        data_to_update['recommended_strategies'] = data_to_update.get('recommended_strategies')
+        data_to_update['usage_count'] = data_to_update.get('usage_count', 0)
+        data_to_update['success_rate'] = data_to_update.get('success_rate')
+
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(SQL(query), data_to_update)
+                    record = await cur.fetchone()
+                    if record:
+                        return dict(record)
+            raise ValueError(f"No se pudo actualizar el preset de escaneo con ID {preset_id}.")
+        except Exception as e:
+            logger.error(f"Error al actualizar preset de escaneo {preset_id}: {e}", exc_info=True)
+            raise
+
+    async def delete_scan_preset(self, preset_id: str) -> bool:
+        await self._check_pool()
+        assert self.pool is not None
+
+        query = SQL("DELETE FROM scan_presets WHERE id = %s AND user_id = %s AND is_system_preset = FALSE;")
+        
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor() as cur:
+                    await cur.execute(query, (preset_id, self.fixed_user_id))
+                    return cur.rowcount > 0
+        except Exception as e:
+            logger.error(f"Error al eliminar preset de escaneo {preset_id}: {e}", exc_info=True)
+            raise
+
+    async def get_scan_preset_by_id(self, preset_id: str) -> Optional[Dict[str, Any]]:
+        await self._check_pool()
+        assert self.pool is not None
+
+        query = SQL("SELECT * FROM scan_presets WHERE id = %s AND (user_id = %s OR is_system_preset = TRUE);")
+        
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, (preset_id, self.fixed_user_id))
+                    record = await cur.fetchone()
+                    if record:
+                        return dict(record)
+            return None
+        except Exception as e:
+            logger.error(f"Error al obtener preset de escaneo por ID {preset_id}: {e}", exc_info=True)
+            raise
+
+    # --- Métodos para Market Scan Configurations (no presets) ---
+    async def get_market_scan_configuration(self, config_id: UUID) -> Optional[Dict[str, Any]]:
+        await self._check_pool()
+        assert self.pool is not None
+        query = SQL("SELECT * FROM market_scan_configurations WHERE id = %s AND user_id = %s;")
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, (config_id, self.fixed_user_id))
+                    record = await cur.fetchone()
+                    if record:
+                        return dict(record)
+            return None
+        except Exception as e:
+            logger.error(f"Error al obtener configuración de escaneo de mercado por ID {config_id}: {e}", exc_info=True)
+            raise
+
+    async def upsert_market_scan_configuration(self, config_data: Dict[str, Any]) -> Dict[str, Any]:
+        await self._check_pool()
+        assert self.pool is not None
+
+        config_id = config_data.get('id')
+        is_update = bool(config_id)
+
+        if is_update:
+            # Lógica de actualización
+            query = """
+            UPDATE market_scan_configurations SET
+                name = %(name)s,
+                description = %(description)s,
+                min_price_change_24h_percent = %(min_price_change_24h_percent)s,
+                max_price_change_24h_percent = %(max_price_change_24h_percent)s,
+                volume_filter_type = %(volume_filter_type)s,
+                min_volume_24h_usd = %(min_volume_24h_usd)s,
+                market_cap_ranges = %(market_cap_ranges)s,
+                trend_direction = %(trend_direction)s,
+                min_rsi = %(min_rsi)s,
+                max_rsi = %(max_rsi)s,
+                max_results = %(max_results)s,
+                scan_interval_minutes = %(scan_interval_minutes)s,
+                allowed_quote_currencies = %(allowed_quote_currencies)s,
+                is_active = %(is_active)s,
+                updated_at = timezone('utc'::text, now())
+            WHERE id = %(id)s AND user_id = %(user_id)s
+            RETURNING *;
+            """
+        else:
+            # Lógica de inserción
+            config_data['id'] = str(uuid4())
+            query = """
+            INSERT INTO market_scan_configurations (
+                id, user_id, name, description, min_price_change_24h_percent,
+                max_price_change_24h_percent, volume_filter_type, min_volume_24h_usd,
+                market_cap_ranges, trend_direction, min_rsi, max_rsi,
+                max_results, scan_interval_minutes, allowed_quote_currencies,
+                is_active, created_at, updated_at
+            ) VALUES (
+                %(id)s, %(user_id)s, %(name)s, %(description)s, %(min_price_change_24h_percent)s,
+                %(max_price_change_24h_percent)s, %(volume_filter_type)s, %(min_volume_24h_usd)s,
+                %(market_cap_ranges)s, %(trend_direction)s, %(min_rsi)s, %(max_rsi)s,
+                %(max_results)s, %(scan_interval_minutes)s, %(allowed_quote_currencies)s,
+                %(is_active)s, %(created_at)s, %(updated_at)s
+            ) RETURNING *;
+            """
+            config_data['created_at'] = datetime.now(timezone.utc)
+
+        data_to_process = config_data.copy()
+        data_to_process['user_id'] = self.fixed_user_id
+        data_to_process['updated_at'] = datetime.now(timezone.utc)
+        
+        # Convertir listas a JSONB si es necesario
+        for key in ['market_cap_ranges', 'allowed_quote_currencies']:
+            if key in data_to_process and isinstance(data_to_process[key], list):
+                data_to_process[key] = json.dumps(data_to_process[key])
+
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(SQL(query), data_to_process)
+                    record = await cur.fetchone()
+                    if record:
+                        return dict(record)
+            raise ValueError("No se pudo guardar/actualizar la configuración de escaneo de mercado.")
+        except Exception as e:
+            logger.error(f"Error al guardar/actualizar configuración de escaneo de mercado: {e}", exc_info=True)
+            raise
+
+    async def delete_market_scan_configuration(self, config_id: UUID) -> bool:
+        await self._check_pool()
+        assert self.pool is not None
+        query = SQL("DELETE FROM market_scan_configurations WHERE id = %s AND user_id = %s;")
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor() as cur:
+                    await cur.execute(query, (config_id, self.fixed_user_id))
+                    return cur.rowcount > 0
+        except Exception as e:
+            logger.error(f"Error al eliminar configuración de escaneo de mercado {config_id}: {e}", exc_info=True)
+            raise
+
+    async def list_market_scan_configurations(self) -> List[Dict[str, Any]]:
+        await self._check_pool()
+        assert self.pool is not None
+        query = SQL("SELECT * FROM market_scan_configurations WHERE user_id = %s ORDER BY created_at DESC;")
+        try:
+            async with self.pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(query, (self.fixed_user_id,))
+                    records = await cur.fetchall()
+                    return [dict(record) for record in records]
+        except Exception as e:
+            logger.error(f"Error al listar configuraciones de escaneo de mercado para usuario {self.fixed_user_id}: {e}", exc_info=True)
+            raise

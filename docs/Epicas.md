@@ -353,7 +353,8 @@ AC7 (Actualización en Tiempo Real del Panel de Notificaciones): Las nuevas noti
 ## Épica 3: Implementación del Ciclo Completo de Paper Trading con Asistencia de IA
 
 Objetivo de la Épica: Permitir al usuario simular un ciclo completo de trading (detección de oportunidad, análisis IA, ejecución simulada, gestión automatizada de Trailing Stop Loss y Take Profit, y visualización de resultados) en modo paper trading, con el apoyo de Gemini y los MCPs externos.
-Historias de Usuario Propuestas para la Épica 3 (en secuencia sugerida):
+
+# Historias de Usuario Propuestas para la Épica 3 (en secuencia sugerida):
 
 1. ## Historia 3.1: Activación y Configuración del Modo Paper Trading
 
@@ -460,7 +461,7 @@ AC3: El sistema debe calcular y mostrar en la UI métricas básicas de rendimien
 
 AC4: El usuario debería poder aplicar filtros básicos a la lista de operaciones cerradas (ej. por par, por fecha).
 
-## Historias de Usuario Propuestas para la Épica 4 (en secuencia sugerida):
+# Historias de Usuario Propuestas para la Épica 4 (en secuencia sugerida):
 
 1. ## Historia 4.1: Configuración y Activación del Modo de "Operativa Real Limitada"
 
@@ -554,7 +555,7 @@ AC3: El saldo de USDT real en Binance, así como las cantidades de otros criptoa
 
 AC4: El historial de operaciones (si se implementa una vista de historial) debe permitir filtrar o distinguir claramente entre las operaciones realizadas en modo Paper Trading y las operaciones ejecutadas con dinero real.
 
-## Historias de Usuario Propuestas para la Épica 5:
+# Historias de Usuario Propuestas para la Épica 5:
 
 Orden Sugerido:
 

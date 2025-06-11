@@ -1,227 +1,196 @@
 import sys
-import qdarkstyle
 import asyncio
+import logging
+from pathlib import Path
+from typing import Optional, TextIO
+from uuid import UUID, uuid4
+import httpx
+import qasync
 from PyQt5.QtWidgets import QApplication, QMessageBox
-from uuid import UUID
-from typing import Optional
-import os # Importar os
+from PyQt5.QtCore import QObject, pyqtSignal
 
-from dotenv import load_dotenv
-from src.ultibot_backend.app_config import AppSettings
-from src.shared.data_types import APICredential, ServiceName # Importar APICredential y ServiceName
-
-# Importar la MainWindow
 from src.ultibot_ui.windows.main_window import MainWindow
+from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
+from src.ultibot_ui.services.trading_mode_state import TradingModeStateManager
+from src.ultibot_ui import app_config
 
-# Importar servicios de backend
-from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend.services.credential_service import CredentialService
-from src.ultibot_backend.services.market_data_service import MarketDataService
-from src.ultibot_backend.services.config_service import ConfigService
-from src.ultibot_backend.services.notification_service import NotificationService # Importar NotificationService
-from src.shared.data_types import UserConfiguration # Importar UserConfiguration
+# --- Configuración de Logging Mejorada ---
 
-async def start_application():
-    # --- Application Configuration ---
-    # This application relies on a .env file in its working directory for essential
-    # configurations such as database connection strings, API keys, and encryption keys.
-    # Ensure a valid .env file is present. See .env.example for a template.
-    # The AppSettings object will load these configurations.
-    # ---
+# 1. Crear directorio de logs
+logs_dir = Path("logs")
+logs_dir.mkdir(exist_ok=True)
 
-    app = QApplication(sys.argv)
-    # Apply the dark theme early so QMessageBox is styled.
-    app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+# 2. Obtener el logger raíz para configurarlo
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.INFO)
 
-    settings = None
-    persistence_service = None
-    credential_service = None
-    market_data_service = None
-    config_service = None
-    notification_service = None # Añadir notification_service
-    user_id = None
+# Limpiar handlers existentes para evitar duplicados
+if root_logger.hasHandlers():
+    root_logger.handlers.clear()
+
+# 3. Crear formateador
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# 4. Crear handler para el archivo
+file_handler = logging.FileHandler(logs_dir / "frontend.log", mode='w')
+file_handler.setFormatter(formatter)
+root_logger.addHandler(file_handler)
+
+# 5. Crear handler para la consola
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(formatter)
+root_logger.addHandler(stream_handler)
+
+# 6. Clase para redirigir stdout/stderr al logger
+class StreamToLogger(TextIO):
+    """
+    Fake file-like stream object that redirects writes to a logger instance.
+    """
+    def __init__(self, logger_instance: logging.Logger, level: int):
+        self.logger = logger_instance
+        self.level = level
+        self.linebuf = ''
+
+    def write(self, buf: str):
+        for line in buf.rstrip().splitlines():
+            self.logger.log(self.level, line.rstrip())
+
+    def flush(self):
+        pass
+
+# 7. Redirigir stdout y stderr
+sys.stdout = StreamToLogger(logging.getLogger('STDOUT'), logging.INFO)
+sys.stderr = StreamToLogger(logging.getLogger('STDERR'), logging.ERROR)
+
+logger = logging.getLogger(__name__)
+logger.info("Logging configurado. stdout y stderr redirigidos al archivo de log.")
+# --- Fin de la Configuración de Logging ---
+
+
+class AppController(QObject):
+    """
+    Controlador principal que gestiona la inicialización asíncrona y el ciclo de vida de los recursos.
+    """
+    initialization_complete = pyqtSignal(object) # MainWindow
+    initialization_error = pyqtSignal(str)
+    
+    def __init__(self, loop: asyncio.AbstractEventLoop, parent: Optional[QObject] = None):
+        super().__init__(parent)
+        self.loop = loop
+        self.user_id: Optional[UUID] = None
+        self.main_window: Optional[MainWindow] = None
+        
+        self.http_client = httpx.AsyncClient(
+            base_url=app_config.API_BASE_URL,
+            timeout=app_config.REQUEST_TIMEOUT
+        )
+        self.api_client = UltiBotAPIClient(client=self.http_client)
+        self.trading_mode_manager = TradingModeStateManager(api_client=self.api_client)
+        self.initialization_finished = asyncio.Event()
+
+    async def initialize(self):
+        """
+        Realiza la inicialización asíncrona, intentando conectar con el backend.
+        """
+        logger.info("Iniciando inicialización asíncrona...")
+        try:
+            await asyncio.sleep(2) 
+            config_data = await self.api_client.get_user_configuration()
+            self.user_id = UUID(config_data.get("userId", str(uuid4())))
+            logger.info(f"Configuración recibida para el ID de usuario: {self.user_id}")
+            
+            # Sincronizar el modo de trading inicial
+            await self.trading_mode_manager.sync_with_backend()
+
+            self.main_window = MainWindow(
+                user_id=self.user_id, 
+                api_client=self.api_client,
+                trading_mode_manager=self.trading_mode_manager,
+                loop=self.loop
+            )
+            self.initialization_complete.emit(self.main_window)
+
+        except (APIError, httpx.ConnectError) as e:
+            error_message = f"Fallo al conectar con el backend: {e}"
+            logger.critical(error_message, exc_info=True)
+            self.initialization_error.emit(error_message)
+        except Exception as e:
+            error_message = f"Error inesperado durante la inicialización: {e}"
+            logger.critical(error_message, exc_info=True)
+            self.initialization_error.emit(error_message)
+        finally:
+            self.initialization_finished.set()
+
+    def show_main_window(self, window: MainWindow):
+        window.show()
+        logger.info("Ventana principal mostrada.")
+
+    def show_error_message(self, message: str):
+        QMessageBox.critical(None, "Error Crítico de Inicialización", f"La aplicación no pudo iniciarse: {message}")
+        if not self.initialization_finished.is_set():
+            self.initialization_finished.set()
+
+    async def cleanup(self):
+        """Cierra los recursos asíncronos de forma segura."""
+        logger.info("Iniciando el proceso de cierre de la aplicación...")
+        if self.main_window:
+            logger.info("Limpiando la ventana principal...")
+            self.main_window.cleanup()
+        
+        logger.info("Cerrando el cliente HTTP...")
+        if self.http_client and not self.http_client.is_closed:
+            await self.http_client.aclose()
+        logger.info("Cliente HTTP cerrado. Limpieza completada.")
+
+
+async def main():
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
 
     try:
-        load_dotenv(override=True)
-        settings = AppSettings()
+        with open("src/ultibot_ui/assets/style.qss", "r") as f:
+            app.setStyleSheet(f.read())
+        logger.info("Stylesheet cargado exitosamente.")
+    except FileNotFoundError:
+        logger.warning("Archivo de hoja de estilos no encontrado: src/ultibot_ui/assets/style.qss")
 
-        if not settings.CREDENTIAL_ENCRYPTION_KEY:
-            raise ValueError("CREDENTIAL_ENCRYPTION_KEY is not set in .env file or environment.")
-        
-        user_id = settings.FIXED_USER_ID # Set user_id after settings are loaded
+    loop = asyncio.get_event_loop()
+    controller = AppController(loop=loop)
+    controller.initialization_complete.connect(controller.show_main_window)
+    controller.initialization_error.connect(controller.show_error_message)
 
-        # Initialize PersistenceService
-        persistence_service = SupabasePersistenceService()
-        await persistence_service.connect() # Connection attempt
+    app_is_closing = asyncio.Event()
 
-        # --- Asegurar que el user_id exista en user_configurations antes de cualquier otra operación ---
-        # Esto es una medida de contingencia para la clave foránea.
-        try:
-            await persistence_service.execute_raw_sql(
-                """
-                INSERT INTO user_configurations (user_id, selected_theme)
-                VALUES (%s, %s)
-                ON CONFLICT (user_id) DO NOTHING;
-                """,
-                (user_id, "dark") # Usar un tema por defecto
-            )
-            print(f"Asegurado que user_id {user_id} existe en user_configurations.")
-            await asyncio.sleep(1) # Añadir un pequeño retraso para la consistencia de la base de datos
-        except Exception as e:
-            QMessageBox.critical(None, "Error de Inicialización de Usuario", f"Error al asegurar la existencia del usuario en la base de datos: {str(e)}\n\nLa aplicación se cerrará.")
-            sys.exit(1)
-        # --- Fin de la inicialización de user_id ---
+    @qasync.asyncSlot()
+    async def on_about_to_quit():
+        logger.info("Señal 'aboutToQuit' recibida. Ejecutando limpieza asíncrona.")
+        await controller.cleanup()
+        logger.info("Limpieza asíncrona completada.")
+        app_is_closing.set()
 
-        # Initialize CredentialService
-        credential_service = CredentialService(encryption_key=settings.CREDENTIAL_ENCRYPTION_KEY)
+    app.aboutToQuit.connect(on_about_to_quit)
 
-        # Other services
-        binance_adapter = BinanceAdapter() # Assumes AppSettings is used internally
-        market_data_service = MarketDataService(credential_service, binance_adapter)
-        config_service = ConfigService(persistence_service)
-        notification_service = NotificationService(credential_service, persistence_service) # Inicializar NotificationService
-
-        # --- Asegurar que la configuración de usuario por defecto exista ---
-        # Esto es necesario porque api_credentials tiene una clave foránea a user_configurations.
-        existing_user_config = await config_service.get_user_configuration(user_id) # Usar get_user_configuration
-        # get_user_configuration siempre devuelve una configuración (por defecto si no existe),
-        # por lo que la verificación de 'not existing_user_config' ya no es necesaria aquí.
-        # Solo necesitamos verificar si la configuración devuelta es la por defecto (recién creada)
-        # o una existente. La lógica de 'get_user_configuration' ya maneja la creación de la por defecto.
-        
-        # Si la configuración devuelta es la por defecto y no tiene el user_id correcto,
-        # o si es una configuración por defecto que no ha sido guardada aún.
-        # La lógica de get_user_configuration ya se encarga de esto.
-        # Aquí solo necesitamos asegurarnos de que la configuración esté guardada si es nueva.
-        
-        # Para simplificar, podemos asumir que get_user_configuration ya ha hecho su trabajo
-        # de cargar o crear la configuración. Si es una configuración por defecto recién creada,
-        # necesitamos guardarla.
-        
-        # Una forma de verificar si es una configuración "nueva" que necesita ser guardada
-        # es si su ID no coincide con el user_id (si el ID de la configuración es un UUID generado
-        # por defecto y no el user_id que se usa como clave primaria en la tabla).
-        # Sin embargo, el método get_default_configuration ahora asigna el user_id al campo 'user_id'
-        # y un nuevo UUID al campo 'id' de la UserConfiguration.
-        # La lógica de `get_user_configuration` ya se encarga de persistir la configuración por defecto
-        # si no la encuentra. Por lo tanto, esta sección puede simplificarse.
-
-        # La lógica actual de `get_user_configuration` en `ConfigService` ya maneja la carga
-        # o la creación de una configuración por defecto si no existe.
-        # No necesitamos una lógica de "asegurar que exista" aquí en `main.py`
-        # si `get_user_configuration` ya lo hace.
-        # Solo necesitamos llamar a `get_user_configuration` para que se inicialice la caché
-        # y se cree la entrada en la DB si es necesario.
-        
-        # Eliminamos la lógica redundante de creación y guardado de configuración por defecto aquí.
-        # La llamada a `get_user_configuration` es suficiente para asegurar que la configuración
-        # del usuario esté cargada y, si no existe, se cree una por defecto en la DB.
-        await config_service.get_user_configuration(user_id)
-        print(f"Configuración de usuario para {user_id} cargada o creada exitosamente.")
-        # --- Fin de la lógica de configuración de usuario ---
-
-        # --- Cargar y guardar credenciales de Binance si no existen ---
-        # Esto asegura que las credenciales de Binance estén disponibles en la base de datos
-        # para el CredentialService, que las recupera de allí.
-        binance_api_key = os.getenv("BINANCE_API_KEY")
-        binance_api_secret = os.getenv("BINANCE_API_SECRET")
-
-        if not binance_api_key or not binance_api_secret:
-            raise ValueError("BINANCE_API_KEY or BINANCE_API_SECRET not found in .env file or environment.")
-
-        try:
-            # Intentar obtener las credenciales para ver si ya están guardadas
-            existing_binance_credential = await credential_service.get_credential(
-                user_id=user_id,
-                service_name=ServiceName.BINANCE_SPOT, # Corregido a ServiceName.BINANCE_SPOT
-                credential_label="default"
-            )
-            # Se elimina la condición 'if not existing_binance_credential:' para forzar la actualización
-            # de las credenciales desde .env en cada inicio, aprovechando el ON CONFLICT DO UPDATE.
-            print("Intentando guardar/actualizar credenciales de Binance desde .env...")
-            
-            # Encriptar las claves antes de guardarlas
-            encrypted_api_key = credential_service.encrypt_data(binance_api_key)
-            encrypted_api_secret = credential_service.encrypt_data(binance_api_secret)
-
-            binance_credential = APICredential( # Usar APICredential
-                id=settings.FIXED_BINANCE_CREDENTIAL_ID, # Pasar el UUID directamente
-                user_id=user_id, # Corregido a user_id
-                service_name=ServiceName.BINANCE_SPOT, # Corregido a ServiceName.BINANCE_SPOT
-                credential_label="default", # Corregido a credential_label
-                encrypted_api_key=encrypted_api_key, # Usar clave encriptada
-                encrypted_api_secret=encrypted_api_secret # Usar clave secreta encriptada
-            )
-            await credential_service.save_encrypted_credential(binance_credential) # Usar el nuevo método
-            print("Credenciales de Binance guardadas/actualizadas exitosamente desde .env.")
-            # Ya no se necesita el 'else' porque siempre se intenta guardar/actualizar.
-        except Exception as e:
-            QMessageBox.critical(None, "Error de Credenciales", f"Error al guardar/actualizar credenciales de Binance: {str(e)}\n\nLa aplicación se cerrará.")
-            sys.exit(1)
-        # --- Fin de la lógica de credenciales de Binance ---
-
-    except ValueError as ve: # Specifically for missing key or other ValueErrors during setup
-        QMessageBox.critical(None, "Configuration Error", f"A configuration error occurred: {str(ve)}\n\nPlease check your .env file or environment variables.\nThe application will now exit.")
-        sys.exit(1)
-    except Exception as e: # Catch other potential errors during service init (e.g., DB connection, malformed keys)
-        QMessageBox.critical(None, "Service Initialization Error", f"Failed to initialize critical services: {str(e)}\n\nThe application will now exit.")
-        sys.exit(1)
-
-    # Ensure persistence_service is available for cleanup, even if MainWindow creation fails
-    # (though unlikely if services initialized correctly)
+    # Lanzar la inicialización como una tarea de fondo
+    init_task = asyncio.create_task(controller.initialize())
     
-    # Crear y mostrar la ventana principal, pasando los servicios
-    # This part is reached only if all initializations were successful
-    main_window = MainWindow(user_id, market_data_service, config_service, notification_service, persistence_service) # Pasar persistence_service
-    main_window.show()
+    # Esperar a que la inicialización termine (para bien o para mal)
+    await controller.initialization_finished.wait()
 
-    # Ejecutar el loop de eventos de Qt
-    exit_code = app.exec_()
+    # Si la inicialización falló, no continuar
+    if not controller.main_window:
+        logger.error("No se pudo crear la ventana principal. Saliendo.")
+        init_task.cancel()
+        return
 
-    # --- Limpieza de recursos después de que la aplicación Qt haya terminado ---
-    print("Iniciando limpieza de recursos asíncronos...")
-    if persistence_service:
-        try:
-            print("Desconectando persistence service...")
-            await persistence_service.disconnect()
-            print("Persistence service desconectado.")
-        except Exception as e:
-            print(f"Error durante la desconexión de persistence_service: {e}")
+    # Esperar a que la aplicación se cierre
+    await app_is_closing.wait()
+    logger.info("El bucle principal de la aplicación ha finalizado.")
 
-    if market_data_service: # Asegurarse de que market_data_service se inicializó
-        try:
-            print("Cerrando market_data_service...")
-            await market_data_service.close()
-            print("Market_data_service cerrado.")
-        except Exception as e:
-            print(f"Error durante el cierre de market_data_service: {e}")
-    
-    print("Limpieza de recursos asíncronos completada.")
-    # --- Fin de la limpieza ---
-
-    sys.exit(exit_code)
 
 if __name__ == "__main__":
-    # --- Running the Application ---
-    # This UI application is part of a larger project structure within the 'src' directory.
-    # To ensure all internal imports (e.g., from 'src.ultibot_backend' or 'ultibot_ui.windows')
-    # resolve correctly, it's recommended to run this script using Poetry from the
-    # project root directory:
-    #
-    #   poetry run python src/ultibot_ui/main.py
-    #
-    # If not using Poetry, ensure the project root directory (containing 'src')
-    # is in your PYTHONPATH, or run the script from the project root directory, e.g.:
-    #
-    #   python -m src.ultibot_ui.main
-    #
-    # or ensure your current working directory is the project root when running:
-    #   python src/ultibot_ui/main.py
-    # ---
-    # Fix for Windows ProactorEventLoop issue with psycopg
-    if sys.platform == "win32":
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-        
-    # Ejecutar la aplicación asíncrona
-    asyncio.run(start_application())
+    try:
+        qasync.run(main())
+    except Exception as e:
+        logger.critical(f"Excepción no controlada en el arranque de la aplicación: {e}", exc_info=True)
+        sys.exit(1)

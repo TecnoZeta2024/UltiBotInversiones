@@ -14,7 +14,7 @@
     
 -   **Interfaz de Usuario Funcional:** Implementar la interfaz de usuario principal con PyQt5, permitiendo el control y monitoreo efectivos de las operaciones y las estrategias iniciales. (Esto se aborda en la Épica 2).
     
--   **Integración de MCPs Esenciales:** Integrar los Model Context Protocols (MCPs) fundamentales para el análisis de mercado y la toma de decisiones de trading asistida por IA. (Esto se aborda en la Épica 3).
+-   **Integración de Fuentes de Datos de Mercado Clave:** Integrar APIs directas de Binance, Mobula y WebSockets de Binance para el análisis de mercado y la toma de decisiones de trading asistida por IA. (Esto se aborda en la Épica 3).
     
 -   **Operatividad Confiable del Núcleo:** Asegurar que el sistema de datos unificado y el motor de ejecución de operaciones funcionen de manera fiable y eficiente para las estrategias que se activen inicialmente, adhiriéndose a las reglas de gestión de capital y riesgo. (Esto se aborda en las Épicas 1, 3, 4 y 5).
 
@@ -42,7 +42,7 @@
     
     -   Permitir la activación y configuración del modo Paper Trading con un capital virtual inicial.
         
-    -   Integrar con servidores MCP externos para la detección de oportunidades de trading ("trending coins", "winner coins").
+    -   Detección de Oportunidades mediante APIs y WebSockets: Utilizar APIs de Mobula y Binance (REST y WebSockets) para identificar "trending coins" o "winner coins" y otros patrones de mercado relevantes.
         
     -   Analizar las oportunidades detectadas utilizando la IA de Gemini, con verificación de datos vía Mobula/Binance API, para obtener una evaluación de confianza.
         
@@ -215,7 +215,7 @@ Esta sección consolida las directrices técnicas de alto nivel, las preferencia
 -   **Base de Datos Principal:** PostgreSQL (versión 15+), gestionada a través de Supabase
 -   **Caché L2:** Redis versión 7.2+
 -   **Proveedor IA Inicial:** Gemini (utilizando la librería `google-generativeai` 0.3.2+)
--   **Fuente de Oportunidades MCP:** Servidores MCP externos identificados en `https://github.com/punkpeye/awesome-mcp-servers#finance--fintech`
+-   **Fuente de Oportunidades:** APIs de Binance (REST y WebSockets) y Mobula (REST API) para datos de mercado y detección de patrones.
 -   **Gestión de Dependencias:** Poetry 1.7.0+
 -   **Containerización:** Docker 24.0+
 
@@ -285,7 +285,7 @@ A continuación, se presenta un resumen de cada una:
 
 -   **Épica 3: Implementación del Ciclo Completo de Paper Trading con Asistencia de IA**
     
-    -   **Objetivo:** Permitir al usuario simular un ciclo completo de trading (detección de oportunidad mediante MCPs, análisis y validación con IA de Gemini y datos de Mobula/Binance, ejecución simulada de órdenes de entrada, gestión automatizada de Trailing Stop Loss y Take Profit) en modo paper trading, y visualizar los resultados y el rendimiento de estas operaciones simuladas.
+    -   **Objetivo:** Permitir al usuario simular un ciclo completo de trading (detección de oportunidad mediante APIs de Binance/Mobula y WebSockets, análisis y validación con IA de Gemini y datos complementarios, ejecución simulada de órdenes de entrada, gestión automatizada de Trailing Stop Loss y Take Profit) en modo paper trading, y visualizar los resultados y el rendimiento de estas operaciones simuladas.
     -   _(Las Historias de Usuario detalladas (3.1 a 3.6) y sus Criterios de Aceptación se encuentran en el documento `Epicas.md`)_.
 
 -   **Épica 4: Habilitación de Operativa Real Limitada y Gestión de Capital**
@@ -326,8 +326,8 @@ A continuación, se presenta un resumen de cada una:
         4.  **Historia 5.4: Ejecución de Operaciones Basada en Estrategias Activas y Configuradas**
             -   Como usuario de UltiBotInversiones, quiero que el motor de trading del sistema solo considere y ejecute operaciones (simuladas en Paper Trading o propuestas para confirmación en Operativa Real Limitada) basadas en las señales generadas por las estrategias que yo he activado y configurado explícitamente, para asegurar que el bot opera estrictamente de acuerdo a mis preferencias y estrategias seleccionadas.
             -   **Criterios de Aceptación (ACs):**
-                -   AC1: El motor de trading debe consultar en tiempo real el estado (activo/inactivo) y la configuración actual de todas las estrategias (gestionado a través de la Historia 5.3) antes de procesar cualquier señal de mercado potencial o oportunidad identificada por los MCPs.
-                -   AC2: Cuando una oportunidad de trading es detectada (sea por MCPs externos o por un análisis interno del sistema), el sistema debe filtrar y determinar qué estrategias activas son aplicables a dicha oportunidad (basado en el par de monedas, condiciones de mercado, etc., según la lógica de cada estrategia).
+                -   AC1: El motor de trading debe consultar en tiempo real el estado (activo/inactivo) y la configuración actual de todas las estrategias (gestionado a través de la Historia 5.3) antes de procesar cualquier señal de mercado potencial o oportunidad identificada por las fuentes de datos directas (Binance/Mobula API/WebSockets).
+                -   AC2: Cuando una oportunidad de trading es detectada (sea por las APIs/WebSockets de Binance/Mobula o por un análisis interno del sistema), el sistema debe filtrar y determinar qué estrategias activas son aplicables a dicha oportunidad (basado en el par de monedas, condiciones de mercado, etc., según la lógica de cada estrategia).
                 -   AC3: Las señales o datos de la oportunidad deben ser procesados por la lógica interna de la(s) estrategia(s) activa(s) que sean aplicables, incluyendo cualquier interacción con el motor de IA (Gemini) si así está configurado para dicha estrategia (según Historia 5.2).
                 -   AC4: Solo se procederá a simular una operación (en modo Paper Trading, como se definió en la Épica 3) o a proponerla para ejecución real (en modo Operativa Real Limitada, como se definió en la Épica 4) si una estrategia activa y correctamente configurada así lo determina y alcanza el umbral de confianza requerido.
                 -   AC5: Cada operación ejecutada (simulada o real) debe ser asociada y registrada de forma persistente con la estrategia específica que la originó, para fines de seguimiento y análisis de desempeño.
