@@ -6,9 +6,9 @@ from typing import List
 
 from fastapi import APIRouter, HTTPException, status
 
-from ...core.domain_models.opportunity_models import Opportunity, OpportunityStatus
-from ...dependencies import PersistenceServiceDep, ConfigurationServiceDep
-from ...app_config import settings
+from src.ultibot_backend.core.domain_models.opportunity_models import Opportunity, OpportunityStatus
+from src.ultibot_backend.dependencies import PersistenceServiceDep, ConfigurationServiceDep
+from src.ultibot_backend.app_config import settings
 
 logger = logging.getLogger(__name__)
 

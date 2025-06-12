@@ -11,7 +11,7 @@ from typing import Optional, Dict, Any
 from uuid import UUID, uuid4
 from datetime import datetime # Importar datetime
 
-from ultibot_backend.core.domain_models.market import MarketSnapshot
+from src.ultibot_backend.core.domain_models.market import MarketData
 from ultibot_backend.core.domain_models.trading import (
     BaseStrategyParameters, AnalysisResult, TradingSignal, OrderSide, OrderType, SignalStrength
 )
@@ -58,12 +58,12 @@ class BaseStrategy(ABC):
         pass
 
     @abstractmethod
-    async def analyze(self, market_snapshot: MarketSnapshot) -> AnalysisResult:
+    async def analyze(self, market_snapshot: MarketData) -> AnalysisResult:
         """
         Método asíncrono para analizar el snapshot de mercado y generar una señal de trading.
 
         Args:
-            market_snapshot (MarketSnapshot): El snapshot actual del mercado.
+            market_snapshot (MarketData): El snapshot actual del mercado.
 
         Returns:
             AnalysisResult: El resultado del análisis, incluyendo una posible señal de trading.

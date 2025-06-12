@@ -11,7 +11,7 @@ import statistics
 
 from pydantic import Field, ConfigDict
 
-from ultibot_backend.core.domain_models.market import KlineData, MarketSnapshot
+from src.ultibot_backend.core.domain_models.market import KlineData, MarketData
 from ultibot_backend.core.domain_models.trading import (
     BaseStrategyParameters, AnalysisResult, TradingSignal, OrderSide, OrderType
 )
@@ -54,12 +54,12 @@ class BollingerSqueezeBreakout(BaseStrategy):
         """
         pass
 
-    async def analyze(self, market_snapshot: MarketSnapshot) -> AnalysisResult:
+    async def analyze(self, market_snapshot: MarketData) -> AnalysisResult:
         """
         Analiza el estado actual del mercado para detectar el squeeze y el breakout.
 
         Args:
-            market_snapshot (MarketSnapshot): Una instantánea del estado actual del mercado.
+            market_snapshot (MarketData): Una instantánea del estado actual del mercado.
 
         Returns:
             AnalysisResult: El resultado del análisis.

@@ -8,9 +8,9 @@ from unittest.mock import Mock, AsyncMock
 from datetime import datetime, timedelta
 from uuid import UUID
 
-from src.ultibot_backend.services.trading_report_service import TradingReportService
-from src.ultibot_backend.core.exceptions import ReportError
-from src.shared.data_types import Trade, PerformanceMetrics, TradeOrderDetails # Eliminar Order, OrderSide, OrderType, OrderStatus
+from ultibot_backend.services.trading_report_service import TradingReportService
+from ultibot_backend.core.exceptions import ReportError
+from shared.data_types import Trade, PerformanceMetrics, TradeOrderDetails # Eliminar Order, OrderSide, OrderType, OrderStatus
 
 
 @pytest.fixture

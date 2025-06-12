@@ -12,18 +12,18 @@ from decimal import Decimal
 from datetime import datetime, timedelta
 
 # Core imports
-from src.ultibot_backend.core.domain_models.trading import (
+from ultibot_backend.core.domain_models.trading import (
     MarketSnapshot, TradingOpportunity, TradeResult, AnalysisResult, TradingSignal
 )
-from src.ultibot_backend.core.domain_models.market import TickerData, KlineData
-from src.ultibot_backend.core.domain_models.events import TradeExecutedEvent, OpportunityDetectedEvent
-from src.ultibot_backend.core.services.ai_orchestrator import AIOrchestratorService
-from src.ultibot_backend.core.services.event_broker import AsyncEventBroker
+from ultibot_backend.core.domain_models.market import TickerData, KlineData
+from ultibot_backend.core.domain_models.events import TradeExecutedEvent, OpportunityDetectedEvent
+from ultibot_backend.core.services.ai_orchestrator import AIOrchestratorService
+from ultibot_backend.core.services.event_broker import AsyncEventBroker
 
 # Strategy imports
-from src.ultibot_backend.strategies.macd_rsi_trend_rider import MACDRSITrendRider
-from src.ultibot_backend.strategies.bollinger_squeeze_breakout import BollingerSqueezeBreakout
-from src.ultibot_backend.strategies.triangular_arbitrage import TriangularArbitrage
+from ultibot_backend.strategies.macd_rsi_trend_rider import MACDRSITrendRider
+from ultibot_backend.strategies.bollinger_squeeze_breakout import BollingerSqueezeBreakout
+from ultibot_backend.strategies.triangular_arbitrage import TriangularArbitrage
 
 # Test fixtures
 from tests.integration.fixtures.market_data_fixtures import (

@@ -7,11 +7,11 @@ from decimal import Decimal
 from unittest.mock import AsyncMock
 import time
 
-from src.ultibot_backend.strategies.macd_rsi_trend_rider import (
+from ultibot_backend.strategies.macd_rsi_trend_rider import (
     MACDRSITrendRider, 
     MACDRSIParameters
 )
-from src.ultibot_backend.core.domain_models.trading import OrderSide, OrderType
+from ultibot_backend.core.domain_models.trading import OrderSide, OrderType
 from tests.unit.strategies.market_data_fixtures import (
     MarketDataFixtures,
     trending_up_snapshot,
@@ -140,7 +140,7 @@ class TestMACDRSITrendRider:
     async def test_generate_signal_low_confidence(self, strategy):
         """Test de que no se genera señal con baja confianza."""
         # Mock de análisis con baja confianza
-        from src.ultibot_backend.core.domain_models.trading import AnalysisResult
+        from ultibot_backend.core.domain_models.trading import AnalysisResult
         
         low_confidence_analysis = AnalysisResult(
             confidence=Decimal('0.5'),  # Menor al umbral de 0.7
@@ -157,7 +157,7 @@ class TestMACDRSITrendRider:
 
     async def test_generate_signal_missing_indicators(self, strategy):
         """Test de que no se genera señal con indicadores faltantes."""
-        from src.ultibot_backend.core.domain_models.trading import AnalysisResult
+        from ultibot_backend.core.domain_models.trading import AnalysisResult
         
         incomplete_analysis = AnalysisResult(
             confidence=Decimal('0.8'),
@@ -173,7 +173,7 @@ class TestMACDRSITrendRider:
 
     async def test_generate_buy_signal(self, strategy):
         """Test de generación de señal de compra."""
-        from src.ultibot_backend.core.domain_models.trading import AnalysisResult
+        from ultibot_backend.core.domain_models.trading import AnalysisResult
         
         # Condiciones para señal de compra: MACD > Signal y RSI < overbought
         buy_analysis = AnalysisResult(
@@ -195,7 +195,7 @@ class TestMACDRSITrendRider:
 
     async def test_generate_sell_signal(self, strategy):
         """Test de generación de señal de venta."""
-        from src.ultibot_backend.core.domain_models.trading import AnalysisResult
+        from ultibot_backend.core.domain_models.trading import AnalysisResult
         
         # Condiciones para señal de venta: MACD < Signal y RSI > oversold
         sell_analysis = AnalysisResult(

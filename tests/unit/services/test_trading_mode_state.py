@@ -9,7 +9,7 @@ import sys
 sys.modules['PyQt5'] = MagicMock()
 sys.modules['PyQt5.QtCore'] = MagicMock()
 
-from src.ultibot_ui.services.trading_mode_state import (
+from ultibot_ui.services.trading_mode_state import (
     TradingModeStateManager,
     TradingModeEnum,
     get_trading_mode_manager,

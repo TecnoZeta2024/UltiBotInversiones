@@ -4,10 +4,10 @@ Endpoints de la API para verificar el estado y la conectividad con Telegram.
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from ....shared.data_types import TelegramConnectionStatus
-from ...core.ports import INotificationPort
-from ...core.exceptions import TelegramNotificationError
-from ...dependencies import NotificationServiceDep
+from src.shared.data_types import TelegramConnectionStatus
+from src.ultibot_backend.core.ports import INotificationPort
+from src.ultibot_backend.core.exceptions import TelegramNotificationError
+from src.ultibot_backend.dependencies import NotificationServiceDep
 
 router = APIRouter(prefix="/telegram", tags=["Telegram"])
 logger = logging.getLogger(__name__)

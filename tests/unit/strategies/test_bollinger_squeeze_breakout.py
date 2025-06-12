@@ -6,11 +6,11 @@ import pytest
 from decimal import Decimal
 import time
 
-from src.ultibot_backend.strategies.bollinger_squeeze_breakout import (
+from ultibot_backend.strategies.bollinger_squeeze_breakout import (
     BollingerSqueezeBreakout,
     BollingerSqueezeParameters
 )
-from src.ultibot_backend.core.domain_models.trading import OrderSide, OrderType
+from ultibot_backend.core.domain_models.trading import OrderSide, OrderType, AnalysisResult
 from tests.unit.strategies.market_data_fixtures import (
     MarketDataFixtures,
     trending_up_snapshot,
@@ -122,8 +122,6 @@ class TestBollingerSqueezeBreakout:
 
     async def test_generate_signal_no_breakout(self, strategy):
         """Test de que no se genera señal sin breakout."""
-        from src.ultibot_backend.core.domain_models.trading import AnalysisResult
-        
         # Mock de análisis sin breakout
         no_breakout_analysis = AnalysisResult(
             confidence=Decimal('0.8'),
@@ -141,8 +139,6 @@ class TestBollingerSqueezeBreakout:
 
     async def test_generate_signal_low_confidence(self, strategy):
         """Test de que no se genera señal con baja confianza."""
-        from src.ultibot_backend.core.domain_models.trading import AnalysisResult
-        
         low_confidence_analysis = AnalysisResult(
             confidence=Decimal('0.5'),  # Menor al umbral de 0.7
             indicators={
@@ -159,8 +155,6 @@ class TestBollingerSqueezeBreakout:
 
     async def test_generate_buy_signal_upward_breakout(self, strategy):
         """Test de generación de señal de compra en breakout alcista."""
-        from src.ultibot_backend.core.domain_models.trading import AnalysisResult
-        
         # Breakout por encima de banda superior
         upward_breakout_analysis = AnalysisResult(
             confidence=Decimal('0.8'),
@@ -182,8 +176,6 @@ class TestBollingerSqueezeBreakout:
 
     async def test_generate_sell_signal_downward_breakout(self, strategy):
         """Test de generación de señal de venta en breakout bajista."""
-        from src.ultibot_backend.core.domain_models.trading import AnalysisResult
-        
         # Breakout por debajo de banda inferior
         downward_breakout_analysis = AnalysisResult(
             confidence=Decimal('0.8'),

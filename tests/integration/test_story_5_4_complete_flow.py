@@ -4,10 +4,10 @@ Test de integración para la Historia de Usuario 5.4: Flujo completo de trading 
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from src.ultibot_backend.services.ai_orchestrator_service import AIOrchestratorService
-from src.ultibot_backend.services.trading_engine_service import TradingEngine
-from src.ultibot_backend.core.domain_models.ai_models import TradingOpportunity, AIAnalysisResult, ToolExecutionRequest, ToolExecutionResult
-from src.ultibot_backend.core.domain_models.trading import Order
+from ultibot_backend.services.ai_orchestrator_service import AIOrchestratorService
+from ultibot_backend.services.trading_engine_service import TradingEngine
+from ultibot_backend.core.domain_models.ai_models import TradingOpportunity, AIAnalysisResult, ToolExecutionRequest, ToolExecutionResult
+from ultibot_backend.core.domain_models.trading import Order
 
 @pytest.fixture
 def mock_ai_orchestrator():

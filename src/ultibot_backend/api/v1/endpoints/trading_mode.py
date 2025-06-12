@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from typing import Literal
 
-from ...services.configuration_service import ConfigurationService
-from ...dependencies import ConfigurationServiceDep
-from ...app_config import settings
+from src.ultibot_backend.services.configuration_service import ConfigurationService
+from src.ultibot_backend.dependencies import ConfigurationServiceDep
+from src.ultibot_backend.app_config import settings
 
 router = APIRouter(prefix="/trading-mode", tags=["Trading Mode"])
 logger = logging.getLogger(__name__)

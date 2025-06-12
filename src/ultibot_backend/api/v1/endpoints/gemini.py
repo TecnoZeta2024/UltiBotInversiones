@@ -8,8 +8,8 @@ from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from ...core.ports import IAIOrchestrator
-from ...dependencies import get_ai_orchestrator_service
+from src.ultibot_backend.core.ports import IAIOrchestrator
+from src.ultibot_backend.dependencies import get_ai_orchestrator_service
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

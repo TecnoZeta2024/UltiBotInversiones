@@ -4,8 +4,8 @@ Modelos de dominio para la gestión de prompts.
 
 import datetime
 from uuid import UUID, uuid4
-from pydantic import BaseModel, Field
-from typing import Dict, Any, Optional, List
+from pydantic import BaseModel, Field, ConfigDict
+from typing import Dict, Any, Optional
 
 class PromptTemplate(BaseModel):
     """
@@ -19,8 +19,7 @@ class PromptTemplate(BaseModel):
     updated_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 class PromptVersion(BaseModel):
     """
@@ -31,8 +30,7 @@ class PromptVersion(BaseModel):
     created_at: datetime.datetime
     author: str
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 class PromptRenderResult(BaseModel):
     """
@@ -42,8 +40,7 @@ class PromptRenderResult(BaseModel):
     variables: Dict[str, Any]
     errors: Optional[Dict[str, str]] = None
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 class PromptCacheEntry(BaseModel):
     """
@@ -52,5 +49,4 @@ class PromptCacheEntry(BaseModel):
     rendered_prompt: str
     timestamp: datetime.datetime
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)

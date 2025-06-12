@@ -9,12 +9,11 @@ from decimal import Decimal
 from typing import Dict, List, Any
 from pydantic import BaseModel, Field, ConfigDict
 
-from ultibot_backend.core.domain_models.trading import TickerData, KlineData
+from .trading import TickerData, KlineData
 
-class MarketSnapshot(BaseModel):
+class MarketData(BaseModel):
     """
-    Representa una instantánea del estado actual del mercado para un símbolo dado.
-    Contiene los datos más recientes del ticker y las velas.
+    Representa los datos de mercado para un símbolo dado, incluyendo ticker y velas.
     """
     symbol: str
     ticker: TickerData

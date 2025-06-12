@@ -3,13 +3,13 @@ from unittest.mock import AsyncMock, MagicMock # Usar AsyncMock para métodos as
 from uuid import UUID, uuid4
 from datetime import datetime, timezone
 
-from src.ultibot_backend.services.performance_service import PerformanceService
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend.services.strategy_service import StrategyService
-from src.ultibot_backend.api.v1.models.performance_models import OperatingMode, StrategyPerformanceData
-from src.shared.data_types import Trade # Asegúrate que Trade y PositionStatus estén aquí o importables
-from src.ultibot_backend.core.domain_models.trade_models import PositionStatus
-from src.ultibot_backend.core.domain_models.trading_strategy_models import TradingStrategyConfig, BaseStrategyType # Para mock de strategy_config
+from ultibot_backend.services.performance_service import PerformanceService
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from ultibot_backend.services.strategy_service import StrategyService
+from ultibot_backend.api.v1.models.performance_models import OperatingMode, StrategyPerformanceData
+from shared.data_types import Trade # Asegúrate que Trade y PositionStatus estén aquí o importables
+from ultibot_backend.core.domain_models.trade_models import PositionStatus
+from ultibot_backend.core.domain_models.trading_strategy_models import TradingStrategyConfig, BaseStrategyType # Para mock de strategy_config
 
 
 USER_ID = uuid4()

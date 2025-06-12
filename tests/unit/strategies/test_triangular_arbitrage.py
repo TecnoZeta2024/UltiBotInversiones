@@ -7,12 +7,12 @@ from decimal import Decimal
 from unittest.mock import AsyncMock
 import time
 
-from src.ultibot_backend.strategies.triangular_arbitrage import (
+from ultibot_backend.strategies.triangular_arbitrage import (
     TriangularArbitrage,
     TriangularArbitrageParameters
 )
-from src.ultibot_backend.core.domain_models.trading import OrderSide, OrderType
-from src.ultibot_backend.core.domain_models.market import TickerData
+from ultibot_backend.core.domain_models.trading import OrderSide, OrderType
+from ultibot_backend.core.domain_models.market import TickerData
 from tests.unit.strategies.market_data_fixtures import (
     MarketDataFixtures,
     sideways_snapshot,
@@ -242,7 +242,7 @@ class TestTriangularArbitrage:
 
     async def test_generate_signal_no_opportunity(self, strategy):
         """Test de que no se genera señal sin oportunidad."""
-        from src.ultibot_backend.core.domain_models.trading import AnalysisResult
+        from ultibot_backend.core.domain_models.trading import AnalysisResult
         
         no_opportunity_analysis = AnalysisResult(
             confidence=Decimal('0.0'),
@@ -254,7 +254,7 @@ class TestTriangularArbitrage:
 
     async def test_generate_signal_low_confidence(self, strategy):
         """Test de que no se genera señal con baja confianza."""
-        from src.ultibot_backend.core.domain_models.trading import AnalysisResult
+        from ultibot_backend.core.domain_models.trading import AnalysisResult
         
         low_confidence_analysis = AnalysisResult(
             confidence=Decimal('0.5'),  # Menor al umbral de 0.8
@@ -271,7 +271,7 @@ class TestTriangularArbitrage:
 
     async def test_generate_signal_with_opportunity(self, strategy):
         """Test de generación de señal con oportunidad válida."""
-        from src.ultibot_backend.core.domain_models.trading import AnalysisResult
+        from ultibot_backend.core.domain_models.trading import AnalysisResult
         
         opportunity_analysis = AnalysisResult(
             confidence=Decimal('0.9'),

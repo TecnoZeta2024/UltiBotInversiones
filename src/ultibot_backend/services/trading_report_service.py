@@ -4,8 +4,8 @@ from datetime import datetime, timedelta
 from uuid import UUID
 
 from shared.data_types import Trade, PerformanceMetrics
-from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from ultibot_backend.core.exceptions import UltiBotError, ReportError
+from ..adapters.persistence_service import SupabasePersistenceService
+from ..core.exceptions import UltiBotError, ReportError
 
 logger = logging.getLogger(__name__)
 

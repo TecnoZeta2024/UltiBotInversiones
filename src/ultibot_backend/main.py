@@ -7,8 +7,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from asgi_correlation_id import CorrelationIdMiddleware
 
-from ultibot_backend.api.v1.router import api_router
-from ultibot_backend.app_config import (
+from .api.v1.router import api_router
+from .app_config import (
     get_app_settings,
     get_uvicorn_config,
     setup_logging,

@@ -4,15 +4,15 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4, UUID
 from datetime import datetime, timezone
 
-from src.ultibot_backend.main import app # Importar la app FastAPI
-from src.ultibot_backend.services.performance_service import PerformanceService
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend.services.strategy_service import StrategyService
-from src.ultibot_backend.api.v1.models.performance_models import StrategyPerformanceData, OperatingMode
-from src.shared.data_types import Trade
-from src.ultibot_backend.core.domain_models.trade_models import PositionStatus
-from src.ultibot_backend.core.domain_models.trading_strategy_models import TradingStrategyConfig, BaseStrategyType
-from src.ultibot_backend.app_config import settings
+from ultibot_backend.main import app # Importar la app FastAPI
+from ultibot_backend.services.performance_service import PerformanceService
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from ultibot_backend.services.strategy_service import StrategyService
+from ultibot_backend.api.v1.models.performance_models import StrategyPerformanceData, OperatingMode
+from shared.data_types import Trade
+from ultibot_backend.core.domain_models.trade_models import PositionStatus
+from ultibot_backend.core.domain_models.trading_strategy_models import TradingStrategyConfig, BaseStrategyType
+from ultibot_backend.app_config import settings
 
 # Usuario fijo para las pruebas de integración (usar el mismo del settings)
 FIXED_TEST_USER_ID = settings.FIXED_USER_ID
@@ -46,7 +46,7 @@ def client(mock_persistence_service_integration, mock_strategy_service_integrati
     # Sobreescribir la dependencia de PerformanceService en el router de performance
     # Esto requiere conocer cómo se inyecta PerformanceService.
     # Asumiendo que se inyecta a través de una función `get_performance_service`
-    # from src.ultibot_backend.api.v1.endpoints.performance import get_performance_service
+    # from ultibot_backend.api.v1.endpoints.performance import get_performance_service
     # app.dependency_overrides[get_performance_service] = get_mock_performance_service
     # Si no, necesitaríamos una forma de inyectar este mock_performance_service_instance
     # en el endpoint. Una forma más directa es mockear los servicios que PerformanceService usa.

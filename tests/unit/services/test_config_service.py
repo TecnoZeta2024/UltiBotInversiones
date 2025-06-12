@@ -2,13 +2,13 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
-from src.ultibot_backend.services.config_service import ConfigService
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend.services.credential_service import CredentialService
-from src.ultibot_backend.services.portfolio_service import PortfolioService
-from src.ultibot_backend.services.notification_service import NotificationService # Importar NotificationService
-from src.shared.data_types import UserConfiguration, RealTradingSettings
-from src.ultibot_backend.core.exceptions import (
+from ultibot_backend.services.config_service import ConfigService
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from ultibot_backend.services.credential_service import CredentialService
+from ultibot_backend.services.portfolio_service import PortfolioService
+from ultibot_backend.services.notification_service import NotificationService # Importar NotificationService
+from shared.data_types import UserConfiguration, RealTradingSettings
+from ultibot_backend.core.exceptions import (
     ConfigurationError,
     BinanceAPIError,
     InsufficientUSDTBalanceError,

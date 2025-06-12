@@ -5,11 +5,11 @@ from fastapi import Depends
 from datetime import timedelta
 
 from shared.data_types import AssetBalance, ServiceName, BinanceConnectionStatus, MarketData
-from ultibot_backend.adapters.binance_adapter import BinanceAdapter
-from ultibot_backend.services.credential_service import CredentialService
-from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from ultibot_backend.core.exceptions import BinanceAPIError, CredentialError, UltiBotError, ExternalAPIError, MarketDataError
-from ultibot_backend.app_config import settings
+from ..adapters.binance_adapter import BinanceAdapter
+from .credential_service import CredentialService
+from ..adapters.persistence_service import SupabasePersistenceService
+from ..core.exceptions import BinanceAPIError, CredentialError, UltiBotError, ExternalAPIError, MarketDataError
+from ..app_config import settings
 from datetime import datetime, timezone
 import asyncio
 

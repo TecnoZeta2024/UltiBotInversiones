@@ -16,7 +16,7 @@ import statistics
 from datetime import datetime, timedelta
 
 from .base_strategy import BaseStrategy, AnalysisResult, TradingSignal, SignalStrength
-from ..core.domain_models.market import MarketSnapshot, KlineData
+from src.ultibot_backend.core.domain_models.market import MarketData, KlineData
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +75,7 @@ class NewsSentimentSpikeTrader(BaseStrategy):
         """Configuración inicial de la estrategia."""
         logger.info(f"Configurando {self.name} con sentiment threshold={self.sentiment_threshold}")
 
-    async def analyze(self, market_snapshot: MarketSnapshot) -> AnalysisResult:
+    async def analyze(self, market_snapshot: MarketData) -> AnalysisResult:
         """
         Analiza el sentimiento de noticias y detecta spikes significativos.
         

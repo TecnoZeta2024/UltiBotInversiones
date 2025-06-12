@@ -15,7 +15,7 @@ from typing import Optional, Dict, Any, List
 import statistics
 
 from .base_strategy import BaseStrategy, AnalysisResult, TradingSignal, SignalStrength
-from ..core.domain_models.market import MarketSnapshot, KlineData
+from src.ultibot_backend.core.domain_models.market import MarketData, KlineData
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ class VWAPCrossStrategy(BaseStrategy):
         """Configuración inicial de la estrategia."""
         logger.info(f"Configurando {self.name} con VWAP period={self.vwap_period}")
 
-    async def analyze(self, market_snapshot: MarketSnapshot) -> AnalysisResult:
+    async def analyze(self, market_snapshot: MarketData) -> AnalysisResult:
         """
         Analiza el mercado usando VWAP y confirmación de volumen.
         

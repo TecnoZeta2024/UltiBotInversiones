@@ -17,23 +17,23 @@ from decimal import Decimal
 from typing import List
 
 # Strategy imports - todas las 10 estrategias
-from src.ultibot_backend.strategies.macd_rsi_trend_rider import MACDRSITrendRider
-from src.ultibot_backend.strategies.bollinger_squeeze_breakout import BollingerSqueezeBreakout
-from src.ultibot_backend.strategies.triangular_arbitrage import TriangularArbitrage
-from src.ultibot_backend.strategies.supertrend_volatility_filter import SuperTrendVolatilityFilter
-from src.ultibot_backend.strategies.stochastic_rsi_overbought_oversold import StochasticRSIOverboughtOversold
-from src.ultibot_backend.strategies.statistical_arbitrage_pairs import StatisticalArbitragePairs
-from src.ultibot_backend.strategies.vwap_cross_strategy import VWAPCrossStrategy
-from src.ultibot_backend.strategies.order_book_imbalance_scalper import OrderBookImbalanceScalper
-from src.ultibot_backend.strategies.news_sentiment_spike_trader import NewsSentimentSpikeTrader
-from src.ultibot_backend.strategies.onchain_metrics_divergence import OnChainMetricsDivergence
+from ultibot_backend.strategies.macd_rsi_trend_rider import MACDRSITrendRider
+from ultibot_backend.strategies.bollinger_squeeze_breakout import BollingerSqueezeBreakout
+from ultibot_backend.strategies.triangular_arbitrage import TriangularArbitrage
+from ultibot_backend.strategies.supertrend_volatility_filter import SuperTrendVolatilityFilter
+from ultibot_backend.strategies.stochastic_rsi_overbought_oversold import StochasticRSIOverboughtOversold
+from ultibot_backend.strategies.statistical_arbitrage_pairs import StatisticalArbitragePairs
+from ultibot_backend.strategies.vwap_cross_strategy import VWAPCrossStrategy
+from ultibot_backend.strategies.order_book_imbalance_scalper import OrderBookImbalanceScalper
+from ultibot_backend.strategies.news_sentiment_spike_trader import NewsSentimentSpikeTrader
+from ultibot_backend.strategies.onchain_metrics_divergence import OnChainMetricsDivergence
 
 # Core imports
-from src.ultibot_backend.strategies.base_strategy import BaseStrategy
-from src.ultibot_backend.strategies.strategy_loader import load_strategies
-from src.ultibot_backend.strategies.strategy_registry import StrategyRegistry
-from src.ultibot_backend.core.domain_models.trading import AnalysisResult, TradingSignal, MarketSnapshot
-from src.ultibot_backend.core.services.market_scanner import MarketScannerService
+from ultibot_backend.strategies.base_strategy import BaseStrategy
+from ultibot_backend.strategies.strategy_loader import load_strategies
+from ultibot_backend.strategies.strategy_registry import StrategyRegistry
+from ultibot_backend.core.domain_models.trading import AnalysisResult, TradingSignal, MarketSnapshot
+from ultibot_backend.core.services.market_scanner import MarketScannerService
 
 # Test fixtures
 from tests.integration.fixtures import (

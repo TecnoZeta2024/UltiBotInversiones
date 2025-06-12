@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from typing import List, Optional, Tuple
 import random
 
-from ultibot_backend.core.domain_models.market import MarketSnapshot, KlineData
+from ultibot_backend.core.domain_models.market import MarketData, KlineData
 from ultibot_backend.core.domain_models.trading import SuperTrendParameters, OrderSide, SignalStrength, TickerData
 from ultibot_backend.strategies.supertrend_volatility_filter import SuperTrendVolatilityFilter
 
@@ -76,8 +76,8 @@ def create_mock_klines(
         
     return klines
 
-def create_market_snapshot(klines: List[KlineData]) -> MarketSnapshot:
-    """Creates a MarketSnapshot from a list of klines."""
+def create_market_snapshot(klines: List[KlineData]) -> MarketData:
+    """Creates a MarketData from a list of klines."""
     last_kline = klines[-1]
     ticker_data = TickerData(
         symbol="BTCUSDT",
@@ -85,7 +85,7 @@ def create_market_snapshot(klines: List[KlineData]) -> MarketSnapshot:
         volume_24h=Decimal("50000"),
         price_change_24h=Decimal("100.0"),
     )
-    return MarketSnapshot(
+    return MarketData(
         symbol="BTCUSDT",
         ticker=ticker_data,
         klines=klines,

@@ -8,10 +8,10 @@ from dotenv import load_dotenv
 from fastapi import Depends
 
 from shared.data_types import APICredential, ServiceName
-from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from ultibot_backend.adapters.binance_adapter import BinanceAdapter
-from ultibot_backend.core.exceptions import BinanceAPIError, CredentialError
-from ultibot_backend.app_config import settings
+from ..adapters.persistence_service import SupabasePersistenceService
+from ..adapters.binance_adapter import BinanceAdapter
+from ..core.exceptions import BinanceAPIError, CredentialError
+from ..app_config import settings
 from datetime import datetime
 import logging
 

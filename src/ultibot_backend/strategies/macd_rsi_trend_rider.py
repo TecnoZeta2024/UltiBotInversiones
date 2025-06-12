@@ -10,7 +10,7 @@ from datetime import datetime
 
 from pydantic import Field, ConfigDict
 
-from ultibot_backend.core.domain_models.market import KlineData, MarketSnapshot
+from src.ultibot_backend.core.domain_models.market import KlineData, MarketData
 from ultibot_backend.core.domain_models.trading import (
     BaseStrategyParameters, AnalysisResult, TradingSignal, OrderSide, OrderType, SignalStrength
 )
@@ -58,12 +58,12 @@ class MACDRSITrendRider(BaseStrategy):
         # Podría cargar datos históricos aquí si fuera necesario para pre-cálculos
         pass
 
-    async def analyze(self, market_snapshot: MarketSnapshot) -> AnalysisResult:
+    async def analyze(self, market_snapshot: MarketData) -> AnalysisResult:
         """
         Analiza el estado actual del mercado utilizando MACD y RSI.
 
         Args:
-            market_snapshot (MarketSnapshot): Una instantánea del estado actual del mercado.
+            market_snapshot (MarketData): Una instantánea del estado actual del mercado.
 
         Returns:
             AnalysisResult: El resultado del análisis, incluyendo la confianza y los indicadores.
@@ -201,7 +201,7 @@ class MACDRSITrendRider(BaseStrategy):
             avg_losses.append(((avg_losses[-1] * (period - 1)) + losses[i]) / Decimal(period))
 
         rs_values = []
-        for i in range(len(avg_gains)):
+        for rs in rs_values:
             if avg_losses[i] == 0:
                 rs_values.append(Decimal('1000000')) # Evitar división por cero, valor alto para RSI = 100
             else:

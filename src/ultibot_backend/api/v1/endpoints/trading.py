@@ -8,11 +8,11 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from pydantic import BaseModel
 
-from ....shared.data_types import ConfirmRealTradeRequest, Trade
-from ...services.trading_engine_service import TradingEngine
-from ...core.ports import IOrderExecutionPort
-from ...dependencies import TradingEngineDep
-from ...core.commands.trading_commands import PlaceOrderCommand
+from src.shared.data_types import ConfirmRealTradeRequest, Trade
+from src.ultibot_backend.services.trading_engine_service import TradingEngine
+from src.ultibot_backend.core.ports import IOrderExecutionPort
+from src.ultibot_backend.dependencies import TradingEngineDep
+from src.ultibot_backend.core.commands.trading_commands import PlaceOrderCommand
 
 router = APIRouter(prefix="/trading", tags=["Trading"])
 logger = logging.getLogger(__name__)

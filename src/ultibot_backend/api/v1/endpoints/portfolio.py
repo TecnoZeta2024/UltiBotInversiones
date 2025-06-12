@@ -6,10 +6,10 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 
-from ....shared.data_types import PortfolioSnapshot, PortfolioSummary
-from ...services.portfolio_service import PortfolioService
-from ...dependencies import PortfolioDep
-from ...app_config import settings
+from src.shared.data_types import PortfolioSnapshot, PortfolioSummary
+from src.ultibot_backend.services.portfolio_service import PortfolioService
+from src.ultibot_backend.dependencies import PortfolioDep
+from src.ultibot_backend.app_config import settings
 
 router = APIRouter(prefix="/portfolio", tags=["Portfolio"])
 logger = logging.getLogger(__name__)

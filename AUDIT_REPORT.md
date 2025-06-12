@@ -67,7 +67,7 @@
 4. **Integración final** con sistema de DI y endpoints
 
 **4. RIESGOS POTENCIALES:**
-* **Pérdida de lógica de negocio**: Migitado por preservar toda la lógica matemática existente
+* **Pérdida de lógica de negocio**: Mitigado por preservar toda la lógica matemática existente
 * **Regresión en tests**: Controlado por validación incremental estrategia por estrategia  
 * **Incompatibilidad con UI**: Manejado manteniendo contratos de API existentes
 
@@ -87,7 +87,7 @@
 
 **1. OBSERVACIONES (Resultados de FASE 1):**
 * **`src/ultibot_backend/strategies/supertrend_volatility_filter.py`:** La implementación de `_apply_volatility_filter` utiliza `statistics.quantiles(..., n=100)` y luego intenta acceder a los índices `0` y `100` para `min_percentile=0.0` y `max_percentile=100.0`. Sin embargo, `statistics.quantiles(n=100)` devuelve una lista de 99 cuantiles (percentiles 1 al 99), lo que causa un `IndexError` cuando se intenta acceder al índice `100`. Esto provoca que el filtro de volatilidad falle inesperadamente en los tests de señal, donde se espera que pase.
-* **`tests/unit/strategies/test_supertrend_volatility_filter.py`:** El fixture `default_params` ya establece `min_volatility_percentile=0.0` y `max_volatility_percentile=100.0`, lo cual es correcto para hacer que el filtro de volatilidad sea trivialmente verdadero en los tests de señal.
+* **`tests/unit/strategies/test_supertrend_volatility_filter.py`:** El fixture `default_params` ya establece `min_volatility_percentile=0.0` y `max_volatility_percentile=100.0`, lo cual es correcto para hacer que el filtro de volatilidad sea trivialmente verdadero en los tests de señal, permitiendo que pasen.
 
 **2. HIPÓTESIS CENTRAL (Resultados de FASE 2):**
 La causa raíz de los tests fallidos (`test_analyze_generates_buy_signal` y `test_analyze_generates_sell_signal`) es un `IndexError` silencioso dentro de `_apply_volatility_filter` en `src/ultibot_backend/strategies/supertrend_volatility_filter.py` cuando se intenta acceder a los percentiles 0 y 100 usando `statistics.quantiles`. Esto hace que `volatility_filter_passed` sea `False` cuando debería ser `True`.
@@ -136,129 +136,6 @@ La causa raíz de los `ModuleNotFoundError` es una instalación incompleta o cor
 * [**PAUSA**] Espero aprobación para proceder con la ejecución del plan de RE-EVALUACIÓN DE DEPENDENCIAS Y EJECUCIÓN DE TESTS.
 
 ---
-
-### INFORME DE ESTADO Y PLAN DE ACCIÓN - 6/12/2025 12:09 PM
-
-**ESTADO ACTUAL:**
-* Iniciando FASE 1: ANÁLISIS SISTÉMICO - PROBLEMA PYTHONPATH CRÍTICO IDENTIFICADO
-
-**REFERENCIA A INFORMES PREVIOS:**
-* Los informes anteriores se centraron en estrategias y dependencias, pero el problema central es más fundamental.
-* El error FastAPI mencionado en `AUDIT_TASK.md` no es visible debido a problemas de importación más básicos.
-
-**1. OBSERVACIONES (Resultados de FASE 1):**
-
-### PROBLEMA CRÍTICO IDENTIFICADO: SISTEMA DE IMPORTS COMPLETAMENTE ROTO
-
-**Test Collection Results:**
-* ❌ **28 ERRORES de importación + 0 correcciones exitosas**
-* **Error Principal**: `ModuleNotFoundError: No module named 'src'` 
-* **Afecta**: 100% de tests de integración y unidad que importan el código principal
-* **Solo 15 tests se recolectan** (únicamente los que no importan `src`)
-
-**Archivos Afectados por Import Errors:**
-```
-- tests/integration/api/v1/endpoints/test_performance_endpoints.py
-- tests/integration/test_ai_orchestrator_integration.py  
-- tests/unit/adapters/test_binance_adapter.py
-- tests/unit/services/test_ai_orchestrator_service.py
-- tests/unit/strategies/test_bollinger_squeeze_breakout.py
-- tests/unit/strategies/test_macd_rsi_trend_rider.py
-- tests/unit/strategies/test_triangular_arbitrage.py
-- [+ 21 archivos más con el mismo problema]
-```
-
-**Dependencias Adicionales Faltantes:**
-* `psycopg` (PostgreSQL adapter)
-* `asgi_correlation_id`
-* `injector` 
-* `PySide6`
-* `langchain_google_genai`
-
-**Depreciaciones Identificadas:**
-* Pydantic V1 `@validator` → debe migrar a `@field_validator`
-* `datetime.utcnow()` → debe usar `datetime.now(datetime.UTC)`
-
-**2. HIPÓTESIS CENTRAL (Resultados de FASE 2):**
-
-**El proyecto tiene un problema de configuración de PYTHONPATH y entorno de desarrollo**:
-1. **PYTHONPATH Incorrecto**: Los tests no pueden importar `src` porque no está en el path
-2. **Entorno Incompleto**: Dependencias críticas no están instaladas en el entorno actual  
-3. **FastAPI Error Enmascarado**: El error original de `gemini.py` no es visible hasta resolver imports
-
-**Esto explica por qué:**
-- `AUDIT_TASK.md` reportaba "un error restante" cuando hay 28+ errores de imports
-- La validación de tests es imposible hasta resolver PYTHONPATH
-- El proyecto parece completo pero no es ejecutable
-
-**3. PLAN DE ACCIÓN UNIFICADO (Propuesta para FASE 3):**
-
-### OPERACIÓN: "ESTABILIZACIÓN DE ENTORNO DE DESARROLLO"
-
-| Archivo a Modificar | Descripción del Cambio | Justificación (Por qué este cambio soluciona el problema) |
-| :--- | :--- | :--- |
-| **FASE 3A: CORRECCIÓN DE PYTHONPATH** |
-| `pytest.ini` | Agregar configuración `pythonpath = .` para incluir el directorio raíz en PYTHONPATH | Permite que pytest encuentre el módulo `src` y todos los imports funcionen |
-| **FASE 3B: INSTALACIÓN DE DEPENDENCIAS** |
-| Entorno Python | Ejecutar `poetry install` para instalar todas las dependencias especificadas en `pyproject.toml` | Resuelve todos los `ModuleNotFoundError` para librerías de terceros |
-| **FASE 3C: VALIDACIÓN DE IMPORTS** |
-| N/A | Ejecutar `pytest --collect-only -q` para verificar que todos los tests se pueden importar sin errores | Confirma que el sistema de imports está completamente funcional |
-| **FASE 3D: VERIFICACIÓN FASTAPI** |
-| `src/ultibot_backend/api/v1/endpoints/gemini.py` | Verificar si el error FastAPI original persiste después de resolver imports | Identifica el problema real mencionado en `AUDIT_TASK.md` |
-
-### ENFOQUE CRÍTICO:
-1. **Resolver PYTHONPATH** como prerequisito absoluto
-2. **Instalar dependencias** completas del proyecto
-3. **Validar imports** antes de proceder con correcciones de código
-4. **Identificar problemas reales** una vez que el entorno esté estable
-
-**4. RIESGOS POTENCIALES:**
-* **Poetry install falla**: Mitigado por revisar `pyproject.toml` y resolver conflictos de dependencias
-* **PYTHONPATH no resuelve imports**: Mitigado usando rutas absolutas si es necesario
-* **Problemas de entorno virtual**: Controlado verificando activación del entorno correcto
-
-**5. SOLICITUD:**
-* [**PAUSA**] Espero aprobación para proceder con la ejecución del plan de ESTABILIZACIÓN DE ENTORNO DE DESARROLLO.
-
----
-
-### INFORME DE ESTADO Y PLAN DE ACCIÓN - 6/12/2025 14:02
-
-**ESTADO ACTUAL:**
-* FASE 1: ANÁLISIS SISTÉMICO COMPLETADO. Listo para formular hipótesis y plan de acción unificado.
-
-**REFERENCIA A INFORMES PREVIOS:**
-* Se preserva el historial completo de auditoría en este archivo. Se confirma que los problemas de arquitectura, dependencias y entorno ya han sido identificados y documentados en profundidad.
-
-**1. OBSERVACIONES (Resultados de FASE 1):**
-* **logs/frontend.log**: Solo muestra cierre limpio de MainWindow, sin errores ni advertencias.
-* **logs/frontend1.log**: Cierre limpio, pero termina con "Unhandled Python exception" sin stacktrace. Indica excepción no capturada en el frontend, probablemente relacionada con dependencias PySide6 o integración UI.
-* **logs/backend.log**: Solo muestra petición HTTP 200 exitosa al endpoint de notificaciones. No hay errores ni advertencias en backend FastAPI.
-* **logs/pyqt_test.log**: Vacío o sin información relevante. No se registran errores de pruebas PyQt6, o las pruebas no se ejecutaron por problemas de entorno.
-* **No se detectan errores críticos de ejecución en backend ni frontend fuera de los ya identificados en los informes previos.**
-* **Persisten síntomas de entorno incompleto y dependencias faltantes, especialmente PySide6, injector, psycopg, asgi_correlation_id, langchain_google_genai.**
-* **No hay evidencia de fallos de integración entre servicios en los logs, pero la excepción no capturada en frontend refuerza la hipótesis de entorno roto.**
-
-**2. HIPÓTESIS CENTRAL (Resultados de FASE 2):**
-* El sistema está funcional a nivel de arquitectura y backend, pero la excepción no capturada en el frontend y la ausencia de logs de error detallados sugieren que el entorno de desarrollo sigue incompleto, especialmente en lo referente a dependencias de UI (PySide6) y posibles problemas de integración de pruebas.
-* La causa raíz sigue siendo la instalación incompleta/corrupta de dependencias y posibles inconsistencias en el entorno virtual, lo que impide la ejecución estable y la validación completa del sistema.
-
-**3. PLAN DE ACCIÓN UNIFICADO (Propuesta para FASE 3):**
-
-| Archivo a Modificar | Descripción del Cambio | Justificación (Por qué este cambio soluciona el problema) |
-| :--- | :--- | :--- |
-| N/A | Ejecutar `poetry install` para reinstalar todas las dependencias y reconstruir el entorno virtual | Garantiza que todas las librerías requeridas (incluyendo PySide6, injector, psycopg, asgi_correlation_id, langchain_google_genai) estén presentes y funcionales |
-| N/A | Ejecutar `pytest --collect-only -q` para validar que todos los tests pueden importarse sin errores | Permite identificar si persisten problemas de imports o dependencias tras la reinstalación |
-| N/A | Ejecutar pruebas de frontend/manuales para detectar y capturar el stacktrace de la excepción no manejada en frontend1.log | Permite aislar y corregir el fallo de integración UI que actualmente no tiene diagnóstico detallado |
-| N/A | Documentar cualquier error nuevo o persistente en AUDIT_REPORT.md y, si corresponde, iniciar protocolo de post-mortem en AUDIT_MORTEN.md | Mantiene trazabilidad y contexto de auditoría |
-
-**4. RIESGOS POTENCIALES:**
-* Si `poetry install` falla, puede deberse a conflictos en `pyproject.toml` o problemas de red/repositorios.
-* Si persisten los errores de importación o dependencias, podría ser necesario recrear el entorno virtual desde cero.
-* La excepción no capturada en frontend podría requerir instrumentación adicional para obtener stacktrace.
-
-**5. SOLICITUD:**
-* [**PAUSA**] Espero aprobación para proceder con la ejecución del plan de REINSTALACIÓN DE DEPENDENCIAS Y VALIDACIÓN DE ENTORNO.
 
 ### INFORME DE AVANCE - 6/12/2025 14:08
 
@@ -327,3 +204,177 @@ La causa raíz de los `ModuleNotFoundError` es una instalación incompleta o cor
 * [**PAUSA**] Espero aprobación para proceder con la ejecución del plan de corrección de imports internos y resolución de la dependencia nativa de PostgreSQL.
 
 ---
+---
+
+### INFORME DE ESTADO Y PLAN DE ACCIÓN - 12/06/2025 14:54
+
+**ESTADO ACTUAL:**
+* Dependencia nativa de `psycopg` resuelta. Plan de acción refinado y listo para aprobación.
+
+**REFERENCIA A INFORMES PREVIOS:**
+* El usuario ha confirmado la instalación de la librería `libpq.dll` y la verificación con `scripts/verify_psycopg.py` fue exitosa.
+* El único bloqueo restante es la corrección de los imports internos.
+
+**1. OBSERVACIONES (Resultados de FASE 1):**
+* **Error Primario:** El único problema de software restante es el uso de rutas de importación obsoletas (`ultibot_backend.api.services` en lugar de `ultibot_backend.services`).
+* **Alcance:** El error afecta a `router.py`, múltiples endpoints y `persistence_service.py`.
+
+**2. HIPÓTESIS CENTRAL (Resultados de FASE 2):**
+* La causa raíz de la inoperabilidad del sistema es únicamente el desajuste de los imports internos tras la refactorización a la arquitectura hexagonal. Corregir estos imports debería estabilizar el sistema y permitir la ejecución de tests.
+
+**3. PLAN DE ACCIÓN UNIFICADO (Propuesta para FASE 3):**
+
+### OPERACIÓN: "ALINEACIÓN ARQUITECTÓNICA DE IMPORTS"
+
+| Archivo a Modificar | Descripción del Cambio | Justificación (Por qué este cambio soluciona el problema) |
+| :--- | :--- | :--- |
+| **FASE 3A: CORRECCIÓN DE IMPORTS** |
+| `src/ultibot_backend/api/v1/router.py` | Corregir los imports de `ultibot_backend.api.services` a `ultibot_backend.services`. | Alinea el router con la arquitectura hexagonal. |
+| `src/ultibot_backend/api/v1/endpoints/*.py` | Corregir las rutas de importación de servicios en todos los endpoints afectados. | Permite que los endpoints localicen los servicios del núcleo. |
+| `src/ultibot_backend/adapters/persistence_service.py` | Corregir cualquier import de servicio incorrecto. | Asegura la correcta referenciación de los servicios. |
+| **FASE 3B: VALIDACIÓN** |
+| N/A | Ejecutar `poetry run pytest --collect-only -q`. | **Criterio de Éxito:** El comando debe ejecutarse sin errores de importación. |
+| N/A | Ejecutar `poetry run pytest`. | **Criterio de Éxito:** Los tests deben ejecutarse, revelando cualquier error lógico subyacente. |
+
+**4. RIESGOS POTENCIALES:**
+* **Correcciones Incompletas:** Mitigado mediante una búsqueda exhaustiva de la ruta de import incorrecta en todo el proyecto.
+* **Errores Lógicos Subyacentes:** Esperado. Este plan desbloqueará la capacidad de detectar y depurar dichos errores.
+
+**5. SOLICITUD:**
+* [**PAUSA**] Espero aprobación para proceder con la ejecución de la **FASE 3A: CORRECCIÓN DE IMPORTS**.
+
+---
+
+### INFORME DE ESTADO Y PLAN DE ACCIÓN - 12/06/2025 15:49
+
+**ESTADO ACTUAL:**
+* Completada la corrección de errores de importación de `MarketSnapshot` a `MarketData`.
+* Se han resuelto todos los `ImportError` relacionados con `MarketSnapshot` en los archivos de estrategias y endpoints.
+* La recolección de tests (`poetry run pytest --collect-only -q`) ahora se ejecuta sin errores de importación.
+
+**REFERENCIA A INFORMES PREVIOS:**
+* Este informe es una continuación de la "Task Continuation: Corrección Holística de Errores de Importación (Fase 2)".
+* Se han corregido los archivos:
+    - `src/ultibot_backend/strategies/vwap_cross_strategy.py`
+    - `src/ultibot_backend/strategies/order_book_imbalance_scalper.py`
+    - `src/ultibot_backend/strategies/news_sentiment_spike_trader.py`
+    - `src/ultibot_backend/strategies/onchain_metrics_divergence.py`
+* Se ha verificado que los imports de `MarketSnapshot` han sido reemplazados por `MarketData` y los type hints ajustados.
+
+**1. OBSERVACIONES (Resultados de FASE 1):**
+* La ejecución completa de los tests (`poetry run pytest`) ha revelado nuevos problemas:
+    * **68 fallos y 13 errores.**
+    * **Error Crítico:** `SystemError: AST constructor recursion depth mismatch` - Este es un error interno de Python/pytest, no un error de código del proyecto. Sugiere un problema con la complejidad del código o un límite de recursión en el intérprete de Python durante el análisis de AST por parte de pytest.
+    * **Errores de `asyncio`:** Múltiples `RuntimeError: Event loop is closed` y `Task was destroyed but it is pending!` relacionados con `psycopg_pool` y `asyncio`. Esto indica problemas con la gestión del ciclo de vida de las conexiones asíncronas a la base de datos durante la ejecución de los tests.
+    * **Advertencias de `PydanticDeprecatedSince20`:** Numerosas advertencias sobre el uso de `@validator` y `json_encoders` de Pydantic v1, que están obsoletas en Pydantic v2. Esto es deuda técnica y no un error que impida la ejecución, pero debe abordarse.
+    * **Advertencia `PytestConfigWarning: Unknown config option: dotenv_files`:** Indica una configuración desconocida en `pytest.ini`.
+    * **Advertencia `PendingDeprecationWarning: Please use `import python_multipart` instead.`:** Relacionada con `starlette/formparsers.py`.
+
+**2. HIPÓTESIS CENTRAL (Resultados de FASE 2):**
+* La fase de corrección de errores de importación está completa. Los problemas actuales son de una naturaleza diferente:
+    1.  **Problemas de entorno/configuración de Pytest:** El `SystemError` y las advertencias de configuración sugieren que Pytest no está configurado óptimamente o que hay un problema con el entorno de ejecución que excede los límites de recursión del analizador AST.
+    2.  **Gestión de Conexiones Asíncronas:** Los errores de `asyncio` y `psycopg_pool` indican que los tests no están manejando correctamente el cierre de las conexiones a la base de datos o el ciclo de vida del bucle de eventos asíncrono, lo que lleva a la destrucción de tareas pendientes.
+    3.  **Deuda Técnica de Pydantic:** Las advertencias de Pydantic v1 a v2 son un problema de deuda técnica que debe ser migrado para mantener la compatibilidad y el rendimiento.
+
+**3. PLAN DE ACCIÓN UNIFICADO (Propuesta para FASE 3):**
+
+### OPERACIÓN: "DIAGNÓSTICO Y RESOLUCIÓN DE ERRORES DE EJECUCIÓN DE TESTS"
+
+| Archivo a Modificar | Descripción del Cambio | Justificación (Por qué este cambio soluciona el problema) |
+| :--- | :--- | :--- |
+| **FASE 3A: DIAGNÓSTICO Y MITIGACIÓN DE ERRORES DE ENTORNO/PYTEST** |
+| N/A | Investigar el `SystemError: AST constructor recursion depth mismatch`. Esto podría requerir ajustar la configuración de Python o Pytest, o identificar archivos de código excesivamente complejos que causen este problema. | Resolver un error crítico que impide la ejecución completa de los tests. |
+| `pytest.ini` | Eliminar la opción `dotenv_files` si no es necesaria o corregirla si hay una alternativa para Pytest 8.4.0. | Limpiar advertencias de configuración y asegurar que Pytest se inicialice correctamente. |
+| **FASE 3B: CORRECCIÓN DE GESTIÓN DE CONEXIONES ASÍNCRONAS** |
+| `tests/conftest.py` y tests relevantes | Revisar y ajustar la configuración de los fixtures de `pytest-asyncio` y la gestión de la piscina de conexiones de `psycopg_pool` para asegurar un cierre limpio del bucle de eventos y las conexiones. | Eliminar los `RuntimeError: Event loop is closed` y `Task was destroyed but it is pending!` que indican fugas de recursos o cierres prematuros. |
+| **FASE 3C: MIGRACIÓN DE Pydantic V1 a V2** |
+| Archivos con advertencias `@validator` y `json_encoders` | Migrar el uso de `@validator` a `@field_validator` y `json_encoders` a `model_dump_json` o `json_schema_extra` según la guía de migración de Pydantic V2. | Reducir la deuda técnica, mejorar la compatibilidad y prepararse para futuras versiones de Pydantic. |
+| **FASE 3D: VALIDACIÓN FINAL** |
+| N/A | Ejecutar `poetry run pytest`. | **Criterio de Éxito:** Todos los tests deben ejecutarse sin errores ni fallos, y el número de advertencias debe reducirse significativamente. |
+
+---
+
+### INFORME DE ESTADO Y PLAN DE ACCIÓN - 12/06/2025 16:37
+
+**ESTADO ACTUAL:**
+* **FASE DE VALIDACIÓN FALLIDA.** La corrección masiva de importaciones fue exitosa para resolver los errores de recolección de `pytest`. Sin embargo, la ejecución de la suite de pruebas ahora falla catastróficamente con errores de `asyncio` y un `SystemError` fatal.
+
+**REFERENCIA A INFORMES PREVIOS:**
+* El plan del `12/06/2025 15:59` sobre la gestión de estado asíncrono es ahora la principal línea de investigación.
+
+**1. OBSERVACIONES (Resultados de FASE 1):**
+* **Éxito Parcial:** La estandarización de `from ultibot_backend...` ha eliminado todos los errores de `ModuleNotFoundError` y de recolección de `pytest`.
+* **Nuevos Errores Críticos:** La ejecución de `pytest` ahora produce:
+    * Múltiples errores `RuntimeError: Event loop is closed`.
+    * Múltiples advertencias `Task was destroyed but it is pending!`.
+    * Un `SystemError: AST constructor recursion depth mismatch` que aborta la sesión de tests.
+* **Análisis de Causa:** Estos errores son sintomáticos de una gestión incorrecta del ciclo de vida de los recursos asíncronos, particularmente los pools de conexiones de `psycopg_pool` para Supabase, a lo largo de la suite de pruebas. Las `fixtures` actuales no garantizan que los `event loops` y las conexiones se creen y destruyan de forma limpia y ordenada.
+
+**2. HIPÓTESIS CENTRAL (Resultados de FASE 2):**
+* La causa raíz de la inestabilidad actual de la suite de pruebas es una gestión deficiente y no centralizada del ciclo de vida de los recursos asíncronos. La corrección de los imports ha permitido que los tests se ejecuten, exponiendo este problema subyacente. La solución requiere refactorizar las `fixtures` en `tests/conftest.py` para manejar correctamente el `event loop` de `asyncio` y las conexiones a la base de datos con un `scope` adecuado.
+
+**3. PLAN DE ACCIÓN UNIFICADO (Propuesta para FASE 3):**
+
+### OPERACIÓN: "ESTABILIZACIÓN DEL CICLO DE VIDA ASÍNCRONO DE TESTS"
+
+| Archivo a Modificar | Descripción del Cambio | Justificación (Por qué este cambio soluciona el problema) |
+| :--- | :--- | :--- |
+| **FASE 3A: REFACTORIZACIÓN DE `conftest.py`** |
+| `tests/conftest.py` | Reemplazar el contenido actual para introducir `fixtures` robustas: <br> 1. **`event_loop`**: Crear un `fixture` con `scope="session"` que provea un único `event loop` para toda la duración de la sesión de `pytest`. <br> 2. **`db_session`**: Crear un `fixture` asíncrono, también con `scope="session"`, que utilice el `event_loop` para establecer una única conexión a la base de datos, la ceda (`yield`) a los tests, y garantice su cierre limpio al finalizar todos los tests. <br> 3. **`sys.path`**: Mantener la lógica existente que añade `src` al `sys.path` para asegurar que los imports `from ultibot_backend` sigan funcionando. | Esta refactorización implementa un patrón estándar y robusto para tests asíncronos. Centraliza la gestión de recursos, previene fugas de conexiones y `event loops`, y elimina la causa raíz de los `RuntimeError` y el `SystemError`, creando un entorno de prueba estable. |
+| **FASE 3B: VALIDACIÓN INICIAL** |
+| `tests/unit/adapters/test_persistence_service.py` | Adaptar este archivo de test para que utilice la nueva `fixture` `db_session`. Esto servirá como prueba de concepto. | Permite validar el nuevo enfoque en un conjunto aislado de tests antes de aplicarlo a toda la suite, facilitando la depuración. |
+| **FASE 3C: VALIDACIÓN COMPLETA** |
+| N/A | Ejecutar `poetry run pytest`. | **Criterio de Éxito:** La suite de tests debe ejecutarse completamente sin errores de `RuntimeError` o `SystemError`. Los fallos lógicos (`F`) pueden persistir y serán abordados posteriormente, pero el entorno de ejecución debe ser estable. |
+
+**4. RIESGOS POTENCIALES:**
+* **Mínimos.** La implementación sigue las mejores prácticas de `pytest-asyncio`. El riesgo principal es que algunos tests requieran ajustes para consumir las nuevas `fixtures`, lo cual es parte del proceso de refactorización.
+
+**5. SOLICITUD:**
+* [**PAUSA**] Espero aprobación para proceder con la ejecución de la **FASE 3A: REFACTORIZACIÓN DE `conftest.py`**.
+
+---
+
+### INFORME DE ESTADO Y PLAN DE ACCIÓN - 12/06/2025 16:47
+
+**ESTADO ACTUAL:**
+* **FALLO CATASTRÓFICO DE LA SUITE DE PRUEBAS.** La estabilización del ciclo de vida asíncrono ha revelado una desintegración sistémica de las pruebas.
+
+**REFERENCIA A INFORMES PREVIOS:**
+* Ver `AUDIT_MORTEN.md` con fecha `12/06/2025 16:46` para un análisis detallado de la falla.
+
+**1. OBSERVACIONES (Resultados de FASE 1):**
+* La ejecución de `poetry run pytest` resultó en **97 fallos y 139 errores**.
+* Los errores de ciclo de vida de `asyncio` fueron resueltos, pero esto expuso problemas más profundos.
+* **Errores Sistémicos Identificados:**
+    1.  **`TypeError` en `__init__`**: Las `fixtures` no proveen los argumentos correctos a los constructores de los servicios.
+    2.  **`ValidationError` de Pydantic**: Los datos de prueba son inválidos para los modelos de Pydantic.
+    3.  **`AttributeError` en `TestClient`**: Uso incorrecto del cliente de pruebas de FastAPI.
+    4.  **`PoolTimeout`**: El servicio de persistencia no utiliza la `fixture` de sesión de base de datos inyectada.
+
+**2. HIPÓTESIS CENTRAL (Resultados de FASE 2):**
+* La causa raíz es una **desintegración sistémica de la suite de pruebas**. Las pruebas no reflejan el estado actual del código fuente. La solución requiere una campaña de refactorización de pruebas por fases.
+
+**3. PLAN DE ACCIÓN UNIFICADO (Propuesta para FASE 4):**
+
+### OPERACIÓN: "RESTAURACIÓN DE INTEGRIDAD DE LA SUITE DE PRUEBAS"
+
+| Archivo a Modificar | Descripción del Cambio | Justificación (Por qué este cambio soluciona el problema) |
+| :--- | :--- | :--- |
+| **FASE 4A: REFACTORIZACIÓN DE `SupabasePersistenceService`** |
+| `src/ultibot_backend/adapters/persistence_service.py` | Modificar el constructor `__init__` para aceptar una `AsyncSession` opcional. Si se provee, el servicio usará esa sesión en lugar de su propio pool. | Resuelve el `PoolTimeout` al permitir la inyección de dependencias de la sesión de BD, desacoplando el servicio y haciéndolo testeable. |
+| `tests/unit/adapters/test_persistence_service.py` | Actualizar la `fixture` `persistence_service` para inyectar la `db_session` en el constructor del servicio. | Alinea la prueba con el servicio refactorizado para una validación de integración real. |
+| **FASE 4B: CORRECCIÓN DE `TypeError` EN FIXTURES** |
+| `tests/unit/services/*.py`, `tests/integration/*.py` | Corregir todas las `fixtures` que instancian servicios para que provean los argumentos requeridos por los constructores. | Elimina los errores de `setup` y permite que los tests de servicio se ejecuten. |
+| **FASE 4C: CORRECCIÓN DE `ValidationError` EN DATOS DE PRUEBA** |
+| `tests/**/*.py` | Revisar y corregir todos los datos de prueba que causan `ValidationError` para que cumplan con los esquemas de los modelos Pydantic. | Asegura que los modelos de dominio se instancien correctamente, permitiendo probar la lógica de negocio. |
+| **FASE 4D: CORRECCIÓN DE PRUEBAS DE API** |
+| `tests/integration/api/v1/*.py` | Refactorizar las pruebas de API para manejar correctamente el `TestClient` como un generador de contexto asíncrono (`async with`). | Corrige el uso del cliente de prueba de FastAPI, permitiendo que los tests de endpoints se ejecuten. |
+| **FASE 4E: VALIDACIÓN INCREMENTAL** |
+| N/A | Ejecutar `poetry run pytest` después de cada fase. | Permite un enfoque controlado, asegurando que cada clase de error se resuelva antes de continuar. |
+
+**4. RIESGOS POTENCIALES:**
+* **Complejidad de la Refactorización:** La corrección de las `fixtures` puede ser compleja si las dependencias son profundas. Se mitigará abordando los errores de manera incremental.
+* **Descubrimiento de Nuevos Errores:** Es probable que la corrección de una capa de errores revele otros problemas lógicos. Esto es esperado y es el objetivo de la operación.
+
+**5. SOLICITUD:**
+* [**PAUSA**] Espero aprobación para proceder con la **FASE 4A** del plan de **RESTAURACIÓN DE INTEGRIDAD DE LA SUITE DE PRUEBAS**.

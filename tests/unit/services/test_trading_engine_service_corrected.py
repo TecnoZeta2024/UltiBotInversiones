@@ -5,11 +5,11 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, call
 from decimal import Decimal
 
-from src.ultibot_backend.services.trading_engine_service import TradingEngine
-from src.ultibot_backend.core.domain_models.portfolio import Portfolio
-from src.ultibot_backend.core.domain_models.trading import Order
-from src.ultibot_backend.core.domain_models.events import OrderPlacedEvent
-from src.ultibot_backend.core.exceptions import InsufficientFundsError
+from ultibot_backend.services.trading_engine_service import TradingEngine
+from ultibot_backend.core.domain_models.portfolio import Portfolio
+from ultibot_backend.core.domain_models.trading import Order
+from ultibot_backend.core.domain_models.events import OrderPlacedEvent
+from ultibot_backend.core.exceptions import InsufficientFundsError
 
 @pytest.fixture
 def mock_binance_adapter():

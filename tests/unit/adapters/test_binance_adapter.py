@@ -3,8 +3,8 @@ import httpx
 from unittest.mock import AsyncMock, patch, MagicMock
 import pytest_asyncio # Importar pytest_asyncio
 
-from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter, BinanceAPIError
-from src.shared.data_types import AssetBalance
+from ultibot_backend.adapters.binance_adapter import BinanceAdapter, BinanceAPIError
+from shared.data_types import AssetBalance
 
 @pytest_asyncio.fixture # Usar pytest_asyncio.fixture
 async def binance_adapter():
@@ -117,7 +117,7 @@ async def test_get_spot_balances_parsing_error(binance_adapter: BinanceAdapter):
         mock_print.assert_called_with("Advertencia: No se pudo parsear el balance para el activo XYZ: could not convert string to float: 'invalid_value'")
 
 @pytest.mark.asyncio
-@patch('src.ultibot_backend.adapters.binance_adapter.httpx.AsyncClient')
+@patch('ultibot_backend.adapters.binance_adapter.httpx.AsyncClient')
 async def test_make_request_get_success(MockAsyncClient):
     """Prueba _make_request para un GET exitoso."""
     # Necesitamos una nueva instancia de adapter para que use el MockAsyncClient
@@ -143,7 +143,7 @@ async def test_make_request_get_success(MockAsyncClient):
 
 
 @pytest.mark.asyncio
-@patch('src.ultibot_backend.adapters.binance_adapter.httpx.AsyncClient')
+@patch('ultibot_backend.adapters.binance_adapter.httpx.AsyncClient')
 async def test_make_request_retry_on_5xx_then_success(MockAsyncClient):
     """Prueba que _make_request reintenta en error 5xx y luego tiene éxito."""
     adapter = BinanceAdapter()
@@ -172,7 +172,7 @@ async def test_make_request_retry_on_5xx_then_success(MockAsyncClient):
         mock_sleep.assert_called_once_with(adapter.RETRY_DELAY_SECONDS)
 
 @pytest.mark.asyncio
-@patch('src.ultibot_backend.adapters.binance_adapter.httpx.AsyncClient')
+@patch('ultibot_backend.adapters.binance_adapter.httpx.AsyncClient')
 async def test_make_request_fail_after_retries_on_5xx(MockAsyncClient):
     """Prueba que _make_request falla después de todos los reintentos en error 5xx."""
     adapter = BinanceAdapter()
@@ -198,7 +198,7 @@ async def test_make_request_fail_after_retries_on_5xx(MockAsyncClient):
         assert mock_sleep.call_count == adapter.RETRY_ATTEMPTS - 1
 
 @pytest.mark.asyncio
-@patch('src.ultibot_backend.adapters.binance_adapter.httpx.AsyncClient')
+@patch('ultibot_backend.adapters.binance_adapter.httpx.AsyncClient')
 async def test_make_request_client_error_no_retry(MockAsyncClient):
     """Prueba que _make_request no reintenta en errores de cliente (4xx)."""
     adapter = BinanceAdapter()

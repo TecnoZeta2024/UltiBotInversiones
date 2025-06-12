@@ -6,7 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, validator
 
-from ...core.domain_models.trading_strategy_models import (
+from ....core.domain_models.trading_strategy_models import (
     BaseStrategyType,
     TradingStrategyConfig,
     StrategySpecificParameters,

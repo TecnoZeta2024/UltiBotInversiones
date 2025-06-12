@@ -4,10 +4,10 @@ Endpoints para verificar el estado y la conectividad con Binance.
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 
-from ....shared.data_types import BinanceConnectionStatus, AssetBalance
-from ...core.ports import IMarketDataProvider
-from ...core.exceptions import CredentialError, UltiBotError, BinanceAPIError
-from ...dependencies import get_binance_adapter
+from src.shared.data_types import BinanceConnectionStatus, AssetBalance
+from src.ultibot_backend.core.ports import IMarketDataProvider
+from src.ultibot_backend.core.exceptions import CredentialError, UltiBotError, BinanceAPIError
+from src.ultibot_backend.dependencies import get_binance_adapter
 
 router = APIRouter()
 

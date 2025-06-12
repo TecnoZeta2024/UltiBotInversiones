@@ -4,7 +4,7 @@ from unittest.mock import patch
 from pydantic_core import ValidationError
 
 # Adjust the import path if AppSettings is located elsewhere
-from src.ultibot_backend.app_config import AppSettings
+from ultibot_backend.app_config import AppSettings
 
 def test_load_credential_encryption_key_success():
     """

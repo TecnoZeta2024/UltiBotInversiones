@@ -4,9 +4,9 @@ from uuid import uuid4, UUID
 from datetime import datetime
 from cryptography.fernet import Fernet, InvalidToken
 
-from src.ultibot_backend.services.credential_service import CredentialService, CredentialError
-from src.shared.data_types import APICredential, ServiceName
-from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter, BinanceAPIError
+from ultibot_backend.services.credential_service import CredentialService, CredentialError
+from shared.data_types import APICredential, ServiceName
+from ultibot_backend.adapters.binance_adapter import BinanceAdapter, BinanceAPIError
 
 # Generar una clave Fernet válida para las pruebas
 TEST_FERNET_KEY = Fernet.generate_key().decode('utf-8')
@@ -24,8 +24,8 @@ def mock_binance_adapter():
 @pytest.fixture
 def credential_service(mock_persistence_service, mock_binance_adapter):
     # Mockear las dependencias que CredentialService inicializa internamente
-    with patch('src.ultibot_backend.services.credential_service.SupabasePersistenceService', return_value=mock_persistence_service), \
-         patch('src.ultibot_backend.services.credential_service.BinanceAdapter', return_value=mock_binance_adapter):
+    with patch('ultibot_backend.services.credential_service.SupabasePersistenceService', return_value=mock_persistence_service), \
+         patch('ultibot_backend.services.credential_service.BinanceAdapter', return_value=mock_binance_adapter):
         service = CredentialService(encryption_key=TEST_FERNET_KEY)
         # Re-asignar mocks si es necesario, aunque el patch debería cubrirlos
         service.persistence_service = mock_persistence_service

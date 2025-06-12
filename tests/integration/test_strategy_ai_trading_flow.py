@@ -8,25 +8,25 @@ import uuid
 from datetime import datetime, timezone
 from unittest.mock import Mock, AsyncMock, patch
 
-from src.ultibot_backend.services.trading_engine_service import (
+from ultibot_backend.services.trading_engine_service import (
     TradingEngine,
     TradingDecision,
 )
-from src.ultibot_backend.services.ai_orchestrator_service import (
+from ultibot_backend.services.ai_orchestrator_service import (
     AIOrchestrator,
     AIAnalysisResult,
 )
-from src.ultibot_backend.core.domain_models.trading_strategy_models import (
+from ultibot_backend.core.domain_models.trading_strategy_models import (
     TradingStrategyConfig,
     BaseStrategyType,
     ScalpingParameters,
     DayTradingParameters,
 )
-from src.ultibot_backend.core.domain_models.user_configuration_models import (
+from ultibot_backend.core.domain_models.user_configuration_models import (
     AIStrategyConfiguration,
     ConfidenceThresholds,
 )
-from src.ultibot_backend.core.domain_models.opportunity_models import (
+from ultibot_backend.core.domain_models.opportunity_models import (
     Opportunity,
     OpportunityStatus,
     SourceType,
@@ -420,7 +420,7 @@ class TestTradeCreationFromDecision:
         )
         
         # Add AI analysis to opportunity
-        from src.ultibot_backend.core.domain_models.opportunity_models import (
+        from ultibot_backend.core.domain_models.opportunity_models import (
             AIAnalysis,
             SuggestedAction,
         )

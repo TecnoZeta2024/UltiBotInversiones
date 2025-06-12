@@ -7,10 +7,10 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 
-from ....shared.data_types import Trade
-from ...core.ports import IPersistencePort
-from ...dependencies import PersistenceServiceDep
-from ...app_config import settings
+from src.shared.data_types import Trade
+from src.ultibot_backend.core.ports import IPersistencePort
+from src.ultibot_backend.dependencies import PersistenceServiceDep
+from src.ultibot_backend.app_config import settings
 
 router = APIRouter(prefix="/trades", tags=["Trades"])
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ async def get_user_trades(
     persistence_port = PersistenceServiceDep,
     trading_mode: TradingMode = Query("both", description="Filtro de modo de trading: 'paper', 'real', o 'both'"),
     status_filter: Optional[str] = Query(None, description="Filtro de estado de posición: 'open', 'closed', etc."),
-    symbol_filter: Optional[str] = Query(None, description="Filtro por símbolo (ej., 'BTCUSDT')"),
+    symbol_filter: Optional[str] = Query(None, description="Filtro por par de trading (ej., 'BTCUSDT')"),
     date_from: Optional[date] = Query(None, description="Filtro por fecha de inicio (YYYY-MM-DD)"),
     date_to: Optional[date] = Query(None, description="Filtro por fecha de fin (YYYY-MM-DD)"),
     limit: int = Query(100, ge=1, le=1000, description="Número máximo de trades a devolver"),

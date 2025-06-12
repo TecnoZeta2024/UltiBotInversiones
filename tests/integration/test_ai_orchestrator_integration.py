@@ -15,14 +15,14 @@ from datetime import datetime
 from decimal import Decimal
 
 # Core imports
-from src.ultibot_backend.core.services.ai_orchestrator import AIOrchestratorService
-from src.ultibot_backend.core.services.mcp_tool_hub import MCPToolHub
-from src.ultibot_backend.core.services.prompt_manager import PromptManager
-from src.ultibot_backend.core.domain_models.ai_models import (
+from ultibot_backend.core.services.ai_orchestrator import AIOrchestratorService
+from ultibot_backend.core.services.mcp_tool_hub import MCPToolHub
+from ultibot_backend.core.services.prompt_manager import PromptManager
+from ultibot_backend.core.domain_models.ai_models import (
     AIAnalysisRequest, AIAnalysisResult, ToolExecutionRequest, ToolExecutionResult
 )
-from src.ultibot_backend.core.domain_models.trading import TradingOpportunity
-from src.ultibot_backend.adapters.gemini_adapter import GeminiAdapter
+from ultibot_backend.core.domain_models.trading import TradingOpportunity
+from ultibot_backend.adapters.gemini_adapter import GeminiAdapter
 
 # Test fixtures
 from tests.integration.fixtures import (

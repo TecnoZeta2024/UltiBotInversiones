@@ -1,103 +1,51 @@
-### INFORME POST-MORTEM - 6/12/2025, 8:22:00 AM
+### INFORME POST-MORTEM - 12/06/2025 15:58
 
-**REFERENCIA A TRABAJO PREVIO:**
-* ✅ **Éxito Parcial**: Se resolvió exitosamente el problema de `PortfolioDep` y las anotaciones FastAPI
-* ✅ **Progreso Significativo**: De 4 errores iniciales de `ImportError: cannot import name 'PortfolioDep'` a 4 errores diferentes
-* ✅ **225 tests recolectados** exitosamente vs errores previos
+**REFERENCIA A INTENTOS PREVIOS:**
+* Este post-mortem se genera tras el fallo catastrófico de la suite de tests (`poetry run pytest`) después de la refactorización de `src/ultibot_backend/core/domain_models/prompt_models.py` a Pydantic V2.
+* El fallo reintroduce los errores `SystemError: AST constructor recursion depth mismatch` y `RuntimeError: Event loop is closed`, que se creían resueltos según `AUDIT_REPORT.md`.
 
 **Resultado Esperado:**
-* Resolución completa de todos los errores de importación de tests
-* `poetry run pytest --collect-only -q` ejecutándose sin errores
-* Sistema de inyección de dependencias completamente funcional
+* La ejecución de `poetry run pytest` debía validar la migración de Pydantic V2, resultando en una suite de tests limpia, sin errores ni advertencias.
 
 **Resultado Real:**
-* ✅ Problema del portafolio resuelto completamente
-* ❌ **Nuevo error sistemático identificado**: `ModuleNotFoundError: No module named 'src.ultibot_backend.services.prompt_service'`
-* **Ubicación**: `src/ultibot_backend/api/v1/endpoints/prompts.py:14`
-* **Impacto**: 4 tests de integración de API no pueden ser recolectados
+* Fallo masivo de la suite de tests con 67 fallos y 13 errores.
+* Reaparición de `SystemError: AST constructor recursion depth mismatch`.
+* Reaparición de `RuntimeError: Event loop is closed` y errores de `asyncio` relacionados con `psycopg_pool`.
 
 **Análisis de Falla:**
-La refactorización incompleta del sistema de servicios continúa afectando otros endpoints. El patrón es idéntico al problema del portafolio:
-1. El endpoint `prompts.py` importa `PromptService` que no existe
-2. Debería importar y usar `PromptManagerService` a través de `PromptManagerDep`
-3. Pero también tiene referencias incorrectas a `ai_orchestrator` vs `ai_orchestrator_service`
+* La hipótesis de que solo era necesaria una migración de sintaxis de Pydantic fue incorrecta.
+* La modificación en `prompt_models.py`, aunque sintácticamente correcta, expuso una fragilidad subyacente en la configuración del entorno de pruebas.
+* La causa raíz no está en los modelos de dominio, sino en una configuración defectuosa en `tests/conftest.py` que no gestiona de forma robusta el ciclo de vida del `event loop` de `asyncio` y el `pool` de conexiones a la base de datos a lo largo de toda la suite de tests. El error `AST` es un síntoma de esta inestabilidad.
 
 **Lección Aprendida y Nueva Hipótesis:**
-La causa raíz sistémica es una **refactorización masiva incompleta** que afectó múltiples endpoints de API de forma consistente. El patrón de falla es predecible y repetible:
-
-1. **Servicios renombrados/movidos** sin actualizar imports en endpoints
-2. **Sistema de dependencias nuevo** no sincronizado con endpoints
-3. **Inconsistencias de nombres** entre archivos y servicios
-
-**HIPÓTESIS CENTRAL REFINADA:**
-Existe un patrón sistemático de desincronización entre:
-- `dependencies.py` (servicios disponibles)
-- `endpoints/*.py` (imports y dependencias)
-- Estructura real de servicios en `/services/`
-
-**PLAN MAESTRO INTEGRAL REQUERIDO:**
-Se necesita una corrección holística que aborde todos los endpoints de API simultáneamente.
+* **Lección Aprendida:** No se debe asumir que un problema está resuelto permanentemente solo porque un informe anterior lo indica. Las modificaciones, incluso las pequeñas, pueden revelar problemas latentes. Es necesario validar el estado del sistema de forma más integral.
+* **Nueva Hipótesis Central:** La inestabilidad de la suite de tests se origina en `tests/conftest.py`. La gestión del `event_loop` y del `db_session` es inadecuada para una ejecución completa de pytest, causando fugas de recursos y fallos en cascada. La solución requiere una refactorización del fixture de base de datos para garantizar que las conexiones y el bucle de eventos se creen y destruyan correctamente una sola vez por sesión de prueba.
 
 ---
 
-### INFORME POST-MORTEM - 6/12/2025, 8:26:35 AM
+### INFORME POST-MORTEM - 12/06/2025 16:46
 
-**REFERENCIA A POST-MORTEM PREVIO:**
-* ✅ **Confirmado**: El patrón de refactorización incompleta identificado previamente es correcto
-* ✅ **Validado**: La hipótesis central sobre desincronización entre `dependencies.py` y `endpoints/*.py` se mantiene
-* ✅ **Éxito Arquitectónico**: El patrón establecido en `portfolio.py` es la referencia dorada a replicar
+**REFERENCIA A INTENTOS PREVIOS:**
+* Este informe sigue a la ejecución de la "OPERACIÓN: ESTABILIZACIÓN DEL CICLO DE VIDA ASÍNCRONO DE TESTS", que refactorizó `tests/conftest.py`.
 
-**Resultado Esperado del Análisis Actual:**
-* Diagnóstico completo de todos los errores restantes en `prompts.py`
-* Plan integral para resolver los 4 errores sistemáticamente
-* Aplicación del patrón exitoso de `portfolio.py` a todos los endpoints afectados
+**Resultado Esperado:**
+* La ejecución de `poetry run pytest` debía resultar en una suite de pruebas estable, libre de errores de `RuntimeError` y `SystemError`, aunque se esperaban fallos de lógica de negocio.
 
-**Resultado Real del Análisis:**
-* ✅ **Error Principal Confirmado**: `ModuleNotFoundError: No module named 'src.ultibot_backend.services.prompt_service'` en línea 14
-* ✅ **Error Secundario Identificado**: Import incorrecto de `ai_orchestrator` vs `ai_orchestrator_service` en línea 15
-* ✅ **Patrón de Solución Validado**: El patrón usado exitosamente en `portfolio.py` es directamente aplicable
+**Resultado Real:**
+* La suite de pruebas ha fallado masivamente con 97 fallos y 139 errores.
+* Los errores de ciclo de vida de `asyncio` (`Event loop is closed`) han sido eliminados, validando la Fase 3A.
+* Sin embargo, ha surgido una nueva clase de errores sistémicos:
+    1.  **`TypeError` en la inicialización de servicios:** Múltiples `fixtures` intentan instanciar clases de servicio (`TradingEngine`, `BinanceAdapter`, `AIOrchestratorService`, etc.) sin proporcionar los argumentos requeridos en sus constructores (`__init__`).
+    2.  **`ValidationError` de Pydantic:** Múltiples pruebas intentan crear instancias de modelos de Pydantic (`Trade`, `KlineData`, `Order`, etc.) con datos incorrectos o campos faltantes.
+    3.  **`AttributeError` en `async_generator`:** Las pruebas de API intentan usar el `client` de `TestClient` como un objeto directo en lugar de un generador asíncrono, causando errores como `AttributeError: 'async_generator' object has no attribute 'get'`.
+    4.  **`PoolTimeout` en `test_persistence_service.py`:** A pesar de la nueva `fixture`, el `SupabasePersistenceService` sigue intentando usar su propio pool de conexiones interno en lugar de la sesión transaccional proporcionada por la `fixture`, lo que lleva a timeouts.
 
-**Análisis de Situación Actual:**
-**PATRONES EXITOSOS DOCUMENTADOS** (de portfolio.py):
-```python
-# ✅ PATRÓN EXITOSO EN DEPENDENCIES.PY:
-def get_portfolio_service(...) -> PortfolioService:
-    return PortfolioService(...)
+**Análisis de Falla:**
+* La hipótesis de que solo el ciclo de vida de `asyncio` estaba roto fue incompleta. La corrección de ese problema ha destapado una erosión masiva de la integridad de las pruebas unitarias y de integración.
+* Las `fixtures` de prueba no han sido mantenidas y están desincronizadas con las firmas de los constructores de las clases que instancian.
+* Los datos de prueba (mocks y datos para modelos Pydantic) son inválidos y no cumplen con los esquemas actuales de los modelos.
+* La interacción con el `TestClient` de FastAPI en las pruebas de API es incorrecta.
 
-PortfolioDep = Annotated[PortfolioService, Depends(get_portfolio_service)]
-
-# ✅ PATRÓN EXITOSO EN ENDPOINT:
-from src.ultibot_backend.dependencies import PortfolioDep
-async def endpoint(portfolio_service = PortfolioDep):  # Sin type hint
-```
-
-**ERRORES SISTEMÁTICOS IDENTIFICADOS** (en prompts.py):
-```python
-# ❌ LÍNEA 14 - IMPORT INCORRECTO:
-from src.ultibot_backend.services.prompt_service import PromptService
-# Debe ser:
-from src.ultibot_backend.dependencies import PromptManagerDep
-
-# ❌ LÍNEA 15 - IMPORT INCORRECTO:
-from src.ultibot_backend.services.ai_orchestrator import AIOrchestratorService
-# Debe ser:
-from src.ultibot_backend.dependencies import AIOrchestratorDep
-
-# ❌ EN FUNCIONES - TYPE HINTS PROBLEMÁTICOS:
-async def list_prompts(prompt_service: PromptService = PromptDep):
-# Debe ser:
-async def list_prompts(prompt_service = PromptManagerDep):
-```
-
-**Lección Aprendida Refinada:**
-La solución NO es corregir un archivo a la vez, sino aplicar sistemáticamente el **patrón de dependencias exitoso** establecido en `portfolio.py` a todos los endpoints afectados de forma coordinada.
-
-**CONCLUSIÓN ESTRATÉGICA:**
-Se requiere un **PLAN DE ACCIÓN UNIFICADO** que corrija simultáneamente:
-1. Imports incorrectos → Usar `dependencies.py` 
-2. Type hints problemáticos → Remover según patrón exitoso
-3. Referencias a servicios inexistentes → Usar *Dep aliases correctos
-4. Verificación de que las dependencias existen en `dependencies.py`
-
-**NUEVA HIPÓTESIS CENTRAL:**
-Los 4 errores restantes se resolverán aplicando el patrón exitoso de `portfolio.py` a `prompts.py`, garantizando que todas las referencias de dependencias estén sincronizadas con `dependencies.py`.
+**Lección Aprendida y Nueva Hipótesis:**
+* **Lección Aprendida:** Una suite de pruebas que no se mantiene activamente se convierte en deuda técnica. Los cambios en el código de la aplicación deben ser reflejados inmediatamente en las pruebas correspondientes. La estabilidad de la suite es un indicador clave de la salud del proyecto.
+* **Nueva Hipótesis Central:** La causa raíz de la falla actual es una **desintegración sistémica de la suite de pruebas**. Las pruebas no reflejan el estado actual del código fuente. La solución no es un único arreglo, sino una campaña de refactorización de pruebas dividida en fases, enfocada en restaurar la coherencia entre las pruebas y el código de la aplicación. Se debe comenzar por el problema más fundamental: la instanciación incorrecta de objetos en las `fixtures`.

@@ -22,7 +22,7 @@ from ..app_config import settings
 from ..core.domain_models.opportunity_models import Opportunity, OpportunityStatus
 from ..core.domain_models.trade_models import Trade, TradeOrderDetails
 from ..core.domain_models.trading_strategy_models import TradingStrategyConfig
-from ...shared.data_types import APICredential, ServiceName, Notification, MarketData
+from shared.data_types import APICredential, ServiceName, Notification, MarketData
 from ..core.domain_models.user_configuration_models import ScanPreset, MarketScanConfiguration
 
 logger = logging.getLogger(__name__)

@@ -10,8 +10,8 @@ from datetime import datetime, timedelta
 from typing import List
 import random
 
-from src.ultibot_backend.core.domain_models.market import TickerData, KlineData
-from src.ultibot_backend.core.domain_models.trading import MarketSnapshot
+from ultibot_backend.core.domain_models.market import TickerData, KlineData
+from ultibot_backend.core.domain_models.trading import MarketSnapshot
 
 def create_mock_ticker_data(
     symbol: str = "BTCUSDT",

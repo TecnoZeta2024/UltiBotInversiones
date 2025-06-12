@@ -8,14 +8,14 @@ from decimal import Decimal
 from typing import Optional
 from uuid import UUID # Importar UUID directamente
 
-from ultibot_backend.core.ports import (
+from ..ports import (
     IMarketDataProvider, IPersistencePort, IEventPublisher, IOrderExecutionPort
 )
-from ultibot_backend.core.domain_models.trading import (
+from ..domain_models.trading import (
     Opportunity, TradeResult, Trade, OrderSide, OrderType, TickerData
 )
-from ultibot_backend.core.domain_models.events import TradeExecutedEvent
-from ultibot_backend.core.exceptions import TradeExecutionError, InsufficientFundsError
+from ..domain_models.events import TradeExecutedEvent
+from ..exceptions import TradeExecutionError, InsufficientFundsError
 
 class TradingEngineService:
     """

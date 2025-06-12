@@ -15,7 +15,7 @@ from typing import Optional, Dict, Any, List, Tuple
 import statistics
 
 from .base_strategy import BaseStrategy, AnalysisResult, TradingSignal, SignalStrength
-from ..core.domain_models.market import MarketSnapshot, KlineData
+from src.ultibot_backend.core.domain_models.market import MarketData, KlineData
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ class OrderBookImbalanceScalper(BaseStrategy):
         """Configuración inicial de la estrategia."""
         logger.info(f"Configurando {self.name} con imbalance threshold={self.imbalance_threshold}")
 
-    async def analyze(self, market_snapshot: MarketSnapshot) -> AnalysisResult:
+    async def analyze(self, market_snapshot: MarketData) -> AnalysisResult:
         """
         Analiza el order book para detectar imbalances significativos.
         
@@ -403,7 +403,7 @@ class OrderBookImbalanceScalper(BaseStrategy):
         
         for i in range(1, len(recent_klines)):
             price_change = float(recent_klines[i].close) - float(recent_klines[i-1].close)
-            volume_change = float(recent_klines[i].volume) - float(recent_klines[i-1].volume)
+            volume_change = (float(recent_klines[i].volume) - float(recent_klines[i-1].volume)) / float(recent_klines[i-1].volume)
             
             price_changes.append(price_change)
             volume_changes.append(volume_change)

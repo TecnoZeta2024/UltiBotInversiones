@@ -7,9 +7,9 @@ from httpx import AsyncClient
 from unittest.mock import AsyncMock, patch
 
 # Asumiendo que la app de FastAPI se puede importar para testing
-from src.ultibot_backend.main import app
-from src.ultibot_backend.services.trading_engine_service import TradingEngine
-from src.ultibot_backend.core.domain_models.trading import Order, Portfolio
+from ultibot_backend.main import app
+from ultibot_backend.services.trading_engine_service import TradingEngine
+from ultibot_backend.core.domain_models.trading import Order, Portfolio
 
 @pytest.mark.asyncio
 async def test_real_trading_market_order_flow():

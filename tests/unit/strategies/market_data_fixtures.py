@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from typing import List
 import pytest
 
-from src.ultibot_backend.core.domain_models.market import KlineData, MarketSnapshot, TickerData
+from ultibot_backend.core.domain_models.market import KlineData, MarketData, TickerData
 
 
 class MarketDataFixtures:
@@ -177,9 +177,9 @@ class MarketDataFixtures:
         symbol: str = "BTCUSDT",
         klines: List[KlineData] = None,
         ticker_price: Decimal = None
-    ) -> MarketSnapshot:
+    ) -> MarketData:
         """
-        Genera un MarketSnapshot completo para tests.
+        Genera un MarketData completo para tests.
         """
         if klines is None:
             klines = MarketDataFixtures.generate_sideways_klines()
@@ -200,7 +200,7 @@ class MarketDataFixtures:
             timestamp=datetime.now()
         )
         
-        return MarketSnapshot(
+        return MarketData(
             symbol=symbol,
             timestamp=datetime.now(),
             ticker=ticker,

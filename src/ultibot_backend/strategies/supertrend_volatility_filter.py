@@ -16,7 +16,7 @@ import statistics
 from datetime import datetime # Importar datetime
 
 from .base_strategy import BaseStrategy
-from ..core.domain_models.market import MarketSnapshot, KlineData
+from src.ultibot_backend.core.domain_models.market import MarketData, KlineData
 from ..core.domain_models.trading import (
     AnalysisResult, TradingSignal, SuperTrendParameters, OrderSide, SignalStrength
 )
@@ -37,7 +37,7 @@ class SuperTrendVolatilityFilter(BaseStrategy):
         logger.info(f"Configurando {self.name} con parámetros: {self.parameters}")
         pass
 
-    async def analyze(self, market_snapshot: MarketSnapshot) -> AnalysisResult:
+    async def analyze(self, market_snapshot: MarketData) -> AnalysisResult:
         """
         Analiza el mercado usando SuperTrend con filtro de volatilidad.
         """

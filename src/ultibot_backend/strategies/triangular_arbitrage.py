@@ -10,7 +10,7 @@ from datetime import datetime
 
 from pydantic import Field, ConfigDict
 
-from ultibot_backend.core.domain_models.market import MarketSnapshot, TickerData
+from src.ultibot_backend.core.domain_models.market import MarketData, TickerData
 from ultibot_backend.core.domain_models.trading import (
     BaseStrategyParameters, AnalysisResult, TradingSignal, OrderSide, OrderType
 )
@@ -61,14 +61,14 @@ class TriangularArbitrage(BaseStrategy):
         # Podría pre-calcular pares de arbitraje aquí si la lista de símbolos es estática
         pass
 
-    async def analyze(self, market_snapshot: MarketSnapshot) -> AnalysisResult:
+    async def analyze(self, market_snapshot: MarketData) -> AnalysisResult:
         """
         Analiza el estado actual del mercado para detectar oportunidades de arbitraje triangular.
         Nota: Esta estrategia requiere acceso a múltiples tickers, no solo el del snapshot.
         El market_snapshot se usa para el símbolo base, pero se necesitan otros tickers.
 
         Args:
-            market_snapshot (MarketSnapshot): Una instantánea del estado actual del mercado (usado como punto de partida).
+            market_snapshot (MarketData): Una instantánea del estado actual del mercado (usado como punto de partida).
 
         Returns:
             AnalysisResult: El resultado del análisis, incluyendo la confianza y los detalles del arbitraje.

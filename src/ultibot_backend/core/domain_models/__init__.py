@@ -6,15 +6,16 @@ y no deben importar frameworks externos.
 """
 
 from .trading import (
-    TickerData, KlineData, OrderSide, OrderType, Trade, Opportunity, TradeResult,
+    TickerData, KlineData, Order, OrderSide, OrderType, Opportunity, TradeResult,
     CommandResult, TradingSignal, AnalysisResult, BaseStrategyParameters
 )
 from .portfolio import (
     UserId, Portfolio, PortfolioSnapshot
 )
 from .market import (
-    MarketSnapshot
+    MarketData
 )
+from .trade import Trade
 from .ai_models import (
     AIAnalysisRequest, AIAnalysisResult
 )
