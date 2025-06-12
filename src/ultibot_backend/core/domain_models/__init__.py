@@ -1,145 +1,30 @@
-"""Domain Models Package.
-
-This package contains all the Pydantic models for the domain entities
-used throughout the UltiBotInversiones application.
+"""
+Módulo de inicialización para el paquete domain_models.
+Define los modelos de dominio puros que representan las entidades de negocio
+del sistema UltiBotInversiones. Estos modelos son agnósticos a la infraestructura
+y no deben importar frameworks externos.
 """
 
-# Trading Strategy Models
-from .trading_strategy_models import (
-    BaseStrategyType,
-    TradingStrategyConfig,
-    ScalpingParameters,
-    DayTradingParameters,
-    ArbitrageSimpleParameters,
-    CustomAIDrivenParameters,
-    MCPSignalFollowerParameters,
-    GridTradingParameters,
-    DCAInvestingParameters,
-    StrategySpecificParameters,
-    ApplicabilityRules,
-    DynamicFilter,
-    RiskParametersOverride,
-    PerformanceMetrics,
-    MarketConditionFilter,
-    ActivationSchedule,
-    StrategyDependency,
-    SharingMetadata,
+from .trading import (
+    TradeId, TickerData, KlineData, OrderSide, OrderType, Trade, Opportunity, TradeResult,
+    CommandResult, TradingSignal, StrategyParameters, AnalysisResult
 )
-
-# User Configuration Models
-from .user_configuration_models import (
-    UserConfiguration,
-    AIStrategyConfiguration,
-    ConfidenceThresholds,
-    NotificationPreference,
-    Watchlist,
-    RiskProfileSettings,
-    RealTradingSettings,
-    MCPServerPreference,
-    DashboardLayoutProfile,
-    CloudSyncPreferences,
-    NotificationChannel,
-    RiskProfile,
-    Theme,
+from .portfolio import (
+    UserId, Portfolio, PortfolioSnapshot
 )
-
-# Opportunity and Trade Models
-from .opportunity_models import (
-    Opportunity,
-    OpportunityStatus,
-    SourceType,
-    Direction,
-    SuggestedAction,
-    InitialSignal,
-    AIAnalysis,
-    DataVerification,
-    RecommendedTradeParams,
-    InvestigationDetails,
-    UserFeedback,
-    ExpirationLogic,
-    PostTradeFeedback,
-    PostFactoSimulationResults,
+from .market import (
+    MarketSnapshot
 )
-
-# Trade Models
-from .trade_models import (
-    Trade,
-    TradeSide,
-    TradeMode,
-    PositionStatus,
-    OrderType,
-    OrderStatus,
-    TradeOrderDetails,
-    Commission,
-    RiskRewardAdjustment,
-    ExternalEventLink,
-    BacktestDetails,
-    AIInfluenceDetails,
+from .ai_models import (
+    AIAnalysisRequest, AIAnalysisResult
 )
-
-__all__ = [
-    # Trading Strategy Models
-    "BaseStrategyType",
-    "TradingStrategyConfig", 
-    "ScalpingParameters",
-    "DayTradingParameters",
-    "ArbitrageSimpleParameters",
-    "CustomAIDrivenParameters",
-    "MCPSignalFollowerParameters",
-    "GridTradingParameters", 
-    "DCAInvestingParameters",
-    "StrategySpecificParameters",
-    "ApplicabilityRules",
-    "DynamicFilter",
-    "RiskParametersOverride",
-    "PerformanceMetrics",
-    "MarketConditionFilter",
-    "ActivationSchedule",
-    "StrategyDependency",
-    "SharingMetadata",
-    
-    # User Configuration Models
-    "UserConfiguration",
-    "AIStrategyConfiguration",
-    "ConfidenceThresholds",
-    "NotificationPreference",
-    "Watchlist", 
-    "RiskProfileSettings",
-    "RealTradingSettings",
-    "MCPServerPreference",
-    "DashboardLayoutProfile",
-    "CloudSyncPreferences",
-    "NotificationChannel",
-    "RiskProfile",
-    "Theme",
-    
-    # Opportunity Models
-    "Opportunity",
-    "OpportunityStatus",
-    "SourceType",
-    "Direction",
-    "SuggestedAction",
-    "InitialSignal",
-    "AIAnalysis",
-    "DataVerification",
-    "RecommendedTradeParams",
-    "InvestigationDetails",
-    "UserFeedback",
-    "ExpirationLogic",
-    "PostTradeFeedback",
-    "PostFactoSimulationResults",
-    
-    # Trade Models
-    "Trade",
-    "TradeSide",
-    "TradeMode",
-    "PositionStatus",
-    "OrderType",
-    "OrderStatus",
-    "TradeOrderDetails",
-    "Commission",
-    "RiskRewardAdjustment",
-    "ExternalEventLink",
-    "BacktestDetails",
-    "AIInfluenceDetails",
-]
+from .prompt_models import (
+    PromptTemplate, PromptVersion
+)
+from .scan_presets import (
+    ScanPreset, ScanResult
+)
+from .events import (
+    BaseEvent, TradeExecutedEvent, PortfolioUpdatedEvent, StrategyActivatedEvent,
+    AIAnalysisCompletedEvent, ToolExecutedEvent, PromptUpdatedEvent, ScanCompletedEvent
+)

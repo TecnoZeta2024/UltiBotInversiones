@@ -1,379 +1,225 @@
+"""
+Unit tests for the TradingEngine core functionalities. (Corrected version)
+"""
 import pytest
-import asyncio
-from unittest.mock import AsyncMock, patch, MagicMock
-from uuid import uuid4, UUID
-from datetime import datetime, timezone
+from unittest.mock import AsyncMock, MagicMock, call
+from decimal import Decimal
 
 from src.ultibot_backend.services.trading_engine_service import TradingEngine
-from src.ultibot_backend.services.config_service import ConfigService
-from src.ultibot_backend.services.order_execution_service import OrderExecutionService
-from src.ultibot_backend.services.credential_service import CredentialService
-from src.ultibot_backend.services.market_data_service import MarketDataService
-from src.ultibot_backend.services.portfolio_service import PortfolioService
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend.services.notification_service import NotificationService
-from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
-from src.ultibot_backend.core.exceptions import OrderExecutionError, ConfigurationError, CredentialError, MarketDataError
-
-from src.shared.data_types import (
-    Opportunity,
-    AIAnalysis,
-    UserConfiguration,
-    RealTradingSettings,
-    RiskProfileSettings,
-    TradeOrderDetails,
-    Trade,
-    OpportunityStatus,
-    OpportunitySourceType,
-    ServiceName,
-    PortfolioSnapshot,
-    PortfolioSummary,
-    OrderCategory
-)
-
-# Valores por defecto de TradingEngineService para TSL/TP
-TP_PERCENTAGE_DEFAULT = 0.02
-TSL_PERCENTAGE_DEFAULT = 0.01
-TSL_CALLBACK_RATE_DEFAULT = 0.005
-
-@pytest.fixture
-def mock_config_service():
-    return AsyncMock(spec=ConfigService)
-
-@pytest.fixture
-def mock_order_execution_service():
-    return AsyncMock(spec=OrderExecutionService)
-
-@pytest.fixture
-def mock_paper_order_execution_service():
-    return AsyncMock()
-
-@pytest.fixture
-def mock_credential_service():
-    return AsyncMock(spec=CredentialService)
-
-@pytest.fixture
-def mock_market_data_service():
-    return AsyncMock(spec=MarketDataService)
-
-@pytest.fixture
-def mock_portfolio_service():
-    return AsyncMock(spec=PortfolioService)
-
-@pytest.fixture
-def mock_persistence_service():
-    return AsyncMock(spec=SupabasePersistenceService)
-
-@pytest.fixture
-def mock_notification_service():
-    return AsyncMock(spec=NotificationService)
+from src.ultibot_backend.core.domain_models.portfolio import Portfolio
+from src.ultibot_backend.core.domain_models.trading import Order
+from src.ultibot_backend.core.domain_models.events import OrderPlacedEvent
+from src.ultibot_backend.core.exceptions import InsufficientFundsError
 
 @pytest.fixture
 def mock_binance_adapter():
-    mock = AsyncMock(spec=BinanceAdapter)
-    # Configurar el mock para create_oco_order
-    mock.create_oco_order.return_value = {
-        'listClientOrderId': 'test_oco_123',
-        'orderReports': [
-            {
-                'orderId': '123456',
-                'clientOrderId': 'sl_order',
-                'type': 'STOP_LOSS_LIMIT',
-                'status': 'NEW',
-                'origQty': '0.1',
-                'executedQty': '0.0',
-                'price': '98.0',
-                'commission': '0.0',
-                'commissionAsset': 'USDT',
-                'updateTime': int(datetime.now(timezone.utc).timestamp() * 1000),
-                'cummulativeQuoteQty': '0.0'
-            },
-            {
-                'orderId': '123457',
-                'clientOrderId': 'tp_order',
-                'type': 'TAKE_PROFIT_LIMIT',
-                'status': 'NEW',
-                'origQty': '0.1',
-                'executedQty': '0.0',
-                'price': '105.0',
-                'commission': '0.0',
-                'commissionAsset': 'USDT',
-                'updateTime': int(datetime.now(timezone.utc).timestamp() * 1000),
-                'cummulativeQuoteQty': '0.0'
-            }
-        ]
-    }
-    return mock
+    """Fixture for a mock Binance adapter."""
+    adapter = MagicMock()
+    adapter.execute_order = AsyncMock()
+    adapter.cancel_order = AsyncMock()
+    return adapter
 
 @pytest.fixture
-def trading_engine_service(
-    mock_config_service,
-    mock_order_execution_service,
-    mock_paper_order_execution_service,
-    mock_credential_service,
-    mock_market_data_service,
-    mock_portfolio_service,
-    mock_persistence_service,
-    mock_notification_service,
-    mock_binance_adapter
-):
-    return TradingEngineService(
-        config_service=mock_config_service,
-        order_execution_service=mock_order_execution_service,
-        paper_order_execution_service=mock_paper_order_execution_service,
-        credential_service=mock_credential_service,
-        market_data_service=mock_market_data_service,
-        portfolio_service=mock_portfolio_service,
-        persistence_service=mock_persistence_service,
-        notification_service=mock_notification_service,
-        binance_adapter=mock_binance_adapter
+def mock_portfolio_manager():
+    """Fixture for a mock portfolio manager."""
+    manager = MagicMock()
+    manager.get_portfolio_snapshot = AsyncMock()
+    manager.update_portfolio_snapshot = AsyncMock()
+    return manager
+
+@pytest.fixture
+def mock_event_broker():
+    """Fixture for a mock event broker."""
+    broker = MagicMock()
+    broker.publish = AsyncMock()
+    return broker
+
+@pytest.fixture
+def trading_engine(mock_binance_adapter, mock_portfolio_manager, mock_event_broker):
+    """Fixture to create a TradingEngine instance with mocked dependencies."""
+    return TradingEngine(
+        binance_adapter=mock_binance_adapter,
+        portfolio_manager=mock_portfolio_manager,
+        event_broker=mock_event_broker
     )
 
 @pytest.mark.asyncio
-async def test_execute_real_trade_sets_tsl_tp_from_user_config(
-    trading_engine_service: TradingEngineService,
-    mock_config_service: AsyncMock,
-    mock_persistence_service: AsyncMock,
-    mock_market_data_service: AsyncMock,
-    mock_portfolio_service: AsyncMock,
-    mock_credential_service: AsyncMock,
-    mock_order_execution_service: AsyncMock,
-    mock_notification_service: AsyncMock,
-    mock_binance_adapter: AsyncMock
+async def test_execute_market_order_paper_trading_success(
+    trading_engine, mock_binance_adapter, mock_portfolio_manager, mock_event_broker
 ):
-    user_id = uuid4()
-    opportunity_id = uuid4()
-    current_price = 100.0
-    requested_quantity_calculated = 0.1
+    """
+    Test successful execution of a market order in paper trading mode.
+    """
+    # Arrange
+    user_id = "test_user_paper"
+    symbol = "BTCUSDT"
+    quantity = Decimal("0.01")
+    price = Decimal("50000")
+    order_value = quantity * price
 
-    mock_opportunity = Opportunity(
-        id=opportunity_id,
+    mock_portfolio = Portfolio(
         user_id=user_id,
-        symbol="BTCUSDT",
-        source_type=OpportunitySourceType.AI_GENERATED,
-        status=OpportunityStatus.PENDING_USER_CONFIRMATION_REAL,
-        ai_analysis=AIAnalysis(
-            suggestedAction="BUY", 
-            calculatedConfidence=0.98,
-            reasoning_ai=None,
-            rawAiOutput=None,
-            dataVerification=None,
-            ai_model_used=None
-        ),
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc)
+        trading_mode="paper",
+        available_balance_usdt=Decimal("10000.0"),
+        assets=[]
     )
-    mock_persistence_service.get_opportunity_by_id.return_value = mock_opportunity
+    mock_portfolio_manager.get_portfolio_snapshot.return_value = mock_portfolio
 
-    mock_user_config = UserConfiguration(
-        user_id=user_id,
-        paperTradingActive=False,
-        realTradingSettings=RealTradingSettings(
-            real_trading_mode_active=True,
-            max_real_trades=5,
-            real_trades_executed_count=0,
-            daily_capital_risked_usd=0.0,
-            last_daily_reset=datetime.now(timezone.utc)
-        ),
-        riskProfileSettings=RiskProfileSettings(
-            dailyCapitalRiskPercentage=0.50,
-            perTradeCapitalRiskPercentage=0.01,
-            takeProfitPercentage=0.05,
-            trailingStopLossPercentage=0.02,
-            trailingStopCallbackRate=0.01
-        )
-    )
-    mock_config_service.get_user_configuration.return_value = mock_user_config
-
-    mock_portfolio_snapshot = PortfolioSnapshot(
-        real_trading=PortfolioSummary(available_balance_usdt=10000.0, total_assets_value_usd=0.0, total_portfolio_value_usd=10000.0, assets=[], error_message=None),
-        paper_trading=PortfolioSummary(available_balance_usdt=10000.0, total_assets_value_usd=0.0, total_portfolio_value_usd=10000.0, assets=[], error_message=None)
-    )
-    mock_portfolio_service.get_portfolio_snapshot.return_value = mock_portfolio_snapshot
-    mock_market_data_service.get_latest_price.return_value = current_price
-
-    mock_credential_service.get_credential.return_value = MagicMock(encrypted_api_key="key", encrypted_api_secret="secret")
-    mock_credential_service.decrypt_data.side_effect = lambda x: x
-
-    entry_order_details = TradeOrderDetails(
-        orderId_internal=uuid4(), orderCategory=OrderCategory.ENTRY, type="market", status="filled",
-        requestedQuantity=requested_quantity_calculated, executedQuantity=requested_quantity_calculated,
-        executedPrice=current_price, timestamp=datetime.now(timezone.utc),
-        orderId_exchange=None,
-        clientOrderId_exchange=None,
-        requestedPrice=current_price,
-        cumulativeQuoteQty=requested_quantity_calculated * current_price,
-        commissions=[],
-        commission=None,
-        commissionAsset=None,
-        submittedAt=datetime.now(timezone.utc),
-        fillTimestamp=datetime.now(timezone.utc),
-        rawResponse=None,
-        ocoOrderListId=None
-    )
-    mock_order_execution_service.execute_market_order.return_value = entry_order_details
+    # In paper mode, the engine itself generates the order result
     
-    mock_persistence_service.upsert_trade.return_value = None
-    mock_persistence_service.update_opportunity_status.return_value = None
-    mock_config_service.save_user_configuration.return_value = None
-
-    with patch('uuid.uuid4', return_value=uuid4()), \
-         patch('src.ultibot_backend.services.trading_engine_service.datetime') as mock_datetime:
-        
-        mock_datetime.utcnow.return_value = datetime.now(timezone.utc)
-
-        created_trade = await trading_engine_service.execute_real_trade(opportunity_id, user_id)
-
-    assert created_trade is not None
-    assert created_trade.mode == 'real'
-    assert created_trade.symbol == "BTCUSDT"
-    assert created_trade.side == "BUY"
-    assert created_trade.entryOrder == entry_order_details
-    assert created_trade.positionStatus == 'open'
-
-    expected_tp_price = current_price * (1 + 0.05)
-    expected_tsl_activation_price = current_price * (1 - 0.02)
-    expected_tsl_callback_rate = 0.01
-
-    assert created_trade.takeProfitPrice == pytest.approx(expected_tp_price)
-    assert created_trade.trailingStopActivationPrice == pytest.approx(expected_tsl_activation_price)
-    assert created_trade.trailingStopCallbackRate == pytest.approx(expected_tsl_callback_rate)
-    assert created_trade.currentStopPrice_tsl == pytest.approx(expected_tsl_activation_price)
-
-    # Verificar que se crearon las órdenes OCO
-    assert created_trade.ocoOrderListId == 'test_oco_123'
-    assert len(created_trade.exitOrders) == 2
-
-    mock_persistence_service.get_opportunity_by_id.assert_called_once_with(opportunity_id)
-    mock_config_service.get_user_configuration.assert_called_once_with(user_id)
-    mock_portfolio_service.get_portfolio_snapshot.assert_called_once_with(user_id)
-    mock_market_data_service.get_latest_price.assert_called_once_with("BTCUSDT")
-    mock_credential_service.get_credential.assert_called_once_with(
-        user_id=user_id, service_name=ServiceName.BINANCE_SPOT, credential_label="default_binance_spot"
+    # Act
+    result_order = await trading_engine.execute_order(
+        user_id=user_id,
+        symbol=symbol,
+        order_type="MARKET",
+        side="BUY",
+        quantity=quantity,
+        price=price,
+        trading_mode="paper"
     )
-    mock_order_execution_service.execute_market_order.assert_called_once() 
-    mock_binance_adapter.create_oco_order.assert_called_once()
-    mock_persistence_service.upsert_trade.assert_called_once()
-    mock_persistence_service.update_opportunity_status.assert_called_once_with(
-        opportunity_id, OpportunityStatus.CONVERTED_TO_TRADE_REAL, f"Convertida a trade real: {created_trade.id}"
-    )
-    mock_config_service.save_user_configuration.assert_called_once()
-    # Verificar notificaciones
-    assert mock_notification_service.send_real_trade_status_notification.call_count >= 2
 
-@pytest.mark.asyncio  
-async def test_execute_real_trade_handles_oco_order_failure(
-    trading_engine_service: TradingEngineService,
-    mock_config_service: AsyncMock,
-    mock_persistence_service: AsyncMock,
-    mock_market_data_service: AsyncMock,
-    mock_portfolio_service: AsyncMock,
-    mock_credential_service: AsyncMock,
-    mock_order_execution_service: AsyncMock,
-    mock_notification_service: AsyncMock,
-    mock_binance_adapter: AsyncMock
+    # Assert
+    assert result_order.status == "FILLED"
+    assert result_order.trading_mode == "paper"
+    mock_portfolio_manager.get_portfolio_snapshot.assert_awaited_once_with(user_id, "paper")
+    mock_portfolio_manager.update_portfolio_snapshot.assert_awaited_once()
+    
+    # Verify event publication
+    mock_event_broker.publish.assert_awaited_once()
+    published_event = mock_event_broker.publish.call_args[0][0]
+    assert isinstance(published_event, OrderPlacedEvent)
+    assert published_event.order_id == result_order.id
+
+@pytest.mark.asyncio
+async def test_execute_market_order_real_trading_success(
+    trading_engine, mock_binance_adapter, mock_portfolio_manager, mock_event_broker
 ):
-    """Test que verifica que el trade se ejecuta correctamente incluso si falla la creación de órdenes OCO"""
-    user_id = uuid4()
-    opportunity_id = uuid4()
-    current_price = 100.0
-    requested_quantity_calculated = 0.1
+    """
+    Test successful execution of a market order in real trading mode.
+    """
+    # Arrange
+    user_id = "test_user_real"
+    symbol = "ETHUSDT"
+    quantity = Decimal("0.5")
+    price = Decimal("3000")
+    api_key = "test_key"
+    api_secret = "test_secret"
 
-    mock_opportunity = Opportunity(
-        id=opportunity_id,
+    mock_portfolio = Portfolio(
         user_id=user_id,
-        symbol="BTCUSDT",
-        source_type=OpportunitySourceType.AI_GENERATED,
-        status=OpportunityStatus.PENDING_USER_CONFIRMATION_REAL,
-        ai_analysis=AIAnalysis(
-            suggestedAction="BUY", 
-            calculatedConfidence=0.98,
-            reasoning_ai=None,
-            rawAiOutput=None,
-            dataVerification=None,
-            ai_model_used=None
-        ),
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc)
+        trading_mode="real",
+        available_balance_usdt=Decimal("2000.0"),
+        assets=[]
     )
-    mock_persistence_service.get_opportunity_by_id.return_value = mock_opportunity
+    mock_portfolio_manager.get_portfolio_snapshot.return_value = mock_portfolio
 
-    mock_user_config = UserConfiguration(
+    expected_order_from_adapter = Order(
+        id="real_order_2",
         user_id=user_id,
-        paperTradingActive=False,
-        realTradingSettings=RealTradingSettings(
-            real_trading_mode_active=True,
-            max_real_trades=5,
-            real_trades_executed_count=0,
-            daily_capital_risked_usd=0.0,
-            last_daily_reset=datetime.now(timezone.utc)
-        ),
-        riskProfileSettings=RiskProfileSettings(
-            dailyCapitalRiskPercentage=0.50,
-            perTradeCapitalRiskPercentage=0.01,
-            takeProfitPercentage=0.05,
-            trailingStopLossPercentage=0.02,
-            trailingStopCallbackRate=0.01
+        symbol=symbol,
+        order_type="MARKET",
+        side="BUY",
+        quantity=quantity,
+        price=price,
+        status="FILLED",
+        trading_mode="real"
+    )
+    mock_binance_adapter.execute_order.return_value = expected_order_from_adapter
+
+    # Act
+    result_order = await trading_engine.execute_order(
+        user_id=user_id,
+        symbol=symbol,
+        order_type="MARKET",
+        side="BUY",
+        quantity=quantity,
+        price=price,
+        trading_mode="real",
+        api_key=api_key,
+        api_secret=api_secret
+    )
+
+    # Assert
+    assert result_order == expected_order_from_adapter
+    mock_binance_adapter.execute_order.assert_awaited_once_with(
+        symbol=symbol,
+        order_type="MARKET",
+        side="BUY",
+        quantity=quantity,
+        price=price,
+        api_key=api_key,
+        api_secret=api_secret
+    )
+    mock_portfolio_manager.update_portfolio_snapshot.assert_awaited_once()
+    mock_event_broker.publish.assert_awaited_once()
+
+@pytest.mark.asyncio
+async def test_execute_order_insufficient_funds(trading_engine, mock_portfolio_manager):
+    """
+    Test that executing an order with insufficient funds raises an error.
+    """
+    # Arrange
+    user_id = "test_user_poor"
+    mock_portfolio = Portfolio(
+        user_id=user_id,
+        trading_mode="paper",
+        available_balance_usdt=Decimal("100.0"),
+        assets=[]
+    )
+    mock_portfolio_manager.get_portfolio_snapshot.return_value = mock_portfolio
+
+    # Act & Assert
+    with pytest.raises(InsufficientFundsError):
+        await trading_engine.execute_order(
+            user_id=user_id,
+            symbol="BTCUSDT",
+            order_type="MARKET",
+            side="BUY",
+            quantity=Decimal("0.01"),
+            price=Decimal("50000"), # Order value: 500
+            trading_mode="paper"
         )
+
+@pytest.mark.asyncio
+async def test_cancel_order_success(trading_engine, mock_binance_adapter, mock_event_broker):
+    """
+    Test successful cancellation of an order.
+    """
+    # Arrange
+    user_id = "test_user_cancel"
+    order_id = "order_to_cancel"
+    api_key = "key"
+    api_secret = "secret"
+    
+    mock_binance_adapter.cancel_order.return_value = True
+
+    # Act
+    result = await trading_engine.cancel_order(
+        user_id=user_id,
+        order_id=order_id,
+        api_key=api_key,
+        api_secret=api_secret
     )
-    mock_config_service.get_user_configuration.return_value = mock_user_config
 
-    mock_portfolio_snapshot = PortfolioSnapshot(
-        real_trading=PortfolioSummary(available_balance_usdt=10000.0, total_assets_value_usd=0.0, total_portfolio_value_usd=10000.0, assets=[], error_message=None),
-        paper_trading=PortfolioSummary(available_balance_usdt=10000.0, total_assets_value_usd=0.0, total_portfolio_value_usd=10000.0, assets=[], error_message=None)
+    # Assert
+    assert result is True
+    mock_binance_adapter.cancel_order.assert_awaited_once_with(
+        order_id=order_id, api_key=api_key, api_secret=api_secret
     )
-    mock_portfolio_service.get_portfolio_snapshot.return_value = mock_portfolio_snapshot
-    mock_market_data_service.get_latest_price.return_value = current_price
+    mock_event_broker.publish.assert_awaited_once()
 
-    mock_credential_service.get_credential.return_value = MagicMock(encrypted_api_key="key", encrypted_api_secret="secret")
-    mock_credential_service.decrypt_data.side_effect = lambda x: x
-
-    entry_order_details = TradeOrderDetails(
-        orderId_internal=uuid4(), orderCategory=OrderCategory.ENTRY, type="market", status="filled",
-        requestedQuantity=requested_quantity_calculated, executedQuantity=requested_quantity_calculated,
-        executedPrice=current_price, timestamp=datetime.now(timezone.utc),
-        orderId_exchange=None,
-        clientOrderId_exchange=None,
-        requestedPrice=current_price,
-        cumulativeQuoteQty=requested_quantity_calculated * current_price,
-        commissions=[],
-        commission=None,
-        commissionAsset=None,
-        submittedAt=datetime.now(timezone.utc),
-        fillTimestamp=datetime.now(timezone.utc),
-        rawResponse=None,
-        ocoOrderListId=None
-    )
-    mock_order_execution_service.execute_market_order.return_value = entry_order_details
-    
-    # Hacer que el create_oco_order falle
-    mock_binance_adapter.create_oco_order.side_effect = Exception("Error al crear órdenes OCO")
-    
-    mock_persistence_service.upsert_trade.return_value = None
-    mock_persistence_service.update_opportunity_status.return_value = None
-    mock_config_service.save_user_configuration.return_value = None
-
-    with patch('uuid.uuid4', return_value=uuid4()), \
-         patch('src.ultibot_backend.services.trading_engine_service.datetime') as mock_datetime:
-        
-        mock_datetime.utcnow.return_value = datetime.now(timezone.utc)
-
-        created_trade = await trading_engine_service.execute_real_trade(opportunity_id, user_id)
-
-    # El trade debe ejecutarse exitosamente incluso si las órdenes OCO fallan
-    assert created_trade is not None
-    assert created_trade.mode == 'real'
-    assert created_trade.symbol == "BTCUSDT"
-    assert created_trade.side == "BUY"
-    assert created_trade.positionStatus == 'open'
-    
-    # Las órdenes OCO deben estar vacías debido al fallo
-    assert created_trade.ocoOrderListId is None
-    assert len(created_trade.exitOrders) == 0
-    
-    # Debe haber enviado una notificación de error sobre las órdenes OCO
-    error_notification_calls = [
-        call for call in mock_notification_service.send_real_trade_status_notification.call_args_list
-        if "Error al enviar órdenes OCO" in str(call)
-    ]
-    assert len(error_notification_calls) > 0
+@pytest.mark.asyncio
+async def test_real_mode_requires_credentials(trading_engine):
+    """
+    Test that real mode operations fail without API credentials.
+    """
+    with pytest.raises(ValueError, match="API key and secret are required for real trading mode"):
+        await trading_engine.execute_order(
+            user_id="user",
+            symbol="BTCUSDT",
+            order_type="MARKET",
+            side="BUY",
+            quantity=Decimal("1"),
+            price=Decimal("1"),
+            trading_mode="real" # Missing credentials
+        )

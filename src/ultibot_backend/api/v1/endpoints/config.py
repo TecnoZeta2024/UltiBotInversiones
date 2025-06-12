@@ -3,7 +3,7 @@ from uuid import UUID
 
 from src.shared.data_types import UserConfiguration
 from src.ultibot_backend.services.configuration_service import ConfigurationService
-from src.ultibot_backend.dependencies import get_config_service
+from src.ultibot_backend.dependencies import get_configuration_service
 from src.ultibot_backend.core.exceptions import (
     ConfigurationError,
     BinanceAPIError,
@@ -17,7 +17,7 @@ router = APIRouter()
 
 @router.get("/config", response_model=UserConfiguration)
 async def get_user_config(
-    config_service: ConfigurationService = Depends(get_config_service)
+    config_service: ConfigurationService = Depends(get_configuration_service)
 ):
     """
     Retorna la configuración actual del usuario.
@@ -42,7 +42,7 @@ async def get_user_config(
 @router.patch("/config", response_model=UserConfiguration)
 async def update_user_config(
     updated_config: UserConfiguration,
-    config_service: ConfigurationService = Depends(get_config_service)
+    config_service: ConfigurationService = Depends(get_configuration_service)
 ):
     """
     Permite actualizar parcialmente la configuración del usuario.
@@ -74,7 +74,7 @@ async def update_user_config(
 
 @router.post("/config/real-trading-mode/activate", response_model=dict)
 async def activate_real_trading_mode_endpoint(
-    config_service: ConfigurationService = Depends(get_config_service)
+    config_service: ConfigurationService = Depends(get_configuration_service)
 ):
     """
     Intenta activar el modo de operativa real limitada para el usuario.
@@ -94,7 +94,7 @@ async def activate_real_trading_mode_endpoint(
 
 @router.post("/config/real-trading-mode/deactivate", response_model=dict)
 async def deactivate_real_trading_mode_endpoint(
-    config_service: ConfigurationService = Depends(get_config_service)
+    config_service: ConfigurationService = Depends(get_configuration_service)
 ):
     """
     Desactiva el modo de operativa real limitada para el usuario.
@@ -110,7 +110,7 @@ async def deactivate_real_trading_mode_endpoint(
 
 @router.get("/config/real-trading-mode/status", response_model=dict)
 async def get_real_trading_mode_status_endpoint(
-    config_service: ConfigurationService = Depends(get_config_service)
+    config_service: ConfigurationService = Depends(get_configuration_service)
 ):
     """
     Retorna el estado actual del modo de operativa real limitada y el contador para el usuario.

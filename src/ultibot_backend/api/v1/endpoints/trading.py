@@ -1,204 +1,83 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+"""
+Endpoints de la API para la ejecución y gestión de operaciones de trading.
+"""
+import logging
+from typing import Literal
 from uuid import UUID
-from typing import Annotated, Literal, Optional, Union
-from pydantic import BaseModel, Field
 
-from src.shared.data_types import ConfirmRealTradeRequest, OpportunityStatus, Opportunity, TradeOrderDetails
-from src.ultibot_backend.services.trading_engine_service import TradingEngineService
-from src.ultibot_backend.services.config_service import ConfigurationService
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend.services.order_execution_service import OrderExecutionService
-from src.ultibot_backend.services.simulated_order_execution_service import SimulatedOrderExecutionService
-from src.ultibot_backend import dependencies as deps
-from src.ultibot_backend.app_config import settings
+from fastapi import APIRouter, Depends, HTTPException, status, Body
+from pydantic import BaseModel
 
-router = APIRouter()
+from src.shared.data_types import ConfirmRealTradeRequest, Trade
+from src.ultibot_backend.services.trading_engine import TradingEngineService
+from src.ultibot_backend.core.ports import IOrderExecutionPort
+from src.ultibot_backend.dependencies import TradingEngineDep
+from src.ultibot_backend.core.domain_models.commands import PlaceOrderCommand
 
-# Definir un tipo para la dependencia unificada
-ActiveOrderExecutionService = Annotated[
-    Union[OrderExecutionService, SimulatedOrderExecutionService],
-    Depends(deps.get_active_order_execution_service)
-]
-
-
-@router.post("/real/confirm-opportunity/{opportunity_id}", status_code=status.HTTP_200_OK)
-async def confirm_real_opportunity(
-    opportunity_id: UUID,
-    request: ConfirmRealTradeRequest,
-    trading_engine_service: Annotated[TradingEngineService, Depends(deps.get_trading_engine_service)],
-    config_service: Annotated[ConfigurationService, Depends(deps.get_config_service)],
-    persistence_service: Annotated[SupabasePersistenceService, Depends(deps.get_persistence_service)]
-):
-    """
-    Endpoint para que el usuario fijo confirme explícitamente una oportunidad de trading real.
-    """
-    user_id = settings.FIXED_USER_ID
-
-    if opportunity_id != request.opportunity_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Opportunity ID in path and request body do not match."
-        )
-    
-    if user_id != request.user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User ID in settings does not match user ID in request body."
-        )
-
-    opportunity = await persistence_service.get_opportunity_by_id(opportunity_id)
-    if not opportunity:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Opportunity with ID {opportunity_id} not found."
-        )
-
-    if opportunity.user_id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User not authorized to confirm this opportunity."
-        )
-
-    if opportunity.status != OpportunityStatus.PENDING_USER_CONFIRMATION_REAL:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Opportunity {opportunity_id} is not in 'pending_user_confirmation_real' status. Current status: {opportunity.status.value}"
-        )
-    
-    user_config = await config_service.get_user_configuration(str(user_id))
-    if not user_config or not user_config.realTradingSettings:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User configuration or real trading settings not found."
-        )
-
-    real_trading_settings = user_config.realTradingSettings
-    if not real_trading_settings.real_trading_mode_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Real trading mode is not active for this user."
-        )
-    
-    if real_trading_settings.real_trades_executed_count >= real_trading_settings.max_real_trades:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Maximum number of real trades reached for this user."
-        )
-
-    try:
-        trade_details = await trading_engine_service.execute_trade_from_confirmed_opportunity(opportunity)
-        if not trade_details:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create trade from confirmed opportunity."
-            )
-        return {"message": "Real trade execution initiated successfully.", "trade_details": trade_details.model_dump()}
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An unexpected error occurred: {str(e)}"
-        )
+router = APIRouter(prefix="/trading", tags=["Trading"])
+logger = logging.getLogger(__name__)
 
 TradingMode = Literal["paper", "real"]
 
 class MarketOrderRequest(BaseModel):
-    """Request model for market order execution."""
-    symbol: str = Field(..., description="Trading symbol (e.g., 'BTCUSDT')")
-    side: str = Field(..., description="Order side ('BUY' or 'SELL')")
-    quantity: float = Field(..., gt=0, description="Order quantity (must be positive)")
-    trading_mode: TradingMode = Field(..., description="Trading mode ('paper' or 'real')")
-    api_key: Optional[str] = Field(None, description="API key for real trading (required for real mode)")
-    api_secret: Optional[str] = Field(None, description="API secret for real trading (required for real mode)")
+    """Modelo de solicitud para una orden de mercado."""
+    symbol: str
+    side: Literal["BUY", "SELL"]
+    quantity: float
+    trading_mode: TradingMode
 
-@router.post("/market-order", response_model=TradeOrderDetails, status_code=status.HTTP_200_OK)
-async def execute_market_order(
-    request: MarketOrderRequest,
-    execution_service: ActiveOrderExecutionService
+@router.post("/confirm-opportunity", response_model=Trade)
+async def confirm_opportunity(
+    request: ConfirmRealTradeRequest,
+    trading_engine: TradingEngineService = TradingEngineDep,
 ):
     """
-    Execute a market order in the specified trading mode for the fixed user.
+    Confirma una oportunidad de trading para su ejecución.
+    El TradingEngine se encargará de la lógica de validación y ejecución.
     """
-    user_id = settings.FIXED_USER_ID
     try:
-        # La validación del modo de trading ahora es implícita por la dependencia
-        order_details = await execution_service.execute_market_order(
-            user_id=user_id,
+        logger.info(f"Confirmando oportunidad {request.opportunity_id} para el usuario {request.user_id}")
+        trade = await trading_engine.execute_trade_from_opportunity(
+            opportunity_id=request.opportunity_id,
+            user_id=request.user_id
+        )
+        return trade
+    except ValueError as e:
+        logger.warning(f"Error de validación al confirmar oportunidad: {e}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except PermissionError as e:
+        logger.warning(f"Error de permisos al confirmar oportunidad: {e}")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error inesperado al confirmar oportunidad: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error inesperado al ejecutar la operación.")
+
+@router.post("/market-order", response_model=Trade)
+async def execute_market_order(
+    request: MarketOrderRequest,
+    # Nota: La inyección directa de un puerto puede ser un anti-patrón.
+    # Idealmente, esto debería pasar a través de un servicio de aplicación.
+    # Se mantiene por ahora para no alterar la lógica existente, pero se marca para revisión.
+    trading_engine: TradingEngineService = TradingEngineDep,
+):
+    """
+    Ejecuta una orden de mercado directamente a través del TradingEngineService.
+    """
+    try:
+        logger.info(f"Ejecutando orden de mercado: {request.model_dump_json()}")
+        command = PlaceOrderCommand(
             symbol=request.symbol,
             side=request.side,
             quantity=request.quantity,
+            order_type="MARKET",
+            is_real_trade=(request.trading_mode == "real")
         )
-        
-        return order_details
-        
-    except HTTPException:
-        raise
+        # El TradingEngineService ahora manejará la ejecución de la orden
+        trade_result = await trading_engine.execute_manual_order(command)
+        return trade_result
     except Exception as e:
+        logger.error(f"Error al ejecutar orden de mercado: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to execute market order: {str(e)}"
+            detail=f"No se pudo ejecutar la orden de mercado: {str(e)}"
         )
-
-@router.get("/paper-balances", status_code=status.HTTP_200_OK)
-async def get_paper_trading_balances(
-    execution_service: ActiveOrderExecutionService
-):
-    """
-    Get current virtual balances for paper trading for the fixed user.
-    """
-    user_id = settings.FIXED_USER_ID
-    try:
-        if not isinstance(execution_service, SimulatedOrderExecutionService):
-            raise HTTPException(status_code=400, detail="This endpoint is only for paper trading mode.")
-
-        balances = await execution_service.get_virtual_balances()
-        return {
-            "user_id": user_id,
-            "trading_mode": "paper",
-            "balances": balances
-        }
-        
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve paper trading balances: {str(e)}"
-        )
-
-@router.post("/paper-balances/reset", status_code=status.HTTP_200_OK)
-async def reset_paper_trading_balances(
-    execution_service: ActiveOrderExecutionService,
-    initial_capital: float = Query(..., gt=0, description="Initial capital amount (must be positive)")
-):
-    """
-    Reset paper trading balances to initial capital for the fixed user.
-    """
-    user_id = settings.FIXED_USER_ID
-    try:
-        if not isinstance(execution_service, SimulatedOrderExecutionService):
-            raise HTTPException(status_code=400, detail="This endpoint is only for paper trading mode.")
-            
-        execution_service.reset_virtual_balances(initial_capital=initial_capital)
-        return {
-            "user_id": user_id,
-            "trading_mode": "paper",
-            "message": f"Paper trading balances reset to {initial_capital} USDT",
-            "new_balance": initial_capital
-        }
-        
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to reset paper trading balances: {str(e)}"
-        )
-
-@router.get("/supported-modes", status_code=status.HTTP_200_OK)
-async def get_supported_trading_modes():
-    """
-    Get list of supported trading modes.
-    """
-    return {
-        "supported_trading_modes": ["paper", "real"],
-        "description": {
-            "paper": "Simulated trading with virtual funds",
-            "real": "Live trading with real funds via Binance API"
-        }
-    }

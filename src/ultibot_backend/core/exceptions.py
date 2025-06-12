@@ -14,6 +14,11 @@ class CredentialError(UltiBotError):
     def __init__(self, message: str, code: Optional[str] = "CREDENTIAL_ERROR", details: Optional[Dict[str, Any]] = None):
         super().__init__(message, status_code=401, code=code, details=details)
 
+class PersistenceError(UltiBotError):
+    """Excepción para errores relacionados con la capa de persistencia."""
+    def __init__(self, message: str, code: Optional[str] = "PERSISTENCE_ERROR", details: Optional[Dict[str, Any]] = None, original_exception: Optional[Exception] = None):
+        super().__init__(message, status_code=500, code=code, details=details)
+        self.original_exception = original_exception
 
 class NotificationError(UltiBotError):
     """Excepción base para errores en el servicio de notificaciones."""
@@ -46,10 +51,19 @@ class ConfigurationError(UltiBotError):
     def __init__(self, message: str, code: Optional[str] = "CONFIG_ERROR", details: Optional[Dict[str, Any]] = None):
         super().__init__(message, status_code=400, code=code, details=details)
 
+class InvalidParameterError(UltiBotError):
+    """Excepción para parámetros inválidos o faltantes en una solicitud."""
+    def __init__(self, message: str, code: Optional[str] = "INVALID_PARAMETER", details: Optional[Dict[str, Any]] = None):
+        super().__init__(message, status_code=400, code=code, details=details)
 
 class OrderExecutionError(UltiBotError):
     """Excepción para errores durante la ejecución de órdenes de trading."""
     def __init__(self, message: str, code: Optional[str] = "ORDER_EXECUTION_ERROR", details: Optional[Dict[str, Any]] = None):
+        super().__init__(message, status_code=400, code=code, details=details)
+
+class TradeExecutionError(UltiBotError):
+    """Excepción para errores durante la ejecución de un trade completo."""
+    def __init__(self, message: str, code: Optional[str] = "TRADE_EXECUTION_ERROR", details: Optional[Dict[str, Any]] = None):
         super().__init__(message, status_code=400, code=code, details=details)
 
 
@@ -67,6 +81,13 @@ class AIAnalysisError(UltiBotError):
         self.llm_provider = llm_provider
         self.original_exception = original_exception
 
+class AIServiceError(UltiBotError):
+    """Excepción para errores generales en los servicios de IA."""
+    def __init__(self, message: str, service_name: str, details: Optional[Dict[str, Any]] = None, original_exception: Optional[Exception] = None):
+        super().__init__(message, status_code=500, code=f"{service_name.upper()}_SERVICE_ERROR", details=details)
+        self.service_name = service_name
+        self.original_exception = original_exception
+
 class MarketDataError(UltiBotError):
     """Excepción para errores al obtener datos de mercado."""
     def __init__(self, message: str, code: Optional[str] = "MARKET_DATA_ERROR", details: Optional[Dict[str, Any]] = None):
@@ -78,17 +99,23 @@ class PortfolioError(UltiBotError):
     def __init__(self, message: str, code: Optional[str] = "PORTFOLIO_ERROR", details: Optional[Dict[str, Any]] = None):
         super().__init__(message, status_code=400, code=code, details=details)
 
-
-class InsufficientUSDTBalanceError(PortfolioError):
-    """Excepción para cuando el saldo de USDT es insuficiente para una operación."""
-    def __init__(self, message: str = "Saldo de USDT insuficiente.", available_balance: Optional[float] = None, required_amount: Optional[float] = None, details: Optional[Dict[str, Any]] = None, original_exception: Optional[Exception] = None):
-        super().__init__(message, code="INSUFFICIENT_USDT_BALANCE", details={
-            "available_balance": available_balance,
-            "required_amount": required_amount,
+class InsufficientFundsError(PortfolioError):
+    """Excepción para cuando el saldo de un activo es insuficiente para una operación."""
+    def __init__(self, message: str = "Fondos insuficientes.", asset: Optional[str] = None, available: Optional[float] = None, required: Optional[float] = None, details: Optional[Dict[str, Any]] = None):
+        super().__init__(message, code="INSUFFICIENT_FUNDS", details={
+            "asset": asset,
+            "available_balance": available,
+            "required_amount": required,
             **(details if details else {})
         })
-        self.available_balance = available_balance
-        self.required_amount = required_amount
+        self.asset = asset
+        self.available = available
+        self.required = required
+
+class InsufficientUSDTBalanceError(InsufficientFundsError):
+    """Excepción para cuando el saldo de USDT es insuficiente para una operación."""
+    def __init__(self, message: str = "Saldo de USDT insuficiente.", available_balance: Optional[float] = None, required_amount: Optional[float] = None, details: Optional[Dict[str, Any]] = None, original_exception: Optional[Exception] = None):
+        super().__init__(message, asset="USDT", available=available_balance, required=required_amount, details=details)
         self.original_exception = original_exception
 
 class RealTradeLimitReachedError(ConfigurationError):
@@ -112,3 +139,71 @@ class ReportError(UltiBotError):
     """Excepción para errores relacionados con la generación o procesamiento de reportes."""
     def __init__(self, message: str, code: Optional[str] = "REPORT_ERROR", details: Optional[Dict[str, Any]] = None):
         super().__init__(message, status_code=500, code=code, details=details)
+
+
+class ServiceUnavailableError(UltiBotError):
+    """Excepción para cuando un servicio no está disponible."""
+    def __init__(self, message: str, service_name: str, details: Optional[Dict[str, Any]] = None):
+        super().__init__(message, status_code=503, code="SERVICE_UNAVAILABLE", details=details)
+        self.service_name = service_name
+
+class TimeoutError(UltiBotError):
+    """Excepción para operaciones que exceden el tiempo límite."""
+    def __init__(self, message: str, timeout: Optional[float] = None, details: Optional[Dict[str, Any]] = None):
+        super().__init__(message, status_code=408, code="OPERATION_TIMEOUT", details=details)
+        self.timeout = timeout
+
+class ToolNotFoundError(UltiBotError):
+    """Excepción para cuando una herramienta solicitada no se encuentra en el MCPToolHub."""
+    def __init__(self, tool_name: str, message: Optional[str] = None):
+        if message is None:
+            message = f"La herramienta '{tool_name}' no fue encontrada."
+        super().__init__(message, status_code=404, code="TOOL_NOT_FOUND", details={"tool_name": tool_name})
+        self.tool_name = tool_name
+
+class ToolExecutionError(UltiBotError):
+    """Excepción para errores durante la ejecución de una herramienta en el MCPToolHub."""
+    def __init__(self, tool_name: str, message: str, details: Optional[Dict[str, Any]] = None, original_exception: Optional[Exception] = None):
+        super().__init__(
+            message,
+            status_code=500,
+            code="TOOL_EXECUTION_ERROR",
+            details={
+                "tool_name": tool_name,
+                **(details if details else {})
+            }
+        )
+        self.tool_name = tool_name
+        self.original_exception = original_exception
+
+class DataProviderError(ExternalAPIError):
+    """Excepción para errores de proveedores de datos como Mobula."""
+    def __init__(self, message: str, provider_name: str, status_code: Optional[int] = None, response_data: Optional[Dict[str, Any]] = None, original_exception: Optional[Exception] = None):
+        super().__init__(message, service_name=provider_name, status_code=status_code, response_data=response_data, original_exception=original_exception)
+
+class PromptNotFoundError(UltiBotError):
+    """Excepción para cuando un prompt no se encuentra."""
+    def __init__(self, message: str, code: Optional[str] = "PROMPT_NOT_FOUND", details: Optional[Dict[str, Any]] = None):
+        super().__init__(message, status_code=404, code=code, details=details)
+
+class RateLimitError(ExternalAPIError):
+    """Excepción para errores de rate limiting."""
+    def __init__(self, message: str, service_name: str, details: Optional[Dict[str, Any]] = None):
+        super().__init__(message, service_name=service_name, status_code=429, details=details)
+
+class TemplateRenderError(UltiBotError):
+    """Excepción para errores al renderizar plantillas de prompts."""
+    def __init__(self, message: str, template_name: str, details: Optional[Dict[str, Any]] = None, original_exception: Optional[Exception] = None):
+        super().__init__(message, status_code=500, code="TEMPLATE_RENDER_ERROR", details=details)
+        self.template_name = template_name
+        self.original_exception = original_exception
+
+class HandlerNotFoundError(UltiBotError):
+    """Excepción para cuando no se encuentra un manejador para un comando o consulta."""
+    def __init__(self, message: str, code: Optional[str] = "HANDLER_NOT_FOUND", details: Optional[Dict[str, Any]] = None):
+        super().__init__(message, status_code=404, code=code, details=details)
+
+class InvalidHandlerError(UltiBotError):
+    """Excepción para cuando se intenta registrar un manejador inválido."""
+    def __init__(self, message: str, code: Optional[str] = "INVALID_HANDLER", details: Optional[Dict[str, Any]] = None):
+        super().__init__(message, status_code=400, code=code, details=details)

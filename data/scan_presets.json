@@ -1,0 +1,153 @@
+{
+  "explosive_volatility": {
+    "name": "Explosive Volatility",
+    "description": "Busca activos con ATR(14) en el 5% superior y volumen en las últimas 24h > $10M",
+    "category": "volatility",
+    "criteria": {
+      "atr_percentile": {"min": 95},
+      "volume_24h": {"min": 10000000},
+      "price_change_24h": {"min": 5}
+    },
+    "recommended_strategies": ["SuperTrend_Volatility_Filter", "News_Sentiment_Spike_Trader"],
+    "risk_level": "high",
+    "timeframe": "1h",
+    "max_results": 20
+  },
+  "sleeping_giants": {
+    "name": "Sleeping Giants",
+    "description": "Activos con capitalización > $1B pero con volatilidad en el 10% inferior (posible acumulación)",
+    "category": "accumulation",
+    "criteria": {
+      "market_cap": {"min": 1000000000},
+      "volatility_percentile": {"max": 10},
+      "volume_trend": "increasing"
+    },
+    "recommended_strategies": ["OnChain_Metrics_Divergence", "Statistical_Arbitrage_Pairs"],
+    "risk_level": "medium",
+    "timeframe": "4h",
+    "max_results": 15
+  },
+  "high_momentum": {
+    "name": "High Momentum",
+    "description": "Activos cuyo precio está por encima de las medias móviles de 20, 50 y 200 períodos",
+    "category": "momentum",
+    "criteria": {
+      "price_above_ma20": true,
+      "price_above_ma50": true,
+      "price_above_ma200": true,
+      "rsi": {"min": 60, "max": 80}
+    },
+    "recommended_strategies": ["MACD_RSI_Trend_Rider", "SuperTrend_Volatility_Filter"],
+    "risk_level": "medium",
+    "timeframe": "1h",
+    "max_results": 25
+  },
+  "strong_mean_reversion": {
+    "name": "Strong Mean Reversion Candidates",
+    "description": "Activos fuera de las 2 desviaciones estándar de las Bandas de Bollinger",
+    "category": "mean_reversion",
+    "criteria": {
+      "bollinger_position": {"outside_bands": true},
+      "rsi": {"min": 20, "max": 30},
+      "volume_spike": {"min": 1.5}
+    },
+    "recommended_strategies": ["Bollinger_Squeeze_Breakout", "Stochastic_RSI_Overbought_Oversold"],
+    "risk_level": "medium",
+    "timeframe": "30m",
+    "max_results": 20
+  },
+  "new_listings_volume": {
+    "name": "New Listings High Volume",
+    "description": "Activos listados en Binance en los últimos 7 días con volumen creciente",
+    "category": "new_listings",
+    "criteria": {
+      "listing_age_days": {"max": 7},
+      "volume_growth_24h": {"min": 50},
+      "price_change_24h": {"min": 10}
+    },
+    "recommended_strategies": ["News_Sentiment_Spike_Trader", "VWAP_Cross_Strategy"],
+    "risk_level": "very_high",
+    "timeframe": "15m",
+    "max_results": 10
+  },
+  "social_sentiment_rockets": {
+    "name": "Social Sentiment Rockets",
+    "description": "Activos con un pico de >50% en menciones sociales positivas",
+    "category": "sentiment",
+    "criteria": {
+      "social_mentions_spike": {"min": 50},
+      "sentiment_score": {"min": 0.7},
+      "volume_confirmation": true
+    },
+    "recommended_strategies": ["News_Sentiment_Spike_Trader", "Order_Book_Imbalance_Scalper"],
+    "risk_level": "high",
+    "timeframe": "5m",
+    "max_results": 15,
+    "requires_mcp_tools": ["get_sentiment"]
+  },
+  "onchain_whales": {
+    "name": "On-Chain Whales",
+    "description": "Activos con un aumento significativo en la actividad de grandes billeteras",
+    "category": "onchain",
+    "criteria": {
+      "whale_transaction_spike": {"min": 30},
+      "large_holder_accumulation": true,
+      "exchange_outflow": {"min": 1000000}
+    },
+    "recommended_strategies": ["OnChain_Metrics_Divergence", "Statistical_Arbitrage_Pairs"],
+    "risk_level": "medium",
+    "timeframe": "1h",
+    "max_results": 12,
+    "requires_mcp_tools": ["get_onchain_data"],
+    "supported_assets": ["BTC", "ETH", "BNB", "ADA", "SOL", "MATIC", "AVAX"]
+  },
+  "defi_blue_chips": {
+    "name": "DeFi Blue Chips",
+    "description": "Top 10 activos de DeFi por TVL con correlación negativa a BTC",
+    "category": "defi",
+    "criteria": {
+      "defi_category": true,
+      "tvl_rank": {"max": 10},
+      "btc_correlation": {"max": -0.2},
+      "volume_24h": {"min": 5000000}
+    },
+    "recommended_strategies": ["Statistical_Arbitrage_Pairs", "VWAP_Cross_Strategy"],
+    "risk_level": "medium",
+    "timeframe": "2h",
+    "max_results": 10,
+    "asset_filter": "defi_tokens"
+  },
+  "low_cap_gems": {
+    "name": "Low-Cap Gems",
+    "description": "Activos con market cap < $50M pero con commits de código diarios en su Github",
+    "category": "small_cap",
+    "criteria": {
+      "market_cap": {"max": 50000000},
+      "github_activity": {"commits_daily": {"min": 1}},
+      "developer_activity_score": {"min": 7},
+      "community_growth": {"min": 10}
+    },
+    "recommended_strategies": ["News_Sentiment_Spike_Trader", "OnChain_Metrics_Divergence"],
+    "risk_level": "very_high",
+    "timeframe": "1h",
+    "max_results": 8,
+    "requires_mcp_tools": ["get_github_activity", "get_community_metrics"]
+  },
+  "forex_majors_breakout": {
+    "name": "Forex Majors Breakout",
+    "description": "Pares de divisas mayores (EUR/USD, etc.) que han roto su rango de las últimas 24h",
+    "category": "forex",
+    "criteria": {
+      "asset_type": "forex_major",
+      "range_breakout_24h": true,
+      "volume_spike": {"min": 1.3},
+      "volatility_expansion": true
+    },
+    "recommended_strategies": ["SuperTrend_Volatility_Filter", "VWAP_Cross_Strategy"],
+    "risk_level": "medium",
+    "timeframe": "1h",
+    "max_results": 15,
+    "asset_filter": "major_forex_pairs",
+    "supported_assets": ["EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD", "USDCAD", "NZDUSD"]
+  }
+}

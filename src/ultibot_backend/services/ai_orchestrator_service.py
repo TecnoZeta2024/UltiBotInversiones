@@ -1,257 +1,158 @@
+"""
+Service responsible for orchestrating AI-based analysis and trading decisions.
+"""
 import logging
-import uuid
-from typing import Any, Dict, Optional
+import asyncio
+import time
+from injector import inject
+from typing import Dict, Any, List
 
-from fastapi import HTTPException
-from langchain.output_parsers import PydanticOutputParser, OutputFixingParser
-from langchain_core.exceptions import OutputParserException
-from langchain_core.prompts import PromptTemplate
-from langchain_google_genai import ChatGoogleGenerativeAI
-from google.api_core.exceptions import GoogleAPIError
-
-from src.ultibot_backend.core.domain_models.ai import AIResponse, TradingAIResponse
-from src.ultibot_backend.app_config import AppSettings
+from src.ultibot_backend.core.ports import (
+    IAIModelAdapter,
+    IMCPToolHub,
+    IPromptManager,
+)
+from src.ultibot_backend.core.domain_models.ai_models import (
+    TradingOpportunity,
+    AIAnalysisResult,
+    ToolExecutionRequest,
+    ToolExecutionResult,
+    AIProcessingStage,
+    OpportunityData,
+)
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_PROMPT_TEMPLATE = """
-Eres un analista de trading de criptomonedas experto con amplia experiencia en mercados financieros.
-Tu misión es evaluar oportunidades de trading y proporcionar recomendaciones fundamentadas para maximizar
-las ganancias mientras gestionas el riesgo de manera responsable.
-
-**CONTEXTO DE LA ESTRATEGIA:**
-{strategy_context}
-
-**OPORTUNIDAD DE TRADING DETECTADA:**
-{opportunity_context}
-
-**HISTORIAL DE PERFORMANCE (últimas operaciones):**
-{historical_context}
-
-**DATOS DE HERRAMIENTAS DE ANÁLISIS:**
-{tool_outputs}
-
-**INSTRUCCIONES CRÍTICAS:**
-1. Evalúa la oportunidad considerando:
-   - Tendencias técnicas y fundamentales
-   - Contexto histórico de la estrategia
-   - Condiciones actuales del mercado
-   - Gestión de riesgo apropiada
-
-2. Proporciona una recomendación clara y justificada:
-   - COMPRAR: Alta probabilidad de ganancia
-   - VENDER: Alta probabilidad de pérdida o toma de ganancias
-   - ESPERAR: Condiciones no óptimas o necesidad de más información
-
-3. Cuantifica tu nivel de confianza (0.0 = sin confianza, 1.0 = máxima confianza)
-
-4. Para operaciones reales, requiere confianza ≥ 0.95
-   Para paper trading, confianza ≥ 0.75 es aceptable
-
-5. Si detectas riesgos significativos, inclúyelos en las advertencias
-
-6. Sugiere precios específicos cuando sea apropiado (entrada, stop loss, take profit)
-
-**IMPORTANTE:** Responde ÚNICAMENTE en el formato JSON estructurado solicitado.
-
-**FORMATO DE SALIDA REQUERIDO:**
-{format_instructions}
-"""
-
 class AIOrchestratorService:
     """
-    Servicio para orquestar las interacciones con el modelo de IA (Gemini),
-    incluyendo la construcción de prompts, el análisis y el parseo de respuestas.
+    Orchestrates the flow of data to AI models, executes tools,
+    interprets responses, and synthesizes trading recommendations.
     """
 
-    def __init__(self, app_settings: AppSettings):
-        self.app_settings = app_settings
-        # Acceder a la clave de forma segura
-        self.gemini_api_key = getattr(app_settings, 'GEMINI_API_KEY', None)
-        
-        if not self.gemini_api_key:
-            logger.warning("GEMINI_API_KEY no está configurada. El servicio de IA no funcionará.")
-            self.llm = None
-            self.parser = None
-            self.output_fixing_parser = None
-            self.prompt_template = None
-        else:
-            self.llm = ChatGoogleGenerativeAI(
-                model="gemini-1.5-pro-latest",
-                google_api_key=self.gemini_api_key,
-                temperature=0.7,
-                convert_system_message_to_human=True
-            )
-            self.parser = PydanticOutputParser(pydantic_object=AIResponse)
-            self.trading_parser = PydanticOutputParser(pydantic_object=TradingAIResponse)
-            self.output_fixing_parser = OutputFixingParser.from_llm(
-                parser=self.parser, llm=self.llm
-            )
-            self.trading_output_fixing_parser = OutputFixingParser.from_llm(
-                parser=self.trading_parser, llm=self.llm
-            )
-            prompt_template_str = getattr(app_settings, 'prompt_template', DEFAULT_PROMPT_TEMPLATE)
-            self.prompt_template = PromptTemplate(
-                template=prompt_template_str,
-                input_variables=[
-                    "strategy_context",
-                    "opportunity_context",
-                    "historical_context",
-                    "tool_outputs",
-                ],
-                partial_variables={"format_instructions": self.parser.get_format_instructions()},
-            )
-            self.trading_prompt_template = PromptTemplate(
-                template=prompt_template_str,
-                input_variables=[
-                    "strategy_context",
-                    "opportunity_context",
-                    "historical_context",
-                    "tool_outputs",
-                ],
-                partial_variables={"format_instructions": self.trading_parser.get_format_instructions()},
-            )
-            logger.info(f"AIOrchestrator initialized with {self.llm.model} and PydanticOutputParser.")
-
-    async def analyze_opportunity_with_strategy_context_async(
+    @inject
+    def __init__(
         self,
-        strategy_context: str,
-        opportunity_context: str,
-        historical_context: str,
-        tool_outputs: str,
-        analysis_id: Optional[uuid.UUID] = None,
-    ) -> AIResponse:
-        """
-        Analiza una oportunidad de trading de forma asíncrona.
-        """
-        if not self.llm or not self.prompt_template or not self.parser or not self.output_fixing_parser:
-            raise HTTPException(status_code=503, detail="AI service is not configured (GEMINI_API_KEY is missing).")
+        gemini_adapter: IAIModelAdapter,
+        tool_hub: IMCPToolHub,
+        prompt_manager: IPromptManager,
+    ):
+        self.gemini_adapter = gemini_adapter
+        self.tool_hub = tool_hub
+        self.prompt_manager = prompt_manager
+        logger.info("AIOrchestratorService initialized.")
 
-        analysis_id = analysis_id or uuid.uuid4()
-        logger.info(f"Starting AI analysis for ID: {analysis_id}...")
+    async def analyze_opportunity(self, opportunity: TradingOpportunity) -> AIAnalysisResult:
+        """
+        Analyzes a trading opportunity through a multi-stage process:
+        1.  Planning: Generates a plan of which tools to use.
+        2.  Execution: Runs the planned tools to gather data.
+        3.  Synthesis: Analyzes the gathered data to make a recommendation.
+        """
+        start_time = time.perf_counter()
+        logger.info(f"Starting AI analysis for opportunity: {opportunity.opportunity_id}")
 
         try:
-            chain = self.prompt_template | self.llm | self.parser
-            
-            logger.debug(f"Invoking LLM chain for analysis ID: {analysis_id}")
-            response_content = await chain.ainvoke(
+            # 1. Planning Stage
+            planning_prompt = await self._get_rendered_prompt(
+                "opportunity_planning",
                 {
-                    "strategy_context": strategy_context,
-                    "opportunity_context": opportunity_context,
-                    "historical_context": historical_context,
-                    "tool_outputs": tool_outputs,
-                }
+                    "context": opportunity.dict(),
+                    "tools": await self.tool_hub.list_available_tools(),
+                },
             )
-            logger.info(f"Successfully parsed AI response for {analysis_id}: {response_content.model_dump_json(indent=2)}")
-            return response_content
+            planning_response = await self.gemini_adapter.generate(planning_prompt)
+            
+            tool_requests = self._parse_tool_requests(planning_response)
 
-        except OutputParserException as e:
-            logger.warning(
-                f"Failed to parse LLM output for {analysis_id}. Attempting to fix with OutputFixingParser. Original error: {e}"
+            # 2. Execution Stage
+            tool_results = await self._execute_tools(tool_requests)
+
+            # 3. Synthesis Stage
+            synthesis_prompt = await self._get_rendered_prompt(
+                "opportunity_synthesis",
+                {
+                    "opportunity": opportunity.dict(),
+                    "tool_results": [result.dict() for result in tool_results],
+                },
             )
-            try:
-                # Re-invocar la cadena sin el parser original para obtener el texto crudo
-                raw_chain = self.prompt_template | self.llm
-                raw_response = await raw_chain.ainvoke({
-                    "strategy_context": strategy_context,
-                    "opportunity_context": opportunity_context,
-                    "historical_context": historical_context,
-                    "tool_outputs": tool_outputs,
-                })
-                fixed_response = self.output_fixing_parser.parse(raw_response.content)
-                logger.info(f"Successfully fixed and parsed AI response for {analysis_id} using OutputFixingParser.")
-                return fixed_response
-            except Exception as fix_e:
-                logger.error(f"Failed to fix and parse LLM output for {analysis_id}: {fix_e}", exc_info=True)
-                raise HTTPException(status_code=500, detail=f"Failed to parse and fix AI response: {fix_e}")
-        
-        except GoogleAPIError as gemini_err:
-            logger.error(f"Gemini API specific error for {analysis_id}: {gemini_err}", exc_info=True)
-            raise HTTPException(status_code=502, detail=f"AI provider error: {gemini_err}")
+            synthesis_response = await self.gemini_adapter.generate(synthesis_prompt)
+            
+            final_result = self._parse_synthesis_response(synthesis_response, opportunity, tool_results)
+
+            processing_time_ms = (time.perf_counter() - start_time) * 1000
+            final_result.total_execution_time_ms = processing_time_ms
+            final_result.ai_metadata["processing_time_ms"] = processing_time_ms
+            
+            logger.info(f"AI analysis completed for {opportunity.opportunity_id} in {processing_time_ms:.2f}ms. Recommendation: {final_result.recommendation}")
+            return final_result
 
         except Exception as e:
-            logger.error(f"An unexpected error occurred during AI analysis for {analysis_id}: {e}", exc_info=True)
-            raise HTTPException(status_code=500, detail=f"An unexpected error occurred during AI analysis: {e}")
+            logger.error(f"Error during AI analysis for opportunity {opportunity.opportunity_id}: {e}", exc_info=True)
+            return AIAnalysisResult(
+                request_id=opportunity.opportunity_id,
+                stage=AIProcessingStage.FAILED,
+                recommendation="ERROR",
+                confidence=0.0,
+                reasoning=f"An internal error occurred: {e}",
+                total_execution_time_ms=(time.perf_counter() - start_time) * 1000,
+            )
 
-    async def analyze_trading_opportunity_async(
-        self,
-        strategy_context: str,
-        opportunity_context: str,
-        historical_context: str,
-        tool_outputs: str,
-        analysis_id: Optional[uuid.UUID] = None,
-    ) -> TradingAIResponse:
-        """
-        Analiza una oportunidad de trading específicamente para obtener recomendaciones estructuradas.
+    async def _get_rendered_prompt(self, template_name: str, variables: Dict[str, Any]) -> str:
+        """Helper to get and render a prompt."""
+        template = await self.prompt_manager.get_prompt(template_name)
+        return await self.prompt_manager.render_prompt(template, variables)
+
+    def _parse_tool_requests(self, planning_response: Dict[str, Any]) -> List[ToolExecutionRequest]:
+        """Parses the AI's planning response to extract tool execution requests."""
+        requests = []
+        # This logic assumes a specific structure from the planning prompt response
+        actions = planning_response.get("plan", {}).get("tool_actions", [])
+        for action in actions:
+            if "name" in action and "parameters" in action:
+                requests.append(ToolExecutionRequest(tool_name=action["name"], parameters=action["parameters"]))
+        return requests
+
+    async def _execute_tools(self, tool_requests: List[ToolExecutionRequest]) -> List[ToolExecutionResult]:
+        """Executes a list of tool requests concurrently."""
+        if not tool_requests:
+            return []
         
-        Args:
-            strategy_context: Contexto de la estrategia de trading
-            opportunity_context: Información de la oportunidad detectada
-            historical_context: Historial de operaciones previas
-            tool_outputs: Resultados de herramientas de análisis
-            analysis_id: ID único para el análisis (opcional)
-            
-        Returns:
-            TradingAIResponse: Respuesta estructurada con recomendación de trading
-            
-        Raises:
-            HTTPException: Si el servicio no está configurado o hay errores
-        """
-        if not self.llm or not self.trading_prompt_template or not self.trading_parser:
-            raise HTTPException(
-                status_code=503, 
-                detail="AI service is not configured (GEMINI_API_KEY is missing)."
-            )
-
-        analysis_id = analysis_id or uuid.uuid4()
-        logger.info(f"Starting trading analysis for ID: {analysis_id}...")
-
-        try:
-            chain = self.trading_prompt_template | self.llm | self.trading_parser
-            
-            logger.debug(f"Invoking trading LLM chain for analysis ID: {analysis_id}")
-            response_content = await chain.ainvoke(
-                {
-                    "strategy_context": strategy_context,
-                    "opportunity_context": opportunity_context,
-                    "historical_context": historical_context,
-                    "tool_outputs": tool_outputs,
-                }
-            )
-            
-            # Añadir el analysis_id a la respuesta
-            response_content.analysis_id = str(analysis_id)
-            
-            logger.info(f"Successfully parsed trading AI response for {analysis_id}")
-            logger.info(f"Recommendation: {response_content.recommendation.value} (Confidence: {response_content.confidence:.2%})")
-            
-            return response_content
-
-        except OutputParserException as e:
-            logger.warning(
-                f"Failed to parse trading LLM output for {analysis_id}. Attempting to fix with OutputFixingParser. Original error: {e}"
-            )
-            try:
-                # Re-invocar la cadena sin el parser original para obtener el texto crudo
-                raw_chain = self.trading_prompt_template | self.llm
-                raw_response = await raw_chain.ainvoke({
-                    "strategy_context": strategy_context,
-                    "opportunity_context": opportunity_context,
-                    "historical_context": historical_context,
-                    "tool_outputs": tool_outputs,
-                })
-                fixed_response = self.trading_output_fixing_parser.parse(raw_response.content)
-                fixed_response.analysis_id = str(analysis_id)
-                logger.info(f"Successfully fixed and parsed trading AI response for {analysis_id} using OutputFixingParser.")
-                return fixed_response
-            except Exception as fix_e:
-                logger.error(f"Failed to fix and parse trading LLM output for {analysis_id}: {fix_e}", exc_info=True)
-                raise HTTPException(status_code=500, detail=f"Failed to parse and fix trading AI response: {fix_e}")
+        tasks = [
+            self.tool_hub.execute_tool(req.tool_name, req.parameters)
+            for req in tool_requests
+        ]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
         
-        except GoogleAPIError as gemini_err:
-            logger.error(f"Gemini API specific error for trading analysis {analysis_id}: {gemini_err}", exc_info=True)
-            raise HTTPException(status_code=502, detail=f"AI provider error: {gemini_err}")
+        # Filter out potential exceptions, logging them
+        final_results = []
+        for res in results:
+            if isinstance(res, ToolExecutionResult):
+                final_results.append(res)
+            elif isinstance(res, Exception):
+                logger.error(f"Tool execution failed: {res}", exc_info=True)
+        return final_results
 
-        except Exception as e:
-            logger.error(f"An unexpected error occurred during trading analysis for {analysis_id}: {e}", exc_info=True)
-            raise HTTPException(status_code=500, detail=f"An unexpected error occurred during trading analysis: {e}")
+    def _parse_synthesis_response(
+        self, 
+        synthesis_response: Dict[str, Any], 
+        opportunity: TradingOpportunity,
+        tool_results: List[ToolExecutionResult]
+    ) -> AIAnalysisResult:
+        """Parses the final synthesis response from the AI into a structured result."""
+        analysis = synthesis_response.get("analysis", {})
+        return AIAnalysisResult(
+            request_id=opportunity.opportunity_id,
+            stage=AIProcessingStage.COMPLETED,
+            recommendation=analysis.get("recommendation", "HOLD"),
+            confidence=analysis.get("confidence", 0.5),
+            reasoning=analysis.get("reasoning", "No specific reasoning provided."),
+            tool_results=tool_results,
+            ai_metadata={
+                "model_version": self.gemini_adapter.get_model_name(),
+                "tools_used": [res.tool_name for res in tool_results],
+            }
+        )
+
+
+# Alias para compatibilidad con tests que esperan el nombre AIOrchestrator
+AIOrchestrator = AIOrchestratorService

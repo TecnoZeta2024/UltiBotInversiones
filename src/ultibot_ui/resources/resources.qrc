@@ -1,0 +1,13 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource prefix="/themes">
+    <file>themes/dark_theme.qss</file>
+    <file>themes/light_theme.qss</file>
+</qresource>
+<!-- Puedes añadir más recursos aquí, por ejemplo, iconos -->
+<!--
+<qresource prefix="/icons">
+    <file>icons/arrow_down.png</file>
+    <file>icons/arrow_down_dark.png</file>
+</qresource>
+-->
+</RCC>

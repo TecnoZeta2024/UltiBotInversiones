@@ -13,80 +13,63 @@ from src.ultibot_backend.api.v1.models.strategy_models import (
     StrategyListResponse,
     ActivateStrategyRequest,
     StrategyActivationResponse,
-    ErrorResponse,
 )
-from src.ultibot_backend.core.domain_models.trading_strategy_models import BaseStrategyType
-from src.ultibot_backend.services.strategy_service import StrategyService
-from src.ultibot_backend import dependencies as deps
+from src.ultibot_backend.services.trading_engine import TradingEngineService
+from src.ultibot_backend.dependencies import TradingEngineDep
 from src.ultibot_backend.app_config import settings
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+router = APIRouter(prefix="/strategies", tags=["Strategies"])
 
 @router.post(
-    "/strategies",
+    "/",
     response_model=TradingStrategyResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create new trading strategy",
-    description="Create a new trading strategy configuration",
-    responses={
-        201: {"description": "Strategy created successfully"},
-        400: {"model": ErrorResponse, "description": "Invalid strategy data"},
-        500: {"model": ErrorResponse, "description": "Internal server error"},
-    }
 )
 async def create_strategy(
     strategy_request: CreateTradingStrategyRequest,
-    strategy_service: StrategyService = Depends(deps.get_strategy_service)
+    trading_engine: TradingEngineService = TradingEngineDep,
 ) -> TradingStrategyResponse:
     """Create a new trading strategy configuration for the fixed user."""
     user_id = settings.FIXED_USER_ID
     try:
         logger.info(f"Creating new strategy: {strategy_request.config_name} for user {user_id}")
-        strategy_data = strategy_request.dict(exclude_unset=True)
-        created_strategy = await strategy_service.create_strategy_config(
+        strategy_data = strategy_request.model_dump(exclude_unset=True)
+        created_strategy = await trading_engine.create_strategy(
             user_id=str(user_id),
             strategy_data=strategy_data
         )
-        response = TradingStrategyResponse.from_orm(created_strategy)
-        logger.info(f"Successfully created strategy {created_strategy.id}")
-        return response
-    except HTTPException:
-        raise
+        return TradingStrategyResponse.model_validate(created_strategy)
     except Exception as e:
-        logger.error(f"Unexpected error creating strategy: {e}")
+        logger.error(f"Unexpected error creating strategy: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create strategy configuration"
         )
 
 @router.get(
-    "/strategies",
+    "/",
     response_model=StrategyListResponse,
     summary="List trading strategies",
-    description="Get all trading strategy configurations for the user",
 )
 async def list_strategies(
-    strategy_service: StrategyService = Depends(deps.get_strategy_service)
+    trading_engine: TradingEngineService = TradingEngineDep,
 ) -> StrategyListResponse:
     """List all trading strategy configurations for the fixed user."""
     user_id = settings.FIXED_USER_ID
     try:
         logger.info(f"Listing strategies for user {user_id}")
-        strategies = await strategy_service.list_strategy_configs(
-            user_id=str(user_id)
-        )
+        strategies = await trading_engine.get_strategies_by_user(user_id=str(user_id))
         strategy_responses = [
-            TradingStrategyResponse.from_orm(strategy)
+            TradingStrategyResponse.model_validate(strategy)
             for strategy in strategies
         ]
-        response = StrategyListResponse(
+        return StrategyListResponse(
             strategies=strategy_responses,
             total_count=len(strategy_responses)
         )
-        logger.info(f"Retrieved {len(strategies)} strategies")
-        return response
     except Exception as e:
         logger.error(f"Unexpected error listing strategies: {e}", exc_info=True)
         raise HTTPException(
@@ -95,232 +78,153 @@ async def list_strategies(
         )
 
 @router.get(
-    "/strategies/{strategy_id}",
+    "/{strategy_id}",
     response_model=TradingStrategyResponse,
     summary="Get trading strategy by ID",
 )
 async def get_strategy(
     strategy_id: str,
-    strategy_service: StrategyService = Depends(deps.get_strategy_service)
+    trading_engine: TradingEngineService = TradingEngineDep,
 ) -> TradingStrategyResponse:
     """Get a trading strategy configuration by ID for the fixed user."""
     user_id = settings.FIXED_USER_ID
     try:
         logger.info(f"Getting strategy {strategy_id} for user {user_id}")
-        strategy = await strategy_service.get_strategy_config(
-            strategy_id=strategy_id,
-            user_id=str(user_id)
-        )
+        strategy = await trading_engine.get_strategy(strategy_id=strategy_id, user_id=str(user_id))
         if not strategy:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Strategy {strategy_id} not found"
             )
-        response = TradingStrategyResponse.from_orm(strategy)
-        logger.info(f"Retrieved strategy {strategy_id}")
-        return response
+        return TradingStrategyResponse.model_validate(strategy)
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Unexpected error getting strategy {strategy_id}: {e}")
+        logger.error(f"Unexpected error getting strategy {strategy_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve strategy configuration"
         )
 
 @router.put(
-    "/strategies/{strategy_id}",
+    "/{strategy_id}",
     response_model=TradingStrategyResponse,
     summary="Update trading strategy",
 )
 async def update_strategy(
     strategy_id: str,
     strategy_request: UpdateTradingStrategyRequest,
-    strategy_service: StrategyService = Depends(deps.get_strategy_service)
+    trading_engine: TradingEngineService = TradingEngineDep,
 ) -> TradingStrategyResponse:
     """Update a trading strategy configuration for the fixed user."""
     user_id = settings.FIXED_USER_ID
     try:
         logger.info(f"Updating strategy {strategy_id} for user {user_id}")
-        strategy_data = strategy_request.dict(exclude_unset=True)
-        updated_strategy = await strategy_service.update_strategy_config(
+        strategy_data = strategy_request.model_dump(exclude_unset=True)
+        updated_strategy = await trading_engine.update_strategy(
             strategy_id=strategy_id,
             user_id=str(user_id),
             strategy_data=strategy_data
         )
-        if not updated_strategy:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Strategy {strategy_id} not found"
-            )
-        response = TradingStrategyResponse.from_orm(updated_strategy)
-        logger.info(f"Successfully updated strategy {strategy_id}")
-        return response
-    except HTTPException:
-        raise
+        return TradingStrategyResponse.model_validate(updated_strategy)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except Exception as e:
-        logger.error(f"Unexpected error updating strategy {strategy_id}: {e}")
+        logger.error(f"Unexpected error updating strategy {strategy_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update strategy configuration"
         )
 
 @router.delete(
-    "/strategies/{strategy_id}",
+    "/{strategy_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete trading strategy",
 )
 async def delete_strategy(
     strategy_id: str,
-    strategy_service: StrategyService = Depends(deps.get_strategy_service)
+    trading_engine: TradingEngineService = TradingEngineDep,
 ) -> None:
     """Delete a trading strategy configuration for the fixed user."""
     user_id = settings.FIXED_USER_ID
     try:
         logger.info(f"Deleting strategy {strategy_id} for user {user_id}")
-        deleted = await strategy_service.delete_strategy_config(
-            strategy_id=strategy_id,
-            user_id=str(user_id)
-        )
-        if not deleted:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Strategy {strategy_id} not found"
-            )
-        logger.info(f"Successfully deleted strategy {strategy_id}")
-    except HTTPException:
-        raise
+        await trading_engine.delete_strategy(strategy_id=strategy_id, user_id=str(user_id))
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except Exception as e:
-        logger.error(f"Unexpected error deleting strategy {strategy_id}: {e}")
+        logger.error(f"Unexpected error deleting strategy {strategy_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete strategy configuration"
         )
 
 @router.patch(
-    "/strategies/{strategy_id}/activate",
+    "/{strategy_id}/activate",
     response_model=StrategyActivationResponse,
     summary="Activate trading strategy",
 )
 async def activate_strategy(
     strategy_id: str,
     activation_request: ActivateStrategyRequest,
-    strategy_service: StrategyService = Depends(deps.get_strategy_service)
+    trading_engine: TradingEngineService = TradingEngineDep,
 ) -> StrategyActivationResponse:
     """Activate a trading strategy in the specified mode for the fixed user."""
     user_id = settings.FIXED_USER_ID
     try:
         logger.info(f"Activating strategy {strategy_id} in {activation_request.mode} mode for user {user_id}")
-        updated_strategy = await strategy_service.activate_strategy(
+        updated_strategy = await trading_engine.set_strategy_activation(
             strategy_id=strategy_id,
             user_id=str(user_id),
-            mode=activation_request.mode
+            mode=activation_request.mode,
+            is_active=True
         )
-        if not updated_strategy:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Strategy {strategy_id} not found"
-            )
-        is_active = (
-            updated_strategy.is_active_paper_mode 
-            if activation_request.mode == "paper" 
-            else updated_strategy.is_active_real_mode
-        )
-        response = StrategyActivationResponse(
+        return StrategyActivationResponse(
             strategy_id=updated_strategy.id,
             mode=activation_request.mode,
-            is_active=is_active,
+            is_active=True,
             message=f"Strategy activated in {activation_request.mode} mode"
         )
-        logger.info(f"Successfully activated strategy {strategy_id} in {activation_request.mode} mode")
-        return response
-    except HTTPException:
-        raise
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except Exception as e:
-        logger.error(f"Unexpected error activating strategy {strategy_id}: {e}")
+        logger.error(f"Unexpected error activating strategy {strategy_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to activate strategy in {activation_request.mode} mode"
         )
 
 @router.patch(
-    "/strategies/{strategy_id}/deactivate",
+    "/{strategy_id}/deactivate",
     response_model=StrategyActivationResponse,
     summary="Deactivate trading strategy",
 )
 async def deactivate_strategy(
     strategy_id: str,
     deactivation_request: ActivateStrategyRequest,
-    strategy_service: StrategyService = Depends(deps.get_strategy_service)
+    trading_engine: TradingEngineService = TradingEngineDep,
 ) -> StrategyActivationResponse:
     """Deactivate a trading strategy in the specified mode for the fixed user."""
     user_id = settings.FIXED_USER_ID
     try:
         logger.info(f"Deactivating strategy {strategy_id} in {deactivation_request.mode} mode for user {user_id}")
-        updated_strategy = await strategy_service.deactivate_strategy(
+        updated_strategy = await trading_engine.set_strategy_activation(
             strategy_id=strategy_id,
             user_id=str(user_id),
-            mode=deactivation_request.mode
+            mode=deactivation_request.mode,
+            is_active=False
         )
-        if not updated_strategy:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Strategy {strategy_id} not found"
-            )
-        is_active = (
-            updated_strategy.is_active_paper_mode 
-            if deactivation_request.mode == "paper" 
-            else updated_strategy.is_active_real_mode
-        )
-        response = StrategyActivationResponse(
+        return StrategyActivationResponse(
             strategy_id=updated_strategy.id,
             mode=deactivation_request.mode,
-            is_active=is_active,
+            is_active=False,
             message=f"Strategy deactivated in {deactivation_request.mode} mode"
         )
-        logger.info(f"Successfully deactivated strategy {strategy_id} in {deactivation_request.mode} mode")
-        return response
-    except HTTPException:
-        raise
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except Exception as e:
-        logger.error(f"Unexpected error deactivating strategy {strategy_id}: {e}")
+        logger.error(f"Unexpected error deactivating strategy {strategy_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to deactivate strategy in {deactivation_request.mode} mode"
-        )
-
-@router.get(
-    "/strategies/active/{mode}",
-    response_model=StrategyListResponse,
-    summary="Get active strategies by mode",
-)
-async def get_active_strategies_by_mode(
-    mode: str,
-    strategy_service: StrategyService = Depends(deps.get_strategy_service)
-) -> StrategyListResponse:
-    """Get all active strategies for a specific trading mode for the fixed user."""
-    user_id = settings.FIXED_USER_ID
-    try:
-        logger.info(f"Getting active {mode} strategies for user {user_id}")
-        strategies = await strategy_service.get_active_strategies(
-            user_id=str(user_id),
-            mode=mode
-        )
-        strategy_responses = [
-            TradingStrategyResponse.from_orm(strategy)
-            for strategy in strategies
-        ]
-        response = StrategyListResponse(
-            strategies=strategy_responses,
-            total_count=len(strategy_responses)
-        )
-        logger.info(f"Retrieved {len(strategies)} active {mode} strategies")
-        return response
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Unexpected error getting active {mode} strategies: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve active {mode} strategies"
         )

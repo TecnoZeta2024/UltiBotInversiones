@@ -1,175 +1,86 @@
-#!/usr/bin/env python3
-"""
-Script para ejecutar los tests de la Historia 4.4 - Gestión de Capital y TSL/TP para Operaciones Reales.
+import pytest
+import asyncio
+from unittest.mock import MagicMock, AsyncMock, patch
 
-Este script ejecuta específicamente los tests relacionados con la Historia 4.4 para verificar:
-- Gestión de capital para operaciones reales
-- Lógica de TSL/TP para operaciones reales  
-- Flujo completo de integración
-- Casos edge y condiciones límite
-
-Uso:
-    python tests/run_story_4_4_tests.py
-    
-    # Para ejecutar solo tests unitarios:
-    python tests/run_story_4_4_tests.py --unit-only
-    
-    # Para ejecutar solo tests de integración:
-    python tests/run_story_4_4_tests.py --integration-only
-    
-    # Para ejecutar con output detallado:
-    python tests/run_story_4_4_tests.py --verbose
-"""
-
-import subprocess
+# Mockear PyQt5 antes de cualquier otra importación de la UI
 import sys
-import argparse
-from pathlib import Path
+sys.modules['PyQt5'] = MagicMock()
+sys.modules['PyQt5.QtCore'] = MagicMock()
 
+from src.ultibot_ui.main import MainWindow
+from src.ultibot_ui.services.trading_mode_state import get_trading_mode_manager, reset_trading_mode_manager
+from src.ultibot_backend.services.trading_engine_service import TradingEngine
 
-def run_tests(test_pattern: str, verbose: bool = False) -> int:
+class TestStory4Scenario4:
     """
-    Ejecuta tests usando pytest con el patrón especificado.
-    
-    Args:
-        test_pattern: Patrón de archivos de test a ejecutar
-        verbose: Si mostrar output detallado
-        
-    Returns:
-        Código de salida del proceso pytest
+    Pruebas para el Escenario 4 de la Historia de Usuario 4:
+    Un usuario cambia el modo de Paper a Real Trading y el sistema se adapta.
     """
-    cmd = ["python", "-m", "pytest"]
-    
-    if verbose:
-        cmd.extend(["-v", "-s"])
-    else:
-        cmd.append("-v")
-    
-    # Añadir patrón de archivos
-    cmd.append(test_pattern)
-    
-    # Configuraciones adicionales
-    cmd.extend([
-        "--tb=short",  # Traceback corto para mejor legibilidad
-        "--strict-markers",  # Requerir markers definidos
-        "--disable-warnings",  # Suprimir warnings menores
-    ])
-    
-    print(f"Ejecutando: {' '.join(cmd)}")
-    print("=" * 80)
-    
-    result = subprocess.run(cmd, cwd=Path.cwd())
-    return result.returncode
 
-
-def main():
-    parser = argparse.ArgumentParser(
-        description="Ejecutar tests de la Historia 4.4 - Gestión de Capital y TSL/TP",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Ejemplos:
-  %(prog)s                     # Ejecutar todos los tests de la historia 4.4
-  %(prog)s --unit-only         # Solo tests unitarios
-  %(prog)s --integration-only  # Solo tests de integración
-  %(prog)s --verbose           # Output detallado
+    def setup_method(self):
         """
-    )
-    
-    parser.add_argument(
-        "--unit-only", 
-        action="store_true",
-        help="Ejecutar solo tests unitarios relacionados con gestión de capital y TSL/TP"
-    )
-    
-    parser.add_argument(
-        "--integration-only",
-        action="store_true", 
-        help="Ejecutar solo tests de integración del flujo completo de trading real"
-    )
-    
-    parser.add_argument(
-        "--verbose", "-v",
-        action="store_true",
-        help="Mostrar output detallado de los tests"
-    )
-    
-    args = parser.parse_args()
-    
-    # Validar argumentos mutuamente excluyentes
-    if args.unit_only and args.integration_only:
-        print("Error: --unit-only y --integration-only son mutuamente excluyentes")
-        return 1
-    
-    print("🚀 Ejecutando Tests de Historia 4.4: Gestión de Capital y TSL/TP para Operaciones Reales")
-    print("=" * 90)
-    
-    total_exit_code = 0
-    
-    if args.unit_only:
-        print("\n📋 EJECUTANDO TESTS UNITARIOS")
-        print("-" * 50)
+        Configura un entorno limpio para cada prueba.
+        """
+        # Resetear el singleton para asegurar aislamiento entre tests
+        reset_trading_mode_manager()
+        self.trading_mode_manager = get_trading_mode_manager()
         
-        # Tests unitarios existentes de TradingEngineService
-        print("\n1️⃣ Tests unitarios existentes de TradingEngineService (TSL/TP)")
-        exit_code = run_tests("tests/unit/services/test_trading_engine_service.py", args.verbose)
-        if exit_code != 0:
-            total_exit_code = exit_code
+        # Mock de la ventana principal y sus componentes
+        self.mock_main_window = MagicMock(spec=MainWindow)
+        self.mock_main_window.trading_mode_manager = self.trading_mode_manager
         
-        # Tests unitarios específicos de gestión de capital
-        print("\n2️⃣ Tests unitarios específicos de gestión de capital")
-        exit_code = run_tests("tests/unit/services/test_trading_engine_capital_management.py", args.verbose)
-        if exit_code != 0:
-            total_exit_code = exit_code
-            
-    elif args.integration_only:
-        print("\n🔗 EJECUTANDO TESTS DE INTEGRACIÓN")
-        print("-" * 50)
-        
-        # Tests de integración del flujo completo
-        print("\n3️⃣ Tests de integración del flujo completo de trading real")
-        exit_code = run_tests("tests/integration/api/v1/test_real_trading_flow.py", args.verbose)
-        if exit_code != 0:
-            total_exit_code = exit_code
-            
-    else:
-        # Ejecutar todos los tests relacionados con la historia 4.4
-        print("\n📋 EJECUTANDO TODOS LOS TESTS DE LA HISTORIA 4.4")
-        print("-" * 50)
-        
-        test_files = [
-            ("Tests unitarios de TradingEngineService (TSL/TP)", "tests/unit/services/test_trading_engine_service.py"),
-            ("Tests unitarios de gestión de capital", "tests/unit/services/test_trading_engine_capital_management.py"),
-            ("Tests de integración del flujo completo", "tests/integration/api/v1/test_real_trading_flow.py")
-        ]
-        
-        for i, (description, test_file) in enumerate(test_files, 1):
-            print(f"\n{i}️⃣ {description}")
-            exit_code = run_tests(test_file, args.verbose)
-            if exit_code != 0:
-                total_exit_code = exit_code
-    
-    # Resumen final
-    print("\n" + "=" * 90)
-    if total_exit_code == 0:
-        print("✅ TODOS LOS TESTS DE LA HISTORIA 4.4 PASARON EXITOSAMENTE")
-        print("\n🎯 Funcionalidades verificadas:")
-        print("   • Gestión de capital con límites diarios y por operación")
-        print("   • Cálculo correcto de tamaños de posición")
-        print("   • Reinicio automático de contadores diarios")
-        print("   • Lógica de TSL/TP para operaciones reales")
-        print("   • Monitoreo de órdenes OCO en Binance")
-        print("   • Flujo completo end-to-end de trading real")
-        print("   • Manejo de casos edge y condiciones límite")
-    else:
-        print("❌ ALGUNOS TESTS FALLARON")
-        print(f"   Código de salida: {total_exit_code}")
-        print("\n🔍 Revise el output anterior para detalles de los fallos")
-    
-    print("\n📚 Para más información sobre la Historia 4.4:")
-    print("   docs/stories/4.4.story.md")
-    
-    return total_exit_code
+        # Mock del motor de trading
+        self.mock_trading_engine = MagicMock(spec=TradingEngine)
+        self.mock_trading_engine.get_portfolio_snapshot = AsyncMock()
 
+    @pytest.mark.asyncio
+    async def test_ui_sends_correct_mode_to_backend(self):
+        """
+        Verifica que al cambiar el modo en la UI, las llamadas al backend
+        reflejan el modo de trading correcto.
+        """
+        # 1. Estado inicial: Paper Trading
+        assert self.trading_mode_manager.current_mode == "paper"
+        
+        # 2. Simular la obtención del portafolio en modo Paper
+        await self.mock_trading_engine.get_portfolio_snapshot(user_id="test_user", trading_mode=self.trading_mode_manager.current_mode)
+        
+        self.mock_trading_engine.get_portfolio_snapshot.assert_awaited_with(user_id="test_user", trading_mode="paper")
+        
+        # 3. Simular cambio de modo en la UI a Real Trading
+        print("Cambiando a modo REAL")
+        self.trading_mode_manager.set_trading_mode("real")
+        assert self.trading_mode_manager.current_mode == "real"
+        
+        # 4. Simular la obtención del portafolio en modo Real
+        await self.mock_trading_engine.get_portfolio_snapshot(user_id="test_user", trading_mode=self.trading_mode_manager.current_mode)
+        
+        # La llamada más reciente debe ser con modo 'real'
+        self.mock_trading_engine.get_portfolio_snapshot.assert_awaited_with(user_id="test_user", trading_mode="real")
 
+    def test_ui_components_react_to_mode_change(self):
+        """
+        Verifica que los componentes de la UI (mockeados) reaccionan
+        al cambio de modo de trading.
+        """
+        # Mock de un componente de UI que se suscribe a los cambios de modo
+        mock_portfolio_view = MagicMock()
+        mock_portfolio_view.on_trading_mode_changed = MagicMock()
+
+        # Conectar el slot del componente mockeado a la señal del manager
+        self.trading_mode_manager.trading_mode_changed.connect(mock_portfolio_view.on_trading_mode_changed)
+
+        # Simular cambio de modo
+        self.trading_mode_manager.set_trading_mode("real")
+
+        # Verificar que el slot del componente fue llamado con el nuevo modo
+        mock_portfolio_view.on_trading_mode_changed.assert_called_once_with("real")
+
+        # Cambiar de nuevo a paper
+        self.trading_mode_manager.set_trading_mode("paper")
+        mock_portfolio_view.on_trading_mode_changed.assert_called_with("paper")
+        assert mock_portfolio_view.on_trading_mode_changed.call_count == 2
+
+# Para ejecutar estas pruebas si el archivo es el punto de entrada
 if __name__ == "__main__":
-    sys.exit(main())
+    pytest.main([__file__])

@@ -1,45 +1,98 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from dotenv import load_dotenv # Importar load_dotenv
-import os # Importar os
-from typing import Optional # Importar Optional
-from uuid import UUID # Add this import
+import os
+import logging
+from functools import lru_cache
+from pydantic_settings import BaseSettings
+from pydantic import Field
+from typing import Optional
 
-# Cargar variables de entorno desde .env al inicio, permitiendo la sobreescritura
-load_dotenv(override=True)
+class UvicornConfig(BaseSettings):
+    host: str = Field("127.0.0.1", env="UVICORN_HOST")
+    port: int = Field(8000, env="UVICORN_PORT")
+    reload: bool = Field(False, env="UVICORN_RELOAD")
+    log_level: str = Field("info", env="UVICORN_LOG_LEVEL")
 
 class AppSettings(BaseSettings):
-    # No es necesario especificar env_file aquí si ya se cargó con load_dotenv()
-    # Pero lo mantenemos para compatibilidad o si se desea un comportamiento específico de pydantic-settings
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    """
+    Main application configuration class.
+    Loads settings from environment variables.
+    """
+    # Project metadata
+    PROJECT_NAME: str = "UltiBot Inversiones"
+    VERSION: str = "1.0.0"
+    DESCRIPTION: str = "Backend for UltiBot Inversiones"
+    API_V1_STR: str = "/api/v1"
 
-    # Supabase
-    SUPABASE_URL: str
-    SUPABASE_ANON_KEY: str
-    SUPABASE_SERVICE_ROLE_KEY: str
-    DATABASE_URL: str
+    # Database configuration
+    db_host: str = Field(..., env="DB_HOST")
+    db_port: int = Field(..., env="DB_PORT")
+    db_user: str = Field(..., env="DB_USER")
+    db_password: str = Field(..., env="DB_PASSWORD")
+    db_name: str = Field(..., env="DB_NAME")
 
-    # Credential Encryption
-    CREDENTIAL_ENCRYPTION_KEY: str
+    # Binance API configuration
+    binance_api_key: str = Field(..., env="BINANCE_API_KEY")
+    binance_api_secret: str = Field(..., env="BINANCE_API_SECRET")
 
-    # Exchange API Keys
-    BINANCE_API_KEY: Optional[str] = None
-    BINANCE_API_SECRET: Optional[str] = None
-    MOBULA_API_KEY: Optional[str] = None
+    # Mobula API configuration
+    mobula_api_key: str = Field(..., env="MOBULA_API_KEY")
 
-    # Logging
-    LOG_LEVEL: str = "INFO"
+    # Telegram Bot configuration
+    telegram_bot_token: str = Field(..., env="TELEGRAM_BOT_TOKEN")
+    telegram_chat_id: str = Field(..., env="TELEGRAM_CHAT_ID")
 
-    # Fixed User ID for UI (can be overridden by .env)
-    FIXED_USER_ID: UUID = UUID("00000000-0000-0000-0000-000000000001")
-    # Fixed Credential ID for Binance (can be overridden by .env)
-    FIXED_BINANCE_CREDENTIAL_ID: UUID = UUID("00000000-0000-0000-0000-000000000002")
+    # Gemini AI configuration
+    gemini_api_key: str = Field(..., env="GEMINI_API_KEY")
 
-    # Google Gemini API Key (optional)
-    GEMINI_API_KEY: Optional[str] = None
+    # Application settings
+    log_level: str = Field("INFO", env="LOG_LEVEL")
+    test_mode: bool = Field(False, env="TEST_MODE")
+    
+    # Supabase configuration (optional, for reference)
+    supabase_url: Optional[str] = Field(None, env="SUPABASE_URL")
+    supabase_key: Optional[str] = Field(None, env="SUPABASE_KEY")
 
-    # Uvicorn server settings (can be overridden by .env)
-    BACKEND_HOST: str = "127.0.0.1"
-    BACKEND_PORT: int = 8000
-    DEBUG_MODE: bool = False # For Uvicorn reload
+    @property
+    def database_url(self) -> str:
+        """Constructs the asynchronous database URL."""
+        return f"postgresql+asyncpg://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}"
 
-settings = AppSettings()
+    class Config:
+        env_file = ".env"
+        env_file_encoding = 'utf-8'
+        extra = "ignore"
+
+@lru_cache
+def get_app_settings() -> AppSettings:
+    """
+    Returns a cached instance of the AppSettings.
+    The configuration is loaded only once.
+    """
+    return AppSettings()
+
+@lru_cache
+def get_uvicorn_config() -> UvicornConfig:
+    """
+    Returns a cached instance of the UvicornConfig.
+    """
+    return UvicornConfig()
+
+def setup_logging(config: AppSettings):
+    """
+    Set up logging for the application.
+    """
+    log_level = config.log_level.upper()
+    # Using force=True to reconfigure logging if it's already been configured
+    logging.basicConfig(
+        level=log_level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        force=True,
+    )
+    # Quieten down some chatty libraries
+    logging.getLogger("uvicorn").setLevel(logging.WARNING)
+    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+    
+    logger = logging.getLogger(__name__)
+    logger.info(f"Logging configured at level: {log_level}")
+
+settings = get_app_settings()
