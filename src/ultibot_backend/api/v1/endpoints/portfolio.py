@@ -19,7 +19,7 @@ TradingMode = Literal["paper", "real", "both"]
 
 @router.get("/snapshot", response_model=PortfolioSnapshot, status_code=status.HTTP_200_OK)
 async def get_portfolio_snapshot(
-    portfolio_service: PortfolioService = PortfolioDep,
+    portfolio_service = PortfolioDep,
     trading_mode: TradingMode = Query("both", description="Filtro de modo de trading: 'paper', 'real', o 'both'"),
 ):
     """
@@ -39,7 +39,7 @@ async def get_portfolio_snapshot(
 
 @router.get("/summary", response_model=PortfolioSummary, status_code=status.HTTP_200_OK)
 async def get_portfolio_summary(
-    portfolio_service: PortfolioService = PortfolioDep,
+    portfolio_service = PortfolioDep,
     trading_mode: Literal["paper", "real"] = Query("paper", description="Modo de trading: 'paper' o 'real'"),
 ):
     """
@@ -59,7 +59,7 @@ async def get_portfolio_summary(
 
 @router.get("/balance", status_code=status.HTTP_200_OK)
 async def get_available_balance(
-    portfolio_service: PortfolioService = PortfolioDep,
+    portfolio_service = PortfolioDep,
     trading_mode: TradingMode = Query("paper", description="Modo de trading: 'paper', 'real', o 'both'"),
 ):
     """

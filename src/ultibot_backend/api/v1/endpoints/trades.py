@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 
 from src.shared.data_types import Trade
 from src.ultibot_backend.core.ports import IPersistencePort
-from src.ultibot_backend.dependencies import get_service
+from src.ultibot_backend.dependencies import PersistenceServiceDep
 from src.ultibot_backend.app_config import settings
 
 router = APIRouter(prefix="/trades", tags=["Trades"])
@@ -19,7 +19,7 @@ TradingMode = Literal["paper", "real", "both"]
 
 @router.get("", response_model=List[Trade], status_code=status.HTTP_200_OK)
 async def get_user_trades(
-    persistence_port: IPersistencePort = Depends(get_service(IPersistencePort)),
+    persistence_port = PersistenceServiceDep,
     trading_mode: TradingMode = Query("both", description="Filtro de modo de trading: 'paper', 'real', o 'both'"),
     status_filter: Optional[str] = Query(None, description="Filtro de estado de posición: 'open', 'closed', etc."),
     symbol_filter: Optional[str] = Query(None, description="Filtro por símbolo (ej., 'BTCUSDT')"),
@@ -63,7 +63,7 @@ async def get_user_trades(
 
 @router.get("/open", response_model=List[Trade], status_code=status.HTTP_200_OK)
 async def get_open_trades(
-    persistence_port: IPersistencePort = Depends(get_service(IPersistencePort)),
+    persistence_port = PersistenceServiceDep,
     trading_mode: TradingMode = Query("both", description="Filtro de modo de trading: 'paper', 'real', o 'both'"),
 ):
     """
@@ -77,7 +77,7 @@ async def get_open_trades(
 
 @router.get("/count", status_code=status.HTTP_200_OK)
 async def get_trades_count(
-    persistence_port: IPersistencePort = Depends(get_service(IPersistencePort)),
+    persistence_port = PersistenceServiceDep,
     trading_mode: TradingMode = Query("both", description="Filtro de modo de trading: 'paper', 'real', o 'both'"),
     status_filter: Optional[str] = Query(None, description="Filtro de estado de posición: 'open', 'closed', etc."),
 ):

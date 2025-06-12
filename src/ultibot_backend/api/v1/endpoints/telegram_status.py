@@ -7,14 +7,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from src.shared.data_types import TelegramConnectionStatus
 from src.ultibot_backend.core.ports import INotificationPort
 from src.ultibot_backend.core.exceptions import TelegramNotificationError
-from src.ultibot_backend.dependencies import get_service
+from src.ultibot_backend.dependencies import NotificationServiceDep
 
 router = APIRouter(prefix="/telegram", tags=["Telegram"])
 logger = logging.getLogger(__name__)
 
 @router.get("/status", response_model=TelegramConnectionStatus, summary="Obtener el estado de la conexión de Telegram")
 async def get_telegram_connection_status(
-    notification_port: INotificationPort = Depends(get_service(INotificationPort)),
+    notification_port = NotificationServiceDep,
 ):
     """
     Obtiene el estado actual de la conexión del bot de Telegram.
@@ -33,7 +33,7 @@ async def get_telegram_connection_status(
 
 @router.post("/verify", response_model=TelegramConnectionStatus, summary="Disparar verificación manual de la conexión de Telegram")
 async def verify_telegram_connection_manually(
-    notification_port: INotificationPort = Depends(get_service(INotificationPort)),
+    notification_port = NotificationServiceDep,
 ):
     """
     Permite al usuario disparar manualmente un reintento de verificación de la conexión de Telegram.

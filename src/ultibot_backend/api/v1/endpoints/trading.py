@@ -9,10 +9,10 @@ from fastapi import APIRouter, Depends, HTTPException, status, Body
 from pydantic import BaseModel
 
 from src.shared.data_types import ConfirmRealTradeRequest, Trade
-from src.ultibot_backend.services.trading_engine import TradingEngineService
+from src.ultibot_backend.services.trading_engine_service import TradingEngine
 from src.ultibot_backend.core.ports import IOrderExecutionPort
 from src.ultibot_backend.dependencies import TradingEngineDep
-from src.ultibot_backend.core.domain_models.commands import PlaceOrderCommand
+from src.ultibot_backend.core.commands.trading_commands import PlaceOrderCommand
 
 router = APIRouter(prefix="/trading", tags=["Trading"])
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ class MarketOrderRequest(BaseModel):
 @router.post("/confirm-opportunity", response_model=Trade)
 async def confirm_opportunity(
     request: ConfirmRealTradeRequest,
-    trading_engine: TradingEngineService = TradingEngineDep,
+    trading_engine = TradingEngineDep,
 ):
     """
     Confirma una oportunidad de trading para su ejecución.
@@ -58,7 +58,7 @@ async def execute_market_order(
     # Nota: La inyección directa de un puerto puede ser un anti-patrón.
     # Idealmente, esto debería pasar a través de un servicio de aplicación.
     # Se mantiene por ahora para no alterar la lógica existente, pero se marca para revisión.
-    trading_engine: TradingEngineService = TradingEngineDep,
+    trading_engine = TradingEngineDep,
 ):
     """
     Ejecuta una orden de mercado directamente a través del TradingEngineService.

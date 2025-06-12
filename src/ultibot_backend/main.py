@@ -9,13 +9,13 @@ from asgi_correlation_id import CorrelationIdMiddleware
 
 from src.ultibot_backend.api.v1.router import api_router
 from src.ultibot_backend.app_config import (
-    get_app_config,
+    get_app_settings,
     get_uvicorn_config,
     setup_logging,
 )
 
 # Configuración inicial
-config = get_app_config()
+config = get_app_settings()
 setup_logging(config)
 logger = logging.getLogger(__name__)
 

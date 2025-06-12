@@ -45,6 +45,8 @@ from .services.market_scan_service import MarketScanService
 from .services.market_data_service import MarketDataService
 from .services.performance_service import PerformanceService
 from .services.strategy_service import StrategyService
+from .services.portfolio_service import PortfolioService
+from .services.trading_engine_service import TradingEngine
 
 # --- Contenedor de Dependencias ---
 
@@ -181,6 +183,18 @@ def get_performance_service(
         strategy_service=strategy_service
     )
 
+def get_portfolio_service(
+    market_data_service: MarketDataService = Depends(get_market_data_service),
+    persistence_service: SupabasePersistenceService = Depends(get_persistence_service)
+) -> PortfolioService:
+    return PortfolioService(
+        market_data_service=market_data_service,
+        persistence_service=persistence_service
+    )
+
+def get_trading_engine_service() -> TradingEngine:
+    return TradingEngine()
+
 # --- Dependencias para Endpoints de FastAPI ---
 
 # Se pueden usar directamente en los endpoints con Depends()
@@ -196,3 +210,5 @@ MarketDataServiceDep = Annotated[MarketDataService, Depends(get_market_data_serv
 NotificationServiceDep = Annotated[NotificationService, Depends(get_notification_service)]
 PersistenceServiceDep = Annotated[IPersistencePort, Depends(get_persistence_service)]
 PerformanceServiceDep = Annotated[PerformanceService, Depends(get_performance_service)]
+PortfolioDep = Annotated[PortfolioService, Depends(get_portfolio_service)]
+TradingEngineDep = Annotated[TradingEngine, Depends(get_trading_engine_service)]

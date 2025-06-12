@@ -186,5 +186,28 @@ class TradingDecision(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
+class Asset(BaseModel):
+    """Representa un activo en el portafolio."""
+    symbol: str
+    quantity: Decimal
+    average_price: Decimal
+    current_price: Optional[Decimal] = None
+    total_value_usd: Optional[Decimal] = None
+    unrealized_pnl: Optional[Decimal] = None
+
+    model_config = ConfigDict(frozen=True)
+
+class Portfolio(BaseModel):
+    """Representa el portafolio de un usuario."""
+    user_id: str
+    trading_mode: Optional[str] = None
+    available_balance_usdt: Decimal = Decimal('0.0')
+    total_assets_value_usd: Decimal = Decimal('0.0')
+    total_portfolio_value_usd: Decimal = Decimal('0.0')
+    assets: List[Asset] = Field(default_factory=list)
+    last_updated: datetime = Field(default_factory=datetime.utcnow)
+
+    model_config = ConfigDict(frozen=True)
+
 # Alias táctico para resolver ImportError por refactorización incompleta
 Opportunity = TradingOpportunity

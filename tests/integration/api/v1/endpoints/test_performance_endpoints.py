@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
+from uuid import uuid4, UUID
 from datetime import datetime, timezone
 
 from src.ultibot_backend.main import app # Importar la app FastAPI
@@ -12,12 +12,10 @@ from src.ultibot_backend.api.v1.models.performance_models import StrategyPerform
 from src.shared.data_types import Trade
 from src.ultibot_backend.core.domain_models.trade_models import PositionStatus
 from src.ultibot_backend.core.domain_models.trading_strategy_models import TradingStrategyConfig, BaseStrategyType
-# Importar la función get_current_user_id desde el propio módulo de endpoints de performance
-from src.ultibot_backend.api.v1.endpoints.performance import get_current_user_id 
-from uuid import UUID # Añadir importación de UUID
+from src.ultibot_backend.app_config import settings
 
-# Usuario fijo para las pruebas de integración
-FIXED_TEST_USER_ID = uuid4()
+# Usuario fijo para las pruebas de integración (usar el mismo del settings)
+FIXED_TEST_USER_ID = settings.FIXED_USER_ID
 
 # Mock del servicio de persistencia para integración
 @pytest.fixture
@@ -30,12 +28,6 @@ def mock_strategy_service_integration():
     service = AsyncMock(spec=StrategyService)
     # Configurar un comportamiento por defecto si es necesario o en cada prueba
     return service
-
-# Override de la dependencia get_current_user_id para usar el usuario fijo
-async def override_get_current_user_id() -> UUID:
-    return FIXED_TEST_USER_ID
-
-app.dependency_overrides[get_current_user_id] = override_get_current_user_id
 
 # Cliente de prueba de FastAPI
 @pytest.fixture
@@ -65,7 +57,6 @@ def client(mock_persistence_service_integration, mock_strategy_service_integrati
 
     return TestClient(app)
 
-
 @pytest.mark.asyncio
 async def test_get_strategies_performance_endpoint_no_data(client, mock_persistence_service_integration):
     """
@@ -82,7 +73,6 @@ async def test_get_strategies_performance_endpoint_no_data(client, mock_persiste
     assert response.status_code == 200
     assert response.json() == []
     mock_persistence_service_integration.get_all_trades_for_user.assert_called_once_with(FIXED_TEST_USER_ID, None)
-
 
 @pytest.mark.asyncio
 async def test_get_strategies_performance_endpoint_with_data(client, mock_persistence_service_integration, mock_strategy_service_integration):
@@ -143,7 +133,6 @@ async def test_get_strategies_performance_endpoint_with_data(client, mock_persis
     mock_persistence_service_integration.get_all_trades_for_user.assert_called_once_with(FIXED_TEST_USER_ID, "paper")
     mock_strategy_service_integration.get_strategy_config.assert_called_once_with(str(strategy_id), str(FIXED_TEST_USER_ID))
 
-
 @pytest.mark.asyncio
 async def test_get_strategies_performance_endpoint_filter_real_mode(client, mock_persistence_service_integration, mock_strategy_service_integration):
     """
@@ -203,7 +192,6 @@ async def test_get_strategies_performance_endpoint_filter_real_mode(client, mock
 
     mock_persistence_service_integration.get_all_trades_for_user.assert_called_once_with(FIXED_TEST_USER_ID, "real")
     mock_strategy_service_integration.get_strategy_config.assert_called_once_with(str(strategy_id_real), str(FIXED_TEST_USER_ID))
-
 
 @pytest.mark.asyncio
 async def test_get_strategies_performance_endpoint_multiple_strategies(client, mock_persistence_service_integration, mock_strategy_service_integration):
@@ -291,7 +279,6 @@ async def test_get_strategies_performance_endpoint_multiple_strategies(client, m
     mock_persistence_service_integration.get_all_trades_for_user.assert_called_with(FIXED_TEST_USER_ID, None)
     assert mock_strategy_service_integration.get_strategy_config.call_count == 2 # Una vez por cada estrategia
 
-
 @pytest.mark.asyncio
 async def test_get_strategies_performance_endpoint_strategy_not_found(client, mock_persistence_service_integration, mock_strategy_service_integration):
     """
@@ -339,7 +326,6 @@ async def test_get_strategies_performance_endpoint_strategy_not_found(client, mo
     mock_persistence_service_integration.get_all_trades_for_user.assert_called_once_with(FIXED_TEST_USER_ID, "paper")
     mock_strategy_service_integration.get_strategy_config.assert_called_once_with(str(unknown_strategy_id), str(FIXED_TEST_USER_ID))
 
-
 @pytest.mark.asyncio
 async def test_get_strategies_performance_endpoint_invalid_mode_parameter(client):
     """
@@ -356,7 +342,6 @@ async def test_get_strategies_performance_endpoint_invalid_mode_parameter(client
         err["type"] == "enum" and err["loc"] == ["query", "mode"] and "invalid_mode" in err["msg"]
         for err in data["detail"]
     )
-
 
 @pytest.mark.asyncio
 async def test_get_strategies_performance_endpoint_no_mode_filter(client, mock_persistence_service_integration, mock_strategy_service_integration):

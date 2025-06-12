@@ -404,3 +404,131 @@ El proyecto sufrió una **refactorización incompleta** del patrón OOP → Func
 
 **6. SOLICITUD:**
 * [**PAUSA**] Espero aprobación para proceder con la corrección final de `gemini.py`
+
+---
+
+### PLAN MAESTRO INTEGRAL PARA RESOLUCIÓN COMPLETA DE ERRORES - 6/12/2025, 8:22:30 AM
+
+**ESTADO ACTUAL CONSOLIDADO:**
+* ✅ **Portafolio completamente resuelto** - `PortfolioDep` y FastAPI anotaciones corregidas
+* ✅ **225 tests recolectados exitosamente** - Progreso significativo confirmado
+* ❌ **Error sistémico restante:** `ModuleNotFoundError: No module named 'src.ultibot_backend.services.prompt_service'`
+
+**ANÁLISIS POST-MORTEM INTEGRADO:**
+Basado en el patrón de errores documentado en `AUDIT_MORTEN.md`, la causa raíz es una **refactorización masiva incompleta** que afectó múltiples endpoints de API de forma sistemática.
+
+**PLAN HOLÍSTICO MAESTRO - EJECUCIÓN ÚNICA INTEGRAL:**
+
+### FASE 1: CORRECCIÓN SISTEMÁTICA DE ENDPOINTS DE API
+| Archivo | Error Identificado | Corrección Requerida | Tipo |
+|:---|:---|:---|:---|
+| `prompts.py` | `from src.ultibot_backend.services.prompt_service import PromptService` | Cambiar a `PromptManagerService` y usar `PromptManagerDep` | Import + Dependency |
+| `prompts.py` | `from src.ultibot_backend.services.ai_orchestrator import AIOrchestratorService` | Cambiar a `ai_orchestrator_service` | Import path |
+| `prompts.py` | Anotaciones de tipo problemáticas | Remover type hints de dependencias | FastAPI annotations |
+
+### FASE 2: SINCRONIZACIÓN DE DEPENDENCIAS
+| Acción | Archivo | Descripción |
+|:---|:---|:---|
+| Verificar `PromptManagerDep` existe | `dependencies.py` | Confirmar que `PromptManagerDep` está definido |
+| Verificar `AIOrchestratorDep` existe | `dependencies.py` | Confirmar que `AIOrchestratorDep` está definido |
+| Validar servicios importados | Todos los endpoints | Asegurar consistencia en imports de servicios |
+
+### FASE 3: VALIDACIÓN SISTÉMICA FINAL
+| Criterio | Comando | Resultado Esperado |
+|:---|:---|:---|
+| Recolección de tests | `poetry run pytest --collect-only -q` | 0 errores de importación |
+| Tests funcionales | 225+ tests collected | Sin errores de colección |
+| Arquitectura preservada | Verificación manual | Puertos y adaptadores intactos |
+
+**ESTRATEGIA DE IMPLEMENTACIÓN:**
+1. **Un solo bloque de cambios** - Todas las correcciones en una operación coordinada
+2. **Patrón consistente** - Aplicar el mismo fix pattern usado exitosamente en `portfolio.py`
+3. **Validación inmediata** - Verificar resolución completa con pytest
+4. **Preservación arquitectónica** - Mantener principios hexagonales y CQRS
+
+**RIESGOS IDENTIFICADOS:**
+* **BAJO:** Patrón de corrección ya validado exitosamente
+* **MITIGACIÓN:** Uso de patrones probados del fix del portafolio
+* **CONTINGENCIA:** Si aparecen errores adicionales, están documentados para iteración
+
+**CRITERIOS DE ÉXITO FINAL:**
+* ✅ `poetry run pytest --collect-only -q` → 0 errores
+* ✅ 225+ tests collected sin ImportError
+* ✅ Arquitectura hexagonal + CQRS + EventBroker preservados
+* ✅ Sistema de inyección de dependencias completamente funcional
+
+**ESTIMACIÓN REALISTA:**
+* **Tiempo:** 3-5 cambios coordinados
+* **Complejidad:** MEDIA (patrón conocido)
+* **Probabilidad de éxito:** 95% (basado en éxito previo con portafolio)
+
+**PLAN READY FOR EXECUTION** ✅
+
+---
+
+### INFORME DE ESTADO Y PLAN DE ACCIÓN - 6/12/2025, 8:27:30 AM
+
+**ESTADO ACTUAL:**
+* 🎯 **FASE 1: ANÁLISIS SISTÉMICO COMPLETO** - Post-mortem creado, Plan Maestro Integral formulado
+
+**REFERENCIA A POST-MORTEM ACTUALIZADO:**
+* ✅ **Contexto Completo Preservado** - Todos los trabajos previos documentados en `AUDIT_MORTEN.md`
+* ✅ **Patrón de Solución Validado** - El éxito del fix de `portfolio.py` confirma la estrategia
+* ✅ **Hipótesis Central Refinada** - Error sistemático en `prompts.py` identificado con precisión
+
+**1. OBSERVACIONES (Análisis Final Consolidado):**
+* **Error Principal:** `ModuleNotFoundError: No module named 'src.ultibot_backend.services.prompt_service'`
+* **Ubicación Específica:** `src/ultibot_backend/api/v1/endpoints/prompts.py:14`
+* **Patrón Confirmado:** Identical pattern to the successfully resolved `portfolio.py` issue
+
+**ERRORES ESPECÍFICOS EN PROMPTS.PY:**
+```python
+# ❌ LÍNEA 14 - IMPORT INCORRECTO:
+from src.ultibot_backend.services.prompt_service import PromptService
+# ✅ DEBE SER:
+from src.ultibot_backend.dependencies import PromptManagerDep
+
+# ❌ LÍNEA 15 - IMPORT INCORRECTO:  
+from src.ultibot_backend.services.ai_orchestrator import AIOrchestratorService
+# ✅ DEBE SER:
+from src.ultibot_backend.dependencies import AIOrchestratorDep
+
+# ❌ EN FUNCIONES - TYPE HINTS PROBLEMÁTICOS:
+async def list_prompts(prompt_service: PromptService = PromptDep):
+# ✅ DEBE SER:
+async def list_prompts(prompt_service = PromptManagerDep):
+```
+
+**2. HIPÓTESIS CENTRAL (Validada por patrón exitoso):**
+* **Causa Raíz:** Refactorización incompleta sistémica idéntica a `portfolio.py`
+* **Solución Probada:** Aplicar exactamente el mismo patrón usado exitosamente
+* **Confianza:** 95% basado en éxito previo documentado
+
+**3. PLAN DE ACCIÓN UNIFICADO (Ready for Execution):**
+
+| Acción | Archivo | Cambio Específico | Justificación |
+|:---|:---|:---|:---|
+| **1. Verificar Dependencias** | `dependencies.py` | Confirmar que `PromptManagerDep` y `AIOrchestratorDep` existen | Prerequisito para fix pattern |
+| **2. Corregir Imports** | `prompts.py` | Reemplazar imports directos por dependencies | Aplicar patrón exitoso |
+| **3. Corregir Type Hints** | `prompts.py` | Remover type hints de parámetros dependencies | Seguir patrón FastAPI exitoso |
+| **4. Validar Solución** | Terminal | `poetry run pytest --collect-only -q` | Confirmar resolución completa |
+
+**4. RIESGOS POTENCIALES:**
+* **MUY BAJO:** Patrón de solución 100% probado y exitoso
+* **MITIGACIÓN:** Uso exacto del mismo pattern que funcionó en `portfolio.py`
+
+**5. CRITERIOS DE ÉXITO ESPECÍFICOS:**
+* ✅ 0 errores en `poetry run pytest --collect-only -q`
+* ✅ 225+ tests collected exitosamente  
+* ✅ Arquitectura hexagonal preservada
+* ✅ Sistema de inyección de dependencias completamente funcional
+
+**6. ESTRATEGIA DE EJECUCIÓN:**
+* **COORDINADA:** Todos los cambios en una sola operación
+* **PROBADA:** Patrón validado previamente con éxito
+* **EFICIENTE:** Evita iteraciones múltiples que consumen tokens
+
+**7. SOLICITUD:**
+* [**LISTO PARA APROBACIÓN**] Plan Maestro Integral formulado y documentado
+* **PRÓXIMA ACCIÓN:** Procede con el plan para resolución completa de errores
+* **EXPECTATIVA:** Resolución definitiva en una sola ejecución coordinada

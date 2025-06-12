@@ -14,7 +14,6 @@ from src.ultibot_backend.api.v1.models.strategy_models import (
     ActivateStrategyRequest,
     StrategyActivationResponse,
 )
-from src.ultibot_backend.services.trading_engine import TradingEngineService
 from src.ultibot_backend.dependencies import TradingEngineDep
 from src.ultibot_backend.app_config import settings
 
@@ -30,7 +29,7 @@ router = APIRouter(prefix="/strategies", tags=["Strategies"])
 )
 async def create_strategy(
     strategy_request: CreateTradingStrategyRequest,
-    trading_engine: TradingEngineService = TradingEngineDep,
+    trading_engine = TradingEngineDep,
 ) -> TradingStrategyResponse:
     """Create a new trading strategy configuration for the fixed user."""
     user_id = settings.FIXED_USER_ID
@@ -55,7 +54,7 @@ async def create_strategy(
     summary="List trading strategies",
 )
 async def list_strategies(
-    trading_engine: TradingEngineService = TradingEngineDep,
+    trading_engine = TradingEngineDep,
 ) -> StrategyListResponse:
     """List all trading strategy configurations for the fixed user."""
     user_id = settings.FIXED_USER_ID
@@ -84,7 +83,7 @@ async def list_strategies(
 )
 async def get_strategy(
     strategy_id: str,
-    trading_engine: TradingEngineService = TradingEngineDep,
+    trading_engine = TradingEngineDep,
 ) -> TradingStrategyResponse:
     """Get a trading strategy configuration by ID for the fixed user."""
     user_id = settings.FIXED_USER_ID
@@ -114,7 +113,7 @@ async def get_strategy(
 async def update_strategy(
     strategy_id: str,
     strategy_request: UpdateTradingStrategyRequest,
-    trading_engine: TradingEngineService = TradingEngineDep,
+    trading_engine = TradingEngineDep,
 ) -> TradingStrategyResponse:
     """Update a trading strategy configuration for the fixed user."""
     user_id = settings.FIXED_USER_ID
@@ -143,7 +142,7 @@ async def update_strategy(
 )
 async def delete_strategy(
     strategy_id: str,
-    trading_engine: TradingEngineService = TradingEngineDep,
+    trading_engine = TradingEngineDep,
 ) -> None:
     """Delete a trading strategy configuration for the fixed user."""
     user_id = settings.FIXED_USER_ID
@@ -167,7 +166,7 @@ async def delete_strategy(
 async def activate_strategy(
     strategy_id: str,
     activation_request: ActivateStrategyRequest,
-    trading_engine: TradingEngineService = TradingEngineDep,
+    trading_engine = TradingEngineDep,
 ) -> StrategyActivationResponse:
     """Activate a trading strategy in the specified mode for the fixed user."""
     user_id = settings.FIXED_USER_ID
@@ -202,7 +201,7 @@ async def activate_strategy(
 async def deactivate_strategy(
     strategy_id: str,
     deactivation_request: ActivateStrategyRequest,
-    trading_engine: TradingEngineService = TradingEngineDep,
+    trading_engine = TradingEngineDep,
 ) -> StrategyActivationResponse:
     """Deactivate a trading strategy in the specified mode for the fixed user."""
     user_id = settings.FIXED_USER_ID

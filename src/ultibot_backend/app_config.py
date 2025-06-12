@@ -47,6 +47,9 @@ class AppSettings(BaseSettings):
     log_level: str = Field("INFO", env="LOG_LEVEL")
     test_mode: bool = Field(False, env="TEST_MODE")
     
+    # Fixed user ID for single-user deployment
+    FIXED_USER_ID: str = Field("00000000-0000-0000-0000-000000000001", env="FIXED_USER_ID")
+    
     # Supabase configuration (optional, for reference)
     supabase_url: Optional[str] = Field(None, env="SUPABASE_URL")
     supabase_key: Optional[str] = Field(None, env="SUPABASE_KEY")

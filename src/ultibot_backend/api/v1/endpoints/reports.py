@@ -6,12 +6,11 @@ import logging
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, Query, Depends, status
+from fastapi import APIRouter, HTTPException, Query, Path, Depends, status
 from pydantic import BaseModel
 
 from src.shared.data_types import Trade, PerformanceMetrics
-from src.ultibot_backend.services.performance_service import PerformanceService
-from src.ultibot_backend.dependencies import get_service
+from src.ultibot_backend.dependencies import PerformanceServiceDep
 from src.ultibot_backend.app_config import settings
 
 logger = logging.getLogger(__name__)
@@ -25,13 +24,13 @@ class TradeHistoryResponse(BaseModel):
 
 @router.get("/trades/history/{mode}", response_model=TradeHistoryResponse)
 async def get_trading_history(
-    mode: str = Query(..., description="Modo de trading: 'paper' o 'real'"),
+    mode: str = Path(..., description="Modo de trading: 'paper' o 'real'"),
     symbol: Optional[str] = Query(None, description="Filtrar por par de trading (ej. BTCUSDT)"),
     start_date: Optional[datetime] = Query(None, description="Fecha de inicio para filtrar"),
     end_date: Optional[datetime] = Query(None, description="Fecha de fin para filtrar"),
     limit: int = Query(100, ge=1, le=500, description="Número máximo de trades a devolver"),
     offset: int = Query(0, ge=0, description="Número de trades a saltar (para paginación)"),
-    performance_service: PerformanceService = Depends(get_service(PerformanceService))
+    performance_service = PerformanceServiceDep
 ):
     """
     Obtiene el historial de operaciones cerradas para el modo de trading especificado.
@@ -68,11 +67,11 @@ async def get_trading_history(
 
 @router.get("/performance/summary/{mode}", response_model=PerformanceMetrics)
 async def get_performance_summary(
-    mode: str = Query(..., description="Modo de trading: 'paper' o 'real'"),
+    mode: str = Path(..., description="Modo de trading: 'paper' o 'real'"),
     symbol: Optional[str] = Query(None, description="Filtrar por par de trading (ej. BTCUSDT)"),
     start_date: Optional[datetime] = Query(None, description="Fecha de inicio para filtrar"),
     end_date: Optional[datetime] = Query(None, description="Fecha de fin para filtrar"),
-    performance_service: PerformanceService = Depends(get_service(PerformanceService))
+    performance_service = PerformanceServiceDep
 ):
     """
     Obtiene las métricas de rendimiento consolidadas para el modo de trading especificado.

@@ -3,7 +3,6 @@ from fastapi import APIRouter
 from src.ultibot_backend.api.v1.endpoints import (
     ai_analysis,
     binance_status,
-    capital_management,
     config,
     gemini,
     market_configuration,
@@ -26,7 +25,6 @@ api_router = APIRouter()
 # Include all the individual routers
 api_router.include_router(ai_analysis.router, prefix="/ai", tags=["AI Analysis"])
 api_router.include_router(binance_status.router, prefix="/status", tags=["Status"])
-api_router.include_router(capital_management.router, prefix="/capital", tags=["Capital Management"])
 api_router.include_router(config.router, prefix="/config", tags=["Configuration"])
 api_router.include_router(gemini.router, prefix="/gemini", tags=["Gemini"])
 api_router.include_router(market_configuration.router, prefix="/market-config", tags=["Market Configuration"])

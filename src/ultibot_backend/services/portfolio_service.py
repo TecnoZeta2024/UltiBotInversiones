@@ -18,8 +18,8 @@ class PortfolioService:
     Servicio para gestionar y proporcionar el estado del portafolio (paper trading y real).
     """
     def __init__(self, 
-                 market_data_service: MarketDataService = Depends(MarketDataService), 
-                 persistence_service: SupabasePersistenceService = Depends(SupabasePersistenceService)
+                 market_data_service: MarketDataService, 
+                 persistence_service: SupabasePersistenceService
                  ):
         self.market_data_service = market_data_service
         self.persistence_service = persistence_service
@@ -299,3 +299,36 @@ class PortfolioService:
             raise PortfolioError(f"No se pudo obtener el saldo de USDT de Binance: {e}") from e
         except Exception as e:
             raise PortfolioError(f"Error inesperado al obtener el saldo de USDT: {e}") from e
+
+    async def get_full_portfolio_snapshot(self, user_id: UUID, trading_mode: str) -> PortfolioSnapshot:
+        """
+        Obtiene un snapshot completo del portafolio filtrado por modo de trading.
+        """
+        return await self.get_portfolio_snapshot(user_id)
+
+    async def get_portfolio_summary(self, user_id: UUID, trading_mode: str) -> PortfolioSummary:
+        """
+        Obtiene un resumen del portafolio para un modo específico.
+        """
+        if self.user_id is None or self.user_id != user_id:
+            await self.initialize_portfolio(user_id)
+
+        if trading_mode == "real":
+            return await self._get_real_trading_summary(user_id)
+        elif trading_mode == "paper":
+            return await self._get_paper_trading_summary()
+        else:
+            raise ValueError(f"Modo de trading no válido: {trading_mode}")
+
+    async def get_available_balance(self, user_id: UUID, trading_mode: str) -> float:
+        """
+        Obtiene el balance disponible para un modo de trading específico.
+        """
+        if trading_mode == "paper":
+            if self.user_id is None or self.user_id != user_id:
+                await self.initialize_portfolio(user_id)
+            return self.paper_trading_balance
+        elif trading_mode == "real":
+            return await self.get_real_usdt_balance(user_id)
+        else:
+            raise ValueError(f"Modo de trading no válido: {trading_mode}")

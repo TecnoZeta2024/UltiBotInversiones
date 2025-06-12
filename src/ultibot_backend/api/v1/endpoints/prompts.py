@@ -11,9 +11,7 @@ import time
 from fastapi import APIRouter, HTTPException, Depends, Query, Path, status
 from pydantic import BaseModel, Field
 
-from src.ultibot_backend.services.prompt_service import PromptService
-from src.ultibot_backend.services.ai_orchestrator import AIOrchestratorService
-from src.ultibot_backend.dependencies import PromptDep, AIOrchestratorDep
+from src.ultibot_backend.dependencies import PromptManagerDep, AIOrchestratorDep
 from src.ultibot_backend.core.domain_models.prompt_models import PromptTemplate
 
 logger = logging.getLogger(__name__)
@@ -61,7 +59,7 @@ class PromptResponse(BaseModel):
 @router.get("/", response_model=List[PromptResponse])
 async def list_prompts(
     category: Optional[str] = Query(None, description="Filtrar por categoría"),
-    prompt_service: PromptService = PromptDep
+    prompt_service = PromptManagerDep
 ):
     """Lista todos los prompts disponibles."""
     try:
@@ -75,7 +73,7 @@ async def list_prompts(
 @router.get("/{name}", response_model=PromptResponse)
 async def get_prompt(
     name: str = Path(..., description="Nombre del prompt"),
-    prompt_service: PromptService = PromptDep
+    prompt_service = PromptManagerDep
 ):
     """Obtiene un prompt específico por nombre."""
     try:
@@ -92,7 +90,7 @@ async def get_prompt(
 @router.post("/", response_model=PromptResponse, status_code=status.HTTP_201_CREATED)
 async def create_prompt(
     request: PromptCreateRequest,
-    prompt_service: PromptService = PromptDep
+    prompt_service = PromptManagerDep
 ):
     """Crea un nuevo prompt."""
     try:
@@ -110,7 +108,7 @@ async def create_prompt(
 async def update_prompt(
     name: str = Path(..., description="Nombre del prompt"),
     request: PromptUpdateRequest = ...,
-    prompt_service: PromptService = PromptDep
+    prompt_service = PromptManagerDep
 ):
     """Actualiza un prompt existente (crea nueva versión)."""
     try:
@@ -126,7 +124,7 @@ async def update_prompt(
 @router.post("/render")
 async def render_prompt(
     request: PromptRenderRequest,
-    prompt_service: PromptService = PromptDep
+    prompt_service = PromptManagerDep
 ):
     """Renderiza un prompt con variables específicas."""
     try:
@@ -141,7 +139,7 @@ async def render_prompt(
 @router.delete("/{name}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_prompt(
     name: str = Path(..., description="Nombre del prompt"),
-    prompt_service: PromptService = PromptDep
+    prompt_service = PromptManagerDep
 ):
     """Elimina un prompt (lo marca como inactivo)."""
     try:
@@ -157,7 +155,7 @@ async def delete_prompt(
 @router.post("/ai/generate")
 async def generate_ai_response(
     request: AIGenerateRequest,
-    ai_orchestrator: AIOrchestratorService = AIOrchestratorDep
+    ai_orchestrator = AIOrchestratorDep
 ):
     """Genera una respuesta usando IA para un prompt dado."""
     try:

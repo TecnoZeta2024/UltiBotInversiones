@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from typing import Literal
 
 from src.ultibot_backend.services.configuration_service import ConfigurationService
-from src.ultibot_backend.dependencies import get_service
+from src.ultibot_backend.dependencies import ConfigurationServiceDep
 from src.ultibot_backend.app_config import settings
 
 router = APIRouter(prefix="/trading-mode", tags=["Trading Mode"])
@@ -21,7 +21,7 @@ class TradingModePayload(BaseModel):
 @router.post("/", status_code=status.HTTP_200_OK)
 async def set_trading_mode(
     payload: TradingModePayload,
-    config_service: ConfigurationService = Depends(get_service(ConfigurationService)),
+    config_service = ConfigurationServiceDep,
 ):
     """
     Sets the application's trading mode (paper or real).
@@ -41,7 +41,7 @@ async def set_trading_mode(
 
 @router.get("/", response_model=TradingModePayload)
 async def get_trading_mode(
-    config_service: ConfigurationService = Depends(get_service(ConfigurationService)),
+    config_service = ConfigurationServiceDep,
 ):
     """
     Gets the application's current trading mode.
