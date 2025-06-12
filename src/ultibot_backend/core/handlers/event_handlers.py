@@ -8,7 +8,7 @@ ejecutando lógica de negocio secundaria o actualizando el estado del sistema.
 import logging
 from typing import Any
 
-from src.ultibot_backend.core.domain_models.events import (
+from ultibot_backend.core.domain_models.events import (
     OrderPlacedEvent,
     TradeExecutedEvent,
     OrderStatusChangedEvent,
@@ -18,7 +18,7 @@ from src.ultibot_backend.core.domain_models.events import (
     ScanCompletedEvent,
     AIAnalysisCompletedEvent,
 )
-from src.ultibot_backend.core.ports import IPersistencePort, INotificationPort
+from ultibot_backend.core.ports import IPersistencePort, INotificationPort
 
 logger = logging.getLogger(__name__)
 

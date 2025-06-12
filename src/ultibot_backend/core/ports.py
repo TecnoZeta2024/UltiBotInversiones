@@ -11,17 +11,17 @@ from decimal import Decimal
 from uuid import UUID
 
 # Importaciones de modelos de dominio puros (sin frameworks externos)
-from src.ultibot_backend.core.domain_models.trading import (
+from ultibot_backend.core.domain_models.trading import (
     TickerData, KlineData, Trade, Order, OrderSide, OrderType, Opportunity, TradeResult,
     CommandResult, TradingSignal
 )
-from src.ultibot_backend.core.domain_models.portfolio import Portfolio, UserId, PortfolioSnapshot
-from src.ultibot_backend.core.domain_models.market import MarketSnapshot
-from src.ultibot_backend.core.domain_models.ai_models import AIAnalysisResult, TradingOpportunity, ToolExecutionResult
-from src.ultibot_backend.core.domain_models.prompt_models import PromptTemplate, PromptVersion
-from src.ultibot_backend.core.domain_models.scan_presets import ScanResult, ScanPreset
-from src.ultibot_backend.core.domain_models.events import BaseEvent
-from src.ultibot_backend.core.domain_models.user_configuration_models import UserConfiguration
+from ultibot_backend.core.domain_models.portfolio import Portfolio, UserId, PortfolioSnapshot
+from ultibot_backend.core.domain_models.market import MarketSnapshot
+from ultibot_backend.core.domain_models.ai_models import AIAnalysisResult, TradingOpportunity, ToolExecutionResult
+from ultibot_backend.core.domain_models.prompt_models import PromptTemplate, PromptVersion
+from ultibot_backend.core.domain_models.scan_presets import ScanResult, ScanPreset
+from ultibot_backend.core.domain_models.events import BaseEvent
+from ultibot_backend.core.domain_models.user_configuration_models import UserConfiguration
 
 T = TypeVar("T")
 

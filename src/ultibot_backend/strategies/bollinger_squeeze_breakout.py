@@ -11,16 +11,16 @@ import statistics
 
 from pydantic import Field, ConfigDict
 
-from src.ultibot_backend.core.domain_models.market import KlineData, MarketSnapshot
-from src.ultibot_backend.core.domain_models.trading import (
-    StrategyParameters, AnalysisResult, TradingSignal, OrderSide, OrderType
+from ultibot_backend.core.domain_models.market import KlineData, MarketSnapshot
+from ultibot_backend.core.domain_models.trading import (
+    BaseStrategyParameters, AnalysisResult, TradingSignal, OrderSide, OrderType
 )
-from src.ultibot_backend.strategies.base_strategy import BaseStrategy
+from ultibot_backend.strategies.base_strategy import BaseStrategy
 
 # Configurar la precisión decimal global
 getcontext().prec = 10
 
-class BollingerSqueezeParameters(StrategyParameters):
+class BollingerSqueezeParameters(BaseStrategyParameters):
     """
     Parámetros de configuración para la estrategia Bollinger_Squeeze_Breakout.
     """
@@ -44,7 +44,7 @@ class BollingerSqueezeBreakout(BaseStrategy):
         Args:
             parameters (BollingerSqueezeParameters): Parámetros específicos de la estrategia.
         """
-        super().__init__("Bollinger_Squeeze_Breakout", parameters)
+        super().__init__(parameters)
         self.params: BollingerSqueezeParameters = parameters
         self._is_squeezed: bool = False
 

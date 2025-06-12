@@ -7,8 +7,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from asgi_correlation_id import CorrelationIdMiddleware
 
-from src.ultibot_backend.api.v1.router import api_router
-from src.ultibot_backend.app_config import (
+from ultibot_backend.api.v1.router import api_router
+from ultibot_backend.app_config import (
     get_app_settings,
     get_uvicorn_config,
     setup_logging,
@@ -64,7 +64,7 @@ if __name__ == "__main__":
     )
     
     uvicorn.run(
-        "src.ultibot_backend.main:app",
+        "ultibot_backend.main:app",
         host=uvicorn_config.host,
         port=uvicorn_config.port,
         reload=uvicorn_config.reload,

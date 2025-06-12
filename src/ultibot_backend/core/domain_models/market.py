@@ -9,7 +9,7 @@ from decimal import Decimal
 from typing import Dict, List, Any
 from pydantic import BaseModel, Field, ConfigDict
 
-from src.ultibot_backend.core.domain_models.trading import TickerData, KlineData
+from ultibot_backend.core.domain_models.trading import TickerData, KlineData
 
 class MarketSnapshot(BaseModel):
     """

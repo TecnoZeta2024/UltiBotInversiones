@@ -5,15 +5,15 @@ from collections import defaultdict
 from enum import Enum
 from datetime import datetime
 
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend.services.strategy_service import StrategyService
-from src.ultibot_backend.api.v1.models.performance_models import (
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from ultibot_backend.services.strategy_service import StrategyService
+from ultibot_backend.api.v1.models.performance_models import (
     StrategyPerformanceData,
     OperatingMode,
     StrategyPerformanceResponse
 )
-from src.shared.data_types import PerformanceMetrics
-from src.ultibot_backend.core.domain_models.trade_models import Trade, PositionStatus
+from shared.data_types import PerformanceMetrics
+from ultibot_backend.core.domain_models.trade_models import Trade, PositionStatus
 
 logger = logging.getLogger(__name__)
 

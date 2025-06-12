@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Importación de Puertos (Interfaces)
-from .core.ports import (
+from src.ultibot_backend.core.ports import (
     IMarketDataProvider,
     IPromptRepository,
     IPromptManager,
@@ -28,25 +28,25 @@ from .core.ports import (
 )
 
 # Importación de Adaptadores (Implementaciones)
-from .adapters.mobula_adapter import MobulaAdapter
-from .adapters.binance_adapter import BinanceAdapter
-from .adapters.prompt_persistence_adapter import PromptPersistenceAdapter
-from .adapters.gemini_adapter import GeminiAdapter
-from .adapters.persistence_service import SupabasePersistenceService
+from src.ultibot_backend.adapters.mobula_adapter import MobulaAdapter
+from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
+from src.ultibot_backend.adapters.prompt_persistence_adapter import PromptPersistenceAdapter
+from src.ultibot_backend.adapters.gemini_adapter import GeminiAdapter
+from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 
 # Importación de Servicios (Lógica de Aplicación)
-from .services.tool_hub_service import ToolHubService
-from .services.prompt_manager_service import PromptManagerService
-from .services.ai_orchestrator_service import AIOrchestratorService
-from .services.credential_service import CredentialService
-from .services.notification_service import NotificationService
-from .services.configuration_service import ConfigurationService
-from .services.market_scan_service import MarketScanService
-from .services.market_data_service import MarketDataService
-from .services.performance_service import PerformanceService
-from .services.strategy_service import StrategyService
-from .services.portfolio_service import PortfolioService
-from .services.trading_engine_service import TradingEngine
+from src.ultibot_backend.services.tool_hub_service import ToolHubService
+from src.ultibot_backend.services.prompt_manager_service import PromptManagerService
+from src.ultibot_backend.services.ai_orchestrator_service import AIOrchestratorService
+from src.ultibot_backend.services.credential_service import CredentialService
+from src.ultibot_backend.services.notification_service import NotificationService
+from src.ultibot_backend.services.configuration_service import ConfigurationService
+from src.ultibot_backend.services.market_scan_service import MarketScanService
+from src.ultibot_backend.services.market_data_service import MarketDataService
+from src.ultibot_backend.services.performance_service import PerformanceService
+from src.ultibot_backend.services.strategy_service import StrategyService
+from src.ultibot_backend.services.portfolio_service import PortfolioService
+from src.ultibot_backend.services.trading_engine_service import TradingEngine
 
 # --- Contenedor de Dependencias ---
 

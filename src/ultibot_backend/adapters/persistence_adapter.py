@@ -11,12 +11,12 @@ from uuid import UUID
 
 from supabase import create_client, Client
 
-from src.ultibot_backend.core.ports import IPersistencePort, ICredentialProvider
-from src.ultibot_backend.core.domain_models.trading import Trade, TradeId
-from src.ultibot_backend.core.domain_models.portfolio import Portfolio, UserId, Asset
-from src.ultibot_backend.core.domain_models.prompt_models import PromptTemplate, PromptVersion
-from src.ultibot_backend.core.domain_models.scan_presets import ScanPreset, ScanResult
-from src.ultibot_backend.core.exceptions import PersistenceError, CredentialError
+from ..core.ports import IPersistencePort, ICredentialProvider
+from ..core.domain_models.trading import Trade # Eliminar TradeId
+from ..core.domain_models.portfolio import Portfolio, UserId, Asset
+from ..core.domain_models.prompt_models import PromptTemplate, PromptVersion
+from ..core.domain_models.scan_presets import ScanPreset, ScanResult
+from ..core.exceptions import PersistenceError, CredentialError
 
 class SupabasePersistenceAdapter(IPersistencePort):
     """
@@ -42,7 +42,7 @@ class SupabasePersistenceAdapter(IPersistencePort):
             except Exception as e:
                 raise CredentialError(f"Fallo al cargar credenciales de Supabase: {e}")
 
-    async def save_trade(self, trade: Trade) -> TradeId:
+    async def save_trade(self, trade: Trade) -> UUID: # Cambiar tipo de retorno a UUID
         """
         Guarda un registro de trade en la tabla 'trades' de Supabase.
 
@@ -50,7 +50,7 @@ class SupabasePersistenceAdapter(IPersistencePort):
             trade (Trade): Objeto Trade a guardar.
 
         Returns:
-            TradeId: ID del trade guardado.
+            UUID: ID del trade guardado.
 
         Raises:
             PersistenceError: Si ocurre un error al guardar el trade.
@@ -58,7 +58,7 @@ class SupabasePersistenceAdapter(IPersistencePort):
         await self._initialize_client()
         try:
             data_to_insert = {
-                "id": str(trade.id.value),
+                "id": str(trade.id), # Usar trade.id directamente
                 "symbol": trade.symbol,
                 "side": trade.side.value,
                 "quantity": float(trade.quantity),
@@ -71,7 +71,7 @@ class SupabasePersistenceAdapter(IPersistencePort):
             }
             response = self._supabase_client.table("trades").insert(data_to_insert).execute()
             if response.data:
-                return TradeId(value=UUID(response.data[0]["id"]))
+                return UUID(response.data[0]["id"]) # Devolver UUID directamente
             raise PersistenceError("No se pudo guardar el trade, respuesta vacía.")
         except Exception as e:
             raise PersistenceError(f"Error al guardar trade en Supabase: {e}") from e
@@ -169,7 +169,7 @@ class SupabasePersistenceAdapter(IPersistencePort):
             trades = []
             for trade_data in response.data:
                 trades.append(Trade(
-                    id=TradeId(value=UUID(trade_data["id"])),
+                    id=UUID(trade_data["id"]), # Usar UUID directamente
                     symbol=trade_data["symbol"],
                     side=trade_data["side"],
                     quantity=Decimal(str(trade_data["quantity"])),
@@ -360,7 +360,7 @@ class PostgresPersistenceAdapter(IPersistencePort):
         self._credential_provider = credential_provider
         # La inicialización de la conexión se manejará aquí
 
-    async def save_trade(self, trade: Trade) -> TradeId:
+    async def save_trade(self, trade: Trade) -> UUID: # Cambiar tipo de retorno a UUID
         raise NotImplementedError
 
     async def get_portfolio(self, user_id: UserId) -> Portfolio:

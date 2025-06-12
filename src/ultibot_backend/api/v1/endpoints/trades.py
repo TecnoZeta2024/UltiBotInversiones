@@ -7,10 +7,10 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 
-from src.shared.data_types import Trade
-from src.ultibot_backend.core.ports import IPersistencePort
-from src.ultibot_backend.dependencies import PersistenceServiceDep
-from src.ultibot_backend.app_config import settings
+from ....shared.data_types import Trade
+from ...core.ports import IPersistencePort
+from ...dependencies import PersistenceServiceDep
+from ...app_config import settings
 
 router = APIRouter(prefix="/trades", tags=["Trades"])
 logger = logging.getLogger(__name__)

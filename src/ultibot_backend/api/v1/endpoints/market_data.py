@@ -6,10 +6,10 @@ from typing import List, Dict, Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from src.shared.data_types import MarketData
-from src.ultibot_backend.services.market_data_service import MarketDataService
-from src.ultibot_backend.core.exceptions import UltiBotError
-from src.ultibot_backend.dependencies import MarketDataServiceDep
+from ....shared.data_types import MarketData
+from ...services.market_data_service import MarketDataService
+from ...core.exceptions import UltiBotError
+from ...dependencies import MarketDataServiceDep
 
 router = APIRouter(prefix="/market-data", tags=["Market Data"])
 logger = logging.getLogger(__name__)

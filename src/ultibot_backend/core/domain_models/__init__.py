@@ -6,8 +6,8 @@ y no deben importar frameworks externos.
 """
 
 from .trading import (
-    TradeId, TickerData, KlineData, OrderSide, OrderType, Trade, Opportunity, TradeResult,
-    CommandResult, TradingSignal, StrategyParameters, AnalysisResult
+    TickerData, KlineData, OrderSide, OrderType, Trade, Opportunity, TradeResult,
+    CommandResult, TradingSignal, AnalysisResult, BaseStrategyParameters
 )
 from .portfolio import (
     UserId, Portfolio, PortfolioSnapshot

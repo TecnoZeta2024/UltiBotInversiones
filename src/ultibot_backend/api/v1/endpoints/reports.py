@@ -9,9 +9,9 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Query, Path, Depends, status
 from pydantic import BaseModel
 
-from src.shared.data_types import Trade, PerformanceMetrics
-from src.ultibot_backend.dependencies import PerformanceServiceDep
-from src.ultibot_backend.app_config import settings
+from ....shared.data_types import Trade, PerformanceMetrics
+from ...dependencies import PerformanceServiceDep
+from ...app_config import settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/reports", tags=["Reports"])

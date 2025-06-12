@@ -5,11 +5,11 @@ from datetime import datetime
 from fastapi import Depends
 
 # Importar modelos de dominio y tipos de datos compartidos
-from src.shared.data_types import PortfolioSnapshot, PortfolioSummary, PortfolioAsset, AssetBalance, Trade
-from src.ultibot_backend.core.domain_models.user_configuration_models import UserConfiguration, PaperTradingAsset
-from src.ultibot_backend.services.market_data_service import MarketDataService
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend.core.exceptions import UltiBotError, ConfigurationError, ExternalAPIError, PortfolioError
+from shared.data_types import PortfolioSnapshot, PortfolioSummary, PortfolioAsset, AssetBalance, Trade
+from ultibot_backend.core.domain_models.user_configuration_models import UserConfiguration, PaperTradingAsset
+from ultibot_backend.services.market_data_service import MarketDataService
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from ultibot_backend.core.exceptions import UltiBotError, ConfigurationError, ExternalAPIError, PortfolioError
 
 logger = logging.getLogger(__name__)
 

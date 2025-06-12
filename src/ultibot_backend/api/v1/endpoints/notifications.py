@@ -7,9 +7,9 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status, Query
 
-from src.shared.data_types import Notification
-from src.ultibot_backend.core.exceptions import NotificationError
-from src.ultibot_backend.dependencies import NotificationServiceDep
+from ....shared.data_types import Notification
+from ...core.exceptions import NotificationError
+from ...dependencies import NotificationServiceDep
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 logger = logging.getLogger(__name__)

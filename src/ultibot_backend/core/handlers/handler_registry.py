@@ -10,7 +10,7 @@ from typing import Any, Callable, Dict, List, Type, TypeVar, Coroutine, Optional
 
 from pydantic import BaseModel
 
-from src.ultibot_backend.core.domain_models.events import (
+from ultibot_backend.core.domain_models.events import (
     OrderPlacedEvent,
     TradeExecutedEvent,
     OrderStatusChangedEvent,
@@ -21,9 +21,9 @@ from src.ultibot_backend.core.domain_models.events import (
     AIAnalysisCompletedEvent,
     BaseEvent
 )
-from src.ultibot_backend.core.exceptions import HandlerNotFoundError, InvalidHandlerError
-from src.ultibot_backend.core.services.event_broker import AsyncEventBroker
-from src.ultibot_backend.core.handlers.event_handlers import (
+from ultibot_backend.core.exceptions import HandlerNotFoundError, InvalidHandlerError
+from ultibot_backend.core.services.event_broker import AsyncEventBroker
+from ultibot_backend.core.handlers.event_handlers import (
     TradingEventHandlers,
     PortfolioEventHandlers,
     StrategyEventHandlers,

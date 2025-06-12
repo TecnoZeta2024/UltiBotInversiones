@@ -7,12 +7,12 @@ import time
 from injector import inject
 from typing import Dict, Any, List
 
-from src.ultibot_backend.core.ports import (
+from ultibot_backend.core.ports import (
     IAIModelAdapter,
     IMCPToolHub,
     IPromptManager,
 )
-from src.ultibot_backend.core.domain_models.ai_models import (
+from ultibot_backend.core.domain_models.ai_models import (
     TradingOpportunity,
     AIAnalysisResult,
     ToolExecutionRequest,

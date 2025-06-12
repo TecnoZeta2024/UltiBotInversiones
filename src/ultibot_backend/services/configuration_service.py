@@ -5,11 +5,11 @@ from uuid import UUID
 from fastapi import HTTPException
 from pydantic import ValidationError
 
-from src.ultibot_backend.core.domain_models.user_configuration_models import UserConfiguration, RealTradingSettings
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend.services.notification_service import NotificationService
-from src.ultibot_backend.core.exceptions import ConfigurationError, RealTradeLimitReachedError, InsufficientUSDTBalanceError
-from src.ultibot_backend.app_config import settings
+from ultibot_backend.core.domain_models.user_configuration_models import UserConfiguration, RealTradingSettings
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from ultibot_backend.services.notification_service import NotificationService
+from ultibot_backend.core.exceptions import ConfigurationError, RealTradeLimitReachedError, InsufficientUSDTBalanceError
+from ultibot_backend.app_config import settings
 
 logger = logging.getLogger(__name__)
 

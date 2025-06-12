@@ -6,15 +6,16 @@ interactuando con los puertos de datos de mercado, persistencia y publicación d
 
 from decimal import Decimal
 from typing import Optional
+from uuid import UUID # Importar UUID directamente
 
-from src.ultibot_backend.core.ports import (
+from ultibot_backend.core.ports import (
     IMarketDataProvider, IPersistencePort, IEventPublisher, IOrderExecutionPort
 )
-from src.ultibot_backend.core.domain_models.trading import (
-    Opportunity, TradeResult, Trade, TradeId, OrderSide, OrderType, TickerData
+from ultibot_backend.core.domain_models.trading import (
+    Opportunity, TradeResult, Trade, OrderSide, OrderType, TickerData
 )
-from src.ultibot_backend.core.domain_models.events import TradeExecutedEvent
-from src.ultibot_backend.core.exceptions import TradeExecutionError, InsufficientFundsError
+from ultibot_backend.core.domain_models.events import TradeExecutedEvent
+from ultibot_backend.core.exceptions import TradeExecutionError, InsufficientFundsError
 
 class TradingEngineService:
     """
@@ -91,7 +92,7 @@ class TradingEngineService:
             )
 
             # Persistir el trade
-            trade_id = await self._persistence_port.save_trade(trade)
+            trade_id: UUID = await self._persistence_port.save_trade(trade) # Asegurar que trade_id es UUID
             trade = trade.model_copy(update={'id': trade_id}) # Actualizar el ID del trade
 
             # Publicar el evento de Trade Ejecutado

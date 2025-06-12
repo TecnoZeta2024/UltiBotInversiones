@@ -1,408 +1,311 @@
 """
-SuperTrend Volatility Filter Strategy
+SuperTrend Volatility Filter Strategy (Refactored)
 
 Esta estrategia sigue tendencias marcadas por el indicador SuperTrend, pero solo si la volatilidad
 (ATR) está dentro de un rango específico. Combina trend following con gestión de riesgo basada en volatilidad.
+Ahora alineada con la arquitectura hexagonal y BaseStrategy.
 
 Author: UltiBotInversiones
-Version: 1.0
+Version: 2.1
 """
 
 import logging
 from decimal import Decimal
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import statistics
+from datetime import datetime # Importar datetime
 
-from .base_strategy import BaseStrategy, AnalysisResult, TradingSignal, SignalStrength
+from .base_strategy import BaseStrategy
 from ..core.domain_models.market import MarketSnapshot, KlineData
+from ..core.domain_models.trading import (
+    AnalysisResult, TradingSignal, SuperTrendParameters, OrderSide, SignalStrength
+)
 
 logger = logging.getLogger(__name__)
 
-
-class SuperTrendParameters:
-    """Parámetros configurables para SuperTrend Volatility Filter."""
-    
-    def __init__(
-        self,
-        atr_period: int = 14,
-        atr_multiplier: float = 3.0,
-        min_volatility_percentile: float = 20.0,
-        max_volatility_percentile: float = 80.0,
-        volatility_lookback: int = 100,
-        min_trend_strength: float = 0.7,
-        position_size_pct: float = 0.02
-    ):
-        self.atr_period = atr_period
-        self.atr_multiplier = atr_multiplier
-        self.min_volatility_percentile = min_volatility_percentile
-        self.max_volatility_percentile = max_volatility_percentile
-        self.volatility_lookback = volatility_lookback
-        self.min_trend_strength = min_trend_strength
-        self.position_size_pct = position_size_pct
-
-
 class SuperTrendVolatilityFilter(BaseStrategy):
     """
-    Estrategia SuperTrend con filtro de volatilidad.
-    
-    Entra en tendencias marcadas por SuperTrend, pero solo si la volatilidad actual
-    está dentro del rango especificado (ni muy baja ni muy alta).
+    Estrategia SuperTrend con filtro de volatilidad, alineada con la arquitectura base.
     """
     
     def __init__(self, parameters: SuperTrendParameters):
-        super().__init__("SuperTrend_Volatility_Filter", parameters)
-        self.atr_period = parameters.atr_period
-        self.atr_multiplier = parameters.atr_multiplier
-        self.min_volatility_percentile = parameters.min_volatility_percentile
-        self.max_volatility_percentile = parameters.max_volatility_percentile
-        self.volatility_lookback = parameters.volatility_lookback
-        self.min_trend_strength = parameters.min_trend_strength
-        self.position_size_pct = parameters.position_size_pct
-        
-        self._atr_history = []
-        self._supertrend_history = []
+        super().__init__(parameters)
+        self._atr_history: List[float] = []
 
-    async def setup(self, market_data: Any) -> None:
+    async def setup(self) -> None:
         """Configuración inicial de la estrategia."""
-        logger.info(f"Configurando {self.name} con ATR period={self.atr_period}, multiplier={self.atr_multiplier}")
+        logger.info(f"Configurando {self.name} con parámetros: {self.parameters}")
+        pass
 
     async def analyze(self, market_snapshot: MarketSnapshot) -> AnalysisResult:
         """
         Analiza el mercado usando SuperTrend con filtro de volatilidad.
-        
-        Args:
-            market_snapshot: Datos actuales del mercado
-            
-        Returns:
-            AnalysisResult con análisis de SuperTrend y volatilidad
         """
         try:
-            if len(market_snapshot.klines) < self.volatility_lookback:
+            params = self.parameters
+            if len(market_snapshot.klines) < params.volatility_lookback:
                 return AnalysisResult(
                     confidence=0.0,
                     indicators={},
                     metadata={"error": "Datos insuficientes para análisis"}
                 )
 
-            # Calcular ATR
-            atr_values = self._calculate_atr(market_snapshot.klines)
+            atr_values = self._calculate_atr(market_snapshot.klines, params.atr_period)
             current_atr = atr_values[-1]
             
-            # Calcular SuperTrend
-            supertrend_data = self._calculate_supertrend(market_snapshot.klines, atr_values)
+            supertrend_data = self._calculate_supertrend(market_snapshot.klines, atr_values, params.atr_multiplier)
             current_supertrend = supertrend_data["values"][-1]
             trend_direction = supertrend_data["direction"][-1]
             
-            # Filtro de volatilidad
-            volatility_filter = self._apply_volatility_filter(atr_values)
+            volatility_filter_passed = self._apply_volatility_filter(
+                atr_values, params.volatility_lookback, params.min_volatility_percentile, params.max_volatility_percentile
+            )
             
-            # Calcular fuerza de la tendencia
             trend_strength = self._calculate_trend_strength(market_snapshot.klines, supertrend_data["values"])
             
-            # Calcular confianza
             confidence = self._calculate_confidence(
-                trend_direction, trend_strength, volatility_filter, current_atr
+                trend_direction, trend_strength, volatility_filter_passed
             )
             
             current_price = float(market_snapshot.klines[-1].close)
             
+            indicators = {
+                "supertrend": current_supertrend,
+                "trend_direction": trend_direction,
+                "atr": current_atr,
+                "trend_strength": trend_strength,
+                "volatility_filter_passed": volatility_filter_passed,
+                "price": current_price
+            }
+            
+            metadata = {
+                "atr_period": params.atr_period,
+                "atr_multiplier": params.atr_multiplier,
+                "volatility_percentile": self._get_volatility_percentile(atr_values, params.volatility_lookback)
+            }
+
+            signal = None
+            if confidence > params.min_trend_strength and volatility_filter_passed:
+                signal = self._generate_signal_from_analysis(indicators, market_snapshot.symbol, market_snapshot.timestamp) # Pasar timestamp
+
             return AnalysisResult(
                 confidence=confidence,
-                indicators={
-                    "supertrend": current_supertrend,
-                    "trend_direction": trend_direction,  # 1: uptrend, -1: downtrend
-                    "atr": current_atr,
-                    "trend_strength": trend_strength,
-                    "volatility_filter": volatility_filter,
-                    "price": current_price
-                },
-                metadata={
-                    "atr_period": self.atr_period,
-                    "atr_multiplier": self.atr_multiplier,
-                    "volatility_percentile": self._get_volatility_percentile(atr_values)
-                }
+                indicators=indicators,
+                metadata=metadata,
+                signal=signal
             )
             
         except Exception as e:
-            logger.error(f"Error en análisis SuperTrend: {e}")
+            logger.error(f"Error en análisis SuperTrend: {e}", exc_info=True)
             return AnalysisResult(
                 confidence=0.0,
                 indicators={},
                 metadata={"error": str(e)}
             )
 
-    async def generate_signal(self, analysis: AnalysisResult) -> Optional[TradingSignal]:
-        """
-        Genera señal de trading basada en el análisis SuperTrend.
+    def _generate_signal_from_analysis(self, indicators: Dict[str, Any], symbol: str, timestamp: datetime) -> Optional[TradingSignal]: # Añadir timestamp
+        """Genera una señal de trading basada en el resultado del análisis."""
+        trend_direction = indicators.get("trend_direction", 0)
+        current_price = indicators.get("price", 0)
+        supertrend = indicators.get("supertrend", 0)
         
-        Args:
-            analysis: Resultado del análisis
-            
-        Returns:
-            TradingSignal si se cumplen las condiciones, None en caso contrario
-        """
-        try:
-            if analysis.confidence < self.min_trend_strength:
-                return None
-                
-            indicators = analysis.indicators
-            trend_direction = indicators.get("trend_direction", 0)
-            volatility_filter = indicators.get("volatility_filter", False)
-            
-            if not volatility_filter:
-                logger.debug("Señal filtrada por volatilidad fuera de rango")
-                return None
-                
-            current_price = indicators.get("price", 0)
-            supertrend = indicators.get("supertrend", 0)
-            
-            if trend_direction == 1 and current_price > supertrend:
-                # Señal de compra
-                signal_strength = self._get_signal_strength(analysis.confidence)
-                position_size = self._calculate_position_size(signal_strength)
-                
-                return TradingSignal(
-                    signal_type="BUY",
-                    strength=signal_strength,
-                    entry_price=Decimal(str(current_price)),
-                    stop_loss=Decimal(str(supertrend)),
-                    take_profit=self._calculate_take_profit(current_price, supertrend, "BUY"),
-                    position_size=position_size,
-                    reasoning=f"SuperTrend uptrend signal with favorable volatility. Price: {current_price:.4f}, SuperTrend: {supertrend:.4f}"
-                )
-                
-            elif trend_direction == -1 and current_price < supertrend:
-                # Señal de venta
-                signal_strength = self._get_signal_strength(analysis.confidence)
-                position_size = self._calculate_position_size(signal_strength)
-                
-                return TradingSignal(
-                    signal_type="SELL",
-                    strength=signal_strength,
-                    entry_price=Decimal(str(current_price)),
-                    stop_loss=Decimal(str(supertrend)),
-                    take_profit=self._calculate_take_profit(current_price, supertrend, "SELL"),
-                    position_size=position_size,
-                    reasoning=f"SuperTrend downtrend signal with favorable volatility. Price: {current_price:.4f}, SuperTrend: {supertrend:.4f}"
-                )
-                
-            return None
-            
-        except Exception as e:
-            logger.error(f"Error generando señal SuperTrend: {e}")
-            return None
+        side = None
+        if trend_direction == 1 and current_price > supertrend:
+            side = OrderSide.BUY
+        elif trend_direction == -1 and current_price < supertrend:
+            side = OrderSide.SELL
 
-    def _calculate_atr(self, klines: list[KlineData]) -> list[float]:
+        if side:
+            confidence = indicators.get("trend_strength", 0.0) # Usar trend_strength como base para la señal
+            signal_strength = self._get_signal_strength(confidence)
+            position_size = self._calculate_position_size(signal_strength)
+            stop_loss = Decimal(str(supertrend))
+            take_profit = self._calculate_take_profit(current_price, stop_loss, side)
+            
+            return self._create_trading_signal(
+                symbol=symbol,
+                side=side,
+                quantity=position_size,
+                stop_loss=stop_loss,
+                take_profit=take_profit,
+                strength=signal_strength,
+                reasoning=f"SuperTrend {side.value} signal with favorable volatility. Price: {current_price:.4f}, SuperTrend: {supertrend:.4f}",
+                timestamp=timestamp # Pasar timestamp a _create_trading_signal
+            )
+        return None
+
+    def _calculate_atr(self, klines: List[KlineData], period: int) -> List[float]:
         """Calcula Average True Range."""
         atr_values = []
-        
+        if not klines:
+            return []
+
+        highs = [float(k.high) for k in klines]
+        lows = [float(k.low) for k in klines]
+        closes = [float(k.close) for k in klines]
+
         for i in range(len(klines)):
             if i == 0:
-                atr_values.append(float(klines[i].high) - float(klines[i].low))
-                continue
-                
-            high = float(klines[i].high)
-            low = float(klines[i].low)
-            prev_close = float(klines[i-1].close)
-            
-            tr1 = high - low
-            tr2 = abs(high - prev_close)
-            tr3 = abs(low - prev_close)
-            true_range = max(tr1, tr2, tr3)
-            
-            if i < self.atr_period:
-                atr_values.append(statistics.mean([atr_values[j] for j in range(i)] + [true_range]))
+                true_range = highs[i] - lows[i]
             else:
-                # EMA del ATR
-                prev_atr = atr_values[-1]
-                alpha = 2 / (self.atr_period + 1)
-                atr = alpha * true_range + (1 - alpha) * prev_atr
+                tr1 = highs[i] - lows[i]
+                tr2 = abs(highs[i] - closes[i-1])
+                tr3 = abs(lows[i] - closes[i-1])
+                true_range = max(tr1, tr2, tr3)
+            
+            if not atr_values:
+                atr_values.append(true_range)
+            else:
+                atr = (atr_values[-1] * (period - 1) + true_range) / period
                 atr_values.append(atr)
         
         return atr_values
 
-    def _calculate_supertrend(self, klines: list[KlineData], atr_values: list[float]) -> Dict[str, list]:
+    def _calculate_supertrend(self, klines: List[KlineData], atr_values: List[float], multiplier: float) -> Dict[str, List[Any]]:
         """Calcula el indicador SuperTrend."""
         hl2 = [(float(k.high) + float(k.low)) / 2 for k in klines]
+        closes = [float(k.close) for k in klines]
         
-        basic_upper_band = []
-        basic_lower_band = []
-        final_upper_band = []
-        final_lower_band = []
-        supertrend = []
-        direction = []
-        
-        for i in range(len(klines)):
-            atr = atr_values[i]
-            
-            # Bandas básicas
-            upper = hl2[i] + (self.atr_multiplier * atr)
-            lower = hl2[i] - (self.atr_multiplier * atr)
-            
-            basic_upper_band.append(upper)
-            basic_lower_band.append(lower)
-            
-            # Bandas finales
-            if i == 0:
-                final_upper_band.append(upper)
-                final_lower_band.append(lower)
-            else:
-                # Final Upper Band
-                if upper < final_upper_band[i-1] or float(klines[i-1].close) > final_upper_band[i-1]:
-                    final_upper_band.append(upper)
-                else:
-                    final_upper_band.append(final_upper_band[i-1])
-                
-                # Final Lower Band
-                if lower > final_lower_band[i-1] or float(klines[i-1].close) < final_lower_band[i-1]:
-                    final_lower_band.append(lower)
-                else:
-                    final_lower_band.append(final_lower_band[i-1])
-            
-            # SuperTrend y dirección
-            if i == 0:
-                supertrend.append(final_lower_band[i])
-                direction.append(1)
-            else:
-                if (supertrend[i-1] == final_upper_band[i-1] and 
-                    float(klines[i].close) <= final_upper_band[i]):
-                    supertrend.append(final_upper_band[i])
-                    direction.append(-1)
-                elif (supertrend[i-1] == final_upper_band[i-1] and 
-                      float(klines[i].close) > final_upper_band[i]):
-                    supertrend.append(final_lower_band[i])
-                    direction.append(1)
-                elif (supertrend[i-1] == final_lower_band[i-1] and 
-                      float(klines[i].close) >= final_lower_band[i]):
-                    supertrend.append(final_lower_band[i])
-                    direction.append(1)
-                elif (supertrend[i-1] == final_lower_band[i-1] and 
-                      float(klines[i].close) < final_lower_band[i]):
-                    supertrend.append(final_upper_band[i])
-                    direction.append(-1)
-                else:
-                    supertrend.append(supertrend[i-1])
-                    direction.append(direction[i-1])
-        
-        return {
-            "values": supertrend,
-            "direction": direction,
-            "upper_band": final_upper_band,
-            "lower_band": final_lower_band
-        }
+        # Initialize bands and direction
+        upper_band = [0.0] * len(klines)
+        lower_band = [0.0] * len(klines)
+        supertrend = [0.0] * len(klines)
+        direction = [0] * len(klines) # 1 for uptrend, -1 for downtrend
 
-    def _apply_volatility_filter(self, atr_values: list[float]) -> bool:
+        for i in range(len(klines)):
+            # Calculate basic upper and lower bands
+            basic_upper_band = hl2[i] + multiplier * atr_values[i]
+            basic_lower_band = hl2[i] - multiplier * atr_values[i]
+
+            if i == 0:
+                upper_band[i] = basic_upper_band
+                lower_band[i] = basic_lower_band
+                direction[i] = 1 # Assume uptrend initially
+            else:
+                # Update upper band
+                upper_band[i] = min(basic_upper_band, upper_band[i-1]) if closes[i-1] > upper_band[i-1] else basic_upper_band
+                # Update lower band
+                lower_band[i] = max(basic_lower_band, lower_band[i-1]) if closes[i-1] < lower_band[i-1] else basic_lower_band
+
+                # Determine SuperTrend direction and value
+                if direction[i-1] == 1: # Previous trend was up
+                    if closes[i] < lower_band[i]: # Price crosses below lower band
+                        direction[i] = -1 # Trend changes to down
+                    else:
+                        direction[i] = 1 # Trend remains up
+                else: # Previous trend was down (-1)
+                    if closes[i] > upper_band[i]: # Price crosses above upper band
+                        direction[i] = 1 # Trend changes to up
+                    else:
+                        direction[i] = -1 # Trend remains down
+            
+            # Calculate SuperTrend value based on current direction
+            if direction[i] == 1:
+                supertrend[i] = lower_band[i]
+            else:
+                supertrend[i] = upper_band[i]
+
+            # Adjust SuperTrend value if price crosses it
+            if i > 0:
+                if supertrend[i] > supertrend[i-1] and closes[i] < supertrend[i]:
+                    supertrend[i] = supertrend[i-1]
+                elif supertrend[i] < supertrend[i-1] and closes[i] > supertrend[i]:
+                    supertrend[i] = supertrend[i-1]
+
+        return {"values": supertrend, "direction": direction}
+
+    def _apply_volatility_filter(self, atr_values: List[float], lookback: int, min_percentile: float, max_percentile: float) -> bool:
         """Aplica filtro de volatilidad basado en percentiles."""
-        if len(atr_values) < self.volatility_lookback:
+        if len(atr_values) < lookback:
             return False
             
-        recent_atr = atr_values[-self.volatility_lookback:]
+        recent_atr = atr_values[-lookback:]
         current_atr = atr_values[-1]
         
-        sorted_atr = sorted(recent_atr)
-        min_threshold_idx = int(len(sorted_atr) * self.min_volatility_percentile / 100)
-        max_threshold_idx = int(len(sorted_atr) * self.max_volatility_percentile / 100)
-        
-        min_threshold = sorted_atr[min_threshold_idx]
-        max_threshold = sorted_atr[max_threshold_idx]
-        
+        try:
+            if min_percentile == 0.0:
+                min_threshold = min(recent_atr)
+            else:
+                min_threshold = statistics.quantiles(recent_atr, n=100)[int(min_percentile) - 1] # Adjust index for 1-based percentile
+
+            if max_percentile == 100.0:
+                max_threshold = max(recent_atr)
+            else:
+                max_threshold = statistics.quantiles(recent_atr, n=100)[int(max_percentile) - 1] # Adjust index for 1-based percentile
+        except IndexError:
+            return False # Not enough data points for quantiles or invalid percentile
+
         return min_threshold <= current_atr <= max_threshold
 
-    def _calculate_trend_strength(self, klines: list[KlineData], supertrend_values: list[float]) -> float:
+    def _calculate_trend_strength(self, klines: List[KlineData], supertrend_values: List[float]) -> float:
         """Calcula la fuerza de la tendencia."""
-        if len(klines) < 20:
+        if len(klines) < 20 or len(supertrend_values) < 20:
             return 0.0
             
-        # Contar cuántas velas están del lado correcto del SuperTrend
         recent_klines = klines[-20:]
         recent_supertrend = supertrend_values[-20:]
         
-        trend_aligned = 0
-        for i, kline in enumerate(recent_klines):
+        trend_aligned_count = 0
+        for kline, st_value in zip(recent_klines, recent_supertrend):
             close_price = float(kline.close)
-            st_value = recent_supertrend[i]
-            
-            # Determinar dirección esperada
-            if i > 0:
-                prev_st = recent_supertrend[i-1]
-                if st_value < close_price and prev_st < float(recent_klines[i-1].close):
-                    trend_aligned += 1  # Uptrend consistente
-                elif st_value > close_price and prev_st > float(recent_klines[i-1].close):
-                    trend_aligned += 1  # Downtrend consistente
+            if close_price > st_value:
+                trend_aligned_count += 1
+            elif close_price < st_value:
+                trend_aligned_count -= 1
         
-        return trend_aligned / len(recent_klines)
+        return abs(trend_aligned_count / len(recent_klines))
 
-    def _calculate_confidence(
-        self, 
-        trend_direction: int, 
-        trend_strength: float, 
-        volatility_filter: bool,
-        current_atr: float
-    ) -> float:
+    def _calculate_confidence(self, trend_direction: int, trend_strength: float, volatility_filter_passed: bool) -> float:
         """Calcula el nivel de confianza de la estrategia."""
-        confidence = 0.0
+        if not volatility_filter_passed:
+            return 0.0
         
-        # Base: fuerza de la tendencia
+        confidence = 0.5
         confidence += trend_strength * 0.4
-        
-        # Bonus por filtro de volatilidad
-        if volatility_filter:
-            confidence += 0.3
-        
-        # Bonus por dirección de tendencia clara
         if abs(trend_direction) == 1:
-            confidence += 0.2
-        
-        # Penalización por volatilidad extrema
-        if current_atr > 0:
-            volatility_factor = min(1.0, 1 / (current_atr * 100))  # Ajustar según escala
-            confidence += volatility_factor * 0.1
+            confidence += 0.1
         
         return min(1.0, confidence)
 
-    def _get_volatility_percentile(self, atr_values: list[float]) -> float:
+    def _get_volatility_percentile(self, atr_values: List[float], lookback: int) -> float:
         """Obtiene el percentil de volatilidad actual."""
-        if len(atr_values) < self.volatility_lookback:
+        if len(atr_values) < lookback:
             return 50.0
             
-        recent_atr = atr_values[-self.volatility_lookback:]
+        recent_atr = sorted(atr_values[-lookback:])
         current_atr = atr_values[-1]
         
-        sorted_atr = sorted(recent_atr)
-        rank = sorted_atr.index(min(sorted_atr, key=lambda x: abs(x - current_atr)))
-        
-        return (rank / len(sorted_atr)) * 100
+        rank = sum(1 for atr in recent_atr if atr < current_atr)
+        return (rank / len(recent_atr)) * 100
 
     def _get_signal_strength(self, confidence: float) -> SignalStrength:
         """Convierte confianza a fuerza de señal."""
         if confidence >= 0.8:
             return SignalStrength.STRONG
         elif confidence >= 0.6:
-            return SignalStrength.MEDIUM
+            return SignalStrength.MODERATE
         else:
             return SignalStrength.WEAK
 
     def _calculate_position_size(self, signal_strength: SignalStrength) -> Decimal:
         """Calcula el tamaño de posición basado en la fuerza de la señal."""
-        base_size = self.position_size_pct
+        base_size = self.parameters.position_size_pct
         
         if signal_strength == SignalStrength.STRONG:
             multiplier = 1.5
-        elif signal_strength == SignalStrength.MEDIUM:
+        elif signal_strength == SignalStrength.MODERATE:
             multiplier = 1.0
         else:
             multiplier = 0.5
             
         return Decimal(str(base_size * multiplier))
 
-    def _calculate_take_profit(self, entry_price: float, stop_loss: float, signal_type: str) -> Decimal:
-        """Calcula take profit usando ratio 2:1."""
-        risk = abs(entry_price - stop_loss)
-        reward = risk * 2  # Ratio 2:1
+    def _calculate_take_profit(self, entry_price: float, stop_loss: Decimal, side: OrderSide) -> Decimal:
+        """Calcula take profit usando el ratio riesgo-recompensa de los parámetros."""
+        risk = abs(Decimal(str(entry_price)) - stop_loss)
+        reward = risk * Decimal(str(self.parameters.risk_reward_ratio))
         
-        if signal_type == "BUY":
-            tp = entry_price + reward
+        if side == OrderSide.BUY:
+            return Decimal(str(entry_price)) + reward
         else:
-            tp = entry_price - reward
-            
-        return Decimal(str(tp))
+            return Decimal(str(entry_price)) - reward

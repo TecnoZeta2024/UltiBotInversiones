@@ -1,17 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from uuid import UUID
 
-from src.shared.data_types import UserConfiguration
-from src.ultibot_backend.services.configuration_service import ConfigurationService
-from src.ultibot_backend.dependencies import get_configuration_service
-from src.ultibot_backend.core.exceptions import (
+from ....shared.data_types import UserConfiguration
+from ...services.configuration_service import ConfigurationService
+from ...dependencies import get_configuration_service
+from ...core.exceptions import (
     ConfigurationError,
     BinanceAPIError,
     InsufficientUSDTBalanceError,
     RealTradeLimitReachedError,
     CredentialError,
 )
-from src.ultibot_backend.app_config import settings
+from ...app_config import settings
 
 router = APIRouter()
 

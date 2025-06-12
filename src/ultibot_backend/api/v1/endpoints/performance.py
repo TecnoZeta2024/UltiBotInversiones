@@ -3,13 +3,13 @@ from typing import Optional
 from uuid import UUID
 from datetime import datetime
 
-from src.ultibot_backend.api.v1.models.performance_models import (
+from ..models.performance_models import (
     StrategyPerformanceResponse,
     OperatingMode,
 )
-from src.shared.data_types import PerformanceMetrics
-from src.ultibot_backend.dependencies import PerformanceServiceDep
-from src.ultibot_backend.app_config import settings
+from ....shared.data_types import PerformanceMetrics
+from ...dependencies import PerformanceServiceDep
+from ...app_config import settings
 
 router = APIRouter()
 

@@ -10,17 +10,17 @@ from datetime import datetime
 
 from pydantic import Field, ConfigDict
 
-from src.ultibot_backend.core.domain_models.market import MarketSnapshot, TickerData
-from src.ultibot_backend.core.domain_models.trading import (
-    StrategyParameters, AnalysisResult, TradingSignal, OrderSide, OrderType
+from ultibot_backend.core.domain_models.market import MarketSnapshot, TickerData
+from ultibot_backend.core.domain_models.trading import (
+    BaseStrategyParameters, AnalysisResult, TradingSignal, OrderSide, OrderType
 )
-from src.ultibot_backend.strategies.base_strategy import BaseStrategy
-from src.ultibot_backend.core.ports import IMarketDataProvider
+from ultibot_backend.strategies.base_strategy import BaseStrategy
+from ultibot_backend.core.ports import IMarketDataProvider
 
 # Configurar la precisión decimal global
 getcontext().prec = 10
 
-class TriangularArbitrageParameters(StrategyParameters):
+class TriangularArbitrageParameters(BaseStrategyParameters):
     """
     Parámetros de configuración para la estrategia Triangular_Arbitrage.
     """
@@ -41,7 +41,7 @@ class TriangularArbitrage(BaseStrategy):
         Args:
             parameters (TriangularArbitrageParameters): Parámetros específicos de la estrategia.
         """
-        super().__init__("Triangular_Arbitrage", parameters)
+        super().__init__(parameters)
         self.params: TriangularArbitrageParameters = parameters
         self._market_data_provider: Optional[IMarketDataProvider] = None # Se inyectará desde el StrategyLoader
 

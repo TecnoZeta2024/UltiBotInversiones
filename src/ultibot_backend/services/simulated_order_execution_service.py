@@ -6,7 +6,7 @@ import logging
 from typing import Dict, Any
 
 # Assuming a shared data type for orders, will define if not present
-# from src.shared.data_types import Order
+from src.shared.data_types import Order
 
 logger = logging.getLogger(__name__)
 

@@ -11,7 +11,7 @@ from typing import Optional
 from uuid import UUID
 from pydantic import BaseModel, Field
 
-from src.ultibot_backend.core.domain_models.trading import OrderType, OrderSide
+from ultibot_backend.core.domain_models.trading import OrderType, OrderSide
 
 class PlaceOrderCommand(BaseModel):
     """Command to place a new trading order."""

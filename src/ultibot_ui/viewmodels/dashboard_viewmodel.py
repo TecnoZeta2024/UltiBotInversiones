@@ -3,14 +3,15 @@ Módulo que define el ViewModel para el Dashboard de la aplicación.
 Gestiona los datos y la lógica de presentación para la vista principal del usuario.
 """
 
-from PyQt6.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
+from PyQt6.QtCore import pyqtProperty, pyqtSignal, pyqtSlot, QObject # Importar QObject
 from typing import Optional, List, Dict, Any
 from decimal import Decimal
 import asyncio
+from uuid import UUID # Importar UUID directamente
 
 from src.ultibot_ui.viewmodels.base_viewmodel import BaseViewModel
 from src.ultibot_ui.services.api_client import APIClient
-from src.ultibot_ui.models import Portfolio, Trade, TickerData, MarketSnapshot, KlineData, TradeId, OrderSide, OrderType
+from src.ultibot_ui.models import Portfolio, Trade, TickerData, MarketSnapshot, KlineData, OrderSide, OrderType # Eliminar TradeId
 
 class DashboardViewModel(BaseViewModel):
     """
@@ -124,7 +125,7 @@ class DashboardViewModel(BaseViewModel):
                 self.portfolio_value = total_value_usd
                 self.active_trades = [
                     Trade(
-                        id=TradeId(UUID(t['id']['value'])), # Asumiendo que el ID es un dict con 'value'
+                        id=UUID(t['id']['value']), # Usar UUID directamente
                         symbol=t['symbol'],
                         side=OrderSide(t['side']),
                         quantity=Decimal(str(t['quantity'])),

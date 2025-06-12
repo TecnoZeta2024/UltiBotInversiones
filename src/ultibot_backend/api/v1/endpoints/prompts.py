@@ -11,8 +11,8 @@ import time
 from fastapi import APIRouter, HTTPException, Depends, Query, Path, status
 from pydantic import BaseModel, Field
 
-from src.ultibot_backend.dependencies import PromptManagerDep, AIOrchestratorDep
-from src.ultibot_backend.core.domain_models.prompt_models import PromptTemplate
+from ...dependencies import PromptManagerDep, AIOrchestratorDep
+from ...core.domain_models.prompt_models import PromptTemplate
 
 logger = logging.getLogger(__name__)
 

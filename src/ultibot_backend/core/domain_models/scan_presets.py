@@ -11,7 +11,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, ConfigDict
 
-from src.ultibot_backend.core.domain_models.trading import TickerData
+from ultibot_backend.core.domain_models.trading import TickerData
 
 class ScanCriteria(BaseModel):
     """Define los criterios para un escaneo de mercado."""

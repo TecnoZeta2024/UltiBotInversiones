@@ -6,11 +6,12 @@ interactuando con el puerto de persistencia y publicando eventos de actualizaci√
 
 from decimal import Decimal
 from typing import Dict, List, Optional
+from datetime import datetime # A√±adido
 
-from src.ultibot_backend.core.ports import IPersistencePort, IEventPublisher, IMarketDataProvider
-from src.ultibot_backend.core.domain_models.portfolio import Portfolio, UserId, Asset, PortfolioSnapshot
-from src.ultibot_backend.core.domain_models.events import PortfolioUpdatedEvent
-from src.ultibot_backend.core.domain_models.trading import Trade, TickerData
+from ultibot_backend.core.ports import IPersistencePort, IEventPublisher, IMarketDataProvider
+from ultibot_backend.core.domain_models.portfolio import Portfolio, UserId, Asset, PortfolioSnapshot
+from ultibot_backend.core.domain_models.events import PortfolioUpdatedEvent
+from ultibot_backend.core.domain_models.trading import Trade, TickerData, OrderSide
 
 class PortfolioManagerService:
     """

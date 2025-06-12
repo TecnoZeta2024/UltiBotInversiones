@@ -10,19 +10,20 @@ from datetime import datetime
 
 from pydantic import Field, ConfigDict
 
-from src.ultibot_backend.core.domain_models.market import KlineData, MarketSnapshot
-from src.ultibot_backend.core.domain_models.trading import (
-    StrategyParameters, AnalysisResult, TradingSignal, OrderSide, OrderType
+from ultibot_backend.core.domain_models.market import KlineData, MarketSnapshot
+from ultibot_backend.core.domain_models.trading import (
+    BaseStrategyParameters, AnalysisResult, TradingSignal, OrderSide, OrderType, SignalStrength
 )
-from src.ultibot_backend.strategies.base_strategy import BaseStrategy
+from ultibot_backend.strategies.base_strategy import BaseStrategy
 
 # Configurar la precisión decimal global
 getcontext().prec = 10
 
-class MACDRSIParameters(StrategyParameters):
+class MACDRSIParameters(BaseStrategyParameters): # Heredar de BaseStrategyParameters
     """
     Parámetros de configuración para la estrategia MACD_RSI_Trend_Rider.
     """
+    name: str = "MACD_RSI_Trend_Rider" # Asegurar que el nombre esté definido aquí
     macd_fast_period: int = Field(default=12, description="Período para la EMA rápida del MACD.")
     macd_slow_period: int = Field(default=26, description="Período para la EMA lenta del MACD.")
     macd_signal_period: int = Field(default=9, description="Período para la línea de señal del MACD.")
@@ -46,7 +47,7 @@ class MACDRSITrendRider(BaseStrategy):
         Args:
             parameters (MACDRSIParameters): Parámetros específicos de la estrategia.
         """
-        super().__init__("MACD_RSI_Trend_Rider", parameters)
+        super().__init__(parameters)
         self.params: MACDRSIParameters = parameters
 
     async def setup(self) -> None:
@@ -94,54 +95,42 @@ class MACDRSITrendRider(BaseStrategy):
         
         confidence = self._calculate_confidence(indicators)
         
+        # Generar señal dentro de analyze
+        signal = None
+        if confidence >= Decimal('0.7'): # Umbral de confianza para generar señal
+            macd_line_val = indicators.get("macd_line")
+            signal_line_val = indicators.get("signal_line")
+            rsi_val = indicators.get("rsi")
+            current_price = indicators.get("current_price")
+            symbol = market_snapshot.symbol # Usar el símbolo del snapshot
+
+            if macd_line_val is not None and signal_line_val is not None and rsi_val is not None and current_price is not None:
+                if macd_line_val > signal_line_val and rsi_val < self.params.rsi_overbought:
+                    # Señal de compra: MACD cruza por encima de la línea de señal y RSI no está sobrecomprado
+                    quantity = self.params.trade_quantity_usd / current_price
+                    signal = self._create_trading_signal(
+                        symbol=symbol,
+                        side=OrderSide.BUY,
+                        quantity=quantity,
+                        order_type=OrderType.MARKET,
+                        timestamp=market_snapshot.timestamp # Pasar timestamp
+                    )
+                elif macd_line_val < signal_line_val and rsi_val > self.params.rsi_oversold:
+                    # Señal de venta: MACD cruza por debajo de la línea de señal y RSI no está sobrevendido
+                    quantity = self.params.trade_quantity_usd / current_price
+                    signal = self._create_trading_signal(
+                        symbol=symbol,
+                        side=OrderSide.SELL,
+                        quantity=quantity,
+                        order_type=OrderType.MARKET,
+                        timestamp=market_snapshot.timestamp # Pasar timestamp
+                    )
+        
         return AnalysisResult(
             confidence=confidence,
-            indicators=indicators
+            indicators=indicators,
+            signal=signal
         )
-
-    async def generate_signal(self, analysis: AnalysisResult) -> Optional[TradingSignal]:
-        """
-        Genera una señal de trading basada en el resultado del análisis.
-
-        Args:
-            analysis (AnalysisResult): El resultado del análisis de mercado.
-
-        Returns:
-            Optional[TradingSignal]: Una señal de trading si se detecta una oportunidad, de lo contrario None.
-        """
-        if analysis.confidence < Decimal('0.7'): # Umbral de confianza para generar señal
-            return None
-
-        macd_line = analysis.indicators.get("macd_line")
-        signal_line = analysis.indicators.get("signal_line")
-        rsi = analysis.indicators.get("rsi")
-        current_price = analysis.indicators.get("current_price")
-        symbol = self.parameters.name.split('_')[0] # Asumiendo que el nombre de la estrategia contiene el símbolo
-
-        if macd_line is None or signal_line is None or rsi is None or current_price is None:
-            return None
-
-        signal = None
-        if macd_line > signal_line and rsi < self.params.rsi_overbought:
-            # Señal de compra: MACD cruza por encima de la línea de señal y RSI no está sobrecomprado
-            quantity = self.params.trade_quantity_usd / current_price
-            signal = self._create_trading_signal(
-                symbol=symbol,
-                side=OrderSide.BUY,
-                quantity=quantity,
-                order_type=OrderType.MARKET # O LIMIT con take_profit/stop_loss
-            )
-        elif macd_line < signal_line and rsi > self.params.rsi_oversold:
-            # Señal de venta: MACD cruza por debajo de la línea de señal y RSI no está sobrevendido
-            quantity = self.params.trade_quantity_usd / current_price
-            signal = self._create_trading_signal(
-                symbol=symbol,
-                side=OrderSide.SELL,
-                quantity=quantity,
-                order_type=OrderType.MARKET # O LIMIT con take_profit/stop_loss
-            )
-        
-        return signal
 
     def _calculate_ema(self, prices: List[Decimal], period: int) -> List[Decimal]:
         """Calcula la Media Móvil Exponencial (EMA)."""

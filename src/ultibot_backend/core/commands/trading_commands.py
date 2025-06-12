@@ -10,7 +10,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, ConfigDict
 
-from src.ultibot_backend.core.domain_models.trading import OrderSide, OrderType
+from ultibot_backend.core.domain_models.trading import OrderSide, OrderType
 
 class PlaceOrderCommand(BaseModel):
     """Comando para colocar una nueva orden de trading."""

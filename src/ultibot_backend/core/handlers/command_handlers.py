@@ -13,31 +13,31 @@ import logging
 from typing import Dict, Any
 from uuid import UUID
 
-from src.ultibot_backend.core.ports import (
+from ultibot_backend.core.ports import (
     IUnitOfWork,
     IEventBroker,
     ITradingEngine,
     IAIOrchestrator,
     IPortfolioManager,
 )
-from src.ultibot_backend.core.commands.trading import (
+from ultibot_backend.core.commands.trading import (
     PlaceOrderCommand,
     CancelOrderCommand,
     UpdatePortfolioCommand,
 )
-from src.ultibot_backend.core.commands.ai import (
+from ultibot_backend.core.commands.ai import (
     TriggerAIAnalysisCommand,
 )
-from src.ultibot_backend.core.domain_models.trading import Order
-from src.ultibot_backend.core.domain_models.portfolio import Portfolio
-from src.ultibot_backend.core.domain_models.events import (
+from ultibot_backend.core.domain_models.trading import Order
+from ultibot_backend.core.domain_models.portfolio import Portfolio
+from ultibot_backend.core.domain_models.events import (
     OrderPlacedEvent,
     PortfolioUpdatedEvent,
     AIAnalysisTriggeredEvent,
 )
 
 # Se asume que OrderCancelledEvent está en events.py, si no, se necesitará añadir.
-# from src.ultibot_backend.core.domain_models.events import OrderCancelledEvent
+# from ultibot_backend.core.domain_models.events import OrderCancelledEvent
 
 logger = logging.getLogger(__name__)
 

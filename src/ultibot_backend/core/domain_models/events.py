@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, Field
 from typing import Dict, Any, Optional, List
 
-from src.ultibot_backend.core.domain_models.trading import Order, Trade
+from ultibot_backend.core.domain_models.trading import Order, Trade
 
 class BaseEvent(BaseModel):
     """

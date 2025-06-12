@@ -11,17 +11,17 @@ import logging
 from typing import List, Dict, Any
 from uuid import UUID
 
-from src.ultibot_backend.core.ports import IUnitOfWork
-from src.ultibot_backend.core.queries.trading import (
+from ultibot_backend.core.ports import IUnitOfWork
+from ultibot_backend.core.queries.trading import (
     GetPortfolioQuery,
     GetOrderHistoryQuery,
     GetTradeDetailsQuery,
 )
-from src.ultibot_backend.core.domain_models.trading import (
+from ultibot_backend.core.domain_models.trading import (
     Order,
     Trade,
 )
-from src.ultibot_backend.core.domain_models.portfolio import Portfolio
+from ultibot_backend.core.domain_models.portfolio import Portfolio
 
 logger = logging.getLogger(__name__)
 

@@ -1,9 +1,9 @@
 import httpx
 from typing import List, Dict, Any, Optional
 from injector import inject
-from src.ultibot_backend.core.ports import IMarketDataProvider
-from src.ultibot_backend.app_config import AppSettings, get_app_settings
-from src.ultibot_backend.core.exceptions import ExternalAPIError
+from ..core.ports import IMarketDataProvider
+from ..app_config import AppSettings, get_app_settings
+from ..core.exceptions import ExternalAPIError
 
 class BinanceAPIError(ExternalAPIError):
     """Exception for errors related to the Binance API."""

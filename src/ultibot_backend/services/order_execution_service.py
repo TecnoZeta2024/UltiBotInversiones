@@ -4,9 +4,9 @@ from typing import Dict, Any, Optional, List # Importar List
 from uuid import UUID, uuid4
 from datetime import datetime, timezone # Importar timezone
 
-from src.shared.data_types import TradeOrderDetails, UserConfiguration, OrderCategory # Importar OrderCategory
-from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
-from src.ultibot_backend.core.exceptions import OrderExecutionError, ExternalAPIError
+from shared.data_types import TradeOrderDetails, UserConfiguration, OrderCategory # Importar OrderCategory
+from ultibot_backend.adapters.binance_adapter import BinanceAdapter
+from ultibot_backend.core.exceptions import OrderExecutionError, ExternalAPIError
 
 logger = logging.getLogger(__name__)
 

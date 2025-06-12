@@ -6,8 +6,8 @@ import logging
 from typing import List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from src.ultibot_backend.services.market_scan_service import MarketScanService
-from src.ultibot_backend.dependencies import MarketScanServiceDep
+from ...services.market_scan_service import MarketScanService
+from ...dependencies import MarketScanServiceDep
 
 logger = logging.getLogger(__name__)
 

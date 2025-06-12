@@ -3,8 +3,8 @@ import logging
 from collections import defaultdict
 from typing import Callable, List, Dict, Type, Awaitable
 
-from src.ultibot_backend.core.domain_models.events import BaseEvent as Event
-from src.ultibot_backend.core.ports import IEventPublisher
+from ultibot_backend.core.domain_models.events import BaseEvent as Event
+from ultibot_backend.core.ports import IEventPublisher
 
 logger = logging.getLogger(__name__)
 

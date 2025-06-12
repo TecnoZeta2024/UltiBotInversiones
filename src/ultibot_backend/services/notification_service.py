@@ -3,12 +3,12 @@ import json
 from uuid import UUID
 from typing import Optional, Dict, Any, List
 
-from src.shared.data_types import ServiceName, Notification, Trade, Opportunity, UserConfiguration
-from src.ultibot_backend.adapters.telegram_adapter import TelegramAdapter
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend.services.credential_service import CredentialService
-from src.ultibot_backend.core.exceptions import CredentialError, NotificationError, TelegramNotificationError, ExternalAPIError
-from src.ultibot_backend.app_config import settings
+from shared.data_types import ServiceName, Notification, Trade, Opportunity, UserConfiguration
+from ultibot_backend.adapters.telegram_adapter import TelegramAdapter
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from ultibot_backend.services.credential_service import CredentialService
+from ultibot_backend.core.exceptions import CredentialError, NotificationError, TelegramNotificationError, ExternalAPIError
+from ultibot_backend.app_config import settings
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)

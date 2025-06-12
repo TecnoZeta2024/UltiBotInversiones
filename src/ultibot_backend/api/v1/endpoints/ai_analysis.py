@@ -9,9 +9,9 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field
 
-from src.ultibot_backend.services.ai_orchestrator_service import AIOrchestratorService
-from src.ultibot_backend.core.domain_models.ai_models import AIAnalysisResult
-from src.ultibot_backend.dependencies import AIOrchestratorDep
+from ...services.ai_orchestrator_service import AIOrchestratorService
+from ...core.domain_models.ai_models import AIAnalysisResult
+from ...dependencies import AIOrchestratorDep
 
 logger = logging.getLogger(__name__)
 

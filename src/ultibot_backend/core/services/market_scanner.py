@@ -1,6 +1,6 @@
 from typing import List, Dict, Any
-from src.ultibot_backend.core.ports import IMarketDataProvider
-from src.ultibot_backend.core.domain_models.trading import ScanResult
+from ultibot_backend.core.ports import IMarketDataProvider
+from ultibot_backend.core.domain_models.trading import ScanResult
 
 class MarketScannerService:
     """

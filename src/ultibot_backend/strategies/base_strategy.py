@@ -1,55 +1,53 @@
 """
-Módulo que define la interfaz base para todas las estrategias de trading.
-Todas las estrategias deben heredar de BaseStrategy y implementar sus métodos abstractos.
+Módulo que define la clase base abstracta para todas las estrategias de trading.
+Establece la interfaz común que todas las estrategias deben implementar,
+asegurando la compatibilidad con el motor de trading.
 """
 
+import logging
 from abc import ABC, abstractmethod
-from typing import Optional
 from decimal import Decimal
-from enum import Enum
+from typing import Optional, Dict, Any
+from uuid import UUID, uuid4
+from datetime import datetime # Importar datetime
 
-from pydantic import BaseModel, Field, ConfigDict
-
-from src.ultibot_backend.core.domain_models.market import MarketSnapshot
-from src.ultibot_backend.core.domain_models.trading import (
-    StrategyParameters, AnalysisResult, TradingSignal, OrderSide, OrderType
+from ultibot_backend.core.domain_models.market import MarketSnapshot
+from ultibot_backend.core.domain_models.trading import (
+    BaseStrategyParameters, AnalysisResult, TradingSignal, OrderSide, OrderType, SignalStrength
 )
-from src.ultibot_backend.core.ports import IMarketDataProvider # Se asume que se inyectará
 
-class SignalStrength(Enum):
-    """
-    Representa la fuerza o confianza de una señal de trading.
-    """
-    WEAK = "WEAK"
-    MODERATE = "MODERATE"
-    STRONG = "STRONG"
+logger = logging.getLogger(__name__)
 
 class BaseStrategy(ABC):
     """
     Clase base abstracta para todas las estrategias de trading.
-    Define la interfaz común que deben implementar todas las estrategias.
+    Define la interfaz mínima que una estrategia debe implementar.
     """
-    def __init__(self, name: str, parameters: StrategyParameters):
+    def __init__(self, parameters: BaseStrategyParameters):
         """
-        Inicializa la estrategia base.
+        Inicializa la estrategia con sus parámetros.
 
         Args:
-            name (str): El nombre de la estrategia.
-            parameters (StrategyParameters): Los parámetros de configuración de la estrategia.
+            parameters (BaseStrategyParameters): Los parámetros de configuración de la estrategia.
         """
-        self.name = name
-        self.parameters = parameters
-        self._market_data_provider: Optional[IMarketDataProvider] = None
+        self._parameters = parameters
+        self._strategy_id: UUID = uuid4()
+        self._name: str = parameters.name
 
-    def set_market_data_provider(self, provider: IMarketDataProvider) -> None:
-        """
-        Establece el proveedor de datos de mercado para la estrategia.
-        Esto se hace por inyección de dependencia.
+    @property
+    def strategy_id(self) -> UUID:
+        """Retorna el ID único de la instancia de la estrategia."""
+        return self._strategy_id
 
-        Args:
-            provider (IMarketDataProvider): El proveedor de datos de mercado.
-        """
-        self._market_data_provider = provider
+    @property
+    def name(self) -> str:
+        """Retorna el nombre de la estrategia."""
+        return self._name
+
+    @property
+    def parameters(self) -> BaseStrategyParameters:
+        """Retorna los parámetros de la estrategia."""
+        return self._parameters
 
     @abstractmethod
     async def setup(self) -> None:
@@ -58,30 +56,17 @@ class BaseStrategy(ABC):
         Puede usarse para cargar datos históricos, inicializar indicadores, etc.
         """
         pass
-    
+
     @abstractmethod
     async def analyze(self, market_snapshot: MarketSnapshot) -> AnalysisResult:
         """
-        Método asíncrono para analizar el estado actual del mercado y generar un resultado de análisis.
+        Método asíncrono para analizar el snapshot de mercado y generar una señal de trading.
 
         Args:
-            market_snapshot (MarketSnapshot): Una instantánea del estado actual del mercado.
+            market_snapshot (MarketSnapshot): El snapshot actual del mercado.
 
         Returns:
-            AnalysisResult: El resultado del análisis, incluyendo la confianza y los indicadores.
-        """
-        pass
-    
-    @abstractmethod
-    async def generate_signal(self, analysis: AnalysisResult) -> Optional[TradingSignal]:
-        """
-        Método asíncrono para generar una señal de trading basada en el resultado del análisis.
-
-        Args:
-            analysis (AnalysisResult): El resultado del análisis de mercado.
-
-        Returns:
-            Optional[TradingSignal]: Una señal de trading si se detecta una oportunidad, de lo contrario None.
+            AnalysisResult: El resultado del análisis, incluyendo una posible señal de trading.
         """
         pass
 
@@ -91,26 +76,26 @@ class BaseStrategy(ABC):
         side: OrderSide,
         quantity: Decimal,
         order_type: OrderType = OrderType.MARKET,
-        price: Optional[Decimal] = None
+        price: Optional[Decimal] = None,
+        stop_loss: Optional[Decimal] = None,
+        take_profit: Optional[Decimal] = None,
+        strength: SignalStrength = SignalStrength.MODERATE,
+        reasoning: Optional[str] = None,
+        timestamp: datetime = datetime.utcnow() # Añadir timestamp como argumento
     ) -> TradingSignal:
         """
-        Método de utilidad para crear una señal de trading.
-
-        Args:
-            symbol (str): El símbolo del activo.
-            side (OrderSide): El lado de la orden (BUY/SELL).
-            quantity (Decimal): La cantidad a operar.
-            order_type (OrderType): El tipo de orden (por defecto MARKET).
-            price (Optional[Decimal]): El precio para órdenes límite (opcional).
-
-        Returns:
-            TradingSignal: La señal de trading creada.
+        Método auxiliar para crear una señal de trading.
         """
         return TradingSignal(
+            strategy_name=self.name,
             symbol=symbol,
             side=side,
             quantity=quantity,
-            price=price,
             order_type=order_type,
-            strategy_name=self.name
+            price=price,
+            stop_loss=stop_loss,
+            take_profit=take_profit,
+            strength=strength,
+            reasoning=reasoning,
+            timestamp=timestamp # Usar el timestamp pasado como argumento
         )

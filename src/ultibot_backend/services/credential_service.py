@@ -7,11 +7,11 @@ from uuid import UUID
 from dotenv import load_dotenv
 from fastapi import Depends
 
-from src.shared.data_types import APICredential, ServiceName
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
-from src.ultibot_backend.core.exceptions import BinanceAPIError, CredentialError
-from src.ultibot_backend.app_config import settings
+from shared.data_types import APICredential, ServiceName
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from ultibot_backend.adapters.binance_adapter import BinanceAdapter
+from ultibot_backend.core.exceptions import BinanceAPIError, CredentialError
+from ultibot_backend.app_config import settings
 from datetime import datetime
 import logging
 
@@ -28,14 +28,14 @@ class CredentialService:
         logger.info(f"CredentialService __init__ intentando obtener encryption_key de ENV: {'Presente' if encryption_key_str else 'Ausente'}")
 
         if not encryption_key_str:
-            logger.critical("CREDENTIAL_ENCRYPTION_KEY no está configurada en las variables de entorno o está vacía.")
-            raise ValueError("CREDENTIAL_ENCRYPTION_KEY es requerida y no está configurada o está vacía.")
+            logger.critical("CREDENTIAL_ENCRYPTION_KEY no estรก configurada en las variables de entorno o estรก vacรญa.")
+            raise ValueError("CREDENTIAL_ENCRYPTION_KEY es requerida y no estรก configurada o estรก vacรญa.")
         
         logger.info(f"Pasando la siguiente clave (str) a Fernet: {encryption_key_str[:5]}... (truncada por seguridad)")
         try:
             self.fernet = Fernet(encryption_key_str.encode('utf-8'))
         except Exception as e:
-            logger.critical(f"Error al inicializar Fernet con la clave de encriptación: {e}", exc_info=True)
+            logger.critical(f"Error al inicializar Fernet con la clave de encriptaciรณn: {e}", exc_info=True)
             raise ValueError(f"Error al inicializar Fernet: {e}")
 
         self.persistence_service = persistence_service
@@ -52,10 +52,10 @@ class CredentialService:
             decrypted_data = self.fernet.decrypt(encrypted_data.encode('utf-8'))
             return decrypted_data.decode('utf-8')
         except InvalidToken:
-            print("Advertencia: Token de encriptación inválido. La desencriptación falló.")
+            print("Advertencia: Token de encriptaciรณn invรกlido. La desencriptaciรณn fallรณ.")
             return None
         except Exception as e:
-            print(f"Error inesperado durante la desencriptación: {e}")
+            print(f"Error inesperado durante la desencriptaciรณn: {e}")
             return None
 
     async def add_credential(self, service_name: ServiceName, credential_label: str, api_key: str, api_secret: Optional[str] = None, other_details: Optional[Dict[str, Any]] = None) -> APICredential:
@@ -191,9 +191,9 @@ class CredentialService:
                 if notification_service:
                     is_valid = await notification_service.send_test_telegram_notification()
                     if is_valid:
-                        logger.info(f"Verificación de Telegram exitosa.")
+                        logger.info(f"Verificaciรณn de Telegram exitosa.")
                     else:
-                        logger.warning(f"Verificación de Telegram fallida.")
+                        logger.warning(f"Verificaciรณn de Telegram fallida.")
                 else:
                     logger.warning(f"NotificationService no proporcionado para verificar Telegram. No se puede verificar.")
                     is_valid = False
@@ -206,26 +206,26 @@ class CredentialService:
                     is_valid = account_info.get("canTrade", False)
                     
                     if is_valid:
-                        logger.info(f"Verificación de Binance {credential.service_name} exitosa.")
+                        logger.info(f"Verificaciรณn de Binance {credential.service_name} exitosa.")
                         permissions = []
                         if account_info.get("canTrade"): permissions.append("SPOT_TRADING")
                         if account_info.get("canDeposit"): permissions.append("DEPOSIT")
                         if account_info.get("canWithdraw"): permissions.append("WITHDRAWAL")
                         await self.persistence_service.update_credential_permissions(credential.id, permissions, datetime.utcnow())
                     else:
-                        logger.warning(f"Verificación de Binance {credential.service_name} fallida: canTrade es False.")
+                        logger.warning(f"Verificaciรณn de Binance {credential.service_name} fallida: canTrade es False.")
 
                 except BinanceAPIError as e:
-                    logger.error(f"Error de Binance API durante la verificación: {str(e)}")
+                    logger.error(f"Error de Binance API durante la verificaciรณn: {str(e)}")
                     is_valid = False
             else:
-                logger.info(f"No hay lógica de verificación implementada para el servicio: {credential.service_name}. Asumiendo válido.")
+                logger.info(f"No hay lรณgica de verificaciรณn implementada para el servicio: {credential.service_name}. Asumiendo vรกlido.")
                 is_valid = True
 
         except CredentialError:
             raise
         except Exception as e:
-            logger.error(f"Error general durante la verificación de {credential.service_name}: {e}", exc_info=True)
+            logger.error(f"Error general durante la verificaciรณn de {credential.service_name}: {e}", exc_info=True)
             is_valid = False
         
         new_status = "active" if is_valid else "verification_failed"
@@ -237,12 +237,12 @@ class CredentialService:
         binance_credential = await self.get_first_decrypted_credential_by_service(service_name=ServiceName.BINANCE_SPOT)
         
         if not binance_credential:
-            logger.error(f"No se encontró credencial de Binance para el usuario {self.fixed_user_id}.")
-            raise CredentialError(f"No se encontró credencial de Binance para el usuario {self.fixed_user_id}.")
+            logger.error(f"No se encontrรณ credencial de Binance para el usuario {self.fixed_user_id}.")
+            raise CredentialError(f"No se encontrรณ credencial de Binance para el usuario {self.fixed_user_id}.")
 
         try:
             if binance_credential.encrypted_api_key is None or binance_credential.encrypted_api_secret is None:
-                raise CredentialError("El API Key o Secret de Binance es requerido pero no se encontró en la credencial.")
+                raise CredentialError("El API Key o Secret de Binance es requerido pero no se encontrรณ en la credencial.")
 
             account_info = await self.binance_adapter.get_account_info(
                 api_key=binance_credential.encrypted_api_key,
@@ -259,10 +259,10 @@ class CredentialService:
             logger.info(f"API Key de Binance verificada exitosamente para el usuario {self.fixed_user_id}.")
             return True
         except BinanceAPIError as e:
-            logger.error(f"Fallo en la verificación de la API Key de Binance para {self.fixed_user_id}: {str(e)}", exc_info=True)
+            logger.error(f"Fallo en la verificaciรณn de la API Key de Binance para {self.fixed_user_id}: {str(e)}", exc_info=True)
             await self.persistence_service.update_credential_status(binance_credential.id, "verification_failed", datetime.utcnow())
             raise e
         except Exception as e:
-            logger.error(f"Error inesperado durante la verificación de la API Key de Binance para {self.fixed_user_id}: {str(e)}", exc_info=True)
+            logger.error(f"Error inesperado durante la verificaciรณn de la API Key de Binance para {self.fixed_user_id}: {str(e)}", exc_info=True)
             await self.persistence_service.update_credential_status(binance_credential.id, "verification_failed", datetime.utcnow())
             raise BinanceAPIError(message="Error inesperado al verificar la API Key de Binance.", original_exception=e)

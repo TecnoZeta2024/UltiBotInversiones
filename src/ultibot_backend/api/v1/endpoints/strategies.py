@@ -6,7 +6,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from uuid import UUID
 
-from src.ultibot_backend.api.v1.models.strategy_models import (
+from ..models.strategy_models import (
     CreateTradingStrategyRequest,
     UpdateTradingStrategyRequest,
     TradingStrategyResponse,
@@ -14,8 +14,8 @@ from src.ultibot_backend.api.v1.models.strategy_models import (
     ActivateStrategyRequest,
     StrategyActivationResponse,
 )
-from src.ultibot_backend.dependencies import TradingEngineDep
-from src.ultibot_backend.app_config import settings
+from ...dependencies import TradingEngineDep
+from ...app_config import settings
 
 logger = logging.getLogger(__name__)
 

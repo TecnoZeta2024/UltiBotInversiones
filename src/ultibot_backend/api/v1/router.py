@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from src.ultibot_backend.api.v1.endpoints import (
+from ultibot_backend.api.v1.endpoints import (
     ai_analysis,
     binance_status,
     config,

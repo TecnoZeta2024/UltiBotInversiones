@@ -9,7 +9,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, ConfigDict
 
-from src.ultibot_backend.core.domain_models.trading import TradingMode
+from ultibot_backend.core.domain_models.trading import TradingMode
 
 UserId = NewType('UserId', UUID)
 

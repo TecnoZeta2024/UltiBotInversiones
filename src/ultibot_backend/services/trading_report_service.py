@@ -3,9 +3,9 @@ from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime, timedelta
 from uuid import UUID
 
-from src.shared.data_types import Trade, PerformanceMetrics
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend.core.exceptions import UltiBotError, ReportError
+from shared.data_types import Trade, PerformanceMetrics
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from ultibot_backend.core.exceptions import UltiBotError, ReportError
 
 logger = logging.getLogger(__name__)
 
