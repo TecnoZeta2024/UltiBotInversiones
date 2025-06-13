@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator # MODIFIED
 from typing import Any, Dict, Optional, Literal
 from enum import Enum
 
@@ -68,15 +68,17 @@ class TradingAIResponse(BaseModel):
         description="ID único del análisis para trazabilidad"
     )
 
-    @validator('confidence')
-    def validate_confidence(cls, v):
+    @field_validator('confidence') # MODIFIED
+    @classmethod # ADDED
+    def validate_confidence(cls, v: float) -> float: # ADDED type hints
         """Valida que la confianza esté en el rango correcto."""
         if not 0.0 <= v <= 1.0:
             raise ValueError('La confianza debe estar entre 0.0 y 1.0')
         return v
 
-    @validator('reasoning')
-    def validate_reasoning(cls, v):
+    @field_validator('reasoning') # MODIFIED
+    @classmethod # ADDED
+    def validate_reasoning(cls, v: str) -> str: # ADDED type hints
         """Valida que el razonamiento no esté vacío."""
         if not v or v.strip() == "":
             raise ValueError('El razonamiento no puede estar vacío')

@@ -1,127 +1,110 @@
-import httpx
-import logging
-import asyncio # Importar asyncio
-from typing import Optional, Dict, Any
-from src.ultibot_backend.core.exceptions import ExternalAPIError # Importar la excepción
+"""
+Adaptador para la API de Telegram.
 
-# Configuración básica de logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+Este adaptador se encarga de enviar notificaciones y alertas a través de un bot de Telegram.
+Implementa la interfaz `INotificationPort`.
+"""
+
+import logging
+from typing import Dict, Any, Optional
+import httpx
+import json
+
+from ..core.ports import INotificationPort, ICredentialService, IPersistencePort
+from ..core.exceptions import NotificationError, CredentialError
+from shared.data_types import ServiceName
+
 logger = logging.getLogger(__name__)
 
-class TelegramAdapter:
-    def __init__(self, bot_token: str):
-        self.bot_token = bot_token
-        self.base_url = f"https://api.telegram.org/bot{self.bot_token}"
-        self.client = httpx.AsyncClient(timeout=10) # Timeout de 10 segundos para solicitudes
+class TelegramAdapter(INotificationPort):
+    """
+    Adaptador para enviar mensajes a través de la API de Telegram.
+    """
 
-    async def send_message(self, chat_id: str, message: str, parse_mode: Optional[str] = "HTML") -> Dict[str, Any]:
+    def __init__(self, credential_service: ICredentialService, persistence_port: IPersistencePort):
         """
-        Envía un mensaje a un chat de Telegram específico.
+        Inicializa el adaptador de Telegram.
+        """
+        self._credential_service = credential_service
+        self._persistence_port = persistence_port
+        self._api_token: Optional[str] = None
+        self._chat_id: Optional[str] = None
+        self._client: Optional[httpx.AsyncClient] = None
+
+    async def _initialize(self):
+        """Carga las credenciales y configura el cliente httpx."""
+        if self._client:
+            return
+
+        creds = await self._credential_service.get_first_decrypted_credential_by_service(ServiceName.TELEGRAM_BOT)
+        if not creds or not creds.encrypted_api_key or not creds.encrypted_other_details:
+            raise CredentialError("Credenciales de Telegram (API Token o Chat ID) no configuradas.")
+
+        self._api_token = creds.encrypted_api_key
+        
+        try:
+            other_details = json.loads(creds.encrypted_other_details) # Assuming encrypted_other_details is a JSON string
+            self._chat_id = other_details.get("chat_id")
+            if not self._chat_id:
+                raise CredentialError("Chat ID no encontrado en los detalles de la credencial de Telegram.")
+        except (json.JSONDecodeError, KeyError) as e:
+            raise CredentialError(f"Error al procesar los detalles de la credencial de Telegram: {e}")
+
+        self.base_url = f"https://api.telegram.org/bot{self._api_token}"
+        self._client = httpx.AsyncClient()
+
+    async def send_alert(self, message: str, priority: str) -> None: # MODIFIED: level -> priority, return type bool -> None
+        """
+        Envía una alerta a un chat de Telegram.
 
         Args:
-            chat_id: El ID del chat de Telegram al que enviar el mensaje.
-            message: El contenido del mensaje a enviar.
-            parse_mode: Modo de parseo para el mensaje (ej. "HTML", "MarkdownV2").
-
-        Returns:
-            Un diccionario con la respuesta de la API de Telegram.
+            message: El texto del mensaje a enviar.
+            priority: El nivel de la alerta (ej. 'info', 'warning', 'error'). No se usa directamente en la lógica de Telegram pero coincide con el puerto.
 
         Raises:
-            ExternalAPIError: Si ocurre un error al interactuar con la API de Telegram.
-            ValueError: Si el token del bot no está configurado.
+            NotificationError: Si ocurre un error grave al enviar el mensaje.
         """
-        if not self.bot_token:
-            logger.error("Telegram bot token no está configurado. No se puede enviar el mensaje.")
-            raise ValueError("Telegram bot token no configurado.")
+        await self._initialize()
+        if not self._client or not self._chat_id:
+            raise NotificationError("El adaptador de Telegram no está inicializado correctamente.")
 
         url = f"{self.base_url}/sendMessage"
         payload = {
-            "chat_id": chat_id,
+            "chat_id": self._chat_id,
             "text": message,
-            "parse_mode": parse_mode
+            "parse_mode": "MarkdownV2", # Consider HTML for more robust formatting if needed
         }
 
         try:
-            # Implementación de reintentos básicos
-            for attempt in range(3): # Intentar 3 veces
-                try:
-                    response = await self.client.post(url, json=payload)
-                    response.raise_for_status()  # Lanza HTTPStatusError para respuestas 4xx/5xx
-                    logger.info(f"Mensaje enviado a Telegram con éxito a chat_id: {chat_id[:4]}... (oculto)")
-                    return response.json()
-                except httpx.HTTPStatusError as e:
-                    if 400 <= e.response.status_code < 500:
-                        # Errores del cliente (ej. token inválido, chat_id incorrecto) no se reintentan
-                        logger.error(f"Error de la API de Telegram (cliente) al enviar mensaje: {e.response.status_code} - {e.response.text}. Intento {attempt + 1}/3. No se reintentará.")
-                        raise
-                    else:
-                        # Errores del servidor o transitorios se reintentan
-                        logger.warning(f"Error de la API de Telegram (servidor/transitorio) al enviar mensaje: {e.response.status_code} - {e.response.text}. Reintentando... ({attempt + 1}/3)")
-                        await self._sleep_for_retry(attempt)
-                except httpx.RequestError as e:
-                    logger.warning(f"Error de red al enviar mensaje a Telegram: {e}. Reintentando... ({attempt + 1}/3)")
-                    await self._sleep_for_retry(attempt)
+            response = await self._client.post(url, json=payload, timeout=10.0)
+            response.raise_for_status() # Raises HTTPStatusError for 4xx/5xx
             
-            # Si todos los reintentos fallan
-            logger.error(f"Fallo al enviar mensaje a Telegram después de múltiples reintentos a chat_id: {chat_id[:4]}... (oculto)")
-            raise ExternalAPIError(
-                message="Fallo al enviar mensaje a Telegram después de múltiples reintentos.",
-                service_name="Telegram",
-                original_exception=httpx.RequestError(f"Fallo al enviar mensaje a Telegram después de múltiples reintentos.")
-            )
+            response_data = response.json()
+            if not response_data.get("ok"):
+                # Telegram API specific error, even with 200 OK
+                error_description = response_data.get('description', 'Unknown error from Telegram API.')
+                logger.error(f"Error de API de Telegram al enviar mensaje (ok=false): {error_description}")
+                # Optionally, still raise NotificationError here if "ok=false" is critical
+                # For now, just logging as the port doesn't return success/failure
+            else:
+                logger.info(f"Mensaje enviado exitosamente a Telegram (Chat ID: {self._chat_id})")
+            # No return value as per port
 
-        except httpx.RequestError as e:
-            logger.error(f"Error de conexión o timeout al enviar mensaje a Telegram: {e}")
-            raise ExternalAPIError(
-                message=f"Error de conexión o timeout con la API de Telegram: {e}",
-                service_name="Telegram",
-                original_exception=e
-            )
         except httpx.HTTPStatusError as e:
-            logger.error(f"Error de la API de Telegram: {e.response.status_code} - {e.response.text}")
-            raise ExternalAPIError(
-                message=f"La API de Telegram devolvió un error: {e.response.status_code} - {e.response.text}",
-                service_name="Telegram",
-                status_code=e.response.status_code,
-                response_data=e.response.json() if e.response.text else None,
-                original_exception=e
-            )
+            error_message = f"Error de estado HTTP al enviar mensaje a Telegram: {e.response.status_code} - {e.response.text}"
+            logger.error(error_message)
+            raise NotificationError(error_message) from e
+        except httpx.RequestError as e:
+            error_message = f"Error de red al conectar con la API de Telegram: {e}"
+            logger.error(error_message)
+            raise NotificationError(error_message) from e
         except Exception as e:
-            logger.error(f"Error inesperado al enviar mensaje a Telegram: {e}", exc_info=True)
-            raise ExternalAPIError(
-                message=f"Error inesperado al interactuar con la API de Telegram: {e}",
-                service_name="Telegram",
-                original_exception=e
-            )
-
-    async def _sleep_for_retry(self, attempt: int):
-        """Espera un tiempo antes de reintentar."""
-        await asyncio.sleep(2 ** attempt) # Backoff exponencial simple
+            error_message = f"Un error inesperado ocurrió al enviar el mensaje de Telegram: {e}"
+            logger.error(error_message)
+            raise NotificationError(error_message) from e
 
     async def close(self):
-        """Cierra el cliente HTTPX."""
-        await self.client.aclose()
-
-# Ejemplo de uso (para pruebas locales, no parte del código de producción)
-# async def main():
-#     # Asegúrate de que TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID estén configurados en tus variables de entorno
-#     # o pásalos directamente para pruebas.
-#     bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-#     chat_id = os.getenv("TELEGRAM_CHAT_ID")
-
-#     if not bot_token or not chat_id:
-#         print("Por favor, configura TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID en tus variables de entorno.")
-#         return
-
-#     adapter = TelegramAdapter(bot_token=bot_token)
-#     try:
-#         response = await adapter.send_message(chat_id, "¡Hola desde UltiBotInversiones! Este es un mensaje de prueba.")
-#         print("Respuesta de Telegram:", response)
-#     except Exception as e:
-#         print("Error al enviar mensaje:", e)
-#     finally:
-#         await adapter.close()
-
-# if __name__ == "__main__":
-#     import asyncio
-#     asyncio.run(main())
+        """Cierra el cliente HTTP si existe."""
+        if self._client:
+            await self._client.aclose()
+            self._client = None

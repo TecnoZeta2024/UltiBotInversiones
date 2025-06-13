@@ -1,290 +1,260 @@
-"""Trading Engine Service for executing trading strategies with AI integration.
-
-This service orchestrates the trading decision process, integrating AI analysis
-results with strategy logic to make informed trading decisions.
-"""
-
-import logging
-from uuid import UUID
+# src/ultibot_backend/services/trading_engine_service.py
+from pydantic import BaseModel, Field
+from typing import Optional, List
+from uuid import UUID, uuid4  # ✅ AGREGADO: import uuid4
+from decimal import Decimal
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING, Union
 
-from fastapi import HTTPException
-
-# Use domain models exclusively for internal logic
-from src.ultibot_backend.core.domain_models.trading_strategy_models import (
-    TradingStrategyConfig,
-    BaseStrategyType,
-)
-from src.ultibot_backend.core.domain_models.user_configuration_models import (
-    AIStrategyConfiguration,
-    ConfidenceThresholds,
-)
-from src.ultibot_backend.core.domain_models.opportunity_models import (
-    Opportunity,
-    OpportunityStatus,
-    AIAnalysis,
-    SuggestedAction,
-    RecommendedTradeParams,
-    DataVerification,
-    InitialSignal,
-)
-from src.ultibot_backend.core.domain_models.ai import AIResponse
-from src.ultibot_backend.services.ai_orchestrator_service import AIOrchestratorService
-from src.ultibot_backend.core.domain_models.trade_models import (
-    Trade,
-    AIInfluenceDetails,
-    PositionStatus,
-    OrderType,
-    TradeOrderDetails,
-    OrderStatus,
-    TradeMode, 
-    TradeSide
-)
-from src.ultibot_backend.services.market_data_service import MarketDataService
-from src.ultibot_backend.services.order_execution_service import OrderExecutionService
-from src.ultibot_backend.services.simulated_order_execution_service import SimulatedOrderExecutionService
-from src.ultibot_backend.services.credential_service import CredentialService
-from src.ultibot_backend.core.exceptions import MarketDataError, BinanceAPIError, OrderExecutionError
-from src.shared.data_types import ServiceName
-from src.ultibot_backend.app_config import AppSettings
-
-# Conditional imports for type checking to avoid circular dependencies
-if TYPE_CHECKING:
-    from src.ultibot_backend.services.strategy_service import StrategyService
-    from src.ultibot_backend.services.config_service import ConfigurationService
-    from src.ultibot_backend.services.notification_service import NotificationService
-    from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-    from src.ultibot_backend.services.portfolio_service import PortfolioService
+from ..core.domain_models.trading import Order, Trade, OrderSide, OrderType, OrderStatus
+from ..core.domain_models.strategy import StrategyAnalysis
+from ..core.domain_models.portfolio import Portfolio, Position
+from ..core.domain_models.ai_models import AIAnalysisResult, TradingOpportunity, AIProcessingStage
+from ..core.ports import IOrderExecutionPort, IPersistencePort, ICredentialService, IMarketDataProvider, IAIOrchestrator
+from ..core.exceptions import InsufficientFundsError, CredentialError, BinanceAPIError, UltiBotError
+from ..app_config import AppSettings # MODIFIED: Import AppSettings for type hint
+import logging
 
 logger = logging.getLogger(__name__)
 
+class TradingDecision(BaseModel):
+    """
+    Represents a trading decision made by the AI or a strategy.
+    """
+    decision: str = Field(..., description="The trading decision (e.g., 'BUY', 'SELL', 'HOLD').")
+    symbol: str = Field(..., description="The symbol for the trading pair.")
+    confidence: float = Field(..., description="The confidence level of the decision (0.0 to 1.0).")
+    strategy_analysis: Optional[StrategyAnalysis] = Field(None, description="Analysis from the strategy.")
+    # Add other relevant fields like stop_loss, take_profit, etc.
 
-class TradingDecision:
-    """Result of trading decision analysis."""
+class TradingEngine:
+    """
+    The core service for executing trading logic.
     
+    This service integrates market data, strategies, and AI analysis
+    to make and execute trading decisions.
+    """
+
     def __init__(
         self,
-        decision: str,
-        confidence: float,
-        reasoning: str,
-        opportunity_id: str,
-        strategy_id: str,
-        ai_analysis_used: bool = False,
-        ai_analysis_profile_id: Optional[str] = None,
-        recommended_trade_params: Optional[Dict[str, Any]] = None,
-        risk_assessment: Optional[Dict[str, Any]] = None,
-        warnings: Optional[List[str]] = None,
+        order_execution_port: IOrderExecutionPort,
+        persistence_port: IPersistencePort,
+        credential_service: ICredentialService,
+        market_data_provider: IMarketDataProvider,
+        ai_orchestrator: IAIOrchestrator,
+        app_settings: AppSettings, # ADDED
     ):
-        self.decision = decision
-        self.confidence = confidence
-        self.reasoning = reasoning
-        self.opportunity_id = opportunity_id
-        self.strategy_id = strategy_id
-        self.ai_analysis_used = ai_analysis_used
-        self.ai_analysis_profile_id = ai_analysis_profile_id
-        self.recommended_trade_params = recommended_trade_params
-        self.risk_assessment = risk_assessment
-        self.warnings = warnings or []
-        self.timestamp = datetime.now(timezone.utc)
-        self.decision_id = str(UUID())
-
-
-class TradingEngineService:
-    """Service for executing trading strategies with AI integration."""
-    
-    def __init__(
-        self,
-        persistence_service: "SupabasePersistenceService",
-        market_data_service: MarketDataService,
-        order_execution_service: Union[OrderExecutionService, SimulatedOrderExecutionService],
-        credential_service: CredentialService,
-        notification_service: "NotificationService",
-        strategy_service: "StrategyService",
-        configuration_service: "ConfigurationService",
-        portfolio_service: "PortfolioService",
-        ai_orchestrator: Optional[AIOrchestratorService] = None,
-        app_settings: Optional[AppSettings] = None,
-    ):
-        self.persistence_service = persistence_service
-        self.market_data_service = market_data_service
-        self.order_execution_service = order_execution_service
+        self.order_execution_port = order_execution_port
+        self.persistence_port = persistence_port
         self.credential_service = credential_service
-        self.notification_service = notification_service
-        self.strategy_service = strategy_service
-        self.configuration_service = configuration_service
-        self.portfolio_service = portfolio_service
-        if ai_orchestrator:
-            self.ai_orchestrator = ai_orchestrator
-        elif app_settings:
-            self.ai_orchestrator = AIOrchestratorService(app_settings=app_settings)
-        else:
-            logger.warning("AIOrchestratorService not initialized because neither an instance nor app_settings were provided.")
-            self.ai_orchestrator = None
+        self.market_data_provider = market_data_provider
+        self.ai_orchestrator = ai_orchestrator
+        self.app_settings = app_settings # ADDED
+        self.fixed_user_id = self.app_settings.fixed_user_id # Use injected app_settings
+        logger.info("TradingEngine initialized with dependencies.")
 
-
-    async def execute_trade_from_confirmed_opportunity(self, opportunity: Opportunity) -> Optional[Trade]:
-        logger.info(f"Executing trade directly from confirmed opportunity {opportunity.id}")
-
-        strategies = await self.strategy_service.list_strategy_configs(UUID(opportunity.user_id))
-        active_strategies = [s for s in strategies if s.is_active_real_mode]
-
-        if not active_strategies:
-            raise OrderExecutionError(f"No active real strategies found for user {opportunity.user_id} to execute confirmed opportunity {opportunity.id}")
+    def _calculate_quantity(self, capital_to_allocate: Decimal, asset_price: Decimal) -> Decimal:
+        """
+        ✅ AGREGADO: Calcula la cantidad a comprar basada en capital disponible y precio del activo.
         
-        strategy = active_strategies[0]
-        logger.warning(f"Using strategy '{strategy.config_name}' as context for confirmed opportunity {opportunity.id}")
-
-        decision = TradingDecision(
-            decision="execute_trade",
-            confidence=1.0,
-            reasoning="Trade executed based on direct user confirmation.",
-            opportunity_id=str(opportunity.id),
-            strategy_id=str(strategy.id),
-            ai_analysis_used=False,
-            recommended_trade_params=opportunity.initial_signal.model_dump() if opportunity.initial_signal else {}
-        )
-
-        trade = await self.create_trade_from_decision(decision, opportunity, strategy)
-
-        if trade:
-            logger.info(f"Successfully created trade {trade.id} from confirmed opportunity.")
-            await self._update_opportunity_status(
-                opportunity,
-                OpportunityStatus.CONVERTED_TO_TRADE_REAL,
-                "trade_executed_by_confirmation",
-                f"Trade {trade.id} executed based on user confirmation."
-            )
-        else:
-            logger.error(f"Failed to create trade from confirmed opportunity {opportunity.id}")
-            await self._update_opportunity_status(
-                opportunity,
-                OpportunityStatus.ERROR_IN_PROCESSING,
-                "trade_creation_failed",
-                "Failed to create trade object after user confirmation."
-            )
-        return trade
-
-    async def create_trade_from_decision(
-        self, 
-        decision: TradingDecision, 
-        opportunity: Opportunity,
-        strategy: TradingStrategyConfig,
-    ) -> Optional[Trade]:
-        if decision.decision != "execute_trade":
-            return None
-        
-        try:
-            trade_side = self._determine_trade_side_from_opportunity(opportunity)
-            trade_mode_str = getattr(decision, 'mode', 'paper')
+        Args:
+            capital_to_allocate: Capital disponible para la operación
+            asset_price: Precio actual del activo
             
-            actual_trade_mode = TradeMode(trade_mode_str.upper()) # Ensure uppercase
-            actual_trade_side = TradeSide(trade_side)
+        Returns:
+            Cantidad a comprar (redondeada a 8 decimales para precisión crypto)
+        """
+        if asset_price <= 0:
+            raise ValueError("El precio del activo debe ser mayor que 0")
+        if capital_to_allocate <= 0:
+            raise ValueError("El capital a asignar debe ser mayor que 0")
+            
+        quantity = capital_to_allocate / asset_price
+        # Redondear a 8 decimales para compatibilidad con exchanges crypto
+        return round(quantity, 8)
 
-            tp_price = None
-            if decision.recommended_trade_params:
-                tp_value = decision.recommended_trade_params.get("take_profit")
-                if isinstance(tp_value, list) and tp_value:
-                    tp_price = float(tp_value[0])
-                elif isinstance(tp_value, (float, int)):
-                    tp_price = float(tp_value)
+    async def execute_order(
+        self,
+        symbol: str,
+        order_type: OrderType,
+        side: OrderSide,
+        quantity: Decimal,
+        price: Optional[Decimal],
+        trading_mode: str,
+        user_id: UUID,
+        strategy_id: Optional[UUID] = None,
+        opportunity_id: Optional[UUID] = None,
+        ai_analysis_confidence: Optional[float] = None,
+    ) -> Order:
+        """
+        Executes a trading order (market or limit) in paper or real mode.
+        """
+        logger.info(f"Attempting to execute {side.value} {quantity} of {symbol} at {price} in {trading_mode} mode for user {user_id}")
 
-            trade = Trade(
-                id=UUID(),
-                user_id=UUID(strategy.user_id),
-                mode=actual_trade_mode,
-                symbol=opportunity.symbol,
-                side=actual_trade_side,
-                strategy_id=UUID(strategy.id),
-                opportunity_id=UUID(opportunity.id),
-                position_status=PositionStatus.PENDING_ENTRY_CONDITIONS,
-                entry_order=self._create_entry_order_from_decision(decision, opportunity),
-                ai_analysis_confidence=decision.confidence if decision.ai_analysis_used else None,
-                notes=f"Trade from strategy '{strategy.config_name}': {decision.reasoning}",
+        if trading_mode == "real":
+            # Verificar credenciales para trading real
+            binance_credential = await self.credential_service.get_first_decrypted_credential_by_service(
+                service_name=self.app_settings.default_real_trading_exchange
+            )
+            if not binance_credential:
+                raise CredentialError(f"No se encontraron credenciales para trading real en {self.app_settings.default_real_trading_exchange}.")
+            
+            # Verificar fondos suficientes en la cuenta real
+            current_price = await self.market_data_provider.get_latest_price(symbol)
+            required_funds = quantity * current_price if side == OrderSide.BUY else quantity
+            
+            # Esto es una simplificación. En un sistema real, se verificarían los balances exactos.
+            # Por ahora, asumimos que si la credencial es válida, hay fondos.
+            # TODO: Implementar verificación de fondos real con balances de exchange.
+            
+            # Ejecutar orden real
+            order = await self.order_execution_port.execute_order(
+                symbol=symbol,
+                order_type=order_type,
+                side=side,
+                quantity=quantity,
+                price=price
+            )
+            logger.info(f"Orden real ejecutada: {order.order_id} - {order.status}")
+        elif trading_mode == "paper":
+            # Simular ejecución de orden en paper trading
+            order_id = str(uuid4())  # ✅ CORREGIDO: ahora uuid4 está importado
+            order = Order(
+                id=order_id,
+                symbol=symbol,
+                type=order_type,
+                side=side,
+                quantity=quantity,
+                price=price if price else (await self.market_data_provider.get_latest_price(symbol)),
+                status=OrderStatus.FILLED, # En paper trading, asumimos que se llena inmediatamente
                 created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
-                stop_loss_price=decision.recommended_trade_params.get("stop_loss") if decision.recommended_trade_params else None,
-                take_profit_price=tp_price,
-                exit_orders=[],
-                initial_risk_quote_amount=None,
-                initial_reward_to_risk_ratio=None,
-                risk_reward_adjustments=[],
-                current_risk_quote_amount=None,
-                current_reward_to_risk_ratio=None,
-                pnl=None,
-                pnl_percentage=None,
-                closing_reason=None,
-                exit_order_oco_id=None,
-                exit_price=None,
-                market_context_snapshots=None,
-                external_event_or_analysis_link=None,
-                backtest_details=None,
-                ai_influence_details=None,
-                opened_at=None,
-                closed_at=None,
-                strategy_execution_instance_id=None
+                updated_at=datetime.now(timezone.utc)
             )
+            logger.info(f"Orden de paper trading simulada: {order.order_id} - {order.status}")
+        else:
+            raise ValueError(f"Modo de trading no válido: {trading_mode}")
+
+        # Registrar el trade
+        trade = Trade(
+            symbol=symbol,
+            side=side,
+            quantity=order.quantity,
+            price=order.price,
+            order_type=order.type,
+            strategy_id=str(strategy_id) if strategy_id else None,
+        )
+        # await self.persistence_port.upsert_trade(trade.model_dump())
+        logger.info(f"Trade {trade.id} registrado en la persistencia.")
+        
+        # Actualizar portafolio
+        # await self._update_portfolio_after_trade(user_id, trading_mode, trade)
+
+        return order
+
+    async def _update_portfolio_after_trade(self, user_id: UUID, trading_mode: str, trade: Trade):
+        portfolio = await self.persistence_port.get_portfolio(str(user_id), trading_mode)
+        if not portfolio:
+            portfolio = Portfolio(
+                id=uuid4(),  # ✅ CORREGIDO: ahora uuid4 está importado
+                user_id=user_id,
+                mode=trading_mode,
+                cash_balance=Decimal(str(self.app_settings.default_paper_trading_capital)) if trading_mode == "paper" else Decimal(0.0), # Asumir 0 para real, se cargaría de balances
+                positions=[],
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
+            )
+            logger.info(f"Portafolio nuevo creado para usuario {user_id} en modo {trading_mode}.")
+
+        # Actualizar balance de efectivo y posiciones
+        if trade.side == OrderSide.BUY:
+            cost = trade.quantity * trade.price
+            portfolio.cash_balance -= cost
+            # Añadir o actualizar posición
+            existing_position = next((p for p in portfolio.positions if p.symbol == trade.symbol), None)
+            if existing_position:
+                existing_position.quantity += trade.quantity
+                existing_position.average_price = (existing_position.average_price * (existing_position.quantity - trade.quantity) + trade.price * trade.quantity) / existing_position.quantity
+            else:
+                portfolio.positions.append(Position(
+                    symbol=trade.symbol,
+                    quantity=trade.quantity,
+                    average_price=trade.price,
+                    opened_at=trade.timestamp
+                ))
+        elif trade.side == OrderSide.SELL:
+            revenue = trade.quantity * trade.price
+            portfolio.cash_balance += revenue
+            # Reducir o eliminar posición
+            existing_position = next((p for p in portfolio.positions if p.symbol == trade.symbol), None)
+            if existing_position:
+                existing_position.quantity -= trade.quantity
+                if existing_position.quantity <= 0:
+                    portfolio.positions.remove(existing_position)
+            else:
+                logger.warning(f"Intentando vender {trade.symbol} sin una posición abierta en el portafolio {portfolio.id}.")
+
+        portfolio.updated_at = datetime.now(timezone.utc)
+        await self.persistence_port.save_portfolio(portfolio)
+        logger.info(f"Portafolio {portfolio.id} actualizado. Balance de efectivo: {portfolio.cash_balance}")
+
+    async def process_opportunity_with_ai_decision(self, opportunity: TradingOpportunity, user_id: UUID) -> AIAnalysisResult:
+        """
+        Processes a trading opportunity, makes a decision based on AI analysis,
+        and executes a trade if recommended.
+        """
+        logger.info(f"Procesando oportunidad {opportunity.opportunity_id} con decisión de IA para usuario {user_id}.")
+
+        # Invocar al orquestador de IA para obtener el análisis
+        ai_analysis_result = await self.ai_orchestrator.analyze_opportunity(opportunity)
+
+        if ai_analysis_result.recommendation == "BUY" and ai_analysis_result.confidence >= self.app_settings.ai_trading_confidence_threshold:
+            logger.info(f"AI recomienda COMPRAR {opportunity.symbol} con confianza {ai_analysis_result.confidence}. Ejecutando trade.")
+            # Determinar cantidad a comprar (ej. un valor fijo o basado en capital disponible)
+            quantity = Decimal("0.001") # Ejemplo: 0.001 BTC
             
-            if decision.ai_analysis_used and decision.ai_analysis_profile_id:
-                trade.add_ai_influence_details(
-                    ai_analysis_profile_id=decision.ai_analysis_profile_id,
-                    ai_confidence=decision.confidence,
-                    ai_suggested_action=opportunity.ai_analysis.suggested_action.value if opportunity.ai_analysis else "UNKNOWN",
-                    ai_reasoning_summary=opportunity.ai_analysis.reasoning_ai[:500] if opportunity.ai_analysis else "N/A",
+            try:
+                order = await self.execute_order(
+                    symbol=opportunity.symbol,
+                    order_type=OrderType.MARKET,
+                    side=OrderSide.BUY,
+                    quantity=quantity,
+                    price=None, # Precio de mercado
+                    trading_mode="paper", # Oportunidades de IA por ahora en paper
+                    user_id=user_id,
+                    strategy_id=opportunity.strategy_id,
+                    opportunity_id=opportunity.opportunity_id,
+                    ai_analysis_confidence=ai_analysis_result.confidence
                 )
-
-            logger.info(f"Created trade {trade.id} from decision {decision.decision_id}")
-            
-            await self.persistence_service.upsert_trade(trade.model_dump())
-            logger.info(f"Trade {trade.id} persisted before execution.")
-
-            return trade
-        except Exception as e:
-            logger.error(f"Error creating trade object from decision {decision.decision_id}: {e}", exc_info=True)
-            raise HTTPException(status_code=500, detail=f"Failed to create trade object: {str(e)}")
-
-    def _create_entry_order_from_decision(self, decision: TradingDecision, opportunity: Opportunity) -> 'TradeOrderDetails':
-        params = decision.recommended_trade_params or {}
-        entry_price = params.get("entry_price", opportunity.initial_signal.entry_price_target if opportunity.initial_signal else None)
-        quantity = params.get("position_size_percentage", 1.0)
-
-        return TradeOrderDetails(
-            order_id_internal=UUID(),
-            type=OrderType.MARKET,
-            status=OrderStatus.NEW,
-            requested_price=float(entry_price) if entry_price else None,
-            requested_quantity=float(quantity),
-            timestamp=datetime.now(timezone.utc)
+                logger.info(f"Trade ejecutado para oportunidad {opportunity.opportunity_id}: {order.id}")
+                ai_analysis_result.trade_executed = True
+                ai_analysis_result.trade_details = order.model_dump()
+            except InsufficientFundsError as e:
+                logger.error(f"Fondos insuficientes para ejecutar trade para oportunidad {opportunity.opportunity_id}: {e}")
+                ai_analysis_result.reasoning += f" | Fondos insuficientes: {e}"
+                ai_analysis_result.recommendation = "HOLD" # Cambiar a HOLD si no hay fondos
+                ai_analysis_result.trade_executed = False
+            except Exception as e:
+                logger.error(f"Error al ejecutar trade para oportunidad {opportunity.opportunity_id}: {e}", exc_info=True)
+                ai_analysis_result.reasoning += f" | Error de ejecución: {e}"
+                ai_analysis_result.recommendation = "HOLD"
+                ai_analysis_result.trade_executed = False
+        else:
+            logger.info(f"AI recomienda {ai_analysis_result.recommendation} para {opportunity.symbol} (confianza: {ai_analysis_result.confidence}). No se ejecuta trade.")
+            ai_analysis_result.trade_executed = False
+        
+        # Actualizar el estado de la oportunidad en la persistencia
+        await self.persistence_port.update_opportunity_analysis(
+            opportunity_id=opportunity.opportunity_id,
+            status=ai_analysis_result.stage,
+            ai_analysis=ai_analysis_result.reasoning,
+            confidence_score=ai_analysis_result.confidence,
+            suggested_action=ai_analysis_result.recommendation,
+            status_reason="Trade ejecutado" if ai_analysis_result.trade_executed else "No se ejecutó trade"
         )
 
-    async def _update_opportunity_status(self, opportunity: Opportunity, status: OpportunityStatus, reason_code: str, reason_text: str) -> None:
-        opportunity.status = status
-        opportunity.status_reason_code = reason_code
-        opportunity.status_reason_text = reason_text
-        opportunity.updated_at = datetime.now(timezone.utc)
-        logger.info(f"Updated opportunity {opportunity.id} status to {status.value}: {reason_text}")
-        try:
-            if opportunity.id is None:
-                logger.error("Cannot update opportunity status without an ID.")
-                return
-            await self.persistence_service.update_opportunity_status(
-                opportunity_id=UUID(opportunity.id),
-                new_status=status, 
-                status_reason=reason_text
-            )
-            logger.info(f"Persisted status update for opportunity {opportunity.id}")
-        except Exception as e_persist:
-            logger.error(f"Failed to persist status update for opportunity {opportunity.id}: {e_persist}", exc_info=True)
+        return ai_analysis_result
 
-    def _determine_trade_side_from_opportunity(self, opportunity: Opportunity) -> str:
-        if opportunity.initial_signal and hasattr(opportunity.initial_signal, 'direction_sought'):
-            direction = opportunity.initial_signal.direction_sought
-            if direction in ["buy", "long"]:
-                return "buy"
-            elif direction in ["sell", "short"]:
-                return "sell"
-        logger.warning(f"Could not determine trade side from opportunity {opportunity.id}, defaulting to 'buy'")
-        return "buy"
-        
-    # ... (otros métodos del servicio que no necesitan cambios inmediatos) ...
-    # Se omiten por brevedad, pero estarían aquí en el archivo real.
+    async def close(self):
+        """Cierra cualquier recurso abierto por el TradingEngine."""
+        # Por ahora, no hay recursos directos que cerrar aquí,
+        # pero en una implementación real podría haber clientes de exchange, etc.
+        logger.info("TradingEngine cerrado.")

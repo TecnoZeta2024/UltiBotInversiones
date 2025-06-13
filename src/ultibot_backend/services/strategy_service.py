@@ -6,7 +6,7 @@ from enum import Enum
 
 from pydantic import BaseModel, ValidationError
 
-from src.ultibot_backend.core.domain_models.trading_strategy_models import (
+from ultibot_backend.core.domain_models.trading_strategy_models import (
     TradingStrategyConfig,
     BaseStrategyType,
     ScalpingParameters,
@@ -18,8 +18,8 @@ from src.ultibot_backend.core.domain_models.trading_strategy_models import (
     DCAInvestingParameters,
     StrategySpecificParameters
 )
-from src.ultibot_backend.core.exceptions import ConfigurationError
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from ultibot_backend.core.exceptions import ConfigurationError
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 
 logger = logging.getLogger(__name__)
 

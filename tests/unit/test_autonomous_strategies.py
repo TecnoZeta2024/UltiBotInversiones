@@ -8,11 +8,11 @@ import uuid
 from datetime import datetime, timezone
 from unittest.mock import Mock, AsyncMock
 
-from src.ultibot_backend.services.trading_engine_service import (
+from ultibot_backend.services.trading_engine_service import (
     TradingEngine,
     TradingDecision,
 )
-from src.ultibot_backend.core.domain_models.trading_strategy_models import (
+from ultibot_backend.core.domain_models.trading_strategy_models import (
     TradingStrategyConfig,
     BaseStrategyType,
     ScalpingParameters,
@@ -20,7 +20,7 @@ from src.ultibot_backend.core.domain_models.trading_strategy_models import (
     ArbitrageSimpleParameters,
     GridTradingParameters,
 )
-from src.ultibot_backend.core.domain_models.opportunity_models import (
+from ultibot_backend.core.domain_models.opportunity_models import (
     Opportunity,
     OpportunityStatus,
     SourceType,

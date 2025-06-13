@@ -2,9 +2,9 @@ import logging
 from typing import Optional, Literal
 from uuid import UUID
 
-from src.shared.data_types import TradeOrderDetails
-from src.ultibot_backend.services.order_execution_service import OrderExecutionService, PaperOrderExecutionService
-from src.ultibot_backend.core.exceptions import OrderExecutionError, ConfigurationError
+from shared.data_types import TradeOrderDetails
+from ultibot_backend.services.order_execution_service import OrderExecutionService, PaperOrderExecutionService
+from ultibot_backend.core.exceptions import OrderExecutionError, ConfigurationError
 
 logger = logging.getLogger(__name__)
 

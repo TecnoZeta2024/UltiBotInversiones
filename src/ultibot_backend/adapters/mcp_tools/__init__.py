@@ -1,8 +1,16 @@
-# Este archivo hace que Python trate el directorio 'mcp_tools' como un paquete.
+"""
+MCP Tools Adapters Package.
 
-# Opcionalmente, puedes importar clases/funciones aquí para facilitar el acceso
-# desde otros módulos. Por ejemplo:
-# from .base_mcp_tool import BaseMCPTool
-# from .mock_mcp_tool import MockMCPTool
+Este paquete contiene los adaptadores específicos para herramientas MCP,
+cada uno implementando la interfaz BaseMCPAdapter.
+"""
 
-# Por ahora, lo dejaremos vacío o con comentarios.
+from .base_mcp_adapter import BaseMCPAdapter
+from .market_sentiment_adapter import MarketSentimentAdapter
+from .web3_research_adapter import Web3ResearchAdapter
+
+__all__ = [
+    "BaseMCPAdapter",
+    "MarketSentimentAdapter", 
+    "Web3ResearchAdapter"
+]

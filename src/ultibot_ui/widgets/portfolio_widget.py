@@ -2,7 +2,7 @@ import logging
 import asyncio
 from typing import Optional, List, Dict, Any, Callable, Coroutine, Tuple
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timezone # ADDED timezone
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QGroupBox, QFormLayout, QHBoxLayout, 
     QTableWidget, QTableWidgetItem, QHeaderView, QScrollArea, QFrame, QPushButton,
@@ -302,7 +302,7 @@ class PortfolioWidget(QWidget):
             else:
                 self._update_open_trades_ui(self.open_trades)
 
-            self.last_updated_label.setText(f"Última actualización: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            self.last_updated_label.setText(f"Última actualización: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S %Z')}") # MODIFIED
             if not has_error:
                 self.error_label.setText("")
 

@@ -8,17 +8,17 @@ import uuid
 from datetime import datetime, timezone
 from unittest.mock import Mock, AsyncMock, patch
 
-from src.ultibot_backend.services.ai_orchestrator_service import (
+from ultibot_backend.services.ai_orchestrator_service import (
     AIOrchestrator,
     AIAnalysisResult,
     OpportunityData,
 )
-from src.ultibot_backend.core.domain_models.trading_strategy_models import (
+from ultibot_backend.core.domain_models.trading_strategy_models import (
     TradingStrategyConfig,
     BaseStrategyType,
     ScalpingParameters,
 )
-from src.ultibot_backend.core.domain_models.user_configuration_models import (
+from ultibot_backend.core.domain_models.user_configuration_models import (
     AIStrategyConfiguration,
     ConfidenceThresholds,
 )

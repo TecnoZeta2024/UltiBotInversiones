@@ -1,111 +1,78 @@
-### INFORME POST-MORTEM Y PLAN DE ACCIÓN - 10 Junio 2025, 21:03
+### INFORME POST-MORTEM - 12/06/2025 15:58
 
-**ESTADO ACTUAL:**
-* FASE 1: ANÁLISIS SISTÉMICO COMPLETADO - Error crítico identificado en el arranque del backend
+**REFERENCIA A INTENTOS PREVIOS:**
+* Este post-mortem se genera tras el fallo catastrófico de la suite de tests (`poetry run pytest`) después de la refactorización de `src/ultibot_backend/core/domain_models/prompt_models.py` a Pydantic V2.
+* El fallo reintroduce los errores `SystemError: AST constructor recursion depth mismatch` y `RuntimeError: Event loop is closed`, que se creían resueltos según `AUDIT_REPORT.md`.
 
-**1. OBSERVACIONES (Resultados de FASE 1):**
+**Resultado Esperado:**
+* La ejecución de `poetry run pytest` debía validar la migración de Pydantic V2, resultando en una suite de tests limpia, sin errores ni advertencias.
 
-#### Secuencia de Fallos Observada:
-- El backend no logra inicializarse debido a un error de compatibilidad de Pydantic v2
-- Error específico: `PydanticUserError: 'regex' is removed. use 'pattern' instead`
-- Archivo problemático: `src/ultibot_backend/api/v1/endpoints/ai_analysis.py` línea 47
-- El error impide que FastAPI cargue correctamente, bloqueando todo el servicio
+**Resultado Real:**
+* Fallo masivo de la suite de tests con 67 fallos y 13 errores.
+* Reaparición de `SystemError: AST constructor recursion depth mismatch`.
+* Reaparición de `RuntimeError: Event loop is closed` y errores de `asyncio` relacionados con `psycopg_pool`.
 
-#### Análisis del Error:
-- En `ai_analysis.py`, el campo `trading_mode` utiliza `regex="^(paper|real)$"` 
-- Pydantic v2 deprecó el parámetro `regex` y lo reemplazó con `pattern`
-- Este cambio de API rompe la compatibilidad y previene el arranque de la aplicación
+**Análisis de Falla:**
+* La hipótesis de que solo era necesaria una migración de sintaxis de Pydantic fue incorrecta.
+* La modificación en `prompt_models.py`, aunque sintácticamente correcta, expuso una fragilidad subyacente en la configuración del entorno de pruebas.
+* La causa raíz no está en los modelos de dominio, sino en una configuración defectuosa en `tests/conftest.py` que no gestiona de forma robusta el ciclo de vida del `event loop` de `asyncio` y el `pool` de conexiones a la base de datos a lo largo de toda la suite de tests. El error `AST` es un síntoma de esta inestabilidad.
 
-#### Estado de Registros de Router:
-- El archivo `main.py` correctamente importa y registra `ai_analysis.router` 
-- El registro del router está bien implementado en la línea 148: `app.include_router(ai_analysis.router, prefix=api_prefix, tags=["ai_analysis"])`
-- El problema no es de configuración sino de compatibilidad de dependencias
-
-#### Verificación de Estructura:
-- Todos los archivos del AI Orchestrator están presentes y correctamente estructurados
-- El servicio `AIOrchestratorService` está funcional (verificado en tests previos)
-- Los endpoints están bien definidos pero no pueden cargarse debido al error de Pydantic
-
-**2. HIPÓTESIS CENTRAL (Resultados de FASE 2):**
-
-**Causa Raíz:** El proyecto está utilizando una versión más reciente de Pydantic (v2.x) que deprecó el parámetro `regex` en `Field()`, pero el código del AI Orchestrator fue desarrollado usando la sintaxis antigua. Esto crea una incompatibilidad que impide el arranque completo del backend.
-
-**Impacto en Cascada:**
-1. El error de Pydantic impide la carga del módulo `ai_analysis.py`
-2. FastAPI no puede importar el router, causando fallo en la inicialización
-3. El backend nunca arranca, imposibilitando cualquier comunicación con el frontend
-4. Los tests de integración fallan con 404 porque no hay servidor disponible
-
-**3. PLAN DE ACCIÓN UNIFICADO (Propuesta para FASE 3):**
-
-| Archivo a Modificar | Descripción del Cambio | Justificación |
-|:---|:---|:---|
-| `src/ultibot_backend/api/v1/endpoints/ai_analysis.py` | Cambiar `regex="^(paper\|real)$"` por `pattern="^(paper\|real)$"` en línea 47 | Corregir incompatibilidad de Pydantic v2 para permitir carga del módulo |
-| `scripts/test_ai_api_integration.py` | Ejecutar test de integración para verificar funcionamiento | Validar que los endpoints AI respondan correctamente después del fix |
-
-**Cambio Específico Requerido:**
-```python
-# ANTES (línea 47):
-trading_mode: str = Field(
-    default="paper",
-    description="Modo de trading: 'paper' o 'real'",
-    regex="^(paper|real)$"
-)
-
-# DESPUÉS:
-trading_mode: str = Field(
-    default="paper",
-    description="Modo de trading: 'paper' o 'real'",
-    pattern="^(paper|real)$"
-)
-```
-
-**4. RIESGOS POTENCIALES:**
-* **Bajo riesgo:** El cambio es una actualización de sintaxis directa sin cambio de funcionalidad
-* **Riesgo de regresión mínimo:** La validación regex/pattern mantiene el mismo comportamiento
-* **Posibles errores adicionales:** Podrían existir otros usos de `regex` en el codebase que requieran corrección
-
-**5. VERIFICACIÓN POST-CORRECCIÓN:**
-* Ejecutar `./run_frontend_with_backend.bat` para verificar arranque exitoso
-* Verificar que el endpoint `/api/v1/ai/health` responda correctamente
-* Ejecutar `poetry run python scripts/test_ai_api_integration.py` para validar todos los endpoints AI
-
-**6. EJECUCIÓN COMPLETADA:**
-* ✅ **CORRECCIÓN APLICADA:** Cambio de `regex` a `pattern` en ai_analysis.py ejecutado exitosamente
-* ✅ **BACKEND INICIADO:** El backend arranca correctamente sin errores de Pydantic
-* ✅ **ENDPOINTS FUNCIONANDO:** Todos los endpoints AI responden correctamente
-* ✅ **TESTS PASADOS:** 5/5 tests de integración completados exitosamente
-
-**7. VERIFICACIÓN POST-CORRECCIÓN COMPLETADA:**
-* ✅ `./run_frontend_with_backend.bat` ejecuta sin errores - Backend y Frontend lanzados
-* ✅ Endpoint `/api/v1/ai/health` responde: "healthy" con modelo Gemini 1.5 Pro
-* ✅ Test de integración completo pasado: `poetry run python scripts/test_ai_api_integration.py`
-* ✅ AI Orchestrator completamente activado y accesible vía API REST
-
-**8. RESULTADOS DE TESTS DE INTEGRACIÓN:**
-```
-🏆 RESUMEN DE TESTS DE INTEGRACIÓN
-✅ PASS - Health Check
-✅ PASS - Models Info  
-✅ PASS - Trading Analysis (COMPRAR - 96.0% confianza)
-✅ PASS - Quick Analysis (ESPERAR - 65.0% confianza)
-✅ PASS - Telegram Format
-
-📊 RESULTADO: 5/5 tests pasaron
-🎉 ¡TODOS LOS TESTS DE INTEGRACIÓN PASARON!
-🚀 AI ORCHESTRATOR COMPLETAMENTE ACTIVADO Y ACCESIBLE VÍA API
-```
+**Lección Aprendida y Nueva Hipótesis:**
+* **Lección Aprendida:** No se debe asumir que un problema está resuelto permanentemente solo porque un informe anterior lo indica. Las modificaciones, incluso las pequeñas, pueden revelar problemas latentes. Es necesario validar el estado del sistema de forma más integral.
+* **Nueva Hipótesis Central:** La inestabilidad de la suite de tests se origina en `tests/conftest.py`. La gestión del `event_loop` y del `db_session` es inadecuada para una ejecución completa de pytest, causando fugas de recursos y fallos en cascada. La solución requiere una refactorización del fixture de base de datos para garantizar que las conexiones y el bucle de eventos se creen y destruyan correctamente una sola vez por sesión de prueba.
 
 ---
 
-### ACTIVACIÓN DEL AI ORCHESTRATOR COMPLETADA ✅
+### INFORME POST-MORTEM - 12/06/2025 16:46
 
-**ESTADO FINAL:**
-* ✅ AI Orchestrator activado y funcional
-* ✅ Endpoints de análisis de trading operativos  
-* ✅ Integración con Gemini 1.5 Pro confirmada
-* ✅ Respuestas estructuradas con recomendaciones de trading
-* ✅ Preparado para integración con la UI de UltiBotInversiones
+**REFERENCIA A INTENTOS PREVIOS:**
+* Este informe sigue a la ejecución de la "OPERACIÓN: ESTABILIZACIÓN DEL CICLO DE VIDA ASÍNCRONO DE TESTS", que refactorizó `tests/conftest.py`.
 
-### LECCIÓN APRENDIDA:
-La migración a Pydantic v2 requiere actualización de la sintaxis de validación de campos. Es crítico verificar compatibilidad de todas las dependencias antes del despliegue en producción.
+**Resultado Esperado:**
+* La ejecución de `poetry run pytest` debía resultar en una suite de pruebas estable, libre de errores de `RuntimeError` y `SystemError`, aunque se esperaban fallos de lógica de negocio.
+
+**Resultado Real:**
+* La suite de pruebas ha fallado masivamente con 97 fallos y 139 errores.
+* Los errores de ciclo de vida de `asyncio` (`Event loop is closed`) han sido eliminados, validando la Fase 3A.
+* Sin embargo, ha surgido una nueva clase de errores sistémicos:
+    1.  **`TypeError` en la inicialización de servicios:** Múltiples `fixtures` intentan instanciar clases de servicio (`TradingEngine`, `BinanceAdapter`, `AIOrchestratorService`, etc.) sin proporcionar los argumentos requeridos en sus constructores (`__init__`).
+    2.  **`ValidationError` de Pydantic:** Múltiples pruebas intentan crear instancias de modelos de Pydantic (`Trade`, `KlineData`, `Order`, etc.) con datos incorrectos o campos faltantes.
+    3.  **`AttributeError` en `async_generator`:** Las pruebas de API intentan usar el `client` de `TestClient` como un objeto directo en lugar de un generador asíncrono, causando errores como `AttributeError: 'async_generator' object has no attribute 'get'`.
+    4.  **`PoolTimeout` en `test_persistence_service.py`:** A pesar de la nueva `fixture`, el `SupabasePersistenceService` sigue intentando usar su propio pool de conexiones interno en lugar de la sesión transaccional proporcionada por la `fixture`, lo que lleva a timeouts.
+
+**Análisis de Falla:**
+* La hipótesis de que solo el ciclo de vida de `asyncio` estaba roto fue incompleta. La corrección de ese problema ha destapado una erosión masiva de la integridad de las pruebas unitarias y de integración.
+* Las `fixtures` de prueba no han sido mantenidas y están desincronizadas con las firmas de los constructores de las clases que instancian.
+* Los datos de prueba (mocks y datos para modelos Pydantic) son inválidos y no cumplen con los esquemas actuales de los modelos.
+* La interacción con el `TestClient` de FastAPI en las pruebas de API es incorrecta.
+
+**Lección Aprendida y Nueva Hipótesis:**
+* **Lección Aprendida:** Una suite de pruebas que no se mantiene activamente se convierte en deuda técnica. Los cambios en el código de la aplicación deben ser reflejados inmediatamente en las pruebas correspondientes. La estabilidad de la suite es un indicador clave de la salud del proyecto.
+* **Nueva Hipótesis Central:** La causa raíz de la falla actual es una **desintegración sistémica de la suite de pruebas**. Las pruebas no reflejan el estado actual del código fuente. La solución no es un único arreglo, sino una campaña de refactorización de pruebas dividida en fases, enfocada en restaurar la coherencia entre las pruebas y el código de la aplicación. Se debe comenzar por el problema más fundamental: la instanciación incorrecta de objetos en las `fixtures`.
+
+---
+
+### INFORME POST-MORTEM RELOJ ATÓMICO - 2025-06-12 18:51
+
+**REFERENCIA A INTENTOS PREVIOS:**
+* Este informe sigue a la ejecución del plan "ESTABILIZACIÓN DE TESTS DE INTEGRACIÓN Y DATOS".
+* El plan se enfocó en refactorizar `SupabasePersistenceService` para permitir la inyección de dependencias y corregir `ValidationErrors` en los tests de API.
+
+**Resultado Esperado:**
+* La ejecución de `poetry run pytest` debía mostrar una reducción significativa de errores, eliminando los `PoolTimeout` y los `ValidationError` de los archivos modificados. Se esperaba que la suite de pruebas fuera más estable, aunque aún con fallos de lógica.
+
+**Resultado Real:**
+* La ejecución de `pytest` resultó en un fallo masivo con **26 fallos y 42 errores**.
+* **Éxito Parcial:** Los `PoolTimeout` parecen haber sido resueltos, ya que no aparecen en el log de errores. La refactorización de la inyección de dependencias fue correcta en su enfoque.
+* **Fallo Sistémico Expuesto:** La corrección de los errores de conexión destapó una cascada de problemas subyacentes mucho más graves, que ahora son los principales bloqueadores.
+* **Nuevo Error Dominante:** `ImportError: cannot import name 'Base' from 'ultibot_backend.adapters.persistence_service'`. Este error de setup impide que cualquier test que dependa de la base de datos se ejecute correctamente.
+* **Otros Errores Críticos Revelados:** `NameError`, `TypeError` por firmas de constructores desincronizadas, `fixture not found`, y `ValidationError` persistentes en múltiples tests unitarios.
+
+**Análisis de Falla:**
+* **Hipótesis Incorrecta:** La hipótesis de que los `PoolTimeout` y los `ValidationError` aislados eran los problemas principales fue incorrecta. Eran solo los síntomas más visibles de una base de código de pruebas profundamente deteriorada.
+* **Visión de Túnel:** Me concentré en los errores reportados en el plan anterior sin realizar un diagnóstico más amplio después de la primera ejecución fallida de `pytest`. La ejecución del plan fue prematura.
+* **Causa Raíz Real:** La causa raíz es una **falla estructural en la configuración del entorno de pruebas (`conftest.py`)** y una **desincronización masiva entre el código de la aplicación y el código de los tests**. Los tests no han sido mantenidos y ya no reflejan cómo funciona la aplicación.
+
+**Lección Aprendida y Nueva Hipótesis:**
+* **Lección Aprendida:** No se puede construir sobre cimientos rotos. Antes de corregir errores de lógica de negocio, es imperativo asegurar que el entorno de pruebas se configure y se inicialice sin errores. Los errores de `setup` y `fixture` deben tener la máxima prioridad.
+* **Nueva Hipótesis Central:** La estabilización de la suite de pruebas debe seguir un enfoque de "abajo hacia arriba". Primero, se debe corregir la configuración fundamental (`conftest.py`, variables de entorno, importaciones base). Segundo, se deben arreglar las `fixtures` para que puedan instanciar correctamente los servicios. Solo entonces se pueden abordar los fallos de lógica dentro de los propios tests. Atacar los problemas en este orden evitará la depuración de errores que son simplemente síntomas de un setup incorrecto.

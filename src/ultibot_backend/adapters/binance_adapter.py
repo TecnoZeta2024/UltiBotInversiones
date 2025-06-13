@@ -1,174 +1,213 @@
-import asyncio
-import logging
-from typing import Any, AsyncGenerator, Callable, Coroutine, Dict, List, Optional
 import httpx
-from binance import AsyncClient, BinanceSocketManager
-from binance.exceptions import BinanceAPIException as BinanceLibAPIError
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+import hmac
+import hashlib
+import time
+from typing import List, Dict, Any, Optional
+from injector import inject
+from datetime import datetime, timezone
+from decimal import Decimal
 
-from src.ultibot_backend.core.exceptions import BinanceAPIError, ExternalAPIError
+from ..core.ports import IMarketDataProvider, IOrderExecutionPort, ICredentialService
+from ..app_config import AppSettings
+from ..core.exceptions import ExternalAPIError, CredentialError
+from ..core.domain_models.trading import TickerData, KlineData, Order, OrderType, OrderSide, OrderStatus
+from shared.data_types import ServiceName
 
-logger = logging.getLogger(__name__)
+class BinanceAPIError(ExternalAPIError):
+    """Exception for errors related to the Binance API."""
+    def __init__(self, message: str, status_code: Optional[int] = None, response_data: Optional[Dict[str, Any]] = None):
+        super().__init__(message, "Binance", status_code, response_data)
 
-# Configuración de reintentos para llamadas a la API de Binance
-# Reintenta en errores de conexión/timeout o errores de servidor (5xx)
-binance_api_retry = retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_type((httpx.ConnectError, httpx.ReadTimeout, httpx.ConnectTimeout))
-)
-
-class BinanceAdapter:
+class BinanceAdapter(IMarketDataProvider, IOrderExecutionPort):
     """
-    Adaptador para interactuar con la API de Binance y los WebSockets.
+    Adapter for fetching market data and executing orders on Binance.
     """
+    @inject
+    def __init__(self, config: AppSettings, credential_service: ICredentialService):
+        self._base_url = "https://api.binance.com/api/v3"
+        self._credential_service = credential_service
+        self._client: Optional[httpx.AsyncClient] = None
+        self._api_key: Optional[str] = None
+        self._api_secret: Optional[str] = None
 
-    def __init__(self, api_key: str, api_secret: str, http_client: httpx.AsyncClient):
-        self.api_key = api_key
-        self.api_secret = api_secret
-        self.client: Optional[AsyncClient] = None
-        self.bsm: Optional[BinanceSocketManager] = None
-        self.http_client = http_client
-        self.active_sockets: Dict[str, asyncio.Task] = {}
-        self._is_closing = False
-
-    async def initialize(self):
-        """Inicializa el cliente asíncrono de Binance."""
-        if not self.client:
-            self.client = AsyncClient(self.api_key, self.api_secret)
-            # Si se necesita un cliente HTTP personalizado, se puede configurar
-            # el cliente de Binance para usarlo, o pasar como 'session' si la versión lo soporta.
-            # Por ahora, se elimina el argumento 'http_client' directo para resolver el error.
-            # await self.client.set_http_client(self.http_client) # Esto sería si existiera un método para setearlo
-            self.bsm = BinanceSocketManager(self.client)
-            logger.info("Binance AsyncClient and SocketManager initialized.")
-
-    @binance_api_retry
-    async def get_connection_status(self) -> Dict[str, Any]:
-        """Verifica el estado de la conexión con la API de Binance."""
-        await self.initialize()
-        try:
-            ping = await self.client.ping()
-            return {"status": "ok", "ping": ping}
-        except BinanceLibAPIError as e:
-            logger.error(f"Binance API error on ping: {e}", exc_info=True)
-            raise BinanceAPIError(message=e.message, status_code=e.status_code, response_data=e.response.json() if e.response else None, original_exception=e)
-        except Exception as e:
-            logger.error(f"Unexpected error on ping: {e}", exc_info=True)
-            raise ExternalAPIError(f"An unexpected error occurred: {e}", service_name="BINANCE_ADAPTER")
-
-    @binance_api_retry
-    async def get_account_info(self) -> Dict[str, Any]:
-        """Obtiene la información de la cuenta de Binance."""
-        await self.initialize()
-        try:
-            account_info = await self.client.get_account()
-            return account_info
-        except BinanceLibAPIError as e:
-            logger.error(f"Binance API error getting account info: {e}", exc_info=True)
-            raise BinanceAPIError(message=e.message, status_code=e.status_code, response_data=e.response.json() if e.response else None, original_exception=e)
-
-    @binance_api_retry
-    async def get_all_tickers(self) -> List[Dict[str, Any]]:
-        """Obtiene los precios de todos los tickers."""
-        await self.initialize()
-        try:
-            tickers = await self.client.get_all_tickers()
-            return tickers
-        except BinanceLibAPIError as e:
-            logger.error(f"Binance API error getting all tickers: {e}", exc_info=True)
-            raise BinanceAPIError(message=e.message, status_code=e.status_code, response_data=e.response.json() if e.response else None, original_exception=e)
-
-    @binance_api_retry
-    async def get_24hr_ticker_data(self) -> List[Dict[str, Any]]:
-        """Obtiene estadísticas de 24 horas para todos los tickers.
-        
-        Returns:
-            List of 24hr ticker statistics including price change, volume, etc.
-        """
-        await self.initialize()
-        try:
-            ticker_data = await self.client.get_ticker()
-            return ticker_data
-        except BinanceLibAPIError as e:
-            logger.error(f"Binance API error getting 24hr ticker data: {e}", exc_info=True)
-            raise BinanceAPIError(message=e.message, status_code=e.status_code, response_data=e.response.json() if e.response else None, original_exception=e)
-
-    @binance_api_retry
-    async def get_candlestick_data(self, symbol: str, interval: str, limit: int, start_time: Optional[int] = None, end_time: Optional[int] = None) -> List[List[Any]]:
-        """Obtiene datos de velas para un símbolo."""
-        await self.initialize()
-        try:
-            # Nota: La API de python-binance usa startTime y endTime, no start_time y end_time.
-            klines = await self.client.get_klines(
-                symbol=symbol, 
-                interval=interval, 
-                limit=limit,
-                startTime=start_time,
-                endTime=end_time
+    async def _get_client(self) -> httpx.AsyncClient:
+        if self._client is None:
+            creds = await self._credential_service.get_first_decrypted_credential_by_service(ServiceName.BINANCE_SPOT)
+            if not creds or not creds.encrypted_api_key or not creds.encrypted_api_secret:
+                raise CredentialError("Binance API credentials are not configured.")
+            self._api_key = creds.encrypted_api_key
+            self._api_secret = creds.encrypted_api_secret
+            self._client = httpx.AsyncClient(
+                headers={"X-MBX-APIKEY": self._api_key}
             )
-            return klines
-        except BinanceLibAPIError as e:
-            logger.error(f"Binance API error getting klines for {symbol}: {e}", exc_info=True)
-            raise BinanceAPIError(message=e.message, status_code=e.status_code, response_data=e.response.json() if e.response else None, original_exception=e)
+        return self._client
 
-    async def start_kline_socket(self, symbol: str, interval: str, callback: Callable[[Dict[str, Any]], Coroutine]):
-        """Inicia un WebSocket para datos de velas (k-lines)."""
-        await self.initialize()
-        socket_key = f"{symbol.lower()}@kline_{interval}"
-        if socket_key in self.active_sockets:
-            logger.warning(f"Socket for {socket_key} is already active.")
-            return
+    def _generate_signature(self, params: Dict[str, Any]) -> str:
+        if not self._api_secret:
+            raise CredentialError("API secret is not available for signature generation.")
+        query_string = "&".join([f"{k}={v}" for k, v in params.items()])
+        return hmac.new(self._api_secret.encode('utf-8'), query_string.encode('utf-8'), hashlib.sha256).hexdigest()
 
-        async def socket_logic():
-            logger.info(f"Starting kline socket for {socket_key}")
-            ts = self.bsm.kline_socket(symbol, interval)
-            async with ts as tscm:
-                while not self._is_closing:
-                    try:
-                        res = await tscm.recv()
-                        if res:
-                            await callback(res)
-                    except Exception as e:
-                        logger.error(f"Error in kline socket {socket_key}: {e}", exc_info=True)
-                        # En un sistema de producción, aquí podría haber lógica de reconexión.
-                        await asyncio.sleep(5) # Esperar antes de reintentar
-            logger.info(f"Kline socket for {socket_key} closed.")
+    async def get_ticker(self, symbol: str) -> TickerData:
+        client = await self._get_client()
+        try:
+            response = await client.get(f"{self._base_url}/ticker/24hr", params={"symbol": symbol})
+            response.raise_for_status()
+            data = response.json()
+            return TickerData(
+                symbol=data["symbol"],
+                price=Decimal(data["lastPrice"]),
+                volume=Decimal(data["volume"]),
+                price_change_24h=Decimal(data["priceChange"]) if "priceChange" in data else None,
+                price_change_percent_24h=Decimal(data["priceChangePercent"]) if "priceChangePercent" in data else None,
+                timestamp=datetime.fromtimestamp(data["closeTime"] / 1000, tz=timezone.utc)
+            )
+        except httpx.HTTPStatusError as e:
+            raise BinanceAPIError(f"Error fetching ticker data for {symbol}: {e}", status_code=e.response.status_code, response_data=e.response.json()) from e
+        except httpx.RequestError as e:
+            raise BinanceAPIError(f"Connection error for {symbol}: {e}") from e
+        except KeyError as e:
+            raise BinanceAPIError(f"Missing data key in ticker response for {symbol}: {e}. Response: {data}", response_data=data) from e
 
-        task = asyncio.create_task(socket_logic())
-        self.active_sockets[socket_key] = task
-        logger.info(f"Kline socket task for {socket_key} created.")
+    async def get_klines(self, symbol: str, interval: str) -> List[KlineData]:
+        client = await self._get_client()
+        params = {
+            "symbol": symbol,
+            "interval": interval,
+            "limit": 1000
+        }
+        try:
+            response = await client.get(f"{self._base_url}/klines", params=params)
+            response.raise_for_status()
+            klines_data = response.json()
+            return [
+                KlineData(
+                    open_time=datetime.fromtimestamp(kline[0] / 1000, tz=timezone.utc),
+                    open_price=Decimal(kline[1]),
+                    high_price=Decimal(kline[2]),
+                    low_price=Decimal(kline[3]),
+                    close_price=Decimal(kline[4]),
+                    volume=Decimal(kline[5]),
+                    close_time=datetime.fromtimestamp(kline[6] / 1000, tz=timezone.utc),
+                    symbol=symbol,
+                    interval=interval
+                )
+                for kline in klines_data
+            ]
+        except httpx.HTTPStatusError as e:
+            raise BinanceAPIError(f"Error fetching klines for {symbol}: {e}", status_code=e.response.status_code, response_data=e.response.json()) from e
+        except httpx.RequestError as e:
+            raise BinanceAPIError(f"Connection error for {symbol}: {e}") from e
+        except IndexError as e:
+            raise BinanceAPIError(f"Invalid klines data structure for {symbol}: {e}. Response: {klines_data}", response_data=klines_data) from e
 
-    async def stop_socket(self, socket_key: str):
-        """Detiene un WebSocket activo."""
-        if socket_key in self.active_sockets:
-            task = self.active_sockets.pop(socket_key)
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                logger.info(f"Socket {socket_key} cancelled successfully.")
-        else:
-            logger.warning(f"No active socket found for key: {socket_key}")
+    async def get_all_symbols(self) -> List[str]:
+        client = await self._get_client()
+        try:
+            response = await client.get(f"{self._base_url}/exchangeInfo")
+            response.raise_for_status()
+            exchange_info = response.json()
+            return [s["symbol"] for s in exchange_info["symbols"] if s["status"] == "TRADING"]
+        except httpx.HTTPStatusError as e:
+            raise BinanceAPIError(f"Error fetching all symbols: {e}", status_code=e.response.status_code, response_data=e.response.json()) from e
+        except httpx.RequestError as e:
+            raise BinanceAPIError(f"Connection error fetching all symbols: {e}") from e
+
+    async def execute_order(self, symbol: str, order_type: OrderType, side: OrderSide, quantity: Decimal, price: Optional[Decimal] = None) -> Order:
+        client = await self._get_client()
+        params = {
+            "symbol": symbol,
+            "side": side.value,
+            "type": order_type.value,
+            "quantity": f"{quantity:.8f}".rstrip('0').rstrip('.'),
+            "timestamp": int(time.time() * 1000)
+        }
+        if order_type == OrderType.LIMIT:
+            if price is None:
+                raise ValueError("Price is required for LIMIT orders.")
+            params["price"] = f"{price:.8f}".rstrip('0').rstrip('.')
+            params["timeInForce"] = "GTC"
+
+        params["signature"] = self._generate_signature(params)
+
+        try:
+            response = await client.post(f"{self._base_url}/order", params=params)
+            response.raise_for_status()
+            data = response.json()
+            return Order(
+                id=str(data['orderId']),
+                symbol=data['symbol'],
+                side=OrderSide(data['side']),
+                type=OrderType(data['type']),
+                quantity=Decimal(data['origQty']),
+                price=Decimal(data['price']) if Decimal(data['price']) > 0 else None,
+                status=OrderStatus(data['status']),
+                created_at=datetime.fromtimestamp(data['transactTime'] / 1000, tz=timezone.utc)
+            )
+        except httpx.HTTPStatusError as e:
+            raise BinanceAPIError(f"Error executing order for {symbol}: {e}", status_code=e.response.status_code, response_data=e.response.json()) from e
+        except httpx.RequestError as e:
+            raise BinanceAPIError(f"Connection error executing order for {symbol}: {e}") from e
+
+    async def cancel_order(self, order_id: str, symbol: str) -> bool:
+        client = await self._get_client()
+        params = {
+            "symbol": symbol,
+            "orderId": order_id,
+            "timestamp": int(time.time() * 1000)
+        }
+        params["signature"] = self._generate_signature(params)
+
+        try:
+            response = await client.delete(f"{self._base_url}/order", params=params)
+            response.raise_for_status()
+            return True
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 400 and e.response.json().get('code') == -2011:
+                return False
+            raise BinanceAPIError(f"Error cancelling order {order_id}: {e}", status_code=e.response.status_code, response_data=e.response.json()) from e
+        except httpx.RequestError as e:
+            raise BinanceAPIError(f"Connection error cancelling order {order_id}: {e}") from e
+
+    async def verify_credentials(self, api_key: str, api_secret: str) -> bool:
+        # Temporary client for verification
+        temp_client = httpx.AsyncClient(headers={"X-MBX-APIKEY": api_key})
+        try:
+            params = {"timestamp": int(time.time() * 1000)}
+            query_string = "&".join([f"{k}={v}" for k, v in params.items()])
+            signature = hmac.new(api_secret.encode('utf-8'), query_string.encode('utf-8'), hashlib.sha256).hexdigest()
+            params["signature"] = signature
+            
+            response = await temp_client.get(f"{self._base_url}/account", params=params)
+            response.raise_for_status()
+            return True
+        except httpx.HTTPStatusError:
+            return False
+        finally:
+            await temp_client.aclose()
+
+    async def get_account_permissions(self, api_key: str, api_secret: str) -> Dict[str, bool]:
+        temp_client = httpx.AsyncClient(headers={"X-MBX-APIKEY": api_key})
+        try:
+            params = {"timestamp": int(time.time() * 1000)}
+            query_string = "&".join([f"{k}={v}" for k, v in params.items()])
+            signature = hmac.new(api_secret.encode('utf-8'), query_string.encode('utf-8'), hashlib.sha256).hexdigest()
+            params["signature"] = signature
+
+            response = await temp_client.get(f"{self._base_url}/account", params=params)
+            response.raise_for_status()
+            data = response.json()
+            return {
+                "can_trade": data.get("canTrade", False),
+                "can_withdraw": data.get("canWithdraw", False),
+                "can_deposit": data.get("canDeposit", False)
+            }
+        except httpx.HTTPStatusError as e:
+            raise BinanceAPIError("Failed to get account permissions", status_code=e.response.status_code, response_data=e.response.json()) from e
+        finally:
+            await temp_client.aclose()
 
     async def close(self):
-        """Cierra todas las conexiones y tareas."""
-        if self._is_closing:
-            return
-        self._is_closing = True
-        logger.info("Closing BinanceAdapter...")
-        
-        # Detener todos los sockets activos
-        active_socket_keys = list(self.active_sockets.keys())
-        if active_socket_keys:
-            logger.info(f"Stopping {len(active_socket_keys)} active sockets...")
-            await asyncio.gather(*(self.stop_socket(key) for key in active_socket_keys), return_exceptions=True)
-        
-        # Cerrar el cliente de Binance (que también cierra el http_client subyacente si fue creado por él)
-        if self.client:
-            await self.client.close_connection()
-            logger.info("Binance client connection closed.")
-        
-        self.client = None
-        self.bsm = None
-        logger.info("BinanceAdapter closed.")
+        if self._client:
+            await self._client.aclose()
+            self._client = None

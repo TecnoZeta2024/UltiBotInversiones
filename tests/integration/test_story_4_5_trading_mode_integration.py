@@ -5,18 +5,14 @@ import pytest
 import asyncio
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
 import sys
-import os
 from uuid import UUID, uuid4
 
 # Mock PyQt5 modules before importing
 sys.modules['PyQt5'] = MagicMock()
 sys.modules['PyQt5.QtCore'] = MagicMock()
 
-# Add src to Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
-
-from src.ultibot_ui.services.api_client import UltiBotAPIClient
-from src.ultibot_ui.services.trading_mode_state import get_trading_mode_manager, reset_trading_mode_manager
+from ultibot_ui.services.api_client import UltiBotAPIClient
+from ultibot_ui.services.trading_mode_state import get_trading_mode_manager, reset_trading_mode_manager
 
 class TestTradingModeAPIIntegration:
     """Integration tests for trading mode aware API endpoints."""

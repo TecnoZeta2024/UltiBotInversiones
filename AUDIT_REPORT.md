@@ -1,146 +1,46 @@
-# INFORME DE AUDITORÍA ARQUITECTÓNICA - UltiBotInversiones
-**Fecha:** 6 de noviembre de 2025  
-**Ingeniero:** Cline (Ingeniero Full-Stack Líder)  
-**Objetivo:** Evolución arquitectónica hacia plataforma de inversión inteligente
+### INFORME DE ESTADO Y PLAN DE ACCIÓN - 2025-06-12 21:59:00
 
----
+**ESTADO ACTUAL:**
+* `A la espera de aprobación para FASE 3: EJECUCIÓN CONTROLADA.`
 
-## RESUMEN EJECUTIVO
+**0. AUTO-DIAGNÓSTICO RELOJ ATÓMICO (Resultados automáticos):**
+* **Comando ejecutado:** `N/A (Análisis manual de código fuente)`
+* **Tipo de error detectado:** `Arquitectónico / Inconsistencia de Tipos`
+* **Nivel DEFCON activado:** `N/A`
+* **Herramientas VS Code disponibles:** `['🐞 Debug Pytest: ALL Tests', '🛠️ Debug Services Tests']`
+* **Protocolo de escalación:** `Refactorización controlada de endpoint.`
 
-El proyecto `UltiBotInversiones` presenta una base sólida con una arquitectura bien estructurada en PyQt6 y FastAPI. Sin embargo, requiere una evolución significativa para convertirse en una verdadera plataforma de inversión inteligente. Esta auditoría identifica 4 épicas críticas que transformarán el sistema actual en una herramienta de trading de nivel profesional con capacidades de IA avanzadas.
+**1. OBSERVACIONES (Resultados de FASE 1):**
+* **Logs analizados:** `N/A`
+* **Errores identificados:**
+    1.  El endpoint `trading.py` depende de la clase concreta `TradingEngine` en lugar de una interfaz (`ITradingService`).
+    2.  Se utilizan modelos de datos (`Trade`, `ConfirmRealTradeRequest`) de una ubicación legada (`src.shared.data_types`).
+    3.  El modelo de solicitud `MarketOrderRequest` usa `float` en lugar de `Decimal` para la cantidad.
+    4.  La creación del `PlaceOrderCommand` es incorrecta: pasa un parámetro inexistente (`is_real_trade`) y no utiliza los enums `OrderType` y `OrderSide`.
+    5.  El endpoint `/confirm-opportunity` contiene una lógica de negocio que no sigue el patrón CQRS y debería ser refactorizada a un flujo basado en comandos.
+* **Servicios afectados:** `TradingService`, `API v1 Endpoints`.
+* **Configuraciones problemáticas:** `N/A`.
 
-### ESTADO ACTUAL DEL PROYECTO
+**2. HIPÓTESIS CENTRAL (Resultados de FASE 2):**
+* **Causa raíz identificada:** El endpoint `trading.py` es un remanente de una fase anterior de la arquitectura. No ha sido actualizado para seguir los patrones de Arquitectura Hexagonal, CQRS e Inyección de Dependencias basados en interfaces que se han establecido en el resto del sistema.
+* **Conexión entre errores:** La dependencia de la clase concreta y los modelos de datos antiguos lleva directamente a la construcción incorrecta de comandos y a la inconsistencia de tipos, lo que provocaría errores en tiempo de ejecución y dificulta las pruebas.
+* **Impacto sistémico:** Este endpoint rompe el desacoplamiento entre la API y el núcleo de negocio, creando una deuda técnica significativa y un punto de fallo.
 
-**Fortalezas Identificadas:**
-- ✅ Arquitectura modular bien definida (backend/frontend separados)
-- ✅ Sistema de navegación avanzado implementado
-- ✅ Servicios básicos de trading y portfolio configurados
-- ✅ Integración con APIs externas (Binance, Gemini) establecida
-- ✅ Sistema de persistencia con Supabase configurado
+**3. PLAN DE ACCIÓN UNIFICADO (Propuesta para FASE 3):**
+| Archivo a Modificar | Descripción del Cambio | Justificación (Por qué este cambio soluciona el problema) | Herramienta Reloj Atómico |
+| :--- | :--- | :--- | :--- |
+| `src/ultibot_backend/api/v1/endpoints/trading.py` | 1. **Corregir importaciones:** Usar `Trade`, `OrderSide`, `OrderType` desde `core.domain_models`, `ITradingService` desde `core.ports`, y `get_trading_service` desde `dependencies`.<br>2. **Refactorizar Inyección:** Cambiar la dependencia a `trading_service: ITradingService = Depends(get_trading_service)`.<br>3. **Reemplazar Request Model:** Crear un `PlaceOrderRequest` que use `Decimal` y refleje los campos del `PlaceOrderCommand`.<br>4. **Reescribir Endpoint:** Sanear `/market-order` para construir un `PlaceOrderCommand` válido, usando los enums correctos.<br>5. **Aislar Lógica Compleja:** Comentar temporalmente el endpoint `/confirm-opportunity` para enfocar el saneamiento en el flujo de comandos directos. | Alinea el endpoint con la arquitectura Hexagonal/CQRS, asegura la correcta inyección de dependencias a través de interfaces, garantiza la seguridad de tipos con `Decimal` y los enums, y elimina la creación de comandos inválidos. | `🛠️ Debug Services Tests` |
+| `tests/integration/api/v1/test_real_trading_flow.py` | 1. **Actualizar Inyección de Mocks:** Reemplazar `app.container.port.override` con `app.dependency_overrides[dependency] = lambda: mock`.<br>2. **Corregir URL del Endpoint:** Cambiar `/execute-order` a `/order`.<br>3. **Alinear Payload del Request:** Modificar el JSON del test para que coincida exactamente con el modelo `PlaceOrderRequest` del endpoint refactorizado.<br>4. **Verificar Llamadas a Mocks:** Asegurar que `trading_engine.execute_order` es llamado con los argumentos correctos y del tipo adecuado (`UUID`, `Decimal`). | Sincroniza el test de integración con el endpoint `trading.py` saneado, garantizando que las pruebas validen el comportamiento actual y correcto de la API. Restaura la confianza en la suite de tests. | `🚀 Debug Integration Tests` |
 
-**Gaps Arquitectónicos Críticos:**
-- ❌ UI actual mezcla incorrectamente niveles de información
-- ❌ Motor de estrategias rígido y no extensible
-- ❌ Orquestación de IA limitada y sin control de herramientas MCP
-- ❌ Ausencia de "AI Prompt Studio" para control total del agente
-- ❌ Sistema de detección de oportunidades pasivo vs. proactivo
+**4. RIESGOS POTENCIALES:**
+* **Riesgo 1:** Comentar `/confirm-opportunity` deshabilita temporalmente esa funcionalidad.
+* **Mitigación:** Es un paso necesario para un refactor controlado. La funcionalidad se restaurará en un paso posterior, ya saneada y alineada con CQRS.
+* **Protocolo de rollback:** `git checkout -- src/ultibot_backend/api/v1/endpoints/trading.py tests/integration/api/v1/test_real_trading_flow.py`.
 
----
+**5. VALIDACIÓN AUTOMÁTICA PROGRAMADA:**
+* **Comandos de verificación:** `poetry run pytest tests/integration/api/v1/test_real_trading_flow.py`.
+* **Métricas de éxito:** Todos los tests en el archivo pasan, validando que el endpoint `/order` funciona como se espera con las dependencias mockeadas.
+* **Recovery protocol:** `DEFCON 1` si la corrección rompe la colección de tests.
 
-## ANÁLISIS DE ARQUITECTURA ACTUAL
-
-### 1. CAPA DE PRESENTACIÓN (PyQt6)
-
-**Estado Actual:**
-- Sistema de navegación moderno con `SidebarNavigationWidget` avanzado
-- Ventana principal (`MainWindow`) bien estructurada con `QStackedWidget`
-- Vistas especializadas: Dashboard, Strategies, Portfolio, History, Settings
-
-**Problemas Identificados:**
-1. **Dashboard sobrecargado:** Mezcla análisis detallados (gráficos) con estado operacional
-2. **Configuración fragmentada:** Ubicada en diálogos secundarios en lugar del flujo principal
-3. **Ausencia de vista dedicada para análisis:** Los gráficos compiten por espacio con información crítica
-
-### 2. CAPA DE LÓGICA DE NEGOCIO (Backend)
-
-**Estado Actual:**
-- Servicios bien separados: `ai_orchestrator_service`, `strategy_service`, `portfolio_service`
-- Adaptadores para APIs externas configurados
-- Sistema de persistencia funcional
-
-**Problemas Identificados:**
-1. **Motor de estrategias rígido:** `strategy_service.py` no implementa patrón Factory
-2. **Orquestación de IA limitada:** `ai_orchestrator_service.py` carece del ciclo "Planificación -> Ejecución -> Síntesis"
-3. **Ausencia de `MCPAdapter`:** No existe adaptador unificado para herramientas MCP
-4. **Control de prompts hardcodeado:** Sin capacidad de gestión dinámica de plantillas de IA
-
-### 3. CAPA DE DATOS
-
-**Estado Actual:**
-- Supabase configurado correctamente
-- Modelos de dominio bien definidos
-- Servicios de persistencia implementados
-
-**Oportunidades:**
-- Falta tabla `ai_prompt_templates` para gestión de prompts
-- Ausencia de tabla `configuration_presets` para presets de usuario
-- Sin estructura para almacenar registro de herramientas MCP
-
----
-
-## ÉPICAS DE TRANSFORMACIÓN ARQUITECTÓNICA
-
-### ÉPICA 1: Re-arquitectura de la Interfaz de Usuario
-
-**Justificación Técnica:**
-La UI actual viola el principio de separación de responsabilidades al mezclar niveles de abstracción diferentes en el dashboard. Esta refactorización implementará una jerarquía clara de información y navegación intuitiva.
-
-**Impacto Arquitectónico:**
-- Implementación de patrón MVC más estricto
-- Separación clara entre vistas de estado vs. análisis
-- Sistema de presets para configuraciones complejas
-
-### ÉPICA 2: Motor de Estrategias "Pluggable"
-
-**Justificación Técnica:**
-El sistema actual no permite extensibilidad de estrategias sin modificar código core. La implementación del patrón Factory + Strategy permitirá agregar nuevas estrategias como módulos independientes.
-
-**Impacto Arquitectónico:**
-- Implementación de patrón Strategy con Factory
-- Interfaz `BaseStrategy` para extensibilidad
-- Carga dinámica de estrategias desde directorio
-
-### ÉPICA 3: Módulo de Orquestación de Herramientas MCP
-
-**Justificación Técnica:**
-La capacidad actual de IA está limitada por la ausencia de un sistema de herramientas robusto. Esta épica implementará el patrón Adapter + Registry para herramientas MCP externas.
-
-**Impacto Arquitectónico:**
-- Patrón Adapter para unificación de APIs MCP
-- Registry pattern para gestión de herramientas
-- Ciclo de orquestación "Planificación -> Ejecución -> Síntesis"
-
-### ÉPICA 4: Control de Prompts y "AI Prompt Studio"
-
-**Justificación Técnica:**
-El control hardcodeado de prompts viola el principio de configurabilidad y limita la capacidad de optimización. El "Prompt Studio" democratizará el control del agente IA.
-
-**Impacto Arquitectónico:**
-- Externalización de prompts a base de datos
-- CRUD completo para plantillas de IA
-- Sistema de testing en vivo para prompts
-
----
-
-## MÉTRICAS DE ÉXITO
-
-### Técnicas
-- **Cobertura de código:** >80% para módulos críticos
-- **Tiempo de respuesta:** <500ms para ciclo completo detección-ejecución
-- **Modularidad:** 100% de estrategias como plugins independientes
-- **Configurabilidad:** 100% de prompts IA externalizados
-
-### Funcionales
-- **Extensibilidad:** Agregar nueva estrategia en <30 minutos
-- **Usabilidad:** Configurar prompt personalizado en <5 minutos
-- **Eficiencia:** Detección proactiva de oportunidades vs. pasiva actual
-
----
-
-## RECOMENDACIONES ESTRATÉGICAS
-
-### Priorización Sugerida
-1. **ÉPICA 1** (UI Re-arquitectura) - Base para experiencia de usuario
-2. **ÉPICA 2** (Motor Estrategias) - Core de funcionalidad de trading
-3. **ÉPICA 3** (Orquestación MCP) - Potenciación de capacidades IA
-4. **ÉPICA 4** (Prompt Studio) - Control total del agente
-
-### Consideraciones de Implementación
-- Mantener compatibilidad con sistema actual durante transición
-- Implementar migraciones de datos para nuevas estructuras
-- Testing exhaustivo de cada módulo antes de integración
-- Documentación técnica completa para futura mantenibilidad
-
----
-
-**Conclusión:** El proyecto está en excelente posición para esta evolución arquitectónica. La base técnica sólida permitirá una implementación eficiente de estas mejoras transformacionales.
+**6. SOLICITUD:**
+* **[PAUSA]** Espero aprobación para proceder con la ejecución del plan usando superpoderes Reloj Atómico.

@@ -1,9 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from uuid import UUID
 
-from src.shared.data_types import UserConfiguration
+# --- Imports Arquitectónicos Corregidos ---
+# Se importa el modelo de dominio desde su ubicación correcta.
+from src.ultibot_backend.core.domain_models.user_configuration_models import UserConfiguration
+# Se importa la clase CONCRETA del servicio, ya que no existe una interfaz IConfigurationService en ports.py.
 from src.ultibot_backend.services.configuration_service import ConfigurationService
-from src.ultibot_backend.dependencies import get_config_service
+from src.ultibot_backend.dependencies import get_configuration_service
 from src.ultibot_backend.core.exceptions import (
     ConfigurationError,
     BinanceAPIError,
@@ -11,19 +14,20 @@ from src.ultibot_backend.core.exceptions import (
     RealTradeLimitReachedError,
     CredentialError,
 )
-from src.ultibot_backend.app_config import settings
 
 router = APIRouter()
 
 @router.get("/config", response_model=UserConfiguration)
 async def get_user_config(
-    config_service: ConfigurationService = Depends(get_config_service)
+    # La dependencia se inyecta como la clase concreta.
+    config_service: ConfigurationService = Depends(get_configuration_service)
 ):
     """
     Retorna la configuración actual del usuario.
     """
     try:
-        user_id = settings.FIXED_USER_ID
+        # El user_id se obtiene a través de la configuración inyectada en el servicio.
+        user_id = UUID(config_service.app_settings.fixed_user_id)
         config = await config_service.get_user_configuration(user_id)
         if not config:
              raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User configuration not found.")
@@ -42,13 +46,13 @@ async def get_user_config(
 @router.patch("/config", response_model=UserConfiguration)
 async def update_user_config(
     updated_config: UserConfiguration,
-    config_service: ConfigurationService = Depends(get_config_service)
+    config_service: ConfigurationService = Depends(get_configuration_service)
 ):
     """
     Permite actualizar parcialmente la configuración del usuario.
     """
     try:
-        user_id = settings.FIXED_USER_ID
+        user_id = UUID(config_service.app_settings.fixed_user_id)
         existing_config = await config_service.get_user_configuration(user_id)
         
         update_data = updated_config.model_dump(exclude_unset=True)
@@ -74,19 +78,19 @@ async def update_user_config(
 
 @router.post("/config/real-trading-mode/activate", response_model=dict)
 async def activate_real_trading_mode_endpoint(
-    config_service: ConfigurationService = Depends(get_config_service)
+    config_service: ConfigurationService = Depends(get_configuration_service)
 ):
     """
     Intenta activar el modo de operativa real limitada para el usuario.
     """
     try:
-        user_id = settings.FIXED_USER_ID
+        user_id = UUID(config_service.app_settings.fixed_user_id)
         await config_service.activate_real_trading_mode(user_id)
         return {"message": "Modo de operativa real limitada activado exitosamente."}
     except RealTradeLimitReachedError as e:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=e.message)
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
     except (BinanceAPIError, InsufficientUSDTBalanceError, CredentialError) as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except ConfigurationError as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error de configuración: {e}")
     except Exception as e:
@@ -94,13 +98,13 @@ async def activate_real_trading_mode_endpoint(
 
 @router.post("/config/real-trading-mode/deactivate", response_model=dict)
 async def deactivate_real_trading_mode_endpoint(
-    config_service: ConfigurationService = Depends(get_config_service)
+    config_service: ConfigurationService = Depends(get_configuration_service)
 ):
     """
     Desactiva el modo de operativa real limitada para el usuario.
     """
     try:
-        user_id = settings.FIXED_USER_ID
+        user_id = UUID(config_service.app_settings.fixed_user_id)
         await config_service.deactivate_real_trading_mode(user_id)
         return {"message": "Modo de operativa real limitada desactivado."}
     except ConfigurationError as e:
@@ -110,13 +114,13 @@ async def deactivate_real_trading_mode_endpoint(
 
 @router.get("/config/real-trading-mode/status", response_model=dict)
 async def get_real_trading_mode_status_endpoint(
-    config_service: ConfigurationService = Depends(get_config_service)
+    config_service: ConfigurationService = Depends(get_configuration_service)
 ):
     """
     Retorna el estado actual del modo de operativa real limitada y el contador para el usuario.
     """
     try:
-        user_id = settings.FIXED_USER_ID
+        user_id = UUID(config_service.app_settings.fixed_user_id)
         status_data = await config_service.get_real_trading_status(user_id)
         return status_data
     except ConfigurationError as e:

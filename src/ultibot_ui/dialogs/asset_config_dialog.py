@@ -7,11 +7,11 @@ incluyendo gestión CRUD completa, validación en tiempo real, y ejecución con 
 import asyncio
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone # ADDED timezone
 from typing import Any, Dict, List, Optional
 
-from PyQt5.QtCore import QThread, pyqtSignal, Qt, QTimer
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import QThread, pyqtSignal, Qt, QTimer # MODIFIED
+from PySide6.QtWidgets import ( # MODIFIED
     QDialog, QVBoxLayout, QHBoxLayout, QSplitter, QLabel, QLineEdit, 
     QTextEdit, QComboBox, QCheckBox, QSpinBox, QDoubleSpinBox, 
     QPushButton, QListWidget, QListWidgetItem, QWidget, QFormLayout,
@@ -657,8 +657,9 @@ class MockAPIClient:
         """Mock: crea parámetros de trading."""
         new_param = parameters.copy()
         new_param["id"] = str(uuid.uuid4())[:8]
-        new_param["created_at"] = datetime.now().isoformat()
-        new_param["updated_at"] = datetime.now().isoformat()
+        now_utc_iso = datetime.now(timezone.utc).isoformat() # MODIFIED
+        new_param["created_at"] = now_utc_iso # MODIFIED
+        new_param["updated_at"] = now_utc_iso # MODIFIED
         self.parameters.append(new_param)
         return new_param
         
@@ -668,7 +669,7 @@ class MockAPIClient:
             if param["id"] == parameter_id:
                 updated_param = param.copy()
                 updated_param.update(parameters)
-                updated_param["updated_at"] = datetime.now().isoformat()
+                updated_param["updated_at"] = datetime.now(timezone.utc).isoformat() # MODIFIED
                 self.parameters[i] = updated_param
                 return updated_param
         raise APIError(f"Parámetro con ID {parameter_id} no encontrado", 404)
@@ -1253,7 +1254,7 @@ class AssetTradingParametersDialog(QDialog):
 def main():
     """Función principal para testing independiente."""
     import sys
-    from PyQt5.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication # MODIFIED
     
     app = QApplication(sys.argv)
     

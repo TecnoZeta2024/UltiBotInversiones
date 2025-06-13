@@ -1,11 +1,13 @@
-from typing import Optional, List, Dict, Any 
+from typing import Optional, List, Dict, Any, TYPE_CHECKING
 from uuid import UUID
 
-from src.ultibot_ui.services.api_client import UltiBotAPIClient
 from src.shared.data_types import PortfolioSnapshot, MarketData, Notification, Kline, Ticker
 
+if TYPE_CHECKING:
+    from src.ultibot_ui.services.api_client import UltiBotAPIClient
+
 class UIMarketDataService:
-    def __init__(self, api_client: UltiBotAPIClient):
+    def __init__(self, api_client: 'UltiBotAPIClient'):
         self.api_client = api_client
 
     async def fetch_portfolio_summary(self, user_id: UUID, trading_mode: str) -> Optional[PortfolioSnapshot]:

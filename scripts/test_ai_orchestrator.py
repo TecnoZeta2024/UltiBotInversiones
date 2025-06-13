@@ -14,8 +14,17 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.ultibot_backend.app_config import AppSettings
+from src.ultibot_backend.dependencies import get_settings # MODIFIED
 from src.ultibot_backend.services.ai_orchestrator_service import AIOrchestratorService
+from src.ultibot_backend.adapters.gemini_adapter import GeminiAdapter # ADDED
+from src.ultibot_backend.adapters.mobula_adapter import MobulaAdapter # ADDED
+from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter # ADDED
+from src.ultibot_backend.services.credential_service import CredentialService # ADDED
+from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService # ADDED
+from src.ultibot_backend.adapters.prompt_persistence_adapter import PromptPersistenceAdapter # ADDED
+from src.ultibot_backend.services.tool_hub_service import ToolHubService # ADDED
+from src.ultibot_backend.services.prompt_manager_service import PromptManagerService # ADDED
+
 
 # Configurar logging
 logging.basicConfig(
@@ -24,53 +33,30 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def check_environment_variables():
-    """Verifica que las variables de entorno necesarias estén configuradas."""
-    logger.info("🔍 Verificando variables de entorno...")
-    
-    required_vars = [
-        'GEMINI_API_KEY',
-        'SUPABASE_URL',
-        'SUPABASE_ANON_KEY',
-        'CREDENTIAL_ENCRYPTION_KEY'
-    ]
-    
-    missing_vars = []
-    for var in required_vars:
-        if not os.getenv(var):
-            missing_vars.append(var)
-        else:
-            logger.info(f"✅ {var}: Configurada")
-    
-    if missing_vars:
-        logger.error(f"❌ Variables faltantes: {missing_vars}")
-        return False
-    
-    logger.info("✅ Todas las variables de entorno requeridas están configuradas")
-    return True
+# REMOVED check_environment_variables
 
-def test_app_settings():
+def test_app_settings(): # Renamed from test_app_settings to reflect it now gets settings
     """Verifica que AppSettings pueda cargar la configuración."""
     logger.info("🔍 Probando carga de configuración...")
     
     try:
-        settings = AppSettings()
+        app_settings = get_settings() # MODIFIED
         
         # Verificar campos críticos
-        if not settings.GEMINI_API_KEY:
+        if not app_settings.gemini_api_key:
             logger.error("❌ GEMINI_API_KEY no está disponible en AppSettings")
             return False, None
             
-        if not settings.SUPABASE_URL:
+        if not app_settings.supabase_url:
             logger.error("❌ SUPABASE_URL no está disponible en AppSettings")
             return False, None
             
         logger.info(f"✅ Configuración cargada correctamente")
-        logger.info(f"   - Gemini API Key: {'*' * (len(settings.GEMINI_API_KEY) - 4) + settings.GEMINI_API_KEY[-4:]}")
-        logger.info(f"   - Supabase URL: {settings.SUPABASE_URL}")
-        logger.info(f"   - Fixed User ID: {settings.FIXED_USER_ID}")
+        logger.info(f"   - Gemini API Key: {'*' * (len(app_settings.gemini_api_key) - 4) + app_settings.gemini_api_key[-4:]}")
+        logger.info(f"   - Supabase URL: {app_settings.supabase_url}")
+        logger.info(f"   - Fixed User ID: {app_settings.fixed_user_id}")
         
-        return True, settings
+        return True, app_settings
         
     except Exception as e:
         logger.error(f"❌ Error cargando configuración: {e}")
@@ -81,75 +67,97 @@ def test_ai_orchestrator_initialization(settings):
     logger.info("🔍 Probando inicialización del AI Orchestrator...")
     
     try:
-        orchestrator = AIOrchestratorService(settings)
+        # Manually instantiate dependencies for AIOrchestratorService
+        # This mirrors parts of src.ultibot_backend.dependencies.py
         
-        if orchestrator.llm is None:
-            logger.error("❌ LLM no se inicializó correctamente")
-            return False, None
-            
-        if orchestrator.parser is None:
-            logger.error("❌ Parser no se inicializó correctamente")
-            return False, None
-            
-        if orchestrator.prompt_template is None:
-            logger.error("❌ Prompt template no se inicializó correctamente")
-            return False, None
+        # Persistence
+        persistence_port = SupabasePersistenceService(app_settings=settings)
+        asyncio.run(persistence_port.connect()) # Connect the pool for this script's lifetime
+
+        # Credential Service
+        credential_service = CredentialService(persistence_port=persistence_port)
+
+        # Adapters
+        gemini_adapter = GeminiAdapter(api_key=settings.gemini_api_key)
+
+        # Binance adapter might require credentials to be pre-loaded for some tool functions
+        # For basic orchestrator init, it might not be strictly needed if not all tools are called.
+        binance_adapter = BinanceAdapter(config=settings, credential_service=credential_service)
+
+        mobula_adapter = MobulaAdapter(api_key=settings.mobula_api_key)
+
+        # ToolHub
+        tool_hub = ToolHubService(mobula_adapter=mobula_adapter, binance_adapter=binance_adapter)
+
+        # Prompt Management
+        if not settings.supabase_url or not settings.supabase_key:
+            logger.error("❌ Supabase URL/Key not configured, cannot init PromptPersistenceAdapter.")
+            return False, None, None
+        prompt_persistence_adapter = PromptPersistenceAdapter(
+            supabase_url=settings.supabase_url,
+            supabase_key=settings.supabase_key
+        )
+        prompt_manager = PromptManagerService(prompt_repository=prompt_persistence_adapter)
+
+        # AI Orchestrator
+        orchestrator = AIOrchestratorService(
+            gemini_adapter=gemini_adapter,
+            tool_hub=tool_hub,
+            prompt_manager=prompt_manager
+        )
+
+        # Basic checks (can be expanded)
+        if orchestrator.gemini_adapter is None:
+            logger.error("❌ Gemini Adapter not initialized in Orchestrator")
+            return False, None, None
             
         logger.info("✅ AI Orchestrator inicializado correctamente")
-        logger.info(f"   - Modelo LLM: {orchestrator.llm.model}")
-        logger.info(f"   - Temperatura: {orchestrator.llm.temperature}")
-        
-        return True, orchestrator
+        # Add more specific checks if needed, e.g., model name from gemini_adapter
+        logger.info(f"   - Gemini Model: {orchestrator.gemini_adapter.get_model_name()}")
+
+        return True, orchestrator, persistence_port
         
     except Exception as e:
-        logger.error(f"❌ Error inicializando AI Orchestrator: {e}")
-        return False, None
+        logger.error(f"❌ Error inicializando AI Orchestrator: {e}", exc_info=True)
+        return False, None, None
+
+from src.ultibot_backend.core.domain_models.ai_models import TradingOpportunity # ADDED
+from decimal import Decimal # ADDED
+import uuid # ADDED
 
 async def test_basic_ai_analysis(orchestrator):
     """Prueba básica de análisis con el AI Orchestrator."""
-    logger.info("🔍 Probando análisis básico de IA...")
-    
-    # Datos de prueba
-    strategy_context = """
-    Estrategia: Scalping en BTC/USDT
-    Parámetros: 
-    - Stop Loss: 1%
-    - Take Profit: 2%
-    - Timeframe: 1m
-    """
-    
-    opportunity_context = """
-    Par: BTC/USDT
-    Precio actual: $43,250.00
-    Cambio 24h: +2.45%
-    Volumen 24h: 15,240 BTC
-    RSI: 58.2
-    """
-    
-    historical_context = """
-    Últimas 5 operaciones:
-    1. COMPRA a $42,800 - ÉXITO (+1.8%)
-    2. VENTA a $43,100 - ÉXITO (+1.2%)
-    3. COMPRA a $42,950 - PÉRDIDA (-0.8%)
-    4. VENTA a $43,200 - ÉXITO (+1.5%)
-    5. COMPRA a $43,000 - ÉXITO (+2.1%)
-    Win Rate: 80%
-    """
-    
-    tool_outputs = """
-    Binance API: Datos de mercado actualizados
-    Mobula API: BTC trending positivamente (+15% en búsquedas)
-    Análisis técnico: Tendencia alcista de corto plazo
-    """
+    logger.info("🔍 Probando análisis básico de IA (con dummy TradingOpportunity)...")
+
+    # Crear un TradingOpportunity dummy para la prueba
+    # Los detalles completos de strategy_context, opportunity_context, etc.,
+    # no se usan directamente por analyze_opportunity; esta espera un objeto estructurado.
+    # Esta prueba ahora verifica la capacidad de llamar al método y obtener una respuesta simulada
+    # o una respuesta basada en el procesamiento interno si los mocks no interceptan todo.
+    dummy_opportunity = TradingOpportunity(
+        opportunity_id=str(uuid.uuid4()),
+        symbol="BTC/USDT",
+        strategy_name="Dummy Strategy",
+        confidence=0.0, # Confidence is usually an output of previous stages, not input here.
+        # Los siguientes campos pueden necesitar valores válidos si el método los usa directamente.
+        current_price=Decimal("43250.00"),
+        # Añadir otros campos requeridos por TradingOpportunity con valores dummy
+        # Basado en test_trading_ai_orchestrator.py:
+        volume_24h=Decimal("15240"),
+        price_change_24h=2.45,
+        technical_indicators={"RSI_1m": 58.2},
+        market_context={},
+        risk_level="UNKNOWN",
+        timeframe="1m",
+        signal_strength=0.0, # Similar a confidence
+        expected_profit=0.0
+    )
     
     try:
-        logger.info("📤 Enviando solicitud de análisis a Gemini...")
+        logger.info("📤 Enviando solicitud de análisis a Gemini (a través de orchestrator.analyze_opportunity)...")
         
-        response = await orchestrator.analyze_opportunity_with_strategy_context_async(
-            strategy_context=strategy_context,
-            opportunity_context=opportunity_context,
-            historical_context=historical_context,
-            tool_outputs=tool_outputs
+        response = await orchestrator.analyze_opportunity(
+            opportunity=dummy_opportunity
         )
         
         logger.info("✅ Análisis completado exitosamente!")
@@ -173,37 +181,44 @@ async def run_validation_tests():
     logger.info("🚀 Iniciando validación del AI Orchestrator...")
     logger.info("=" * 60)
     
-    # Test 1: Variables de entorno
-    if not check_environment_variables():
-        logger.error("💥 Fallo en verificación de variables de entorno")
-        return False
-    
-    logger.info("\n" + "=" * 60)
-    
-    # Test 2: Configuración de la aplicación
-    config_ok, settings = test_app_settings()
-    if not config_ok:
-        logger.error("💥 Fallo en carga de configuración")
-        return False
-    
-    logger.info("\n" + "=" * 60)
-    
-    # Test 3: Inicialización del orchestrator
-    init_ok, orchestrator = test_ai_orchestrator_initialization(settings)
-    if not init_ok:
-        logger.error("💥 Fallo en inicialización del AI Orchestrator")
-        return False
-    
-    logger.info("\n" + "=" * 60)
-    
-    # Test 4: Análisis básico
-    analysis_ok, response = await test_basic_ai_analysis(orchestrator)
-    if not analysis_ok:
-        logger.error("💥 Fallo en análisis básico de IA")
-        return False
-    
-    logger.info("\n" + "=" * 60)
-    logger.info("🎉 ¡TODOS LOS TESTS PASARON EXITOSAMENTE!")
+    persistence_port = None # Define persistence_port here to be accessible in finally
+    try:
+        # Test 1: Configuración de la aplicación (Variables de entorno implicitly checked by get_settings)
+        config_ok, app_settings = test_app_settings() # MODIFIED: was test_app_settings() before, now it's the getter
+        if not config_ok:
+            logger.error("💥 Fallo en carga de configuración")
+            return False
+
+        logger.info("\n" + "=" * 60)
+
+        # Test 3: Inicialización del orchestrator
+        # Update: test_ai_orchestrator_initialization might need to return persistence_port
+        # For simplicity, I'll re-fetch it or assume it's available if orchestrator is.
+        # For now, I'll assume test_ai_orchestrator_initialization handles its own connect/disconnect
+        # or I pass persistence_port back from it.
+        # Let's adjust test_ai_orchestrator_initialization to return persistence_port
+
+        init_ok, orchestrator, persistence_port = test_ai_orchestrator_initialization(app_settings)
+        if not init_ok:
+            logger.error("💥 Fallo en inicialización del AI Orchestrator")
+            return False
+
+        logger.info("\n" + "=" * 60)
+
+        # Test 4: Análisis básico
+        # WARNING: analyze_opportunity_with_strategy_context_async may not exist or match signature
+        # This part might fail and require further adaptation of the test data / method call.
+        analysis_ok, response = await test_basic_ai_analysis(orchestrator)
+        if not analysis_ok:
+            logger.error("💥 Fallo en análisis básico de IA")
+            return False
+
+        logger.info("\n" + "=" * 60)
+        logger.info("🎉 ¡TODOS LOS TESTS PASARON EXITOSAMENTE (core configuration and initialization)!")
+    finally:
+        if persistence_port:
+            logger.info("🔌 Cerrando conexión de persistencia...")
+            asyncio.run(persistence_port.disconnect())
     logger.info("✅ El AI Orchestrator está correctamente configurado y funcionando")
     logger.info("🚀 Listo para dar consejos de trading e inversiones")
     

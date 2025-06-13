@@ -1,12 +1,13 @@
 import pytest
+import os
 from unittest.mock import AsyncMock, MagicMock, patch, ANY
 from uuid import uuid4, UUID
-from datetime import datetime
+from datetime import datetime, timezone # ADDED timezone
 from cryptography.fernet import Fernet, InvalidToken
 
-from src.ultibot_backend.services.credential_service import CredentialService, CredentialError
-from src.shared.data_types import APICredential, ServiceName
-from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter, BinanceAPIError
+from ultibot_backend.services.credential_service import CredentialService, CredentialError
+from shared.data_types import APICredential, ServiceName
+from ultibot_backend.adapters.binance_adapter import BinanceAdapter, BinanceAPIError
 
 # Generar una clave Fernet válida para las pruebas
 TEST_FERNET_KEY = Fernet.generate_key().decode('utf-8')
@@ -23,14 +24,18 @@ def mock_binance_adapter():
 
 @pytest.fixture
 def credential_service(mock_persistence_service, mock_binance_adapter):
-    # Mockear las dependencias que CredentialService inicializa internamente
-    with patch('src.ultibot_backend.services.credential_service.SupabasePersistenceService', return_value=mock_persistence_service), \
-         patch('src.ultibot_backend.services.credential_service.BinanceAdapter', return_value=mock_binance_adapter):
-        service = CredentialService(encryption_key=TEST_FERNET_KEY)
-        # Re-asignar mocks si es necesario, aunque el patch debería cubrirlos
-        service.persistence_service = mock_persistence_service
-        service.binance_adapter = mock_binance_adapter
-        return service
+    # Establecer la clave de encriptación como variable de entorno para la prueba
+    # Esto es necesario porque CredentialService la lee de os.getenv
+    os.environ["CREDENTIAL_ENCRYPTION_KEY"] = TEST_FERNET_KEY
+    
+    # Instanciar CredentialService pasando los mocks como dependencias
+    service = CredentialService(
+        persistence_service=mock_persistence_service,
+        binance_adapter=mock_binance_adapter
+    )
+    yield service
+    # Limpiar la variable de entorno después de la prueba
+    del os.environ["CREDENTIAL_ENCRYPTION_KEY"]
 
 @pytest.fixture
 def sample_user_id():
@@ -57,8 +62,8 @@ def sample_encrypted_credential(credential_service: CredentialService, sample_cr
         encrypted_api_key=credential_service.encrypt_data(sample_credential_data["api_key"]),
         encrypted_api_secret=credential_service.encrypt_data(sample_credential_data["api_secret"]),
         status="verification_pending",
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc), # MODIFIED
+        updated_at=datetime.now(timezone.utc) # MODIFIED
     )
 
 # Pruebas de encriptación/desencriptación
@@ -185,8 +190,8 @@ async def test_verify_credential_telegram_success(credential_service: Credential
         credential_label="test_telegram",
         encrypted_api_key=credential_service.encrypt_data("telegram_token"), # El token es la API Key
         status="verification_pending",
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc), # MODIFIED
+        updated_at=datetime.now(timezone.utc) # MODIFIED
     )
     
     mock_notification_service = AsyncMock()

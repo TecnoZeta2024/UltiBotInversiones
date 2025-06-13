@@ -1,12 +1,14 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4, UUID
-from datetime import datetime
+from datetime import datetime, timezone # ADDED timezone
 
-from src.ultibot_backend.services.market_data_service import MarketDataService
-from src.ultibot_backend.services.credential_service import CredentialService, CredentialError
-from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter, BinanceAPIError
-from src.shared.data_types import APICredential, ServiceName, BinanceConnectionStatus, AssetBalance
+from ultibot_backend.services.market_data_service import MarketDataService
+from ultibot_backend.services.credential_service import CredentialService, CredentialError
+from ultibot_backend.adapters.binance_adapter import BinanceAdapter, BinanceAPIError
+from shared.data_types import APICredential, ServiceName, BinanceConnectionStatus, AssetBalance
+from ultibot_backend.core.exceptions import UltiBotError
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService # Importar SupabasePersistenceService
 
 @pytest.fixture
 def mock_credential_service():
@@ -22,8 +24,13 @@ def mock_binance_adapter():
     return adapter
 
 @pytest.fixture
-def market_data_service(mock_credential_service, mock_binance_adapter):
-    return MarketDataService(mock_credential_service, mock_binance_adapter)
+def mock_persistence_service(): # Nueva fixture para mockear persistence_service
+    service = AsyncMock(spec=SupabasePersistenceService)
+    return service
+
+@pytest.fixture
+def market_data_service(mock_credential_service, mock_binance_adapter, mock_persistence_service):
+    return MarketDataService(mock_credential_service, mock_binance_adapter, mock_persistence_service)
 
 @pytest.fixture
 def sample_user_id():
@@ -42,10 +49,10 @@ def sample_binance_credential(sample_user_id):
         encrypted_api_key="decrypted_api_key_value", # Simula valor ya desencriptado
         encrypted_api_secret="decrypted_api_secret_value", # Simula valor ya desencriptado
         status="active",
-        last_verified_at=datetime.utcnow(),
+        last_verified_at=datetime.now(timezone.utc), # MODIFIED
         permissions=["SPOT_TRADING"],
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc), # MODIFIED
+        updated_at=datetime.now(timezone.utc) # MODIFIED
     )
 
 @pytest.mark.asyncio
@@ -145,7 +152,6 @@ async def test_get_binance_spot_balances_api_error(market_data_service: MarketDa
     mock_credential_service.get_credential.return_value = sample_binance_credential
     mock_binance_adapter.get_spot_balances.side_effect = BinanceAPIError("Failed to fetch balances")
 
-    from src.ultibot_backend.core.exceptions import UltiBotError # Importar aquí para evitar error de importación circular si se mueve arriba
     with pytest.raises(UltiBotError) as excinfo: # MarketDataService envuelve BinanceAPIError en UltiBotError
         await market_data_service.get_binance_spot_balances(sample_user_id)
     assert "No se pudieron obtener los balances de Binance: Failed to fetch balances" in str(excinfo.value)

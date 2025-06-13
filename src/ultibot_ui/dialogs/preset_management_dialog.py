@@ -6,6 +6,7 @@ permitiendo crear, editar, eliminar y ejecutar presets tanto del sistema como pe
 
 import asyncio
 import logging
+from datetime import timezone # ADDED timezone
 from typing import Dict, List, Optional, Union, Callable, Coroutine
 
 from PyQt5.QtCore import QThread, QTimer, pyqtSignal
@@ -931,7 +932,7 @@ class PresetManagementDialog(QDialog):
         
     def _create_temp_preset_from_data(self, data: Dict) -> ScanPreset:
         """Crea un preset temporal desde datos de diccionario."""
-        from datetime import datetime
+        from datetime import datetime # This is fine, as timezone is already imported at the top
         
         # Crear configuración de escaneo
         scan_config = MarketScanConfiguration(**data["market_scan_configuration"])
@@ -948,8 +949,8 @@ class PresetManagementDialog(QDialog):
             is_active=data.get("is_active", True),
             usage_count=0,
             success_rate=None,
-            created_at=datetime.now(),
-            updated_at=datetime.now()
+            created_at=datetime.now(timezone.utc), # MODIFIED
+            updated_at=datetime.now(timezone.utc) # MODIFIED
         )
         
         return temp_preset
