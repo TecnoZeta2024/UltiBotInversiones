@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 
 # --- Configuraciones y Imports Arquitectónicos ---
-from src.ultibot_backend.app_config import get_app_settings
+from src.ultibot_backend.dependencies import get_settings
 from src.ultibot_backend.core.ports import IPersistencePort
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 # Corregido: La ubicación correcta de los modelos de configuración de usuario.
@@ -27,7 +27,7 @@ async def main():
     """
     logger.info("Iniciando script para poblar la configuración del usuario...")
     
-    app_settings = get_app_settings()
+    app_settings = get_settings()
 
     if not app_settings.database_url or not app_settings.fixed_user_id:
         logger.error("Error crítico: DATABASE_URL o FIXED_USER_ID no están configurados.")

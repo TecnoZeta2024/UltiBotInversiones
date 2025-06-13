@@ -14,7 +14,7 @@ python src/ultibot_ui/widgets/portfolio_widget_demo.py
 import sys
 import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone # ADDED timezone
 from typing import Optional, List, Dict, Any
 from uuid import UUID, uuid4
 
@@ -58,7 +58,7 @@ class MockAPIClient(UltiBotAPIClient):
                 "entryOrder": {
                     "executedQuantity": 0.001,
                     "executedPrice": 58500.0,
-                    "timestamp": datetime.utcnow() - timedelta(hours=2)
+                    "timestamp": datetime.now(timezone.utc) - timedelta(hours=2) # MODIFIED
                 },
                 "takeProfitPrice": 61000.0,
                 "currentStopPrice_tsl": 57200.0,
@@ -77,7 +77,7 @@ class MockAPIClient(UltiBotAPIClient):
                 "entryOrder": {
                     "executedQuantity": 0.1,
                     "executedPrice": 3200.0,
-                    "timestamp": datetime.utcnow() - timedelta(hours=1)
+                    "timestamp": datetime.now(timezone.utc) - timedelta(hours=1) # MODIFIED
                 },
                 "takeProfitPrice": 3350.0,
                 "currentStopPrice_tsl": 3150.0,
@@ -96,7 +96,7 @@ class MockAPIClient(UltiBotAPIClient):
                 "entryOrder": {
                     "executedQuantity": 1000.0,
                     "executedPrice": 0.45,
-                    "timestamp": datetime.utcnow() - timedelta(minutes=30)
+                    "timestamp": datetime.now(timezone.utc) - timedelta(minutes=30) # MODIFIED
                 },
                 "takeProfitPrice": 0.42,
                 "currentStopPrice_tsl": 0.465,
@@ -227,7 +227,7 @@ class MockAPIClient(UltiBotAPIClient):
         return PortfolioSnapshot(
             paper_trading=paper_summary,
             real_trading=real_summary,
-            last_updated=datetime.utcnow()
+            last_updated=datetime.now(timezone.utc) # MODIFIED
         )
 
 class MockPortfolioService:

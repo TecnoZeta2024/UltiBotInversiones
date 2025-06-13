@@ -2,7 +2,7 @@ import pytest
 import os
 from unittest.mock import AsyncMock, MagicMock, patch, ANY
 from uuid import uuid4, UUID
-from datetime import datetime
+from datetime import datetime, timezone # ADDED timezone
 from cryptography.fernet import Fernet, InvalidToken
 
 from ultibot_backend.services.credential_service import CredentialService, CredentialError
@@ -62,8 +62,8 @@ def sample_encrypted_credential(credential_service: CredentialService, sample_cr
         encrypted_api_key=credential_service.encrypt_data(sample_credential_data["api_key"]),
         encrypted_api_secret=credential_service.encrypt_data(sample_credential_data["api_secret"]),
         status="verification_pending",
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc), # MODIFIED
+        updated_at=datetime.now(timezone.utc) # MODIFIED
     )
 
 # Pruebas de encriptación/desencriptación
@@ -190,8 +190,8 @@ async def test_verify_credential_telegram_success(credential_service: Credential
         credential_label="test_telegram",
         encrypted_api_key=credential_service.encrypt_data("telegram_token"), # El token es la API Key
         status="verification_pending",
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc), # MODIFIED
+        updated_at=datetime.now(timezone.utc) # MODIFIED
     )
     
     mock_notification_service = AsyncMock()

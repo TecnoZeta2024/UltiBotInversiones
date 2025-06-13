@@ -11,7 +11,7 @@ Este módulo valida la integración completa del sistema de IA:
 import pytest
 import asyncio
 from unittest.mock import Mock, AsyncMock, patch
-from datetime import datetime
+from datetime import datetime, timezone # ADDED timezone
 from decimal import Decimal
 
 # Core imports
@@ -242,7 +242,7 @@ class TestAIOrchestratorIntegration:
             expected_profit=0.025,
             risk_level="MEDIUM",
             timeframe="1h",
-            detected_at=datetime.utcnow()
+            detected_at=datetime.now(timezone.utc) # MODIFIED
         )
         
         # Ejecutar análisis completo
@@ -324,7 +324,7 @@ class TestAIOrchestratorIntegration:
             expected_profit=0.02,
             risk_level="MEDIUM",
             timeframe="1h",
-            detected_at=datetime.utcnow()
+            detected_at=datetime.now(timezone.utc) # MODIFIED
         )
         
         import time
@@ -351,7 +351,7 @@ class TestAIOrchestratorIntegration:
                 expected_profit=0.02,
                 risk_level="MEDIUM", 
                 timeframe="1h",
-                detected_at=datetime.utcnow()
+                detected_at=datetime.now(timezone.utc) # MODIFIED
             )
             
             # El análisis debe continuar aunque fallen las herramientas
@@ -379,7 +379,7 @@ class TestAIOrchestratorIntegration:
                 expected_profit=0.02,
                 risk_level="MEDIUM",
                 timeframe="1h",
-                detected_at=datetime.utcnow()
+                detected_at=datetime.now(timezone.utc) # MODIFIED
             )
             opportunities.append(opportunity)
         
@@ -408,7 +408,7 @@ class TestAIOrchestratorIntegration:
             expected_profit=0.02,
             risk_level="MEDIUM",
             timeframe="1h",
-            detected_at=datetime.utcnow()
+            detected_at=datetime.now(timezone.utc) # MODIFIED
         )
         
         result = await orchestrator.analyze_opportunity(opportunity)
@@ -447,7 +447,7 @@ class TestAIOrchestratorIntegration:
                 expected_profit=0.02,
                 risk_level="MEDIUM",
                 timeframe="1h", 
-                detected_at=datetime.utcnow(),
+                detected_at=datetime.now(timezone.utc), # MODIFIED
                 market_context=market_data.__dict__  # Contexto del mercado
             )
             

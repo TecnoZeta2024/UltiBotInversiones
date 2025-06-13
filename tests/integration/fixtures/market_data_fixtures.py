@@ -6,7 +6,7 @@ testing de estrategias y flujos de trading.
 """
 
 from decimal import Decimal
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone # ADDED timezone
 from typing import List
 import random
 
@@ -29,7 +29,7 @@ def create_mock_ticker_data(
         high_24h=Decimal(str(price * 1.05)),
         low_24h=Decimal(str(price * 0.95)),
         open_24h=Decimal(str(price * 0.98)),
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now(timezone.utc) # MODIFIED
     )
 
 def create_mock_kline_data(
@@ -50,7 +50,7 @@ def create_mock_kline_data(
         trend: Tendencia del mercado
     """
     klines = []
-    current_time = datetime.utcnow() - timedelta(hours=periods)
+    current_time = datetime.now(timezone.utc) - timedelta(hours=periods) # MODIFIED
     current_price = base_price
     
     # Configuración de tendencia
@@ -117,7 +117,9 @@ def create_bullish_market_snapshot(symbol: str = "BTCUSDT") -> MarketSnapshot:
     
     return MarketSnapshot(
         symbol=symbol,
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(timezone.utc), # MODIFIED
+        timestamp=datetime.now(timezone.utc), # MODIFIED
+        timestamp=datetime.now(timezone.utc), # MODIFIED
         ticker_data=ticker,
         klines=klines,
         timeframe="1h",
@@ -227,7 +229,7 @@ def create_high_volatility_snapshot(symbol: str = "BTCUSDT") -> MarketSnapshot:
     
     # Klines con alta volatilidad
     klines = []
-    base_time = datetime.utcnow() - timedelta(hours=20)
+    base_time = datetime.now(timezone.utc) - timedelta(hours=20) # MODIFIED
     
     # Simular movimientos bruscos de precio
     prices = [42000, 43500, 41500, 44000, 46000, 43000, 45000, 44000]
@@ -257,7 +259,7 @@ def create_high_volatility_snapshot(symbol: str = "BTCUSDT") -> MarketSnapshot:
     
     return MarketSnapshot(
         symbol=symbol,
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(timezone.utc), # MODIFIED
         ticker_data=ticker,
         klines=klines,
         timeframe="1h",
@@ -316,7 +318,7 @@ def create_arbitrage_opportunity_snapshots() -> tuple[MarketSnapshot, MarketSnap
         
         snapshot = MarketSnapshot(
             symbol=ticker.symbol,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc), # MODIFIED
             ticker_data=ticker,
             klines=klines,
             timeframe="5m",  # Timeframe corto para arbitraje
@@ -353,7 +355,7 @@ def create_news_sentiment_spike_data(symbol: str = "BTCUSDT") -> dict:
             "news_velocity": 15,  # Noticias por hora
             "sentiment_change_1h": 0.25,  # Cambio significativo
             "major_sources": ["coindesk", "cointelegraph", "bloomberg"],
-            "timestamp": datetime.utcnow()
+            "timestamp": datetime.now(timezone.utc) # MODIFIED
         },
         "volume_spike_data": {
             "current_volume": 8000000,
@@ -402,7 +404,7 @@ def create_onchain_metrics_data(symbol: str = "BTCUSDT") -> dict:
                 "fear_greed_index": 68,  # Greed territory
                 "google_trends": 85
             },
-            "timestamp": datetime.utcnow()
+            "timestamp": datetime.now(timezone.utc) # MODIFIED
         }
     }
 

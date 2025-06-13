@@ -6,12 +6,12 @@ from decimal import Decimal
 from typing import Optional, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends # ADDED Depends
 from pydantic import BaseModel
 
 from ultibot_backend.core.domain_models.trading import OrderSide, OrderType, Order
-from ultibot_backend.dependencies import TradingEngineDep
-from ultibot_backend.app_config import get_app_settings
+from ultibot_backend.dependencies import TradingEngineDep, get_settings # MODIFIED
+from ultibot_backend.app_config import AppSettings # ADDED AppSettings for type hint
 
 router = APIRouter(prefix="/trading", tags=["Trading"])
 logger = logging.getLogger(__name__)
@@ -36,6 +36,7 @@ class PlaceOrderRequest(BaseModel):
 async def place_order(
     request: PlaceOrderRequest,
     trading_engine: TradingEngineDep,
+    settings: AppSettings = Depends(get_settings), # ADDED settings dependency
 ):
     """
     Coloca una nueva orden de trading en el sistema.
@@ -44,7 +45,7 @@ async def place_order(
         logger.info(f"Recibida solicitud de orden: {request.model_dump_json()}")
 
         # Obtener user_id de la configuración (solución temporal)
-        settings = get_app_settings()
+        # settings = get_app_settings() # REMOVED
         user_id = UUID(settings.fixed_user_id)
 
         # El TradingEngine se encarga de la lógica de ejecución.

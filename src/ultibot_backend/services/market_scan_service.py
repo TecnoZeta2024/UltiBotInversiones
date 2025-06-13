@@ -5,7 +5,7 @@ for the UltiBotInversiones trading system.
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone # ADDED timezone
 from typing import Dict, List, Optional, Any
 from uuid import uuid4
 
@@ -135,13 +135,14 @@ class MarketScanService:
         if not preset.id:
             preset.id = str(uuid4())
         
-        preset.created_at = datetime.utcnow()
-        preset.updated_at = preset.created_at
+        now = datetime.now(timezone.utc) # ADDED
+        preset.created_at = now # MODIFIED
+        preset.updated_at = now # MODIFIED
         
         # Ensure the market scan configuration has proper timestamps too
         if not preset.market_scan_configuration.created_at:
-            preset.market_scan_configuration.created_at = preset.created_at
-        preset.market_scan_configuration.updated_at = preset.created_at
+            preset.market_scan_configuration.created_at = now # MODIFIED (use 'now' consistent with preset)
+        preset.market_scan_configuration.updated_at = now # MODIFIED (use 'now' consistent with preset)
         
         await self.persistence_service.save_scan_preset(preset, user_id)
         
@@ -166,8 +167,9 @@ class MarketScanService:
         if not config.id:
             config.id = str(uuid4())
         
-        config.created_at = datetime.utcnow()
-        config.updated_at = config.created_at
+        now_config = datetime.now(timezone.utc) # ADDED for config
+        config.created_at = now_config # MODIFIED
+        config.updated_at = now_config # MODIFIED
         
         await self.persistence_service.upsert_market_scan_configuration(config.__dict__, user_id)
         
@@ -196,8 +198,9 @@ class MarketScanService:
         if not existing_preset:
             raise ValueError(f"Scan preset '{preset.id}' not found")
         
-        preset.updated_at = datetime.utcnow()
-        preset.market_scan_configuration.updated_at = preset.updated_at
+        now_update = datetime.now(timezone.utc) # ADDED for update
+        preset.updated_at = now_update # MODIFIED
+        preset.market_scan_configuration.updated_at = now_update # MODIFIED
         
         await self.persistence_service.update_scan_preset(preset, user_id)
         
@@ -598,7 +601,7 @@ class MarketScanService:
             preset = await self.get_scan_preset(preset_id, user_id)
             if preset:
                 preset.usage_count = (preset.usage_count or 0) + 1
-                preset.updated_at = datetime.utcnow()
+                preset.updated_at = datetime.now(timezone.utc) # MODIFIED
                 await self.persistence_service.update_scan_preset(preset, user_id)
         except Exception as e:
             logger.warning(f"Failed to update preset usage: {str(e)}")

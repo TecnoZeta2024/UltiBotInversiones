@@ -4,7 +4,7 @@ Implementa la interfaz IPersistencePort, traduciendo las operaciones de dominio
 a interacciones con la base de datos de Supabase.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone # ADDED timezone
 from decimal import Decimal
 from typing import List, Optional, Dict, Any
 from uuid import UUID
@@ -213,7 +213,7 @@ class SupabasePersistenceAdapter(IPersistencePort):
                 prompt_id = UUID(response.data[0]["id"])
                 current_version = response.data[0]["version"]
                 # Actualizar el prompt existente para incrementar la versión
-                self._supabase_client.table("ai_prompts").update({"version": current_version + 1, "template": new_template, "variables": variables, "description": description, "updated_at": datetime.utcnow().isoformat()}).eq("id", str(prompt_id)).execute()
+                self._supabase_client.table("ai_prompts").update({"version": current_version + 1, "template": new_template, "variables": variables, "description": description, "updated_at": datetime.now(timezone.utc).isoformat()}).eq("id", str(prompt_id)).execute() # MODIFIED
             else:
                 # Crear un nuevo prompt
                 new_prompt_data = {

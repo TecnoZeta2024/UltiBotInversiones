@@ -51,7 +51,7 @@ class OrderExecutionService:
                 "symbol": symbol,
                 "orderId": 123456789,
                 "clientOrderId": f"test_order_{uuid4()}",
-                "transactTime": int(datetime.now().timestamp() * 1000),
+                "transactTime": int(datetime.now(timezone.utc).timestamp() * 1000), # MODIFIED
                 "price": "0.00000000", # Precio de mercado, puede ser 0 para órdenes de mercado
                 "origQty": str(quantity),
                 "executedQty": str(quantity),
@@ -84,9 +84,9 @@ class OrderExecutionService:
                 } for f in simulated_response.get("fills", [])] if simulated_response.get("fills") else [], # Manejar fills como lista vacía
                 commission=float(simulated_response["fills"][0]["commission"]) if simulated_response.get("fills") and simulated_response["fills"] else None, # Campo legado
                 commissionAsset=simulated_response["fills"][0]["commissionAsset"] if simulated_response.get("fills") and simulated_response["fills"] else None, # Campo legado
-                timestamp=datetime.fromtimestamp(simulated_response.get("transactTime", datetime.now().timestamp() * 1000) / 1000, tz=timezone.utc), # Usar timezone.utc
-                submittedAt=datetime.fromtimestamp(simulated_response.get("transactTime", datetime.now().timestamp() * 1000) / 1000, tz=timezone.utc),
-                fillTimestamp=datetime.fromtimestamp(simulated_response.get("transactTime", datetime.now().timestamp() * 1000) / 1000, tz=timezone.utc),
+                timestamp=datetime.fromtimestamp(simulated_response.get("transactTime", int(datetime.now(timezone.utc).timestamp() * 1000)) / 1000, tz=timezone.utc), # MODIFIED
+                submittedAt=datetime.fromtimestamp(simulated_response.get("transactTime", int(datetime.now(timezone.utc).timestamp() * 1000)) / 1000, tz=timezone.utc), # MODIFIED
+                fillTimestamp=datetime.fromtimestamp(simulated_response.get("transactTime", int(datetime.now(timezone.utc).timestamp() * 1000)) / 1000, tz=timezone.utc), # MODIFIED
                 rawResponse=simulated_response,
                 ocoOrderListId=ocoOrderListId
             )
@@ -164,9 +164,9 @@ class PaperOrderExecutionService:
             commissions=[], # Sin comisiones en paper trading por simplicidad
             commission=None, # Campo legado
             commissionAsset=None, # Campo legado
-            timestamp=datetime.now(timezone.utc),
-            submittedAt=datetime.now(timezone.utc),
-            fillTimestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(timezone.utc), # Already timezone aware
+            submittedAt=datetime.now(timezone.utc), # Already timezone aware
+            fillTimestamp=datetime.now(timezone.utc), # Already timezone aware
             rawResponse=None,
             ocoOrderListId=ocoOrderListId # Asignar el parámetro
         )

@@ -13,7 +13,7 @@ import logging
 from decimal import Decimal
 from typing import Optional, Dict, Any, List
 import statistics
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone # ADDED timezone
 
 from .base_strategy import BaseStrategy, AnalysisResult, TradingSignal, SignalStrength
 from src.ultibot_backend.core.domain_models.market import MarketData, KlineData
@@ -274,7 +274,7 @@ class OnChainMetricsDivergence(BaseStrategy):
         Obtiene métricas on-chain usando herramientas MCP.
         En implementación real, esto haría llamadas a APIs como Glassnode, etc.
         """
-        current_time = datetime.now()
+        current_time = datetime.now(timezone.utc) # MODIFIED
         
         # Simular métricas on-chain para testing
         base_seed = hash(symbol + str(current_time.date()))

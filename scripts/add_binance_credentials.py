@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 
 # --- Configuraciones y Imports Arquitectónicos ---
 # Se importa directamente desde la raíz del proyecto.
-from src.ultibot_backend.app_config import get_app_settings
+from src.ultibot_backend.dependencies import get_settings
 from src.ultibot_backend.core.ports import ICredentialService, IPersistencePort
 from src.ultibot_backend.services.credential_service import CredentialService
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
@@ -22,7 +22,7 @@ async def main():
     """
     logger.info("Iniciando script para añadir/verificar credenciales de Binance...")
 
-    app_settings = get_app_settings()
+    app_settings = get_settings()
     
     if not app_settings.database_url:
         logger.error("Error crítico: DATABASE_URL no está configurada en app_settings.")

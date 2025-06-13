@@ -7,7 +7,7 @@ incluyendo noticias, redes sociales y métricas on-chain.
 
 import asyncio
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone # ADDED timezone
 from typing import Any, Dict, List, Optional
 
 from .base_mcp_adapter import BaseMCPAdapter
@@ -146,7 +146,7 @@ class MarketSentimentAdapter(BaseMCPAdapter):
         result = {
             "symbol": symbol,
             "timeframe": timeframe,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(), # MODIFIED
             "overall_sentiment": aggregated_sentiment,
             "sentiment_score": aggregated_sentiment["score"],
             "confidence": aggregated_sentiment["confidence"],
@@ -164,7 +164,7 @@ class MarketSentimentAdapter(BaseMCPAdapter):
         # Guardar en cache
         self._sentiment_cache[cache_key] = {
             "result": result.copy(),
-            "timestamp": datetime.utcnow()
+            "timestamp": datetime.now(timezone.utc) # MODIFIED
         }
         
         return result
@@ -462,7 +462,7 @@ class MarketSentimentAdapter(BaseMCPAdapter):
         cache_time = cached_data["timestamp"]
         expiry_time = cache_time + timedelta(minutes=self._cache_expiry_minutes)
         
-        return datetime.utcnow() < expiry_time
+        return datetime.now(timezone.utc) < expiry_time # MODIFIED
     
     async def _post_execute_hook(
         self,

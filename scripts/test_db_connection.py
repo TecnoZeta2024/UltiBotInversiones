@@ -2,7 +2,7 @@ import asyncio
 import os
 import sys
 import psycopg
-from dotenv import load_dotenv
+from src.ultibot_backend.dependencies import get_settings # Changed
 
 # Solución para Windows ProactorEventLoop con psycopg/asyncio
 if sys.platform == "win32":
@@ -13,17 +13,20 @@ async def test_connection():
     Intenta conectarse a la base de datos de Supabase, verifica la conexión
     y comprueba si la tabla 'user_configurations' es accesible.
     """
-    load_dotenv(dotenv_path='.env', override=True)
-    db_url = os.getenv("DATABASE_URL")
+    settings = get_settings() # Changed
     
-    if not db_url:
-        print("ERROR: La variable de entorno DATABASE_URL no está definida en el archivo .env.")
+    # Construct DSN for psycopg from AppSettings
+    db_url = f"postgresql://{settings.db_user}:{settings.db_password}@{settings.db_host}:{settings.db_port}/{settings.db_name}" # Changed
+
+    if not all([settings.db_user, settings.db_password, settings.db_host, settings.db_port, settings.db_name]): # Changed
+        print("ERROR: Database connection parameters are not fully configured in settings.") # Changed
         return
 
-    print(f"Intentando conectar a la base de datos con la URL: {db_url[:50]}...")
+    print(f"Intentando conectar a la base de datos con DSN: postgresql://{settings.db_user}:***@{settings.db_host}:{settings.db_port}/{settings.db_name}") # Changed
 
     try:
         # Intenta conectar usando la URL completa
+        # Assuming 'supabase/prod-ca-2021.crt' is available in the execution path
         async with await psycopg.AsyncConnection.connect(db_url, sslmode='verify-full', sslrootcert='supabase/prod-ca-2021.crt') as aconn:
             async with aconn.cursor() as acur:
                 # 1. Verificar conexión básica

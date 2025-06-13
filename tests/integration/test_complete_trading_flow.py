@@ -9,7 +9,7 @@ import pytest
 import asyncio
 from unittest.mock import Mock, AsyncMock, patch
 from decimal import Decimal
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone # ADDED timezone
 
 # Core imports
 from ultibot_backend.core.domain_models.trading import (
@@ -92,7 +92,7 @@ class MockTradingSystem:
                 expected_profit=0.025,
                 risk_level="MEDIUM",
                 timeframe="1h",
-                detected_at=datetime.utcnow()
+                detected_at=datetime.now(timezone.utc) # MODIFIED
             )
             opportunities.append(opportunity)
             
@@ -131,13 +131,13 @@ class MockTradingSystem:
     async def execute_paper_trade(self, analysis: AnalysisResult) -> TradeResult:
         """Ejecuta un trade simulado (paper trading)."""
         trade_result = TradeResult(
-            trade_id=f"paper_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}",
+            trade_id=f"paper_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}", # MODIFIED
             symbol=analysis.symbol if hasattr(analysis, 'symbol') else "BTCUSDT",
             side="BUY",
             quantity=Decimal("0.1"),
             price=Decimal("45000.00"),
             status="FILLED",
-            executed_at=datetime.utcnow(),
+            executed_at=datetime.now(timezone.utc), # MODIFIED
             commission=Decimal("0.001"),
             is_paper=True
         )
@@ -160,13 +160,13 @@ class MockTradingSystem:
             raise ValueError("Real trading requires explicit user confirmation")
         
         trade_result = TradeResult(
-            trade_id=f"real_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}",
+            trade_id=f"real_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}", # MODIFIED
             symbol=analysis.symbol if hasattr(analysis, 'symbol') else "BTCUSDT",
             side="BUY",
             quantity=Decimal("0.01"),  # Cantidad menor para real trading
             price=Decimal("45000.00"),
             status="FILLED",
-            executed_at=datetime.utcnow(),
+            executed_at=datetime.now(timezone.utc), # MODIFIED
             commission=Decimal("0.0001"),
             is_paper=False
         )
@@ -366,7 +366,7 @@ class TestCompleteTradingFlow:
                     side="BUY",
                     quantity=Decimal("1.0"),
                     price=Decimal("100.0"),
-                    timestamp=datetime.utcnow()
+                    timestamp=datetime.now(timezone.utc) # MODIFIED
                 )
                 task = trading_system.event_broker.publish(event)
                 tasks.append(task)

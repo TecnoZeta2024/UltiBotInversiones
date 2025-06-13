@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone # ADDED timezone
 from decimal import Decimal
 from enum import Enum
 from typing import Optional, List, Any, Dict, Union
@@ -52,7 +52,7 @@ class TickerData(BaseModel):
     price: Decimal
     volume_24h: Decimal
     price_change_24h: Decimal
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc)) # MODIFIED
     model_config = ConfigDict(frozen=True)
 
 class KlineData(BaseModel):
@@ -87,8 +87,8 @@ class Order(BaseModel):
     quantity: Decimal
     price: Optional[Decimal] = None
     status: OrderStatus = OrderStatus.PENDING
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc)) # MODIFIED
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc)) # MODIFIED
     model_config = ConfigDict(frozen=True)
 
 class Trade(QObject):
@@ -256,7 +256,7 @@ class PortfolioModel(QAbstractListModel):
             total_assets_value_usd=Decimal('0.0'),
             total_portfolio_value_usd=Decimal('0.0'),
             assets=[],
-            last_updated=datetime.utcnow()
+            last_updated=datetime.now(timezone.utc) # MODIFIED
         )
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:

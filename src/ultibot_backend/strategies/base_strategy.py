@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from decimal import Decimal
 from typing import Optional, Dict, Any
 from uuid import UUID, uuid4
-from datetime import datetime # Importar datetime
+from datetime import datetime, timezone # MODIFIED: Importar datetime y timezone
 
 from src.ultibot_backend.core.domain_models.market import MarketData
 from ultibot_backend.core.domain_models.trading import (
@@ -81,7 +81,7 @@ class BaseStrategy(ABC):
         take_profit: Optional[Decimal] = None,
         strength: SignalStrength = SignalStrength.MODERATE,
         reasoning: Optional[str] = None,
-        timestamp: datetime = datetime.utcnow() # Añadir timestamp como argumento
+        timestamp: datetime = datetime.now(timezone.utc) # MODIFIED
     ) -> TradingSignal:
         """
         Método auxiliar para crear una señal de trading.

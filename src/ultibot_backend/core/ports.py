@@ -14,6 +14,7 @@ from uuid import UUID
 from .domain_models.trade import Trade, TradeOrderDetails, OrderCategory
 from .domain_models.portfolio import Portfolio, UserId, PortfolioSnapshot
 from .domain_models.market import MarketData, TickerData, KlineData
+from .domain_models.trading import Order, OrderType, OrderSide # ADDED
 from .domain_models.ai_models import AIAnalysisResult, TradingOpportunity, ToolExecutionResult, AIModelType, AISystemMetrics
 from .domain_models.prompt_models import PromptTemplate
 from .domain_models.user_configuration_models import UserConfiguration, ScanPreset
@@ -118,7 +119,7 @@ class IOrderExecutionPort(Protocol):
     """
     Interfaz para el puerto de ejecución de órdenes.
     """
-    async def execute_order(self, symbol: str, order_type: str, side: str, quantity: Decimal, price: Optional[Decimal] = None) -> TradeOrderDetails:
+    async def execute_order(self, symbol: str, order_type: OrderType, side: OrderSide, quantity: Decimal, price: Optional[Decimal] = None) -> Order: # MODIFIED
         ...
 
     async def cancel_order(self, order_id: str, symbol: str) -> bool:

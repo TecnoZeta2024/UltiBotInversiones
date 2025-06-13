@@ -8,7 +8,7 @@ Este servicio gestiona el registro, descubrimiento y ejecución de herramientas 
 import asyncio
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timezone # ADDED timezone
 from typing import Any, Dict, List, Optional, Type
 from uuid import UUID, uuid4
 
@@ -55,7 +55,7 @@ class ToolDescriptor:
         self.timeout_seconds = timeout_seconds
         self.requires_credentials = requires_credentials
         self.version = version
-        self.created_at = datetime.utcnow()
+        self.created_at = datetime.now(timezone.utc) # MODIFIED
     
     def dict(self) -> Dict[str, Any]:
         """Convierte el descriptor a diccionario."""
@@ -137,7 +137,7 @@ class BaseMCPAdapter:
         self._validate_parameters(parameters)
         
         start_time = time.time()
-        self._last_execution_time = datetime.utcnow()
+        self._last_execution_time = datetime.now(timezone.utc) # MODIFIED
         
         try:
             # Pre-ejecución
@@ -308,7 +308,7 @@ class MCPToolHub:
         self._total_executions = 0
         self._successful_executions = 0
         self._failed_executions = 0
-        self._start_time = datetime.utcnow()
+        self._start_time = datetime.now(timezone.utc) # MODIFIED
     
     def register_tool(self, adapter: BaseMCPAdapter) -> None:
         """
@@ -517,7 +517,7 @@ class MCPToolHub:
         Returns:
             dict: Estado completo del hub
         """
-        uptime = (datetime.utcnow() - self._start_time).total_seconds()
+        uptime = (datetime.now(timezone.utc) - self._start_time).total_seconds() if self._start_time else 0 # MODIFIED and added check for None
         
         return {
             "hub_status": {
