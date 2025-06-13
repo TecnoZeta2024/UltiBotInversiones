@@ -5,7 +5,7 @@ Parte de la arquitectura MVVM - maneja estado y comandos de la UI
 
 from typing import Dict, Any, Optional, List
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone # ADDED timezone
 import json
 import logging
 
@@ -295,7 +295,7 @@ class AIStudioViewModel(QObject):
                     "rendered_prompt": render_result["content"],
                     "variables_used": variables,
                     "ai_response": ai_result,
-                    "timestamp": datetime.now().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(), # MODIFIED
                     "prompt_name": self._state.current_prompt.name,
                     "prompt_version": self._state.current_prompt.version
                 }

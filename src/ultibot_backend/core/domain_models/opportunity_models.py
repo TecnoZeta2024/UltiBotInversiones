@@ -3,7 +3,7 @@
 This module defines the Pydantic models for trading opportunities and trades.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone # ADDED timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
@@ -391,7 +391,7 @@ class Opportunity(BaseModel):
         investigation_note = InvestigationNote(
             note=note,
             author=author,
-            timestamp=datetime.now()
+            timestamp=datetime.now(timezone.utc) # MODIFIED
         )
         
         self.investigation_details.investigation_notes.append(investigation_note)

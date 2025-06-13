@@ -269,7 +269,7 @@ if __name__ == "__main__":
     import sys
     import asyncio
     import logging
-    from datetime import datetime
+from datetime import datetime, timedelta, timezone # Ensure timezone is imported
     from typing import Optional, List, Dict, Any
     from uuid import UUID
 
@@ -331,7 +331,7 @@ if __name__ == "__main__":
                     encrypted_api_key="mock_key",
                     encrypted_api_secret="mock_secret",
                     status="active",
-                    last_verified_at=datetime.utcnow(),
+                    last_verified_at=datetime.now(timezone.utc), # MODIFIED
                     permissions=["SPOT_TRADING"]
                 )
             return None

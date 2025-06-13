@@ -1,10 +1,10 @@
 import logging
 import os
 from typing import Callable, Optional
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import ( # MODIFIED
     QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox, QDialogButtonBox, QWidget, QHBoxLayout
 )
-from PyQt5.QtCore import pyqtSignal, Qt, QObject, QThread
+from PySide6.QtCore import pyqtSignal, Qt, QObject, QThread # MODIFIED
 
 # Importar ApiWorker para type hinting y uso.
 from src.ultibot_ui.workers import ApiWorker

@@ -5,6 +5,7 @@ Módulo para el diálogo de configuración de estrategias de trading.
 import logging
 from typing import Optional, List # Importar Optional y List
 import re # Añadido para limpiar la entrada de apalancamiento
+from datetime import timezone # ADDED timezone
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, 
                              QTextEdit, QComboBox, QPushButton, QFormLayout, 
                              QDialogButtonBox, QMessageBox, QStackedWidget, QWidget, QGroupBox, QCheckBox) # Añadido QCheckBox
@@ -499,10 +500,14 @@ if __name__ == '__main__':
             pass 
         async def create_strategy(self, config_data):
             print(f"Mock API: create_strategy called with {config_data}")
-            return {"configName": config_data.get("configName", "Mock Strategy")}
+            # Assuming the mock should also reflect timezone-aware datetimes if they were set
+            config_data['created_at'] = datetime.now(timezone.utc).isoformat() # MODIFIED (example)
+            config_data['updated_at'] = datetime.now(timezone.utc).isoformat() # MODIFIED (example)
+            return {"configName": config_data.get("configName", "Mock Strategy"), **config_data}
         async def update_strategy(self, strategy_id, config_data):
             print(f"Mock API: update_strategy called for {strategy_id} with {config_data}")
-            return {"configName": config_data.get("configName", "Mock Strategy")}
+            config_data['updated_at'] = datetime.now(timezone.utc).isoformat() # MODIFIED (example)
+            return {"configName": config_data.get("configName", "Mock Strategy"), **config_data}
         # Añadir otros métodos mock si son necesarios para las pruebas
         # Asegurarse de que todos los métodos abstractos o requeridos por UltiBotAPIClient estén implementados
         # o que el mock sea lo suficientemente completo para el contexto de la prueba.
@@ -530,7 +535,7 @@ if __name__ == '__main__':
         isActivePaperMode=True,
         isActiveRealMode=False,
         applicabilityRules={"explicitPairs": ["BTC/USDT", "ETH/USDT"]},
-        lastModified=datetime.now(),
+        lastModified=datetime.now(timezone.utc), # MODIFIED
         # description="Una descripción de prueba.",
         # parameters={"stop_loss_percent": 0.015, "take_profit_percent": 0.03} 
         # aiAnalysisProfileId="profile-uuid-here",

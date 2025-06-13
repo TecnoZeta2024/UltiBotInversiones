@@ -13,7 +13,7 @@ import logging
 from decimal import Decimal
 from typing import Optional, Dict, Any, List
 import statistics
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone # ADDED timezone
 
 from .base_strategy import BaseStrategy, AnalysisResult, TradingSignal, SignalStrength
 from src.ultibot_backend.core.domain_models.market import MarketData, KlineData
@@ -265,7 +265,7 @@ class NewsSentimentSpikeTrader(BaseStrategy):
         En implementación real, esto haría llamadas a APIs reales.
         """
         # Simular datos de sentiment para testing
-        current_time = datetime.now()
+        current_time = datetime.now(timezone.utc) # MODIFIED
         
         # Simular scores de diferentes fuentes
         base_sentiment = 0.5  # Neutral
@@ -509,8 +509,16 @@ class NewsSentimentSpikeTrader(BaseStrategy):
         """Detecta eventos significativos en las noticias."""
         # Simular detección de eventos basada en volumen y timing
         total_volume = sentiment_data.get("total_volume", 0)
-        current_time = sentiment_data.get("timestamp", datetime.now())
         
+        # Ensure current_time is timezone-aware. sentiment_data["timestamp"] should ideally be aware.
+        # If sentiment_data["timestamp"] is naive, this comparison might be problematic.
+        # Assuming sentiment_data["timestamp"] (if present and datetime) is UTC.
+        sentiment_time = sentiment_data.get("timestamp")
+        if isinstance(sentiment_time, datetime):
+            current_time = sentiment_time if sentiment_time.tzinfo else sentiment_time.replace(tzinfo=timezone.utc)
+        else: # Fallback if timestamp is not a datetime object or not present
+            current_time = datetime.now(timezone.utc) # MODIFIED
+
         # Eventos más probables en ciertos horarios (earnings, anuncios)
         hour = current_time.hour
         

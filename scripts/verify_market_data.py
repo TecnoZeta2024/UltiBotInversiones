@@ -1,7 +1,8 @@
 import os
 import sys
 import psycopg
-from dotenv import load_dotenv
+# from dotenv import load_dotenv # REMOVED
+from src.ultibot_backend.dependencies import get_settings # ADDED
 
 # Add src to path to allow imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -10,16 +11,19 @@ def verify_data():
     """
     Connects to the database and checks if the market_data table has any records.
     """
-    load_dotenv()
-    db_url = os.getenv("DATABASE_URL")
-    if not db_url:
-        print("❌ ERROR: DATABASE_URL no está configurada en el archivo .env.")
+    settings = get_settings() # ADDED
+
+    # Construct DSN for psycopg from AppSettings
+    db_dsn = f"postgresql://{settings.db_user}:{settings.db_password}@{settings.db_host}:{settings.db_port}/{settings.db_name}" # ADDED
+
+    if not all([settings.db_user, settings.db_password, settings.db_host, settings.db_port, settings.db_name]): # ADDED
+        print("❌ ERROR: Database connection parameters are not fully configured in settings.") # ADDED
         return
 
-    print(f"Intentando conectar a la base de datos...")
+    print(f"Intentando conectar a la base de datos (postgresql://{settings.db_user}:***@{settings.db_host}:{settings.db_port}/{settings.db_name})...") # ADDED
     
     try:
-        with psycopg.connect(db_url) as conn:
+        with psycopg.connect(db_dsn) as conn: # MODIFIED to use db_dsn
             print("✅ Conexión a la base de datos exitosa.")
             with conn.cursor() as cur:
                 print("Consultando la tabla 'market_data'...")

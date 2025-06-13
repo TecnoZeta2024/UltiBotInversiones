@@ -11,7 +11,7 @@ from ..core.domain_models.portfolio import Portfolio, Position
 from ..core.domain_models.ai_models import AIAnalysisResult, TradingOpportunity, AIProcessingStage
 from ..core.ports import IOrderExecutionPort, IPersistencePort, ICredentialService, IMarketDataProvider, IAIOrchestrator
 from ..core.exceptions import InsufficientFundsError, CredentialError, BinanceAPIError, UltiBotError
-from ..app_config import settings
+from ..app_config import AppSettings # MODIFIED: Import AppSettings for type hint
 import logging
 
 logger = logging.getLogger(__name__)
@@ -41,13 +41,15 @@ class TradingEngine:
         credential_service: ICredentialService,
         market_data_provider: IMarketDataProvider,
         ai_orchestrator: IAIOrchestrator,
+        app_settings: AppSettings, # ADDED
     ):
         self.order_execution_port = order_execution_port
         self.persistence_port = persistence_port
         self.credential_service = credential_service
         self.market_data_provider = market_data_provider
         self.ai_orchestrator = ai_orchestrator
-        self.fixed_user_id = settings.FIXED_USER_ID
+        self.app_settings = app_settings # ADDED
+        self.fixed_user_id = self.app_settings.fixed_user_id # Use injected app_settings
         logger.info("TradingEngine initialized with dependencies.")
 
     def _calculate_quantity(self, capital_to_allocate: Decimal, asset_price: Decimal) -> Decimal:
@@ -91,10 +93,10 @@ class TradingEngine:
         if trading_mode == "real":
             # Verificar credenciales para trading real
             binance_credential = await self.credential_service.get_first_decrypted_credential_by_service(
-                service_name=settings.DEFAULT_REAL_TRADING_EXCHANGE
+                service_name=self.app_settings.default_real_trading_exchange
             )
             if not binance_credential:
-                raise CredentialError(f"No se encontraron credenciales para trading real en {settings.DEFAULT_REAL_TRADING_EXCHANGE}.")
+                raise CredentialError(f"No se encontraron credenciales para trading real en {self.app_settings.default_real_trading_exchange}.")
             
             # Verificar fondos suficientes en la cuenta real
             current_price = await self.market_data_provider.get_latest_price(symbol)
@@ -155,7 +157,7 @@ class TradingEngine:
                 id=uuid4(),  # ✅ CORREGIDO: ahora uuid4 está importado
                 user_id=user_id,
                 mode=trading_mode,
-                cash_balance=settings.DEFAULT_PAPER_TRADING_CAPITAL if trading_mode == "paper" else Decimal(0.0), # Asumir 0 para real, se cargaría de balances
+                cash_balance=Decimal(str(self.app_settings.default_paper_trading_capital)) if trading_mode == "paper" else Decimal(0.0), # Asumir 0 para real, se cargaría de balances
                 positions=[],
                 created_at=datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc)
@@ -204,7 +206,7 @@ class TradingEngine:
         # Invocar al orquestador de IA para obtener el análisis
         ai_analysis_result = await self.ai_orchestrator.analyze_opportunity(opportunity)
 
-        if ai_analysis_result.recommendation == "BUY" and ai_analysis_result.confidence >= settings.AI_TRADING_CONFIDENCE_THRESHOLD:
+        if ai_analysis_result.recommendation == "BUY" and ai_analysis_result.confidence >= self.app_settings.ai_trading_confidence_threshold:
             logger.info(f"AI recomienda COMPRAR {opportunity.symbol} con confianza {ai_analysis_result.confidence}. Ejecutando trade.")
             # Determinar cantidad a comprar (ej. un valor fijo o basado en capital disponible)
             quantity = Decimal("0.001") # Ejemplo: 0.001 BTC

@@ -2,6 +2,7 @@ import logging
 from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
+from shared.data_types import ServiceName # ADDED
 
 class UvicornConfig(BaseSettings):
     host: str = "127.0.0.1"
@@ -59,6 +60,11 @@ class AppSettings(BaseSettings):
     # Supabase configuration (optional, for reference)
     supabase_url: Optional[str] = None
     supabase_key: Optional[str] = None
+
+    # Default trading settings
+    default_real_trading_exchange: ServiceName = ServiceName.BINANCE_SPOT # ADDED
+    default_paper_trading_capital: float = 10000.0 # ADDED
+    ai_trading_confidence_threshold: float = 0.75 # ADDED
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

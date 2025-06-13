@@ -89,17 +89,17 @@ def get_binance_adapter(
     Proveedor del adaptador de Binance.
     Implementa: IOrderExecutionPort y IMarketDataProvider.
     """
-    return BinanceAdapter(credential_service=credential_service, app_settings=app_settings)
+    return BinanceAdapter(config=app_settings, credential_service=credential_service)
 
 def get_telegram_adapter(
     credential_service: ICredentialService = Depends(get_credential_service),
-    app_settings: AppSettings = Depends(get_settings)
+    persistence_port: IPersistencePort = Depends(get_persistence_service) # MODIFIED
 ) -> INotificationPort:
     """
     Proveedor del adaptador de Telegram.
     Implementa: INotificationPort.
     """
-    return TelegramAdapter(credential_service=credential_service, app_settings=app_settings)
+    return TelegramAdapter(credential_service=credential_service, persistence_port=persistence_port) # MODIFIED
 
 def get_mobula_adapter(settings: AppSettings = Depends(get_settings)) -> MobulaAdapter:
     """Proveedor del adaptador de Mobula para datos de mercado alternativos."""
@@ -126,21 +126,27 @@ def get_gemini_adapter(settings: AppSettings = Depends(get_settings)) -> IAIMode
 # Nivel 3: Servicios de Aplicación (Orquestan la lógica de negocio)
 def get_notification_service(
     credential_service: ICredentialService = Depends(get_credential_service),
-    notification_port: INotificationPort = Depends(get_telegram_adapter)
+    persistence_port: IPersistencePort = Depends(get_persistence_service), # ADDED
+    notification_port: INotificationPort = Depends(get_telegram_adapter),
+    app_settings: AppSettings = Depends(get_settings) # ADDED
 ) -> NotificationService:
     """Proveedor del servicio de notificaciones."""
     return NotificationService(
         credential_service=credential_service,
-        notification_port=notification_port
+        persistence_port=persistence_port, # ADDED
+        notification_port=notification_port,
+        app_settings=app_settings # ADDED
     )
 
 def get_market_data_service(
+    credential_service: ICredentialService = Depends(get_credential_service), # ADDED
     market_data_provider: IMarketDataProvider = Depends(get_binance_adapter),
     persistence_service: IPersistencePort = Depends(get_persistence_service),
     app_settings: AppSettings = Depends(get_settings)
 ) -> MarketDataService:
     """Proveedor del servicio de datos de mercado."""
     return MarketDataService(
+        credential_service=credential_service, # ADDED
         market_data_provider=market_data_provider,
         persistence_service=persistence_service,
         app_settings=app_settings
@@ -207,7 +213,8 @@ def get_trading_engine_service(
     persistence_port: IPersistencePort = Depends(get_persistence_service),
     credential_service: ICredentialService = Depends(get_credential_service),
     market_data_provider: IMarketDataProvider = Depends(get_binance_adapter),
-    ai_orchestrator: IAIOrchestrator = Depends(get_ai_orchestrator_service)
+    ai_orchestrator: IAIOrchestrator = Depends(get_ai_orchestrator_service),
+    app_settings: AppSettings = Depends(get_settings) # ADDED
 ) -> TradingEngine:
     """Proveedor del motor de trading, el servicio de más alto nivel."""
     return TradingEngine(
@@ -215,7 +222,8 @@ def get_trading_engine_service(
         persistence_port=persistence_port,
         credential_service=credential_service,
         market_data_provider=market_data_provider,
-        ai_orchestrator=ai_orchestrator
+        ai_orchestrator=ai_orchestrator,
+        app_settings=app_settings # ADDED
     )
 
 # --- Dependencias Anotadas para Endpoints de FastAPI ---

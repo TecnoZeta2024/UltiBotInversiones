@@ -9,7 +9,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, model_validator # MODIFIED
 
 class NotificationChannel(str, Enum):
     """Enumeration of notification channels."""
@@ -200,13 +200,14 @@ class ConfidenceThresholds(BaseModel):
         description="Confidence threshold for real trading (default: 95%)"
     )
 
-    @validator('real_trading')
-    def real_trading_should_be_higher_than_paper(cls, v, values):
+    @model_validator(mode='after') # MODIFIED
+    @classmethod # ADDED
+    def real_trading_should_be_higher_than_paper(cls, model: 'ConfidenceThresholds') -> 'ConfidenceThresholds': # MODIFIED
         """Validate that real trading threshold is higher than paper trading."""
-        if v is not None and 'paper_trading' in values and values['paper_trading'] is not None:
-            if v <= values['paper_trading']:
+        if model.real_trading is not None and model.paper_trading is not None:
+            if model.real_trading <= model.paper_trading:
                 raise ValueError('Real trading confidence threshold should be higher than paper trading')
-        return v
+        return model
 
 class MarketScanConfiguration(BaseModel):
     """Configuration for market scanning and filtering criteria."""
@@ -333,23 +334,25 @@ class MarketScanConfiguration(BaseModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-    @validator('max_price_change_24h_percent')
-    def max_price_change_should_be_higher_than_min(cls, v, values):
+    @model_validator(mode='after') # MODIFIED
+    @classmethod # ADDED
+    def max_price_change_should_be_higher_than_min(cls, model: 'MarketScanConfiguration') -> 'MarketScanConfiguration': # MODIFIED
         """Validate that max price change is higher than min."""
-        if v is not None and 'min_price_change_24h_percent' in values:
-            min_val = values['min_price_change_24h_percent']
-            if min_val is not None and v <= min_val:
-                raise ValueError('max_price_change_24h_percent should be higher than min_price_change_24h_percent')
-        return v
+        if model.max_price_change_24h_percent is not None and \
+           model.min_price_change_24h_percent is not None and \
+           model.max_price_change_24h_percent <= model.min_price_change_24h_percent:
+            raise ValueError('max_price_change_24h_percent should be higher than min_price_change_24h_percent')
+        return model
 
-    @validator('max_rsi')
-    def max_rsi_should_be_higher_than_min(cls, v, values):
+    @model_validator(mode='after') # MODIFIED
+    @classmethod # ADDED
+    def max_rsi_should_be_higher_than_min(cls, model: 'MarketScanConfiguration') -> 'MarketScanConfiguration': # MODIFIED
         """Validate that max RSI is higher than min RSI."""
-        if v is not None and 'min_rsi' in values:
-            min_val = values['min_rsi']
-            if min_val is not None and v <= min_val:
-                raise ValueError('max_rsi should be higher than min_rsi')
-        return v
+        if model.max_rsi is not None and \
+           model.min_rsi is not None and \
+           model.max_rsi <= model.min_rsi:
+            raise ValueError('max_rsi should be higher than min_rsi')
+        return model
 
 class AssetTradingParameters(BaseModel):
     """Trading parameters specific to a particular asset or asset category."""
@@ -797,78 +800,83 @@ class UserConfiguration(BaseModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-    class Config:
-        """Pydantic model configuration."""
-        
-        use_enum_values = True
-        validate_assignment = True
-        extra = "forbid"  # Prevent extra fields
-        json_encoders = {
+    model_config = { # MODIFIED
+        "use_enum_values": True,
+        "validate_assignment": True,
+        "extra": "forbid",
+        "json_encoders": {
             datetime: lambda v: v.isoformat() if v else None
         }
+    }
 
-    @validator('ai_strategy_configurations')
-    def validate_unique_ai_config_ids(cls, v):
+    @field_validator('ai_strategy_configurations') # MODIFIED
+    @classmethod # ADDED
+    def validate_unique_ai_config_ids(cls, v: Optional[List[AIStrategyConfiguration]]) -> Optional[List[AIStrategyConfiguration]]: # MODIFIED
         """Validate that AI configuration IDs are unique."""
         if v is None:
             return v
         
-        ids = [config.id for config in v]
+        ids = [config.id for config in v if config] # Added 'if config' for robustness
         if len(ids) != len(set(ids)):
             raise ValueError('AI strategy configuration IDs must be unique')
         return v
 
-    @validator('watchlists')
-    def validate_unique_watchlist_ids(cls, v):
+    @field_validator('watchlists') # MODIFIED
+    @classmethod # ADDED
+    def validate_unique_watchlist_ids(cls, v: Optional[List[Watchlist]]) -> Optional[List[Watchlist]]: # MODIFIED
         """Validate that watchlist IDs are unique."""
         if v is None:
             return v
         
-        ids = [wl.id for wl in v]
+        ids = [wl.id for wl in v if wl]
         if len(ids) != len(set(ids)):
             raise ValueError('Watchlist IDs must be unique')
         return v
 
-    @validator('mcp_server_preferences')
-    def validate_unique_mcp_ids(cls, v):
+    @field_validator('mcp_server_preferences') # MODIFIED
+    @classmethod # ADDED
+    def validate_unique_mcp_ids(cls, v: Optional[List[MCPServerPreference]]) -> Optional[List[MCPServerPreference]]: # MODIFIED
         """Validate that MCP server IDs are unique."""
         if v is None:
             return v
         
-        ids = [mcp.id for mcp in v]
+        ids = [mcp.id for mcp in v if mcp]
         if len(ids) != len(set(ids)):
             raise ValueError('MCP server IDs must be unique')
         return v
 
-    @validator('market_scan_presets')
-    def validate_unique_scan_preset_ids(cls, v):
+    @field_validator('market_scan_presets') # MODIFIED
+    @classmethod # ADDED
+    def validate_unique_scan_preset_ids(cls, v: Optional[List[ScanPreset]]) -> Optional[List[ScanPreset]]: # MODIFIED
         """Validate that scan preset IDs are unique."""
         if v is None:
             return v
         
-        ids = [preset.id for preset in v]
+        ids = [preset.id for preset in v if preset]
         if len(ids) != len(set(ids)):
             raise ValueError('Scan preset IDs must be unique')
         return v
 
-    @validator('asset_trading_parameters')
-    def validate_unique_asset_trading_parameter_ids(cls, v):
+    @field_validator('asset_trading_parameters') # MODIFIED
+    @classmethod # ADDED
+    def validate_unique_asset_trading_parameter_ids(cls, v: Optional[List[AssetTradingParameters]]) -> Optional[List[AssetTradingParameters]]: # MODIFIED
         """Validate that asset trading parameter IDs are unique."""
         if v is None:
             return v
         
-        ids = [param.id for param in v]
+        ids = [param.id for param in v if param]
         if len(ids) != len(set(ids)):
             raise ValueError('Asset trading parameter IDs must be unique')
         return v
 
-    @validator('alert_configurations')
-    def validate_unique_alert_ids(cls, v):
+    @field_validator('alert_configurations') # MODIFIED
+    @classmethod # ADDED
+    def validate_unique_alert_ids(cls, v: Optional[List[AlertConfiguration]]) -> Optional[List[AlertConfiguration]]: # MODIFIED
         """Validate that alert configuration IDs are unique."""
         if v is None:
             return v
         
-        ids = [alert.id for alert in v]
+        ids = [alert.id for alert in v if alert]
         if len(ids) != len(set(ids)):
             raise ValueError('Alert configuration IDs must be unique')
         return v

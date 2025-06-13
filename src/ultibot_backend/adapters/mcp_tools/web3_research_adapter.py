@@ -7,7 +7,7 @@ tokenomics, governance, desarrollo, comunidad y métricas on-chain.
 
 import asyncio
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone # ADDED timezone
 from typing import Any, Dict, List, Optional
 
 from .base_mcp_adapter import BaseMCPAdapter
@@ -157,7 +157,7 @@ class Web3ResearchAdapter(BaseMCPAdapter):
         result = {
             "project_identifier": project_id,
             "analysis_depth": analysis_depth,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(), # MODIFIED
             "overall_score": overall_score,
             "recommendation": self._generate_recommendation(overall_score, research_results),
             "focus_areas_analyzed": list(research_results.keys()),
@@ -180,7 +180,7 @@ class Web3ResearchAdapter(BaseMCPAdapter):
         # Guardar en cache
         self._research_cache[cache_key] = {
             "result": result.copy(),
-            "timestamp": datetime.utcnow()
+            "timestamp": datetime.now(timezone.utc) # MODIFIED
         }
         
         return result
@@ -692,7 +692,7 @@ class Web3ResearchAdapter(BaseMCPAdapter):
         cache_time = cached_data["timestamp"]
         expiry_time = cache_time + timedelta(hours=self._cache_expiry_hours)
         
-        return datetime.utcnow() < expiry_time
+        return datetime.now(timezone.utc) < expiry_time # MODIFIED
     
     async def _post_execute_hook(
         self,

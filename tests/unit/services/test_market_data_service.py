@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4, UUID
-from datetime import datetime
+from datetime import datetime, timezone # ADDED timezone
 
 from ultibot_backend.services.market_data_service import MarketDataService
 from ultibot_backend.services.credential_service import CredentialService, CredentialError
@@ -49,10 +49,10 @@ def sample_binance_credential(sample_user_id):
         encrypted_api_key="decrypted_api_key_value", # Simula valor ya desencriptado
         encrypted_api_secret="decrypted_api_secret_value", # Simula valor ya desencriptado
         status="active",
-        last_verified_at=datetime.utcnow(),
+        last_verified_at=datetime.now(timezone.utc), # MODIFIED
         permissions=["SPOT_TRADING"],
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc), # MODIFIED
+        updated_at=datetime.now(timezone.utc) # MODIFIED
     )
 
 @pytest.mark.asyncio

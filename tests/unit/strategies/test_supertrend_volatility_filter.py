@@ -4,7 +4,7 @@ Unit tests for the refactored SuperTrendVolatilityFilter strategy.
 
 import pytest
 from decimal import Decimal
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone # ADDED timezone
 from typing import List, Optional, Tuple
 import random
 
@@ -28,7 +28,7 @@ def create_mock_klines(
         random.seed(random_seed)
 
     klines = []
-    current_time = datetime.utcnow()
+    current_time = datetime.now(timezone.utc) # MODIFIED
     price = start_price
 
     for i in range(num_klines):

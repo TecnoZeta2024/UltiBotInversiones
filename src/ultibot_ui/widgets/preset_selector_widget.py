@@ -6,7 +6,7 @@ visualización de resultados de escaneo de mercado.
 
 import logging
 from typing import Any, Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone # ADDED timezone
 
 from PyQt5.QtCore import Qt, pyqtSignal, QThread, QTimer
 from PyQt5.QtWidgets import (
@@ -746,7 +746,7 @@ class ScanResultsWidget(QWidget):
         file_path, _ = QFileDialog.getSaveFileName(
             self,
             "Exportar Resultados",
-            f"scan_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            f"scan_results_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.csv", # MODIFIED
             "CSV Files (*.csv)"
         )
         

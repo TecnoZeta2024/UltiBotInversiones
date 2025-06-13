@@ -2,7 +2,7 @@
 """
 A generic confirmation dialog for critical actions.
 """
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import ( # MODIFIED
     QDialog,
     QVBoxLayout,
     QLabel,
@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (
     QDialogButtonBox,
     QWidget,
 )
-from PyQt5.QtCore import Qt
+from PySide6.QtCore import Qt # MODIFIED
 
 class ConfirmationDialog(QDialog):
     """

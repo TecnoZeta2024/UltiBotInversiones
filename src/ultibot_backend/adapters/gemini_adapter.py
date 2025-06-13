@@ -8,7 +8,7 @@ a través del ecosistema de LangChain, manejando la complejidad subyacente.
 import asyncio
 import logging
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone # ADDED timezone
 from typing import Any, Dict, Optional
 from uuid import UUID
 
@@ -53,7 +53,7 @@ class CircuitBreaker:
         self.timeout_seconds = timeout_seconds
         self.expected_exception = expected_exception
         self.failure_count = 0
-        self.last_failure_time: Optional[datetime] = None
+        self.last_failure_time: Optional[datetime] = None # This will store timezone-aware datetime
         self.state = CircuitBreakerState.CLOSED
 
     def can_execute(self) -> bool:
@@ -72,14 +72,14 @@ class CircuitBreaker:
 
     def record_failure(self) -> None:
         self.failure_count += 1
-        self.last_failure_time = datetime.utcnow()
+        self.last_failure_time = datetime.now(timezone.utc) # MODIFIED
         if self.failure_count >= self.failure_threshold:
             self.state = CircuitBreakerState.OPEN
 
     def _should_attempt_reset(self) -> bool:
         if not self.last_failure_time:
             return True
-        elapsed = datetime.utcnow() - self.last_failure_time
+        elapsed = datetime.now(timezone.utc) - self.last_failure_time # MODIFIED
         return elapsed.total_seconds() >= self.timeout_seconds
 
 
@@ -239,7 +239,7 @@ class GeminiAdapter:
             avg_tokens_per_request=avg_tokens_per_request,
             avg_confidence_score=self._metrics.avg_confidence_score,
             rate_limit_hits=self._metrics.rate_limit_hits,
-            measured_at=datetime.utcnow()
+            measured_at=datetime.now(timezone.utc) # MODIFIED
         )
 
     def get_metrics(self) -> AISystemMetrics:
@@ -284,7 +284,7 @@ class GeminiAdapter:
             tokens_output=tokens_output,
             model_used=self.model_type,
             execution_time_ms=execution_time_ms,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc) # MODIFIED
         )
 
 def create_gemini_adapter(

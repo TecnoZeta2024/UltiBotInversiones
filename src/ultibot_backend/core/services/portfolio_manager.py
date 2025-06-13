@@ -6,7 +6,7 @@ interactuando con el puerto de persistencia y publicando eventos de actualizaci�
 
 from decimal import Decimal
 from typing import Dict, List, Optional
-from datetime import datetime # Añadido
+from datetime import datetime, timezone # MODIFIED
 
 from ultibot_backend.core.ports import IPersistencePort, IEventPublisher, IMarketDataProvider
 from ultibot_backend.core.domain_models.portfolio import Portfolio, UserId, Asset, PortfolioSnapshot
@@ -78,7 +78,7 @@ class PortfolioManagerService:
                     quantity=new_quantity,
                     average_buy_price=new_average_buy_price,
                     current_price=existing_asset.current_price, # Se actualizará con el precio actual más tarde
-                    last_updated=datetime.utcnow()
+                    last_updated=datetime.now(timezone.utc) # MODIFIED
                 )
             else:
                 updated_assets[symbol] = Asset(
@@ -86,7 +86,7 @@ class PortfolioManagerService:
                     quantity=quantity_change,
                     average_buy_price=trade.price,
                     current_price=trade.price, # Se actualizará con el precio actual más tarde
-                    last_updated=datetime.utcnow()
+                    last_updated=datetime.now(timezone.utc) # MODIFIED
                 )
             # Reducir balance disponible
             new_available_balance = portfolio.available_balance_usd - cost_or_revenue
@@ -105,7 +105,7 @@ class PortfolioManagerService:
                     quantity=new_quantity,
                     average_buy_price=existing_asset.average_buy_price,
                     current_price=existing_asset.current_price,
-                    last_updated=datetime.utcnow()
+                    last_updated=datetime.now(timezone.utc) # MODIFIED
                 )
             # Aumentar balance disponible
             new_available_balance = portfolio.available_balance_usd + cost_or_revenue
@@ -124,7 +124,7 @@ class PortfolioManagerService:
             assets=updated_assets,
             total_value_usd=total_value,
             available_balance_usd=new_available_balance,
-            last_updated=datetime.utcnow()
+            last_updated=datetime.now(timezone.utc) # MODIFIED
         )
 
         # Persistir el portfolio actualizado

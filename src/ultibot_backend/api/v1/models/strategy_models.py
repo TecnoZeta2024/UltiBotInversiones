@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator # MODIFIED: validator -> field_validator
 
 from ....core.domain_models.trading_strategy_models import (
     BaseStrategyType,
@@ -82,10 +82,10 @@ class CreateTradingStrategyRequest(BaseModel):
         description="Sharing and template metadata"
     )
 
-    class Config:
-        """Pydantic model configuration."""
-        use_enum_values = True
-        extra = "forbid"
+    model_config = { # MODIFIED: Replaced Config class
+        "use_enum_values": True,
+        "extra": "forbid"
+    }
 
 
 class UpdateTradingStrategyRequest(BaseModel):
@@ -154,10 +154,10 @@ class UpdateTradingStrategyRequest(BaseModel):
         description="Sharing and template metadata"
     )
 
-    class Config:
-        """Pydantic model configuration."""
-        use_enum_values = True
-        extra = "forbid"
+    model_config = { # MODIFIED: Replaced Config class
+        "use_enum_values": True,
+        "extra": "forbid"
+    }
 
 
 class TradingStrategyResponse(BaseModel):
@@ -184,14 +184,14 @@ class TradingStrategyResponse(BaseModel):
     created_at: Optional[datetime] = Field(None, description="Creation timestamp")
     updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
 
-    class Config:
-        """Pydantic model configuration."""
-        use_enum_values = True
-        from_attributes = True  # Correct attribute for Pydantic v2
-        json_encoders = {
+    model_config = { # MODIFIED: Replaced Config class
+        "use_enum_values": True,
+        "from_attributes": True,
+        "json_encoders": {
             datetime: lambda v: v.isoformat() if v else None,
             UUID: lambda v: str(v)
         }
+    }
 
 
 class StrategyListResponse(BaseModel):
@@ -212,8 +212,9 @@ class ActivateStrategyRequest(BaseModel):
         description="Trading mode to activate/deactivate"
     )
 
-    @validator('mode')
-    def validate_mode(cls, v):
+    @field_validator('mode') # MODIFIED: @validator -> @field_validator
+    @classmethod # ADDED @classmethod for Pydantic v2 field_validator
+    def validate_mode(cls, v: str) -> str: # Added type hints
         """Validate trading mode."""
         if v not in ['paper', 'real']:
             raise ValueError('Mode must be "paper" or "real"')

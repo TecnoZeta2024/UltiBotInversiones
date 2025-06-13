@@ -8,6 +8,7 @@ import asyncio
 from datetime import datetime
 import json
 import logging
+from datetime import timezone # ADDED timezone
 
 from supabase import create_client, Client
 from ..core.ports import IPromptRepository
@@ -217,7 +218,7 @@ class PromptPersistenceAdapter(IPromptRepository):
             await self._ensure_connection()
             
             response = self._client.table(self._table_name)\
-                .update({"is_active": is_active, "updated_at": datetime.now().isoformat()})\
+                .update({"is_active": is_active, "updated_at": datetime.now(timezone.utc).isoformat()})\ # MODIFIED
                 .eq("name", name)\
                 .eq("version", version)\
                 .execute()
@@ -335,7 +336,7 @@ class PromptPersistenceAdapter(IPromptRepository):
             Diccionario con métricas de salud
         """
         try:
-            start_time = datetime.now()
+            start_time = datetime.now(timezone.utc) # MODIFIED
             
             # Test básico de conectividad
             response = self._client.table(self._table_name)\
@@ -343,14 +344,14 @@ class PromptPersistenceAdapter(IPromptRepository):
                 .limit(1)\
                 .execute()
             
-            response_time = (datetime.now() - start_time).total_seconds() * 1000
+            response_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000 # MODIFIED
             
             return {
                 "status": "healthy",
                 "response_time_ms": response_time,
                 "total_prompts": response.count if hasattr(response, 'count') else 0,
                 "connection_verified": self._connection_verified,
-                "last_check": datetime.now().isoformat()
+                "last_check": datetime.now(timezone.utc).isoformat() # MODIFIED
             }
             
         except Exception as e:
@@ -359,7 +360,7 @@ class PromptPersistenceAdapter(IPromptRepository):
                 "status": "unhealthy",
                 "error": str(e),
                 "connection_verified": False,
-                "last_check": datetime.now().isoformat()
+                "last_check": datetime.now(timezone.utc).isoformat() # MODIFIED
             }
     
     # === Métodos privados ===
@@ -371,7 +372,7 @@ class PromptPersistenceAdapter(IPromptRepository):
                 # Test simple de conectividad
                 self._client.table(self._table_name).select("1").limit(1).execute()
                 self._connection_verified = True
-                self._last_health_check = datetime.now()
+                self._last_health_check = datetime.now(timezone.utc) # MODIFIED
                 logger.debug("Conexión con Supabase verificada")
             except Exception as e:
                 logger.error(f"Error verificando conexión: {str(e)}")

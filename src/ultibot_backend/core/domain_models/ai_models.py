@@ -5,14 +5,14 @@ Este módulo define los tipos de datos puros utilizados por el AI Orchestrator S
 Mantiene la pureza del dominio sin importar librerías externas.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone # ADDED timezone
 from decimal import Decimal
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field, validator, model_validator
-from pydantic_settings import SettingsConfigDict
+from pydantic import BaseModel, Field, field_validator, model_validator # MODIFIED validator
+# from pydantic_settings import SettingsConfigDict # REMOVED - only needed for BaseSettings
 
 
 class AIModelType(str, Enum):
@@ -48,8 +48,7 @@ class ToolAction(BaseModel):
     priority: AIRequestPriority = Field(default=AIRequestPriority.MEDIUM, description="Prioridad de ejecución")
     timeout_seconds: Optional[int] = Field(default=30, description="Timeout en segundos")
     
-    class Config:
-        frozen = True
+    model_config = {"frozen": True} # MODIFIED
 
 
 class ToolExecutionRequest(BaseModel):
@@ -57,8 +56,7 @@ class ToolExecutionRequest(BaseModel):
     tool_name: str
     parameters: Dict[str, Any]
 
-    class Config:
-        frozen = True
+    model_config = {"frozen": True} # MODIFIED
 
 
 class ToolExecutionResult(BaseModel):
@@ -69,11 +67,10 @@ class ToolExecutionResult(BaseModel):
     data: Optional[Dict[str, Any]] = Field(default=None, description="Datos del resultado")
     error: Optional[str] = Field(default=None, description="Mensaje de error si falló")
     execution_time_ms: float = Field(..., description="Tiempo de ejecución en milisegundos")
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Timestamp de ejecución")
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Timestamp de ejecución") # MODIFIED
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Metadatos adicionales")
     
-    class Config:
-        frozen = True
+    model_config = {"frozen": True} # MODIFIED
 
 
 class AIAnalysisRequest(BaseModel):
@@ -87,8 +84,9 @@ class AIAnalysisRequest(BaseModel):
     max_tools_per_stage: int = Field(default=3, description="Máximo número de herramientas por etapa")
     timeout_seconds: int = Field(default=300, description="Timeout total en segundos")
     
-    @validator('opportunity_id')
-    def validate_opportunity_id(cls, v):
+    @field_validator('opportunity_id') # MODIFIED
+    @classmethod # ADDED
+    def validate_opportunity_id(cls, v: str) -> str: # ADDED type hints
         if not v or len(v.strip()) == 0:
             raise ValueError("opportunity_id no puede estar vacío")
         return v.strip()
@@ -103,7 +101,7 @@ class AIAnalysisPlan(BaseModel):
     tool_actions: List[ToolAction] = Field(default_factory=list, description="Acciones de herramientas planificadas")
     estimated_duration_ms: int = Field(..., description="Duración estimada en milisegundos")
     confidence_score: float = Field(..., ge=0.0, le=1.0, description="Confianza en el plan")
-    created_at: datetime = Field(default_factory=datetime.utcnow, description="Timestamp de creación")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Timestamp de creación") # MODIFIED
     
     def add_tool_action(self, action: ToolAction) -> None:
         """Añade una acción de herramienta al plan."""
@@ -138,14 +136,14 @@ class AIAnalysisResult(BaseModel):
     
     # Metadatos
     ai_metadata: Dict[str, Any] = Field(default_factory=dict, description="Metadatos de la ejecución de IA")
-    created_at: datetime = Field(default_factory=datetime.utcnow, description="Timestamp de creación")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Timestamp de creación") # MODIFIED
     model_used: AIModelType = Field(default=AIModelType.GEMINI_PRO, description="Modelo de IA utilizado")
     
-    class Config:
-        frozen = True
+    model_config = {"frozen": True} # MODIFIED
     
-    @validator('confidence')
-    def validate_confidence_score(cls, v):
+    @field_validator('confidence') # MODIFIED
+    @classmethod # ADDED
+    def validate_confidence_score(cls, v: float) -> float: # ADDED type hints
         if not 0.0 <= v <= 1.0:
             raise ValueError("confidence_score debe estar entre 0.0 y 1.0")
         return v
@@ -172,10 +170,9 @@ class AIInteractionLog(BaseModel):
     # Metadatos
     model_used: AIModelType = Field(..., description="Modelo utilizado")
     execution_time_ms: float = Field(..., description="Tiempo de ejecución")
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Timestamp")
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Timestamp") # MODIFIED
     
-    class Config:
-        frozen = True
+    model_config = {"frozen": True} # MODIFIED
 
 
 class TradingOpportunity(BaseModel):
@@ -197,24 +194,27 @@ class TradingOpportunity(BaseModel):
     signal_strength: Optional[float] = Field(None, ge=0.0, le=1.0, description="Fuerza de la señal")
     
     # Contexto
-    detected_at: datetime = Field(default_factory=datetime.utcnow, description="Timestamp de detección")
+    detected_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Timestamp de detección") # MODIFIED
     expires_at: Optional[datetime] = Field(default=None, description="Timestamp de expiración")
     risk_level: str = Field("MEDIUM", description="Nivel de riesgo estimado")
     expected_profit: Optional[float] = Field(None, description="Beneficio esperado")
     timeframe: Optional[str] = Field(None, description="Timeframe de la oportunidad")
     
-    class Config:
-        frozen = True
+    model_config = { # MODIFIED
+        "frozen": True,
+        "json_encoders": {Decimal: lambda d: float(d)} # ADDED json_encoders for Decimal
+    }
     
-    def dict(self, **kwargs) -> Dict[str, Any]:
-        """Override para serialización personalizada."""
-        data = super().dict(**kwargs)
-        # Convertir Decimal a float para JSON serialization
-        if data.get('current_price') is not None:
-            data['current_price'] = float(data['current_price'])
-        if data.get('volume_24h') is not None:
-            data['volume_24h'] = float(data['volume_24h'])
-        return data
+    # def dict(self, **kwargs) -> Dict[str, Any]: # REMOVED custom dict
+    #     """Override para serialización personalizada."""
+    #     data = super().model_dump(**kwargs) # CHANGED to model_dump
+    #     # Convertir Decimal a float para JSON serialization
+    #     # This should now be handled by json_encoders in model_config when using model_dump(mode='json')
+    #     if data.get('current_price') is not None and isinstance(data['current_price'], Decimal):
+    #         data['current_price'] = float(data['current_price'])
+    #     if data.get('volume_24h') is not None and isinstance(data['volume_24h'], Decimal):
+    #         data['volume_24h'] = float(data['volume_24h'])
+    #     return data
 
 
 class AISystemMetrics(BaseModel):
@@ -235,10 +235,9 @@ class AISystemMetrics(BaseModel):
     rate_limit_hits: int = Field(default=0, description="Veces que se alcanzó rate limit")
     
     # Timestamp
-    measured_at: datetime = Field(default_factory=datetime.utcnow, description="Timestamp de medición")
+    measured_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Timestamp de medición") # MODIFIED
     
-    class Config:
-        frozen = True
+    model_config = {"frozen": True} # MODIFIED
     
     @property
     def success_rate(self) -> float:
@@ -277,10 +276,10 @@ class TradingAIResponse(AIAnalysisResult):
     # Sobrescribir el tipo de recomendación para usar el Enum
     recommendation: Recommendation = Field(..., description="Recomendación principal de trading")
 
-    class Config(SettingsConfigDict):
-        frozen = True
-        # Permitir que los campos de AIAnalysisResult se pasen directamente
-        extra = "allow"
+    model_config = { # MODIFIED: SettingsConfigDict is for BaseSettings
+        "frozen": True,
+        "extra": "allow"
+    }
 
     @model_validator(mode='after')
     def validate_prices(self) -> 'TradingAIResponse':
@@ -353,20 +352,23 @@ class OpportunityData(BaseModel):
     ma_50: Optional[Decimal] = Field(None, description="Media móvil 50")
     
     # Metadatos
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Timestamp de los datos")
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Timestamp de los datos") # MODIFIED
     source: str = Field(default="market_scanner", description="Fuente de los datos")
     
-    class Config:
-        frozen = True
-    
-    def dict(self, **kwargs) -> Dict[str, Any]:
-        """Override para serialización personalizada."""
-        data = super().dict(**kwargs)
-        # Convertir Decimal a float para JSON serialization
-        for field in ['price', 'volume', 'market_cap', 'ma_20', 'ma_50']:
-            if data.get(field) is not None:
-                data[field] = float(data[field])
-        return data
+    model_config = { # MODIFIED
+        "frozen": True,
+        "json_encoders": {Decimal: lambda d: float(d)} # ADDED json_encoders for Decimal
+    }
+
+    # def dict(self, **kwargs) -> Dict[str, Any]: # REMOVED custom dict
+    #     """Override para serialización personalizada."""
+    #     data = super().model_dump(**kwargs) # CHANGED to model_dump
+    #     # Convertir Decimal a float para JSON serialization
+    #     # This should now be handled by json_encoders in model_config when using model_dump(mode='json')
+    #     for field_name in ['price', 'volume', 'market_cap', 'ma_20', 'ma_50']:
+    #         if data.get(field_name) is not None and isinstance(data[field_name], Decimal):
+    #             data[field_name] = float(data[field_name])
+    #     return data
 
 # Aliases para compatibilidad
 AIRequest = AIAnalysisRequest

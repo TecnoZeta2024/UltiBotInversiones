@@ -43,7 +43,7 @@ class TelegramAdapter(INotificationPort):
         self._api_token = creds.encrypted_api_key
         
         try:
-            other_details = json.loads(creds.encrypted_other_details)
+            other_details = json.loads(creds.encrypted_other_details) # Assuming encrypted_other_details is a JSON string
             self._chat_id = other_details.get("chat_id")
             if not self._chat_id:
                 raise CredentialError("Chat ID no encontrado en los detalles de la credencial de Telegram.")
@@ -53,17 +53,14 @@ class TelegramAdapter(INotificationPort):
         self.base_url = f"https://api.telegram.org/bot{self._api_token}"
         self._client = httpx.AsyncClient()
 
-    async def send_alert(self, message: str, level: str) -> bool:
+    async def send_alert(self, message: str, priority: str) -> None: # MODIFIED: level -> priority, return type bool -> None
         """
         Envía una alerta a un chat de Telegram.
 
         Args:
             message: El texto del mensaje a enviar.
-            level: El nivel de la alerta (ej. 'info', 'warning', 'error'). No se usa en Telegram pero es parte de la interfaz.
+            priority: El nivel de la alerta (ej. 'info', 'warning', 'error'). No se usa directamente en la lógica de Telegram pero coincide con el puerto.
 
-        Returns:
-            True si el mensaje se envió con éxito, False en caso contrario.
-        
         Raises:
             NotificationError: Si ocurre un error grave al enviar el mensaje.
         """
@@ -75,15 +72,23 @@ class TelegramAdapter(INotificationPort):
         payload = {
             "chat_id": self._chat_id,
             "text": message,
-            "parse_mode": "MarkdownV2",
+            "parse_mode": "MarkdownV2", # Consider HTML for more robust formatting if needed
         }
 
         try:
             response = await self._client.post(url, json=payload, timeout=10.0)
-            response.raise_for_status()
+            response.raise_for_status() # Raises HTTPStatusError for 4xx/5xx
             
-            logger.info(f"Mensaje enviado exitosamente a Telegram (Chat ID: {self._chat_id})")
-            return response.json().get("ok", False)
+            response_data = response.json()
+            if not response_data.get("ok"):
+                # Telegram API specific error, even with 200 OK
+                error_description = response_data.get('description', 'Unknown error from Telegram API.')
+                logger.error(f"Error de API de Telegram al enviar mensaje (ok=false): {error_description}")
+                # Optionally, still raise NotificationError here if "ok=false" is critical
+                # For now, just logging as the port doesn't return success/failure
+            else:
+                logger.info(f"Mensaje enviado exitosamente a Telegram (Chat ID: {self._chat_id})")
+            # No return value as per port
 
         except httpx.HTTPStatusError as e:
             error_message = f"Error de estado HTTP al enviar mensaje a Telegram: {e.response.status_code} - {e.response.text}"
