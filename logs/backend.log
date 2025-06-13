@@ -452,3 +452,31 @@
 2025-06-10 07:34:31,857 - src.ultibot_backend.services.portfolio_service - INFO - [6a32c87ffbd9454090f4fbd32d5a595f] - MainThread - portfolio_service.py:97 - Portafolio de paper trading inicializado para 00000000-0000-0000-0000-000000000001 con capital: 10000.0
 2025-06-10 07:34:31,857 - ultibot_backend - INFO - [95ad2ad6d06f] - MainThread - main.py:136 - Middleware: Solicitud procesada: GET /api/v1/portfolio/snapshot - Status: 200
 2025-06-10 07:34:31,857 - uvicorn.access - INFO - [c81de7a99d3b] - MainThread - httptools_impl.py:481 - 127.0.0.1:52771 - "GET /api/v1/portfolio/snapshot?user_id=45e1b41b-7313-4c69-9e18-ac02d154d751&trading_mode=paper HTTP/1.1" 200
+2025-06-13 10:57:03,699 - ultibot_backend - INFO - [f5d20c2889d7] - MainThread - main.py:87 - Logging configurado exitosamente usando dictConfig.
+2025-06-13 10:57:03,701 - ultibot_backend - INFO - [ca2ad029a41c] - MainThread - main.py:157 - Registrando routers de la API...
+2025-06-13 10:57:03,719 - ultibot_backend - INFO - [23fe76878131] - MainThread - main.py:168 - Todos los routers han sido registrados.
+2025-06-13 10:57:52,669 - ultibot_backend - INFO - [111018003fa9] - MainThread - main.py:87 - Logging configurado exitosamente usando dictConfig.
+2025-06-13 10:57:52,669 - ultibot_backend - INFO - [aaab24398eb5] - MainThread - main.py:157 - Registrando routers de la API...
+2025-06-13 10:57:52,688 - ultibot_backend - INFO - [307ae2170b66] - MainThread - main.py:168 - Todos los routers han sido registrados.
+2025-06-13 10:57:52,689 - ultibot_backend - INFO - [e14584f97c56] - MainThread - main.py:96 - Iniciando UltiBot Backend...
+2025-06-13 10:57:52,690 - src.ultibot_backend.dependencies - INFO - [a044ca7b60d1] - MainThread - dependencies.py:47 - Initializing dependency container...
+2025-06-13 10:57:52,690 - httpx - DEBUG - [2ffeda999088] - MainThread - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-13 10:57:52,691 - httpx - DEBUG - [ab0f2e537844] - MainThread - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\AppData\\Local\\pypoetry\\Cache\\virtualenvs\\ultibotinversiones-UOQi1NQu-py3.11\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-13 10:57:52,879 - src.ultibot_backend.adapters.persistence_service - INFO - [f67f17a0477d] - MainThread - persistence_service.py:68 - Pool de conexiones a Supabase (psycopg_pool) establecido exitosamente. Min: 2, Max: 10
+2025-06-13 10:57:52,879 - src.ultibot_backend.services.order_execution_service - INFO - [195b69cdc9b3] - MainThread - order_execution_service.py:110 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-13 10:57:52,972 - src.ultibot_backend.services.ai_orchestrator_service - INFO - [e5923c33ee90] - MainThread - ai_orchestrator_service.py:84 - AIOrchestrator initialized with models/gemini-1.5-pro-latest and PydanticOutputParser.
+2025-06-13 10:57:52,972 - src.ultibot_backend.services.credential_service - INFO - [479b07890095] - MainThread - credential_service.py:28 - CredentialService __init__ intentando obtener encryption_key de ENV: Presente
+2025-06-13 10:57:52,972 - src.ultibot_backend.services.credential_service - INFO - [22931df4a1a1] - MainThread - credential_service.py:34 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-13 10:57:52,972 - src.ultibot_backend.services.unified_order_execution_service - INFO - [d26af4276cff] - MainThread - unified_order_execution_service.py:27 - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-13 10:57:52,972 - src.ultibot_backend.services.config_service - WARNING - [9bb9917adac2] - MainThread - config_service.py:41 - NotificationService already set in ConfigService, ignoring attempt to reset.
+2025-06-13 10:57:52,972 - src.ultibot_backend.dependencies - INFO - [0d332b130f4d] - MainThread - dependencies.py:138 - Dependency container initialized successfully.
+2025-06-13 10:57:52,972 - ultibot_backend - INFO - [de20faaac29e] - MainThread - main.py:101 - Contenedor de dependencias inicializado.
+2025-06-13 10:57:52,972 - ultibot_backend - INFO - [337e91e4e2a6] - MainThread - main.py:107 - Aplicación iniciada correctamente.
+2025-06-13 10:57:52,979 - psycopg.pool - WARNING - [b9807a46224d] - MainThread - pool_async.py:691 - error connecting in 'supabase_pool': [Errno 11001] getaddrinfo failed
+2025-06-13 10:57:52,979 - psycopg.pool - WARNING - [de22de2cb239] - MainThread - pool_async.py:691 - error connecting in 'supabase_pool': [Errno 11001] getaddrinfo failed
+2025-06-13 10:57:53,960 - psycopg.pool - WARNING - [271280fc741c] - MainThread - pool_async.py:691 - error connecting in 'supabase_pool': [Errno 11001] getaddrinfo failed
+2025-06-13 10:57:53,973 - psycopg.pool - WARNING - [80c733c51720] - MainThread - pool_async.py:691 - error connecting in 'supabase_pool': [Errno 11001] getaddrinfo failed
+2025-06-13 10:57:55,927 - psycopg.pool - WARNING - [0170b236496d] - MainThread - pool_async.py:691 - error connecting in 'supabase_pool': [Errno 11001] getaddrinfo failed
+2025-06-13 10:57:55,964 - psycopg.pool - WARNING - [2f3303f98631] - MainThread - pool_async.py:691 - error connecting in 'supabase_pool': [Errno 11001] getaddrinfo failed
+2025-06-13 10:57:59,849 - psycopg.pool - WARNING - [4b8ac699288f] - MainThread - pool_async.py:691 - error connecting in 'supabase_pool': [Errno 11001] getaddrinfo failed
+2025-06-13 10:57:59,929 - psycopg.pool - WARNING - [3f3825abe05a] - MainThread - pool_async.py:691 - error connecting in 'supabase_pool': [Errno 11001] getaddrinfo failed
