@@ -1,65 +1,115 @@
-# Script para poblar la configuración de gestión de capital del usuario fijo en Supabase
 import asyncio
+import logging
 from uuid import UUID
-from datetime import datetime
-from src.ultibot_backend.services.config_service import ConfigService
+from datetime import datetime, timezone
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+
+# --- Configuraciones y Imports Arquitectónicos ---
+from src.ultibot_backend.app_config import get_app_settings
+from src.ultibot_backend.core.ports import IPersistencePort
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.shared.data_types import UserConfiguration, RiskProfileSettings, RealTradingSettings
-from src.ultibot_backend.app_config import settings
-from src.ultibot_backend.services.credential_service import CredentialService
-from src.ultibot_backend.services.portfolio_service import PortfolioService
-from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
-from src.ultibot_backend.services.market_data_service import MarketDataService
-import json
+# Corregido: La ubicación correcta de los modelos de configuración de usuario.
+from src.ultibot_backend.core.domain_models.user_configuration_models import (
+    UserConfiguration, 
+    RiskProfileSettings, 
+    RealTradingSettings,
+    RiskProfile
+)
+
+# Configurar un logger básico para el script
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 async def main():
-    persistence_service = SupabasePersistenceService()
-    await persistence_service.connect()
-    binance_adapter = BinanceAdapter()
-    credential_service = CredentialService(persistence_service=persistence_service, binance_adapter=binance_adapter)
-    market_data_service = MarketDataService(credential_service=credential_service, binance_adapter=binance_adapter)
-    portfolio_service = PortfolioService(market_data_service=market_data_service, persistence_service=persistence_service)  # market_data_service puede ser None para este script
-    config_service = ConfigService(
-        persistence_service=persistence_service,
-        credential_service=credential_service,
-        portfolio_service=portfolio_service
-    )
+    """
+    Script para poblar la configuración de gestión de capital del usuario fijo.
+    Este script interactúa directamente con el puerto de persistencia para mayor simplicidad.
+    """
+    logger.info("Iniciando script para poblar la configuración del usuario...")
+    
+    app_settings = get_app_settings()
 
-    user_id = settings.FIXED_USER_ID
-    now = datetime.utcnow()
+    if not app_settings.database_url or not app_settings.fixed_user_id:
+        logger.error("Error crítico: DATABASE_URL o FIXED_USER_ID no están configurados.")
+        return
 
-    config = UserConfiguration(
-        user_id=user_id,
-        defaultPaperTradingCapital=10000.0,
-        paperTradingActive=True,
-        riskProfileSettings=RiskProfileSettings(
-            dailyCapitalRiskPercentage=0.5,
-            perTradeCapitalRiskPercentage=0.1,
-            takeProfitPercentage=0.02,
-            trailingStopLossPercentage=0.01,
-            trailingStopCallbackRate=0.005
-        ),
-        realTradingSettings=RealTradingSettings(
-            real_trading_mode_active=True,
-            real_trades_executed_count=0,
-            max_real_trades=5,
-            daily_capital_risked_usd=0.0,
-            last_daily_reset=now
-        ),
-        createdAt=now,
-        updatedAt=now
-    )
+    logger.info(f"Usando DATABASE_URL: {app_settings.database_url[:20]}...")
+    logger.info(f"Poblando configuración para User ID: {app_settings.fixed_user_id}")
 
-    config_dict = config.model_dump(mode='json', by_alias=True)
-    # Serializar los campos anidados manualmente solo si existen
-    if config.riskProfileSettings is not None:
-        config_dict['riskProfileSettings'] = json.dumps(config.riskProfileSettings.model_dump(mode='json', by_alias=True))
-    if config.realTradingSettings is not None:
-        config_dict['realTradingSettings'] = json.dumps(config.realTradingSettings.model_dump(mode='json', by_alias=True))
+    # 1. Inicializar el motor de la base de datos y la sesión
+    engine = create_async_engine(app_settings.database_url, echo=False)
+    AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
-    await config_service.persistence_service.upsert_user_configuration(user_id, config_dict)
-    print("Configuración de usuario poblada correctamente.")
-    await persistence_service.disconnect()
+    async with AsyncSessionLocal() as db_session:
+        try:
+            # 2. Instanciar el puerto de persistencia
+            persistence_port: IPersistencePort = SupabasePersistenceService(db_session=db_session)
+
+            # 3. Definir la configuración por defecto usando la nueva estructura de modelos
+            user_id_str = app_settings.fixed_user_id
+            now = datetime.now(timezone.utc)
+
+            default_config = UserConfiguration(
+                user_id=user_id_str,
+                # --- Campos Requeridos y Esenciales con Defaults ---
+                id=str(UUID(int=0)), # Proporcionar un ID por defecto
+                telegram_chat_id=None,
+                notification_preferences=[],
+                enable_telegram_notifications=True,
+                default_paper_trading_capital=10000.0,
+                paper_trading_active=True,
+                paper_trading_assets=[],
+                watchlists=[],
+                favorite_pairs=[],
+                risk_profile=RiskProfile.MODERATE,
+                risk_profile_settings=RiskProfileSettings(
+                    daily_capital_risk_percentage=0.01,  # 1%
+                    per_trade_capital_risk_percentage=0.005, # 0.5%
+                    max_drawdown_percentage=0.05 # 5%
+                ),
+                real_trading_settings=RealTradingSettings(
+                    real_trading_mode_active=False,
+                    real_trades_executed_count=0,
+                    max_concurrent_operations=5,
+                    max_real_trades=10,
+                    daily_loss_limit_absolute=None,
+                    daily_profit_target_absolute=None,
+                    asset_specific_stop_loss=None,
+                    auto_pause_trading_conditions=None
+                ),
+                # --- Nuevos campos opcionales inicializados como None ---
+                market_scan_presets=None,
+                active_market_scan_preset_id=None,
+                custom_market_scan_configurations=None,
+                asset_trading_parameters=None,
+                alert_configurations=None,
+                performance_metrics=None,
+                performance_history=None,
+                ai_strategy_configurations=None,
+                ai_analysis_confidence_thresholds=None,
+                mcp_server_preferences=None,
+                selected_theme=None,
+                dashboard_layout_profiles=None,
+                active_dashboard_layout_profile_id=None,
+                dashboard_layout_config=None,
+                cloud_sync_preferences=None,
+                created_at=now,
+                updated_at=now
+            )
+
+            # 4. Guardar la configuración usando directamente el puerto de persistencia
+            logger.info("Guardando la configuración del usuario en la base de datos...")
+            # El puerto espera un diccionario, por lo que se convierte el modelo Pydantic.
+            config_dict = default_config.model_dump(mode='json', by_alias=True)
+            await persistence_port.upsert_user_configuration(config_dict)
+            logger.info("Configuración de usuario poblada y guardada correctamente.")
+
+        except Exception as e:
+            logger.error(f"Ocurrió un error al poblar la configuración del usuario: {e}", exc_info=True)
+        finally:
+            await engine.dispose()
+            logger.info("Conexión a la base de datos cerrada.")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

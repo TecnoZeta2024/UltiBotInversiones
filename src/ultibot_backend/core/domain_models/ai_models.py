@@ -11,7 +11,8 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator, model_validator
+from pydantic_settings import SettingsConfigDict
 
 
 class AIModelType(str, Enum):
@@ -251,6 +252,91 @@ class AISystemMetrics(BaseModel):
         """Calcula la tasa de fallo."""
         return 1.0 - self.success_rate
 
+
+class Recommendation(str, Enum):
+    """Recomendaciones de trading."""
+    BUY = "BUY"
+    SELL = "SELL"
+    HOLD = "HOLD"
+    SHORT = "SHORT"
+    CLOSE = "CLOSE"
+    ERROR = "ERROR"
+
+class TradingAIResponse(AIAnalysisResult):
+    """
+    Respuesta estructurada del AI Orchestrator para decisiones de trading.
+    Extiende AIAnalysisResult con campos y métodos específicos de trading.
+    """
+    entry_price: Optional[Decimal] = Field(None, description="Precio de entrada recomendado")
+    stop_loss: Optional[Decimal] = Field(None, description="Precio de Stop Loss recomendado")
+    take_profit: Optional[Decimal] = Field(None, description="Precio de Take Profit recomendado")
+    risk_level: Optional[str] = Field(None, description="Nivel de riesgo de la operación (LOW, MEDIUM, HIGH)")
+    timeframe: Optional[str] = Field(None, description="Timeframe de la oportunidad (e.g., '1m', '5m', '1h')")
+    analysis_id: UUID = Field(default_factory=uuid4, description="ID único de este análisis de trading")
+
+    # Sobrescribir el tipo de recomendación para usar el Enum
+    recommendation: Recommendation = Field(..., description="Recomendación principal de trading")
+
+    class Config(SettingsConfigDict):
+        frozen = True
+        # Permitir que los campos de AIAnalysisResult se pasen directamente
+        extra = "allow"
+
+    @model_validator(mode='after')
+    def validate_prices(self) -> 'TradingAIResponse':
+        """Valida que los precios sean positivos si están presentes."""
+        if self.entry_price is not None and self.entry_price <= 0:
+            raise ValueError("Entry price must be positive.")
+        if self.stop_loss is not None and self.stop_loss <= 0:
+            raise ValueError("Stop loss must be positive.")
+        if self.take_profit is not None and self.take_profit <= 0:
+            raise ValueError("Take profit must be positive.")
+        return self
+
+    def is_high_confidence(self, threshold: float = 0.8) -> bool:
+        """Indica si la confianza de la recomendación es alta."""
+        return self.confidence >= threshold
+
+    def is_suitable_for_real_trading(self, confidence_threshold: float = 0.95) -> bool:
+        """Indica si la recomendación es apta para trading real (alta confianza)."""
+        return self.confidence >= confidence_threshold and self.recommendation != Recommendation.ERROR
+
+    def get_summary(self) -> str:
+        """Genera un resumen conciso de la recomendación."""
+        summary = f"Recomendación: {self.recommendation.value} (Confianza: {self.confidence:.1%})."
+        if self.entry_price:
+            summary += f" Entrada: ${self.entry_price:,.2f}."
+        if self.stop_loss:
+            summary += f" SL: ${self.stop_loss:,.2f}."
+        if self.take_profit:
+            summary += f" TP: ${self.take_profit:,.2f}."
+        if self.risk_level:
+            summary += f" Riesgo: {self.risk_level}."
+        return summary
+
+    def to_telegram_message(self) -> str:
+        """Formatea la respuesta para un mensaje de Telegram."""
+        msg = (
+            f"📊 **Análisis de IA para Trading**\n\n"
+            f"🎯 **Recomendación:** `{self.recommendation.value}`\n"
+            f"📈 **Confianza:** `{self.confidence:.1%}`\n"
+            f"🧠 **Razonamiento:** {self.reasoning or 'N/A'}\n"
+        )
+        if self.entry_price:
+            msg += f"💰 **Precio de Entrada:** `${self.entry_price:,.2f}`\n"
+        if self.stop_loss:
+            msg += f"🛑 **Stop Loss:** `${self.stop_loss:,.2f}`\n"
+        if self.take_profit:
+            msg += f"🎯 **Take Profit:** `${self.take_profit:,.2f}`\n"
+        if self.risk_level:
+            msg += f"📊 **Nivel de Riesgo:** `{self.risk_level}`\n"
+        if self.timeframe:
+            msg += f"⏰ **Timeframe:** `{self.timeframe}`\n"
+        if self.warnings:
+            msg += f"⚠️ **Advertencias:** {', '.join(self.warnings)}\n"
+        
+        msg += f"\n_ID de Análisis: {self.analysis_id}_"
+        return msg
 
 class OpportunityData(BaseModel):
     """Datos de oportunidad de trading para análisis de IA."""

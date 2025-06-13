@@ -14,7 +14,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.ultibot_backend.app_config import AppSettings
+from src.ultibot_backend.app_config import get_app_settings
 from src.ultibot_backend.services.ai_orchestrator_service import AIOrchestratorService
 
 # Configurar logging
@@ -54,23 +54,23 @@ def test_app_settings():
     logger.info("🔍 Probando carga de configuración...")
     
     try:
-        settings = AppSettings()
+        app_settings = get_app_settings()
         
         # Verificar campos críticos
-        if not settings.GEMINI_API_KEY:
+        if not app_settings.gemini_api_key:
             logger.error("❌ GEMINI_API_KEY no está disponible en AppSettings")
             return False, None
             
-        if not settings.SUPABASE_URL:
+        if not app_settings.supabase_url:
             logger.error("❌ SUPABASE_URL no está disponible en AppSettings")
             return False, None
             
         logger.info(f"✅ Configuración cargada correctamente")
-        logger.info(f"   - Gemini API Key: {'*' * (len(settings.GEMINI_API_KEY) - 4) + settings.GEMINI_API_KEY[-4:]}")
-        logger.info(f"   - Supabase URL: {settings.SUPABASE_URL}")
-        logger.info(f"   - Fixed User ID: {settings.FIXED_USER_ID}")
+        logger.info(f"   - Gemini API Key: {'*' * (len(app_settings.gemini_api_key) - 4) + app_settings.gemini_api_key[-4:]}")
+        logger.info(f"   - Supabase URL: {app_settings.supabase_url}")
+        logger.info(f"   - Fixed User ID: {app_settings.fixed_user_id}")
         
-        return True, settings
+        return True, app_settings
         
     except Exception as e:
         logger.error(f"❌ Error cargando configuración: {e}")
@@ -181,7 +181,7 @@ async def run_validation_tests():
     logger.info("\n" + "=" * 60)
     
     # Test 2: Configuración de la aplicación
-    config_ok, settings = test_app_settings()
+    config_ok, app_settings = test_app_settings()
     if not config_ok:
         logger.error("💥 Fallo en carga de configuración")
         return False
@@ -189,7 +189,7 @@ async def run_validation_tests():
     logger.info("\n" + "=" * 60)
     
     # Test 3: Inicialización del orchestrator
-    init_ok, orchestrator = test_ai_orchestrator_initialization(settings)
+    init_ok, orchestrator = test_ai_orchestrator_initialization(app_settings)
     if not init_ok:
         logger.error("💥 Fallo en inicialización del AI Orchestrator")
         return False

@@ -1,15 +1,15 @@
-import os
 import logging
 from functools import lru_cache
-from pydantic_settings import BaseSettings
-from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 
 class UvicornConfig(BaseSettings):
-    host: str = Field("127.0.0.1", env="UVICORN_HOST")
-    port: int = Field(8000, env="UVICORN_PORT")
-    reload: bool = Field(False, env="UVICORN_RELOAD")
-    log_level: str = Field("info", env="UVICORN_LOG_LEVEL")
+    host: str = "127.0.0.1"
+    port: int = 8000
+    reload: bool = False
+    log_level: str = "info"
+
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", env_prefix="UVICORN_")
 
 class AppSettings(BaseSettings):
     """
@@ -23,46 +23,53 @@ class AppSettings(BaseSettings):
     API_V1_STR: str = "/api/v1"
 
     # Database configuration
-    db_host: str = Field(..., env="DB_HOST")
-    db_port: int = Field(..., env="DB_PORT")
-    db_user: str = Field(..., env="DB_USER")
-    db_password: str = Field(..., env="DB_PASSWORD")
-    db_name: str = Field(..., env="DB_NAME")
+    db_host: str
+    db_port: int
+    db_user: str
+    db_password: str
+    db_name: str
+    
+    # Test Database configuration
+    test_db_name: str = "test_ultibot"
 
     # Binance API configuration
-    binance_api_key: str = Field(..., env="BINANCE_API_KEY")
-    binance_api_secret: str = Field(..., env="BINANCE_API_SECRET")
+    binance_api_key: str
+    binance_api_secret: str
 
     # Mobula API configuration
-    mobula_api_key: str = Field(..., env="MOBULA_API_KEY")
+    mobula_api_key: str
 
     # Telegram Bot configuration
-    telegram_bot_token: str = Field(..., env="TELEGRAM_BOT_TOKEN")
-    telegram_chat_id: str = Field(..., env="TELEGRAM_CHAT_ID")
+    telegram_bot_token: str
+    telegram_chat_id: str
 
     # Gemini AI configuration
-    gemini_api_key: str = Field(..., env="GEMINI_API_KEY")
+    gemini_api_key: str
+
+    # Credential Encryption Key
+    credential_encryption_key: str
 
     # Application settings
-    log_level: str = Field("INFO", env="LOG_LEVEL")
-    test_mode: bool = Field(False, env="TEST_MODE")
+    log_level: str = "INFO"
+    test_mode: bool = False
     
     # Fixed user ID for single-user deployment
-    FIXED_USER_ID: str = Field("00000000-0000-0000-0000-000000000001", env="FIXED_USER_ID")
+    fixed_user_id: str = "00000000-0000-0000-0000-000000000001"
     
     # Supabase configuration (optional, for reference)
-    supabase_url: Optional[str] = Field(None, env="SUPABASE_URL")
-    supabase_key: Optional[str] = Field(None, env="SUPABASE_KEY")
+    supabase_url: Optional[str] = None
+    supabase_key: Optional[str] = None
+
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @property
     def database_url(self) -> str:
         """Constructs the asynchronous database URL."""
         return f"postgresql+asyncpg://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}"
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = 'utf-8'
-        extra = "ignore"
+    def get_test_database_url(self) -> str:
+        """Constructs the asynchronous test database URL."""
+        return f"postgresql+asyncpg://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.test_db_name}"
 
 @lru_cache
 def get_app_settings() -> AppSettings:
@@ -97,5 +104,3 @@ def setup_logging(config: AppSettings):
     
     logger = logging.getLogger(__name__)
     logger.info(f"Logging configured at level: {log_level}")
-
-settings = get_app_settings()

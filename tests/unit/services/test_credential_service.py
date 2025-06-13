@@ -1,4 +1,5 @@
 import pytest
+import os
 from unittest.mock import AsyncMock, MagicMock, patch, ANY
 from uuid import uuid4, UUID
 from datetime import datetime
@@ -23,14 +24,18 @@ def mock_binance_adapter():
 
 @pytest.fixture
 def credential_service(mock_persistence_service, mock_binance_adapter):
-    # Mockear las dependencias que CredentialService inicializa internamente
-    with patch('ultibot_backend.services.credential_service.SupabasePersistenceService', return_value=mock_persistence_service), \
-         patch('ultibot_backend.services.credential_service.BinanceAdapter', return_value=mock_binance_adapter):
-        service = CredentialService(encryption_key=TEST_FERNET_KEY)
-        # Re-asignar mocks si es necesario, aunque el patch debería cubrirlos
-        service.persistence_service = mock_persistence_service
-        service.binance_adapter = mock_binance_adapter
-        return service
+    # Establecer la clave de encriptación como variable de entorno para la prueba
+    # Esto es necesario porque CredentialService la lee de os.getenv
+    os.environ["CREDENTIAL_ENCRYPTION_KEY"] = TEST_FERNET_KEY
+    
+    # Instanciar CredentialService pasando los mocks como dependencias
+    service = CredentialService(
+        persistence_service=mock_persistence_service,
+        binance_adapter=mock_binance_adapter
+    )
+    yield service
+    # Limpiar la variable de entorno después de la prueba
+    del os.environ["CREDENTIAL_ENCRYPTION_KEY"]
 
 @pytest.fixture
 def sample_user_id():

@@ -49,3 +49,30 @@
 **Lección Aprendida y Nueva Hipótesis:**
 * **Lección Aprendida:** Una suite de pruebas que no se mantiene activamente se convierte en deuda técnica. Los cambios en el código de la aplicación deben ser reflejados inmediatamente en las pruebas correspondientes. La estabilidad de la suite es un indicador clave de la salud del proyecto.
 * **Nueva Hipótesis Central:** La causa raíz de la falla actual es una **desintegración sistémica de la suite de pruebas**. Las pruebas no reflejan el estado actual del código fuente. La solución no es un único arreglo, sino una campaña de refactorización de pruebas dividida en fases, enfocada en restaurar la coherencia entre las pruebas y el código de la aplicación. Se debe comenzar por el problema más fundamental: la instanciación incorrecta de objetos en las `fixtures`.
+
+---
+
+### INFORME POST-MORTEM RELOJ ATÓMICO - 2025-06-12 18:51
+
+**REFERENCIA A INTENTOS PREVIOS:**
+* Este informe sigue a la ejecución del plan "ESTABILIZACIÓN DE TESTS DE INTEGRACIÓN Y DATOS".
+* El plan se enfocó en refactorizar `SupabasePersistenceService` para permitir la inyección de dependencias y corregir `ValidationErrors` en los tests de API.
+
+**Resultado Esperado:**
+* La ejecución de `poetry run pytest` debía mostrar una reducción significativa de errores, eliminando los `PoolTimeout` y los `ValidationError` de los archivos modificados. Se esperaba que la suite de pruebas fuera más estable, aunque aún con fallos de lógica.
+
+**Resultado Real:**
+* La ejecución de `pytest` resultó en un fallo masivo con **26 fallos y 42 errores**.
+* **Éxito Parcial:** Los `PoolTimeout` parecen haber sido resueltos, ya que no aparecen en el log de errores. La refactorización de la inyección de dependencias fue correcta en su enfoque.
+* **Fallo Sistémico Expuesto:** La corrección de los errores de conexión destapó una cascada de problemas subyacentes mucho más graves, que ahora son los principales bloqueadores.
+* **Nuevo Error Dominante:** `ImportError: cannot import name 'Base' from 'ultibot_backend.adapters.persistence_service'`. Este error de setup impide que cualquier test que dependa de la base de datos se ejecute correctamente.
+* **Otros Errores Críticos Revelados:** `NameError`, `TypeError` por firmas de constructores desincronizadas, `fixture not found`, y `ValidationError` persistentes en múltiples tests unitarios.
+
+**Análisis de Falla:**
+* **Hipótesis Incorrecta:** La hipótesis de que los `PoolTimeout` y los `ValidationError` aislados eran los problemas principales fue incorrecta. Eran solo los síntomas más visibles de una base de código de pruebas profundamente deteriorada.
+* **Visión de Túnel:** Me concentré en los errores reportados en el plan anterior sin realizar un diagnóstico más amplio después de la primera ejecución fallida de `pytest`. La ejecución del plan fue prematura.
+* **Causa Raíz Real:** La causa raíz es una **falla estructural en la configuración del entorno de pruebas (`conftest.py`)** y una **desincronización masiva entre el código de la aplicación y el código de los tests**. Los tests no han sido mantenidos y ya no reflejan cómo funciona la aplicación.
+
+**Lección Aprendida y Nueva Hipótesis:**
+* **Lección Aprendida:** No se puede construir sobre cimientos rotos. Antes de corregir errores de lógica de negocio, es imperativo asegurar que el entorno de pruebas se configure y se inicialice sin errores. Los errores de `setup` y `fixture` deben tener la máxima prioridad.
+* **Nueva Hipótesis Central:** La estabilización de la suite de pruebas debe seguir un enfoque de "abajo hacia arriba". Primero, se debe corregir la configuración fundamental (`conftest.py`, variables de entorno, importaciones base). Segundo, se deben arreglar las `fixtures` para que puedan instanciar correctamente los servicios. Solo entonces se pueden abordar los fallos de lógica dentro de los propios tests. Atacar los problemas en este orden evitará la depuración de errores que son simplemente síntomas de un setup incorrecto.

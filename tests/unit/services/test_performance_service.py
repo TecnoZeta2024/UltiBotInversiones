@@ -10,13 +10,17 @@ from ultibot_backend.api.v1.models.performance_models import OperatingMode, Stra
 from shared.data_types import Trade # Asegúrate que Trade y PositionStatus estén aquí o importables
 from ultibot_backend.core.domain_models.trade_models import PositionStatus
 from ultibot_backend.core.domain_models.trading_strategy_models import TradingStrategyConfig, BaseStrategyType # Para mock de strategy_config
-
+from ultibot_backend.core.ports import IMarketDataProvider, IPersistencePort # Importar interfaces
 
 USER_ID = uuid4()
 
 @pytest.fixture
-def mock_persistence_service():
-    return AsyncMock(spec=SupabasePersistenceService)
+def mock_market_data_provider(): # Nueva fixture para IMarketDataProvider
+    return AsyncMock(spec=IMarketDataProvider)
+
+@pytest.fixture
+def mock_persistence_port(): # Renombrado de mock_persistence_service a mock_persistence_port
+    return AsyncMock(spec=IPersistencePort)
 
 @pytest.fixture
 def mock_strategy_service():
@@ -48,26 +52,26 @@ def mock_strategy_service():
     return service
 
 @pytest.fixture
-def performance_service(mock_persistence_service, mock_strategy_service):
+def performance_service(mock_market_data_provider, mock_persistence_port): # Actualizar argumentos
     return PerformanceService(
-        persistence_service=mock_persistence_service,
-        strategy_service=mock_strategy_service
+        market_data_provider=mock_market_data_provider,
+        persistence_port=mock_persistence_port
     )
 
 @pytest.mark.asyncio
-async def test_get_all_strategies_performance_no_trades(performance_service, mock_persistence_service):
+async def test_get_all_strategies_performance_no_trades(performance_service, mock_persistence_port):
     """
     Test case when there are no trades for the user.
     """
-    mock_persistence_service.get_all_trades_for_user.return_value = []
+    mock_persistence_port.get_all_trades_for_user.return_value = []
     
     result = await performance_service.get_all_strategies_performance(user_id=USER_ID)
     
     assert result == []
-    mock_persistence_service.get_all_trades_for_user.assert_called_once_with(USER_ID, None)
+    mock_persistence_port.get_all_trades_for_user.assert_called_once_with(USER_ID, None)
 
 @pytest.mark.asyncio
-async def test_get_all_strategies_performance_no_closed_trades(performance_service, mock_persistence_service):
+async def test_get_all_strategies_performance_no_closed_trades(performance_service, mock_persistence_port):
     """
     Test case when there are trades, but none are closed.
     """
@@ -98,16 +102,16 @@ async def test_get_all_strategies_performance_no_closed_trades(performance_servi
         # created_at y updated_at tienen default_factory
         # exitOrders tiene default_factory
     )
-    mock_persistence_service.get_all_trades_for_user.return_value = [open_trade]
+    mock_persistence_port.get_all_trades_for_user.return_value = [open_trade]
     
     result = await performance_service.get_all_strategies_performance(user_id=USER_ID)
     
     assert result == []
-    mock_persistence_service.get_all_trades_for_user.assert_called_once_with(USER_ID, None)
+    mock_persistence_port.get_all_trades_for_user.assert_called_once_with(USER_ID, None)
 
 @pytest.mark.asyncio
 async def test_get_all_strategies_performance_with_closed_trades(
-    performance_service, mock_persistence_service, mock_strategy_service
+    performance_service, mock_persistence_port, mock_strategy_service
 ):
     """
     Test case with a single closed trade.
@@ -138,7 +142,7 @@ async def test_get_all_strategies_performance_with_closed_trades(
         trailingStopCallbackRate=None,
         currentStopPrice_tsl=None,
     )
-    mock_persistence_service.get_all_trades_for_user.return_value = [closed_trade]
+    mock_persistence_port.get_all_trades_for_user.return_value = [closed_trade]
     
     mock_strategy_config = TradingStrategyConfig(
         id=str(strategy1_id),
@@ -176,12 +180,12 @@ async def test_get_all_strategies_performance_with_closed_trades(
     assert perf_data.totalPnl == 10.0
     assert perf_data.win_rate == 100.0
     
-    mock_persistence_service.get_all_trades_for_user.assert_called_once_with(USER_ID, "paper")
+    mock_persistence_port.get_all_trades_for_user.assert_called_once_with(USER_ID, "paper")
     mock_strategy_service.get_strategy_config.assert_called_once_with(str(strategy1_id), str(USER_ID))
 
 @pytest.mark.asyncio
 async def test_get_all_strategies_performance_multiple_trades_mixed_pnl(
-    performance_service, mock_persistence_service, mock_strategy_service
+    performance_service, mock_persistence_port, mock_strategy_service
 ):
     """
     Test with multiple trades for a strategy, mixed P&L.
@@ -202,7 +206,7 @@ async def test_get_all_strategies_performance_multiple_trades_mixed_pnl(
     trade2 = Trade(id=trade2_id, symbol="ETHUSDT", side="SELL", pnl_usd=-5.0, **common_trade_params)
     trade3 = Trade(id=trade3_id, symbol="ADAUSDT", side="BUY", pnl_usd=15.0, **common_trade_params)
     
-    mock_persistence_service.get_all_trades_for_user.return_value = [trade1, trade2, trade3]
+    mock_persistence_port.get_all_trades_for_user.return_value = [trade1, trade2, trade3]
     
     mock_strategy_config = TradingStrategyConfig(
         id=str(strategy1_id), user_id=str(USER_ID), config_name="Scalping Pro", 
@@ -237,7 +241,7 @@ async def test_get_all_strategies_performance_multiple_trades_mixed_pnl(
 
 @pytest.mark.asyncio
 async def test_get_all_strategies_performance_mode_filtering_real(
-    performance_service, mock_persistence_service, mock_strategy_service
+    performance_service, mock_persistence_port, mock_strategy_service
 ):
     """
     Test mode filtering for 'real' trades.
@@ -257,7 +261,7 @@ async def test_get_all_strategies_performance_mode_filtering_real(
     paper_trade = Trade(id=trade_paper_id, mode="paper", symbol="BTCUSDT", side="BUY", strategyId=strategy_paper_id, pnl_usd=10.0, **common_trade_params_filter_test)
     real_trade = Trade(id=trade_real_id, mode="real", symbol="ETHUSDT", side="SELL", strategyId=strategy_real_id, pnl_usd=50.0, **common_trade_params_filter_test)
     
-    mock_persistence_service.get_all_trades_for_user.return_value = [real_trade] 
+    mock_persistence_port.get_all_trades_for_user.return_value = [real_trade] 
     
     mock_strategy_config_real = TradingStrategyConfig(
         id=str(strategy_real_id), user_id=str(USER_ID), config_name="Real Trader", 
@@ -294,11 +298,11 @@ async def test_get_all_strategies_performance_mode_filtering_real(
     assert perf_data.totalPnl == 50.0
     assert perf_data.win_rate == 100.0
     
-    mock_persistence_service.get_all_trades_for_user.assert_called_once_with(USER_ID, "real")
+    mock_persistence_port.get_all_trades_for_user.assert_called_once_with(USER_ID, "real")
 
 @pytest.mark.asyncio
 async def test_get_all_strategies_performance_unknown_strategy(
-    performance_service, mock_persistence_service, mock_strategy_service
+    performance_service, mock_persistence_port, mock_strategy_service
 ):
     """
     Test when a strategyId from a trade does not have a corresponding strategy config.
@@ -316,7 +320,7 @@ async def test_get_all_strategies_performance_unknown_strategy(
     }
     
     trade = Trade(id=trade_id, symbol="BTCUSDT", side="BUY", pnl_usd=10.0, **common_trade_params_unknown_strat)
-    mock_persistence_service.get_all_trades_for_user.return_value = [trade]
+    mock_persistence_port.get_all_trades_for_user.return_value = [trade]
     
     mock_strategy_service.get_strategy_config.return_value = None # Simula que no se encuentra la estrategia
     
@@ -329,7 +333,7 @@ async def test_get_all_strategies_performance_unknown_strategy(
 
 @pytest.mark.asyncio
 async def test_get_all_strategies_performance_multiple_strategies_different_modes(
-    performance_service, mock_persistence_service, mock_strategy_service
+    performance_service, mock_persistence_port, mock_strategy_service
 ):
     """
     Test with multiple strategies operating in different modes (paper and real).
@@ -358,7 +362,7 @@ async def test_get_all_strategies_performance_multiple_strategies_different_mode
     )
 
     # Cuando se llama sin filtro de modo, debe devolver todos los trades
-    mock_persistence_service.get_all_trades_for_user.return_value = [paper_trade, real_trade]
+    mock_persistence_port.get_all_trades_for_user.return_value = [paper_trade, real_trade]
 
     mock_strategy_config_paper = TradingStrategyConfig(
         id=str(strategy_paper_id), user_id=str(USER_ID), config_name="Paper Trader Pro",
@@ -402,7 +406,7 @@ async def test_get_all_strategies_performance_multiple_strategies_different_mode
     assert real_perf.totalPnl == 25.0
     assert real_perf.totalOperations == 1
     
-    mock_persistence_service.get_all_trades_for_user.assert_called_once_with(USER_ID, None)
+    mock_persistence_port.get_all_trades_for_user.assert_called_once_with(USER_ID, None)
     # Verificar que get_strategy_config fue llamado para ambas estrategias
     assert mock_strategy_service.get_strategy_config.call_count == 2
     mock_strategy_service.get_strategy_config.assert_any_call(str(strategy_paper_id), str(USER_ID))
@@ -410,7 +414,7 @@ async def test_get_all_strategies_performance_multiple_strategies_different_mode
 
 @pytest.mark.asyncio
 async def test_get_all_strategies_performance_breakeven_trades(
-    performance_service, mock_persistence_service, mock_strategy_service
+    performance_service, mock_persistence_port, mock_strategy_service
 ):
     """
     Test with trades that result in zero P&L (break-even).
@@ -430,7 +434,7 @@ async def test_get_all_strategies_performance_breakeven_trades(
     trade1 = Trade(id=trade1_id, symbol="XRPUSDT", side="BUY", pnl_usd=0.0, **common_trade_params_breakeven)
     trade2 = Trade(id=trade2_id, symbol="LTCUSDT", side="SELL", pnl_usd=0.0, **common_trade_params_breakeven)
 
-    mock_persistence_service.get_all_trades_for_user.return_value = [trade1, trade2]
+    mock_persistence_port.get_all_trades_for_user.return_value = [trade1, trade2]
 
     mock_strategy_config = TradingStrategyConfig(
         id=str(strategy_id), user_id=str(USER_ID), config_name="Breakeven Master",
@@ -455,7 +459,7 @@ async def test_get_all_strategies_performance_breakeven_trades(
 
 @pytest.mark.asyncio
 async def test_get_all_strategies_performance_trade_with_none_strategy_id(
-    performance_service, mock_persistence_service, mock_strategy_service
+    performance_service, mock_persistence_port, mock_strategy_service
 ):
     """
     Test that trades with strategyId=None are handled gracefully (e.g., ignored or grouped under a special ID).
@@ -481,7 +485,7 @@ async def test_get_all_strategies_performance_trade_with_none_strategy_id(
         ocoOrderListId=None, takeProfitPrice=None, trailingStopActivationPrice=None,
         trailingStopCallbackRate=None, currentStopPrice_tsl=None,
     )
-    mock_persistence_service.get_all_trades_for_user.return_value = [trade_no_strategy]
+    mock_persistence_port.get_all_trades_for_user.return_value = [trade_no_strategy]
     mock_strategy_service.get_strategy_config.return_value = None # Simulate strategy not found for "None"
 
     result = await performance_service.get_all_strategies_performance(user_id=USER_ID, mode_filter=OperatingMode.PAPER)
@@ -496,7 +500,7 @@ async def test_get_all_strategies_performance_trade_with_none_strategy_id(
     assert perf_data.totalPnl == 5.0
     assert perf_data.win_rate == 100.0
 
-    mock_persistence_service.get_all_trades_for_user.assert_called_once_with(USER_ID, "paper")
+    mock_persistence_port.get_all_trades_for_user.assert_called_once_with(USER_ID, "paper")
     # It will try to fetch a strategy with ID "None"
     mock_strategy_service.get_strategy_config.assert_called_once_with(None, str(USER_ID))
 
@@ -512,7 +516,7 @@ async def test_get_all_strategies_performance_trade_with_none_strategy_id(
     ]
 )
 async def test_get_all_strategies_performance_win_rate_edge_cases(
-    performance_service, mock_persistence_service, mock_strategy_service,
+    performance_service, mock_persistence_port, mock_strategy_service,
     trades_pnl, expected_win_rate, description
 ):
     """
@@ -533,7 +537,7 @@ async def test_get_all_strategies_performance_win_rate_edge_cases(
         )
         trades.append(trade)
 
-    mock_persistence_service.get_all_trades_for_user.return_value = trades
+    mock_persistence_port.get_all_trades_for_user.return_value = trades
     
     mock_strategy_config = TradingStrategyConfig(
         id=str(strategy_id), user_id=str(USER_ID), config_name="WinRate Test Strat",

@@ -1,5 +1,5 @@
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 from src.ultibot_backend.core.domain_models.portfolio import Portfolio
@@ -14,6 +14,82 @@ class PerformanceService:
     def __init__(self, market_data_provider: IMarketDataProvider, persistence_port: IPersistencePort):
         self.market_data_provider = market_data_provider
         self.persistence_port = persistence_port
+
+    async def get_all_strategies_performance(self, user_id: str, mode_filter: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        ✅ AGREGADO: Obtiene métricas de rendimiento para todas las estrategias de un usuario.
+        
+        Args:
+            user_id: ID del usuario
+            mode_filter: Filtro opcional por modo de trading ('paper' o 'real')
+            
+        Returns:
+            Lista de diccionarios con métricas de rendimiento por estrategia
+        """
+        logger.info(f"Obteniendo rendimiento de estrategias para usuario {user_id}, modo: {mode_filter}")
+        
+        try:
+            # Por ahora retornamos una lista vacía como implementación mínima
+            # En una implementación completa, esto consultaría la base de datos
+            # para obtener todas las estrategias y calcular sus métricas
+            
+            # TODO: Implementar lógica real para:
+            # 1. Obtener todas las estrategias del usuario
+            # 2. Calcular métricas para cada estrategia
+            # 3. Filtrar por modo si se especifica
+            # 4. Retornar datos estructurados
+            
+            performance_data = []
+            logger.info(f"Se encontraron {len(performance_data)} estrategias para usuario {user_id}")
+            return performance_data
+            
+        except Exception as e:
+            logger.error(f"Error al obtener rendimiento de estrategias para usuario {user_id}: {e}")
+            raise
+
+    async def get_trade_performance_metrics(
+        self, 
+        user_id: str, 
+        trading_mode: str, 
+        start_date: Optional[datetime] = None, 
+        end_date: Optional[datetime] = None
+    ) -> PerformanceMetrics:
+        """
+        ✅ AGREGADO: Obtiene métricas de rendimiento para trades en un período específico.
+        
+        Args:
+            user_id: ID del usuario
+            trading_mode: Modo de trading ('paper' o 'real')
+            start_date: Fecha de inicio (opcional)
+            end_date: Fecha de fin (opcional)
+            
+        Returns:
+            Métricas de rendimiento calculadas
+        """
+        logger.info(f"Calculando métricas de trades para usuario {user_id}, modo {trading_mode}")
+        
+        try:
+            # Por ahora retornamos métricas por defecto
+            # En una implementación completa, esto:
+            # 1. Obtendría todos los trades del usuario en el período
+            # 2. Calcularía métricas reales basadas en los trades
+            # 3. Retornaría métricas precisas
+            
+            metrics = PerformanceMetrics(
+                total_return_percentage=0.0,
+                annualized_return_percentage=0.0,
+                sharpe_ratio=0.0,
+                max_drawdown=0.0,
+                volatility=0.0,
+                trades_count=0
+            )
+            
+            logger.info(f"Métricas calculadas para usuario {user_id}: {metrics}")
+            return metrics
+            
+        except Exception as e:
+            logger.error(f"Error al calcular métricas de trades para usuario {user_id}: {e}")
+            raise
 
     async def calculate_performance_metrics(self, portfolio: Portfolio, start_date: datetime, end_date: datetime) -> PerformanceMetrics:
         """

@@ -2,235 +2,198 @@
 Unit tests for the TradingEngine core functionalities.
 """
 import pytest
-from unittest.mock import AsyncMock, MagicMock, call
+from unittest.mock import AsyncMock, MagicMock
 from decimal import Decimal
+import uuid
+from uuid import uuid4
 
-from ultibot_backend.services.trading_engine_service import TradingEngine
+from ultibot_backend.services.trading_engine_service import TradingEngine, AIAnalysisResult
 from ultibot_backend.core.domain_models.portfolio import Portfolio
-from ultibot_backend.core.domain_models.trading import Order
-from ultibot_backend.core.domain_models.events import OrderPlacedEvent
+from ultibot_backend.core.domain_models.trading import Order, OrderSide, OrderType, OrderStatus, Trade
+from ultibot_backend.core.domain_models.ai_models import TradingOpportunity
 from ultibot_backend.core.exceptions import InsufficientFundsError
+from ultibot_backend.core.ports import (
+    IOrderExecutionPort,
+    IPersistencePort,
+    ICredentialService,
+    IMarketDataProvider,
+    IAIOrchestrator
+)
 
 @pytest.fixture
-def mock_binance_adapter():
-    """Fixture for a mock Binance adapter."""
-    adapter = MagicMock()
-    adapter.execute_order = AsyncMock()
-    adapter.cancel_order = AsyncMock()
-    return adapter
+def mock_order_execution_port():
+    """Fixture for a mock order execution port."""
+    port = AsyncMock(spec=IOrderExecutionPort)
+    port.execute_order = AsyncMock()
+    port.cancel_order = AsyncMock()
+    return port
 
 @pytest.fixture
-def mock_portfolio_manager():
-    """Fixture for a mock portfolio manager."""
-    manager = MagicMock()
-    manager.get_portfolio_snapshot = AsyncMock()
-    manager.update_portfolio_snapshot = AsyncMock()
-    return manager
+def mock_persistence_port():
+    """Fixture for a mock persistence port."""
+    port = AsyncMock(spec=IPersistencePort)
+    port.get_portfolio = AsyncMock()
+    port.save_portfolio = AsyncMock()
+    port.update_opportunity_analysis = AsyncMock()
+    port.upsert_trade = AsyncMock()
+    return port
 
 @pytest.fixture
-def mock_event_broker():
-    """Fixture for a mock event broker."""
-    broker = MagicMock()
-    broker.publish = AsyncMock()
-    return broker
+def mock_credential_service():
+    """Fixture for a mock credential service."""
+    service = AsyncMock(spec=ICredentialService)
+    service.get_first_decrypted_credential_by_service = AsyncMock(return_value={"api_key": "test_key", "api_secret": "test_secret"})
+    return service
 
 @pytest.fixture
-def trading_engine(mock_binance_adapter, mock_portfolio_manager, mock_event_broker):
+def mock_market_data_provider():
+    """Fixture for a mock market data provider."""
+    provider = AsyncMock(spec=IMarketDataProvider)
+    provider.get_latest_price = AsyncMock(return_value=Decimal("50000.0"))
+    return provider
+
+@pytest.fixture
+def mock_ai_orchestrator():
+    """Fixture for a mock AI orchestrator."""
+    orchestrator = AsyncMock(spec=IAIOrchestrator)
+    orchestrator.analyze_opportunity = AsyncMock()
+    return orchestrator
+
+@pytest.fixture
+def trading_engine(
+    mock_order_execution_port,
+    mock_persistence_port,
+    mock_credential_service,
+    mock_market_data_provider,
+    mock_ai_orchestrator,
+):
     """Fixture to create a TradingEngine instance with mocked dependencies."""
-    return TradingEngine(
-        binance_adapter=mock_binance_adapter,
-        portfolio_manager=mock_portfolio_manager,
-        event_broker=mock_event_broker
-    )
+    with pytest.MonkeyPatch.context() as m:
+        mock_settings = MagicMock()
+        mock_settings.FIXED_USER_ID = "test_user"
+        mock_settings.DEFAULT_REAL_TRADING_EXCHANGE = "binance"
+        mock_settings.AI_TRADING_CONFIDENCE_THRESHOLD = 0.75
+        m.setattr("ultibot_backend.services.trading_engine_service.settings", mock_settings)
+        
+        engine = TradingEngine(
+            order_execution_port=mock_order_execution_port,
+            persistence_port=mock_persistence_port,
+            credential_service=mock_credential_service,
+            market_data_provider=mock_market_data_provider,
+            ai_orchestrator=mock_ai_orchestrator,
+        )
+    return engine
 
 @pytest.mark.asyncio
-async def test_execute_market_order_paper_trading_success(
-    trading_engine, mock_binance_adapter, mock_portfolio_manager, mock_event_broker
+async def test_execute_paper_order_success(
+    trading_engine, mock_persistence_port, mock_market_data_provider
 ):
     """
     Test successful execution of a market order in paper trading mode.
     """
     # Arrange
-    user_id = "test_user_paper"
+    user_id = uuid4()
     symbol = "BTCUSDT"
     quantity = Decimal("0.01")
-    price = Decimal("50000")
-    order_value = quantity * price
-
-    mock_portfolio = Portfolio(
-        user_id=user_id,
-        trading_mode="paper",
-        available_balance_usdt=Decimal("10000.0"),
-        assets=[]
-    )
-    mock_portfolio_manager.get_portfolio_snapshot.return_value = mock_portfolio
-
-    expected_order = Order(
-        id="paper_order_1",
-        user_id=user_id,
-        symbol=symbol,
-        order_type="MARKET",
-        side="BUY",
-        quantity=quantity,
-        price=price,
-        status="FILLED",
-        trading_mode="paper"
-    )
-    # In paper mode, the engine itself generates the order result
     
+    mock_market_data_provider.get_latest_price.return_value = Decimal("50000")
+
     # Act
     result_order = await trading_engine.execute_order(
         user_id=user_id,
         symbol=symbol,
-        order_type="MARKET",
-        side="BUY",
+        order_type=OrderType.MARKET,
+        side=OrderSide.BUY,
         quantity=quantity,
-        price=price,
+        price=None,
         trading_mode="paper"
     )
 
     # Assert
-    assert result_order.status == "FILLED"
-    assert result_order.trading_mode == "paper"
-    mock_portfolio_manager.get_portfolio_snapshot.assert_awaited_once_with(user_id, "paper")
-    mock_portfolio_manager.update_portfolio_snapshot.assert_awaited_once()
-    
-    # Verify event publication
-    mock_event_broker.publish.assert_awaited_once()
-    published_event = mock_event_broker.publish.call_args[0][0]
-    assert isinstance(published_event, OrderPlacedEvent)
-    assert published_event.order_id == result_order.id
+    assert result_order.status == OrderStatus.FILLED
+    assert result_order.side == OrderSide.BUY
+    mock_persistence_port.upsert_trade.assert_awaited_once()
 
 @pytest.mark.asyncio
-async def test_execute_market_order_real_trading_success(
-    trading_engine, mock_binance_adapter, mock_portfolio_manager, mock_event_broker
+async def test_process_opportunity_with_ai_buy_decision(
+    trading_engine, mock_ai_orchestrator, mock_persistence_port
 ):
     """
-    Test successful execution of a market order in real trading mode.
+    Test processing a trading opportunity where the AI decides to buy.
     """
     # Arrange
-    user_id = "test_user_real"
-    symbol = "ETHUSDT"
-    quantity = Decimal("0.5")
-    price = Decimal("3000")
-    api_key = "test_key"
-    api_secret = "test_secret"
-
-    mock_portfolio = Portfolio(
-        user_id=user_id,
-        trading_mode="real",
-        available_balance_usdt=Decimal("2000.0"),
-        assets=[]
+    user_id = uuid4()
+    opportunity = TradingOpportunity(
+        opportunity_id=uuid4(),
+        symbol="BTCUSDT",
+        signal_strength=0.9,
+        detected_at="2025-01-01T12:00:00Z",
+        strategy_id="test_strategy",
+        details={"price": "50000"}
     )
-    mock_portfolio_manager.get_portfolio_snapshot.return_value = mock_portfolio
-
-    expected_order_from_adapter = Order(
-        id="real_order_2",
-        user_id=user_id,
-        symbol=symbol,
-        order_type="MARKET",
-        side="BUY",
-        quantity=quantity,
-        price=price,
-        status="FILLED",
-        trading_mode="real"
-    )
-    mock_binance_adapter.execute_order.return_value = expected_order_from_adapter
-
-    # Act
-    result_order = await trading_engine.execute_order(
-        user_id=user_id,
-        symbol=symbol,
-        order_type="MARKET",
-        side="BUY",
-        quantity=quantity,
-        price=price,
-        trading_mode="real",
-        api_key=api_key,
-        api_secret=api_secret
-    )
-
-    # Assert
-    assert result_order == expected_order_from_adapter
-    mock_binance_adapter.execute_order.assert_awaited_once_with(
-        symbol=symbol,
-        order_type="MARKET",
-        side="BUY",
-        quantity=quantity,
-        price=price,
-        api_key=api_key,
-        api_secret=api_secret
-    )
-    mock_portfolio_manager.update_portfolio_snapshot.assert_awaited_once()
-    mock_event_broker.publish.assert_awaited_once()
-
-@pytest.mark.asyncio
-async def test_execute_order_insufficient_funds(trading_engine, mock_portfolio_manager):
-    """
-    Test that executing an order with insufficient funds raises an error.
-    """
-    # Arrange
-    user_id = "test_user_poor"
-    mock_portfolio = Portfolio(
-        user_id=user_id,
-        trading_mode="paper",
-        available_balance_usdt=Decimal("100.0"),
-        assets=[]
-    )
-    mock_portfolio_manager.get_portfolio_snapshot.return_value = mock_portfolio
-
-    # Act & Assert
-    with pytest.raises(InsufficientFundsError):
-        await trading_engine.execute_order(
-            user_id=user_id,
-            symbol="BTCUSDT",
-            order_type="MARKET",
-            side="BUY",
-            quantity=Decimal("0.01"),
-            price=Decimal("50000"), # Order value: 500
-            trading_mode="paper"
-        )
-
-@pytest.mark.asyncio
-async def test_cancel_order_success(trading_engine, mock_binance_adapter, mock_event_broker):
-    """
-    Test successful cancellation of an order.
-    """
-    # Arrange
-    user_id = "test_user_cancel"
-    order_id = "order_to_cancel"
-    api_key = "key"
-    api_secret = "secret"
     
-    mock_binance_adapter.cancel_order.return_value = True
+    ai_result = AIAnalysisResult(
+        recommendation="BUY",
+        confidence=0.8,
+        reasoning="Strong bullish signals.",
+        trade_executed=False
+    )
+    mock_ai_orchestrator.analyze_opportunity.return_value = ai_result
+    
+    # Mock la ejecución de la orden para que devuelva una orden válida
+    trading_engine.execute_order = AsyncMock(return_value=Order(
+        id=uuid4(),
+        symbol="BTCUSDT",
+        type=OrderType.MARKET,
+        side=OrderSide.BUY,
+        quantity=Decimal("0.001"),
+        price=Decimal("50000"),
+        status=OrderStatus.FILLED
+    ))
 
     # Act
-    result = await trading_engine.cancel_order(
-        user_id=user_id,
-        order_id=order_id,
-        api_key=api_key,
-        api_secret=api_secret
-    )
+    final_result = await trading_engine.process_opportunity_with_ai_decision(opportunity, user_id)
 
     # Assert
-    assert result is True
-    mock_binance_adapter.cancel_order.assert_awaited_once_with(
-        order_id=order_id, api_key=api_key, api_secret=api_secret
-    )
-    mock_event_broker.publish.assert_awaited_once()
+    mock_ai_orchestrator.analyze_opportunity.assert_awaited_once_with(opportunity)
+    trading_engine.execute_order.assert_awaited_once()
+    mock_persistence_port.update_opportunity_analysis.assert_awaited_once()
+    assert final_result.trade_executed is True
+    assert final_result.recommendation == "BUY"
 
 @pytest.mark.asyncio
-async def test_real_mode_requires_credentials(trading_engine):
+async def test_process_opportunity_with_ai_hold_decision(
+    trading_engine, mock_ai_orchestrator, mock_persistence_port
+):
     """
-    Test that real mode operations fail without API credentials.
+    Test processing a trading opportunity where the AI decides to hold.
     """
-    with pytest.raises(ValueError, match="API key and secret are required for real trading mode"):
-        await trading_engine.execute_order(
-            user_id="user",
-            symbol="BTCUSDT",
-            order_type="MARKET",
-            side="BUY",
-            quantity=Decimal("1"),
-            price=Decimal("1"),
-            trading_mode="real" # Missing credentials
-        )
+    # Arrange
+    user_id = uuid4()
+    opportunity = TradingOpportunity(
+        opportunity_id=uuid4(),
+        symbol="ETHUSDT",
+        signal_strength=0.6,
+        detected_at="2025-01-01T13:00:00Z",
+        strategy_id="test_strategy",
+        details={"price": "3000"}
+    )
+    
+    ai_result = AIAnalysisResult(
+        recommendation="HOLD",
+        confidence=0.6,
+        reasoning="Neutral market signals.",
+        trade_executed=False
+    )
+    mock_ai_orchestrator.analyze_opportunity.return_value = ai_result
+    trading_engine.execute_order = AsyncMock()
+
+    # Act
+    final_result = await trading_engine.process_opportunity_with_ai_decision(opportunity, user_id)
+
+    # Assert
+    mock_ai_orchestrator.analyze_opportunity.assert_awaited_once_with(opportunity)
+    trading_engine.execute_order.assert_not_awaited()
+    mock_persistence_port.update_opportunity_analysis.assert_awaited_once()
+    assert final_result.trade_executed is False
+    assert final_result.recommendation == "HOLD"

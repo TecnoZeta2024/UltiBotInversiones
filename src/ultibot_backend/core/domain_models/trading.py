@@ -4,10 +4,10 @@ Estos modelos son agnósticos a la infraestructura y no deben importar framework
 Utilizan Pydantic para la validación y serialización de datos.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
-from typing import Optional, List, Any, Dict, Union
+from typing import Optional, List, Any, Dict
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, ConfigDict
@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field, ConfigDict
 
 class TradingMode(str, Enum):
     """Define los modos de operación de trading."""
-    SIMULATED = "SIMULATED"
+    PAPER = "PAPER"
     REAL = "REAL"
 
 class OrderSide(str, Enum):
@@ -34,11 +34,13 @@ class OrderType(str, Enum):
 class OrderStatus(str, Enum):
     """Estado de una orden."""
     PENDING = "PENDING"
+    OPEN = "OPEN"
     FILLED = "FILLED"
     PARTIALLY_FILLED = "PARTIALLY_FILLED"
     CANCELED = "CANCELED"
     REJECTED = "REJECTED"
     EXPIRED = "EXPIRED"
+    ERROR = "ERROR"
 
 class SignalStrength(Enum):
     """Representa la fuerza o confianza de una señal de trading."""
@@ -52,20 +54,24 @@ class TickerData(BaseModel):
     """Datos de un ticker de mercado."""
     symbol: str
     price: Decimal
-    volume_24h: Decimal
-    price_change_24h: Decimal
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-    model_config = ConfigDict(frozen=True)
+    volume: Decimal
+    price_change_24h: Optional[Decimal] = None
+    price_change_percent_24h: Optional[Decimal] = None
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    model_config = ConfigDict(frozen=True, from_attributes=True)
 
 class KlineData(BaseModel):
     """Datos de una vela (kline)."""
-    timestamp: datetime
-    open: Decimal
-    high: Decimal
-    low: Decimal
-    close: Decimal
+    open_time: datetime
+    open_price: Decimal
+    high_price: Decimal
+    low_price: Decimal
+    close_price: Decimal
     volume: Decimal
-    model_config = ConfigDict(frozen=True)
+    close_time: datetime
+    symbol: str
+    interval: str
+    model_config = ConfigDict(frozen=True, from_attributes=True)
 
 class MarketSnapshot(BaseModel):
     """Snapshot de datos de mercado en un momento dado."""
@@ -76,7 +82,7 @@ class MarketSnapshot(BaseModel):
     timeframe: str
     indicators: Dict[str, Any] = Field(default_factory=dict)
     volume_data: Dict[str, Any] = Field(default_factory=dict)
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, from_attributes=True)
 
 # --- Modelos de Órdenes y Trades ---
 
@@ -89,23 +95,32 @@ class Order(BaseModel):
     quantity: Decimal
     price: Optional[Decimal] = None
     status: OrderStatus = OrderStatus.PENDING
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
-    model_config = ConfigDict(frozen=True)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    model_config = ConfigDict(frozen=True, from_attributes=True)
 
 class Trade(BaseModel):
-    """Representación de un trade ejecutado."""
+    """
+    Representación canónica de un trade ejecutado.
+    Este es el modelo de dominio central para una operación de trading.
+    """
     id: UUID = Field(default_factory=uuid4)
+    user_id: UUID
     symbol: str
     side: OrderSide
     quantity: Decimal
     price: Decimal
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    status: OrderStatus
+    mode: TradingMode
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     strategy_id: Optional[str] = None
     order_type: OrderType
     fee: Optional[Decimal] = None
     fee_asset: Optional[str] = None
-    model_config = ConfigDict(frozen=True)
+    pnl_usd: Optional[Decimal] = None
+    pnl_percentage: Optional[Decimal] = None
+    closed_at: Optional[datetime] = None
+    model_config = ConfigDict(frozen=True, from_attributes=True)
 
 # --- Modelos de Estrategias y Señales ---
 
@@ -115,7 +130,7 @@ class BaseStrategyParameters(BaseModel):
     description: Optional[str] = Field(None, description="Descripción de la configuración de la estrategia.")
     position_size_pct: float = Field(0.01, ge=0, le=1, description="Porcentaje del capital a arriesgar por operación.")
     risk_reward_ratio: float = Field(2.0, gt=0, description="Ratio riesgo/recompensa para take profit.")
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, from_attributes=True)
 
 class MACDRSIParameters(BaseStrategyParameters):
     """Parámetros para MACD RSI Trend Rider."""
@@ -167,15 +182,6 @@ class VWAPParameters(BaseStrategyParameters):
     trend_confirmation_period: int = 10
     min_price_deviation: float = 0.002
 
-# Alias táctico para resolver ImportError por refactorización incompleta
-# StrategyParameters = Union[
-#     MACDRSIParameters,
-#     BollingerSqueezeParameters,
-#     TriangularArbitrageParameters,
-#     SuperTrendParameters,
-#     VWAPParameters
-# ]
-
 class TradingSignal(BaseModel):
     """Señal de trading generada por una estrategia."""
     signal_id: UUID = Field(default_factory=uuid4)
@@ -189,8 +195,8 @@ class TradingSignal(BaseModel):
     take_profit: Optional[Decimal] = None
     strength: SignalStrength = SignalStrength.MODERATE
     reasoning: Optional[str] = None
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-    model_config = ConfigDict(frozen=True)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    model_config = ConfigDict(frozen=True, from_attributes=True)
 
 class AnalysisResult(BaseModel):
     """Resultado del análisis de una estrategia."""
@@ -198,8 +204,8 @@ class AnalysisResult(BaseModel):
     indicators: Dict[str, Any]
     metadata: Dict[str, Any] = Field(default_factory=dict)
     signal: Optional[TradingSignal] = None
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-    model_config = ConfigDict(frozen=True)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    model_config = ConfigDict(frozen=True, from_attributes=True)
 
 # --- Modelos de Portfolio y Activos ---
 
@@ -211,7 +217,7 @@ class Asset(BaseModel):
     current_price: Optional[Decimal] = None
     total_value_usd: Optional[Decimal] = None
     unrealized_pnl: Optional[Decimal] = None
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, from_attributes=True)
 
 class Portfolio(BaseModel):
     """Representa el portafolio de un usuario."""
@@ -221,8 +227,8 @@ class Portfolio(BaseModel):
     total_assets_value_usd: Decimal = Decimal('0.0')
     total_portfolio_value_usd: Decimal = Decimal('0.0')
     assets: List[Asset] = Field(default_factory=list)
-    last_updated: datetime = Field(default_factory=datetime.utcnow)
-    model_config = ConfigDict(frozen=True)
+    last_updated: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    model_config = ConfigDict(frozen=True, from_attributes=True)
 
 # --- Modelos de Resultados y Oportunidades ---
 
@@ -233,21 +239,21 @@ class TradeResult(BaseModel):
     message: Optional[str] = None
     executed_price: Optional[Decimal] = None
     executed_quantity: Optional[Decimal] = None
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, from_attributes=True)
 
 class CommandResult(BaseModel):
     """Resultado de la ejecución de un comando."""
     success: bool
     message: Optional[str] = None
     data: Optional[Any] = None
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, from_attributes=True)
 
 class ScanResult(BaseModel):
     """Resultado de un escaneo de mercado."""
     symbol: str
     score: float
     preset: str
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, from_attributes=True)
 
 class TradingOpportunity(BaseModel):
     """Representa una oportunidad de trading detectada."""
@@ -255,8 +261,8 @@ class TradingOpportunity(BaseModel):
     opportunity_type: str
     confidence: float = Field(ge=0, le=1)
     details: Dict[str, Any]
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-    model_config = ConfigDict(frozen=True)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    model_config = ConfigDict(frozen=True, from_attributes=True)
 
 class TradingDecision(BaseModel):
     """Representa una decisión de trading tomada por un servicio."""
@@ -269,8 +275,8 @@ class TradingDecision(BaseModel):
     confidence: float = Field(ge=0, le=1)
     rationale: str
     source: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-    model_config = ConfigDict(frozen=True)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    model_config = ConfigDict(frozen=True, from_attributes=True)
 
 # Alias táctico para resolver ImportError por refactorización incompleta
 Opportunity = TradingOpportunity

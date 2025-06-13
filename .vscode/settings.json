@@ -1,0 +1,148 @@
+{
+    "python.testing.pytestEnabled": true,
+    "python.testing.pytestArgs": ["-v", "--tb=short"],
+    "python.testing.unittestEnabled": false,
+    "python.testing.autoTestDiscoverOnSaveEnabled": true,
+    "python.defaultInterpreterPath": "poetry",
+    "python.poetryPath": "poetry",
+    "python.terminal.activateEnvironment": true,
+    "python.terminal.activateEnvInCurrentTerminal": true,
+    "python.linting.enabled": true,
+    "python.linting.ruffEnabled": true,
+    "python.formatting.provider": "black",
+    "python.analysis.extraPaths": ["./src"],
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.diagnosticMode": "workspace",
+    "python.analysis.typeCheckingMode": "strict",
+    "python.envFile": "${workspaceFolder}/.env",
+    "files.associations": {
+        "*.md": "markdown",
+        "*.toml": "toml",
+        "*.ini": "ini"
+    },
+    "files.exclude": {
+        "**/__pycache__": true,
+        "**/*.pyc": true,
+        "**/.pytest_cache": true,
+        "**/htmlcov": true,
+        "**/.coverage": true,
+        "**/.mypy_cache": true,
+        "**/.ruff_cache": true
+    },
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit",
+        "source.fixAll.ruff": "explicit"
+    },
+    "editor.rulers": [100],
+    
+    // CONFIGURACIONES CRÍTICAS PARA SHELL INTEGRATION
+    "terminal.integrated.shellIntegration.enabled": true,
+    "terminal.integrated.shellIntegration.decorationsEnabled": "both",
+    "terminal.integrated.shellIntegration.history": 100,
+    "terminal.integrated.enablePersistentSessions": true,
+    "terminal.integrated.persistentSessionReviveProcess": "onExitAndWindowClose",
+    
+    // CONFIGURACIONES DE TERMINAL PARA WINDOWS
+    "terminal.integrated.defaultProfile.windows": "PowerShell",
+    "terminal.integrated.profiles.windows": {
+        "PowerShell": {
+            "source": "PowerShell",
+            "args": ["-ExecutionPolicy", "Bypass", "-NoLogo"],
+            "icon": "terminal-powershell",
+            "env": {
+                "TERM": "xterm-256color"
+            }
+        },
+        "Poetry Shell": {
+            "path": "powershell.exe",
+            "args": ["-ExecutionPolicy", "Bypass", "-NoLogo", "-Command", "poetry shell"],
+            "icon": "terminal-powershell",
+            "env": {
+                "TERM": "xterm-256color"
+            }
+        },
+        "Command Prompt": {
+            "path": "cmd.exe",
+            "args": ["/k"],
+            "icon": "terminal-cmd"
+        },
+        "Git Bash": {
+            "path": "C:\\Program Files\\Git\\bin\\bash.exe",
+            "args": ["--login"],
+            "icon": "terminal-bash"
+        }
+    },
+    
+    // CONFIGURACIONES ESPECÍFICAS PARA CLINE SHELL INTEGRATION
+    "terminal.integrated.commandsToSkipShell": [],
+    "terminal.integrated.allowChords": false,
+    "terminal.integrated.allowMnemonics": false,
+    "terminal.integrated.altClickMovesCursor": false,
+    "terminal.integrated.macOptionIsMeta": false,
+    "terminal.integrated.rightClickBehavior": "default",
+    "terminal.integrated.copyOnSelection": false,
+    "terminal.integrated.cursorBlinking": true,
+    "terminal.integrated.cursorStyle": "block",
+    "terminal.integrated.drawBoldTextInBrightColors": true,
+    "terminal.integrated.fastScrollSensitivity": 5,
+    "terminal.integrated.fontSize": 12,
+    "terminal.integrated.letterSpacing": 0,
+    "terminal.integrated.lineHeight": 1.0,
+    "terminal.integrated.minimumContrastRatio": 4.5,
+    "terminal.integrated.mouseWheelScrollSensitivity": 1,
+    "terminal.integrated.scrollback": 1000,
+    "terminal.integrated.smoothScrolling": false,
+    "terminal.integrated.splitCwd": "workspaceRoot",
+    "terminal.integrated.tabs.enabled": true,
+    "terminal.integrated.tabs.hideCondition": "never",
+    "terminal.integrated.tabs.location": "right",
+    "terminal.integrated.tabs.showActiveTerminal": "singleTerminalOrNarrow",
+    "terminal.integrated.tabs.showActions": "singleTerminalOrNarrow",
+    
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/bower_components": true,
+        "**/*.code-search": true,
+        "**/__pycache__": true,
+        "**/.pytest_cache": true,
+        "**/htmlcov": true,
+        "**/.coverage": true,
+        "**/.mypy_cache": true,
+        "**/.ruff_cache": true,
+        "**/logs": true
+    },
+    "workbench.colorCustomizations": {
+        "terminal.background": "#1e1e1e",
+        "terminal.foreground": "#d4d4d4",
+        "terminalCursor.background": "#d4d4d4",
+        "terminalCursor.foreground": "#d4d4d4"
+    },
+    "workbench.settings.editor": "json",
+    "markdown.preview.breaks": true,
+    "markdown.preview.linkify": true,
+    "git.ignoreLimitWarning": true,
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.python",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit",
+            "source.fixAll.ruff": "explicit"
+        }
+    },
+    "[markdown]": {
+        "editor.wordWrap": "on",
+        "editor.quickSuggestions": {
+            "comments": "off",
+            "strings": "off",
+            "other": "off"
+        }
+    },
+    "[toml]": {
+        "editor.defaultFormatter": "tamasfe.even-better-toml"
+    },
+    "ruff.args": ["--line-length=100"],
+    "black-formatter.args": ["--line-length=100"],
+    "autoDocstring.docstringFormat": "google",
+    "autoDocstring.generateDocstringOnEnter": true
+}

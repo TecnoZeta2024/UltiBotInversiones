@@ -4,48 +4,31 @@ from uuid import UUID
 from typing import Optional, Dict, Any, List
 
 from shared.data_types import ServiceName, Notification, Trade, Opportunity, UserConfiguration
-from ultibot_backend.adapters.telegram_adapter import TelegramAdapter
-from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from ultibot_backend.services.credential_service import CredentialService
-from ultibot_backend.core.exceptions import CredentialError, NotificationError, TelegramNotificationError, ExternalAPIError
-from ultibot_backend.app_config import settings
+from ..core.ports import INotificationPort, IPersistencePort, ICredentialService
+from ..core.exceptions import CredentialError, NotificationError, TelegramNotificationError, ExternalAPIError
+from ..app_config import AppSettings
+from datetime import datetime, timezone
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class NotificationService:
-    def __init__(self, credential_service: CredentialService, persistence_service: SupabasePersistenceService):
+    def __init__(self, 
+                 credential_service: ICredentialService, 
+                 persistence_port: IPersistencePort,
+                 notification_port: INotificationPort, # Usar la interfaz
+                 app_settings: AppSettings
+                 ):
         self.credential_service = credential_service
-        self.persistence_service = persistence_service
-        self._telegram_adapter: Optional[TelegramAdapter] = None
-        self._user_id: UUID = settings.FIXED_USER_ID
-
-    async def _get_telegram_adapter(self) -> Optional[TelegramAdapter]:
-        telegram_credential = await self.credential_service.get_credential(
-            service_name=ServiceName.TELEGRAM_BOT,
-            credential_label="default_telegram_bot"
-        )
-        if not telegram_credential:
-            logger.warning("No se encontraron credenciales de Telegram.")
-            raise CredentialError("No se encontraron credenciales de Telegram.", code="TELEGRAM_CREDENTIAL_NOT_FOUND")
-        
-        # Asumimos que la credencial devuelta tiene los datos desencriptados
-        bot_token = telegram_credential.encrypted_api_key 
-        if not bot_token:
-            logger.error("Token de bot de Telegram no encontrado en las credenciales.")
-            return None
-        if self._telegram_adapter and self._telegram_adapter.bot_token == bot_token:
-            return self._telegram_adapter
-        if self._telegram_adapter:
-            await self._telegram_adapter.close()
-        self._telegram_adapter = TelegramAdapter(bot_token=bot_token)
-        return self._telegram_adapter
+        self.persistence_port = persistence_port
+        self.notification_port = notification_port
+        self.app_settings = app_settings
+        self._user_id: UUID = UUID(app_settings.fixed_user_id)
 
     async def save_notification(self, notification: Notification) -> Notification:
         try:
-            # Aseguramos que la notificación tenga el user_id correcto
             notification.userId = self._user_id
-            saved_notification = await self.persistence_service.save_notification(notification)
+            saved_notification = await self.persistence_port.save_notification(notification)
             logger.info(f"Notificación {notification.id} guardada en la base de datos.")
             return saved_notification
         except Exception as e:
@@ -54,7 +37,7 @@ class NotificationService:
 
     async def get_notification_history(self, limit: int = 50) -> List[Notification]:
         try:
-            history = await self.persistence_service.get_notification_history(limit)
+            history = await self.persistence_port.get_notification_history(limit)
             logger.info("Historial de notificaciones recuperado.")
             return history
         except Exception as e:
@@ -63,7 +46,7 @@ class NotificationService:
 
     async def mark_notification_as_read(self, notification_id: UUID) -> Optional[Notification]:
         try:
-            updated_notification = await self.persistence_service.mark_notification_as_read(notification_id)
+            updated_notification = await self.persistence_port.mark_notification_as_read(notification_id)
             if updated_notification:
                 logger.info(f"Notificación {notification_id} marcada como leída.")
             else:
@@ -75,55 +58,17 @@ class NotificationService:
 
     async def send_test_telegram_notification(self) -> bool:
         logger.info("Intentando enviar mensaje de prueba de Telegram...")
-        telegram_credential = await self.credential_service.get_credential(
-            service_name=ServiceName.TELEGRAM_BOT,
-            credential_label="default_telegram_bot"
-        )
-        if not telegram_credential:
-            logger.warning("No se encontraron credenciales de Telegram. No se puede enviar mensaje de prueba.")
-            raise CredentialError("No se encontraron credenciales de Telegram.", code="TELEGRAM_CREDENTIAL_NOT_FOUND")
-        
-        chat_id = None
-        # El 'other_details' viene desencriptado desde get_credential
-        if telegram_credential.encrypted_other_details:
-            try:
-                other_details = json.loads(telegram_credential.encrypted_other_details)
-                chat_id = other_details.get("chat_id")
-            except (json.JSONDecodeError, TypeError):
-                logger.error("Error al decodificar encrypted_other_details. No se pudo obtener el chat_id.", exc_info=True)
-                raise CredentialError("Error al decodificar chat_id de Telegram.", code="TELEGRAM_CHAT_ID_DECODE_ERROR")
-
-        if not chat_id:
-            logger.error("Chat ID de Telegram no encontrado en las credenciales. No se puede enviar mensaje de prueba.")
-            raise CredentialError("Chat ID de Telegram no encontrado.", code="TELEGRAM_CHAT_ID_MISSING")
-
-        telegram_adapter = await self._get_telegram_adapter()
-        if not telegram_adapter:
-            logger.error("No se pudo inicializar TelegramAdapter.")
-            raise TelegramNotificationError("No se pudo inicializar TelegramAdapter.", code="TELEGRAM_ADAPTER_INIT_FAILED")
-
-        message = "¡Hola! UltiBotInversiones se ha conectado correctamente a este chat y está listo para enviar notificaciones."
         try:
-            await telegram_adapter.send_message(chat_id, message)
-            await self.credential_service.update_credential(
-                credential_id=telegram_credential.id,
-                status="active"
-            )
-            logger.info("Mensaje de prueba de Telegram enviado con éxito.")
+            # La lógica de obtener credenciales y enviar se delega al puerto de notificación
+            message = "¡Hola! UltiBotInversiones se ha conectado correctamente a este chat y está listo para enviar notificaciones."
+            await self.notification_port.send_alert(message, "info")
+            logger.info("Mensaje de prueba de Telegram enviado con éxito a través del puerto.")
             return True
-        except ExternalAPIError as e:
-            logger.error(f"Fallo de API externa al enviar mensaje de prueba de Telegram: {str(e)}", exc_info=True)
-            raise TelegramNotificationError(
-                message=f"Fallo al enviar mensaje de prueba de Telegram: {str(e)}",
-                code="TELEGRAM_SEND_FAILED",
-                original_exception=e,
-                telegram_response=e.response_data
-            )
         except Exception as e:
-            logger.error(f"Fallo inesperado al enviar mensaje de prueba de Telegram: {e}", exc_info=True)
+            logger.error(f"Fallo al enviar mensaje de prueba de Telegram a través del puerto: {e}", exc_info=True)
             raise TelegramNotificationError(
-                message=f"Fallo inesperado al enviar mensaje de prueba de Telegram: {e}",
-                code="UNEXPECTED_TELEGRAM_ERROR",
+                message=f"Fallo al enviar mensaje de prueba de Telegram: {e}",
+                code="TELEGRAM_SEND_FAILED",
                 original_exception=e
             )
 
@@ -165,42 +110,14 @@ class NotificationService:
                 logger.error(f"No se pudo guardar la notificación UI en la DB para OID {opportunity_id}: {e}")
 
         if send_telegram_notification and user_config.enableTelegramNotifications:
-            chat_id = None
             try:
-                telegram_credential = await self.credential_service.get_credential(
-                    service_name=ServiceName.TELEGRAM_BOT, credential_label="default_telegram_bot"
-                )
-                if not telegram_credential or not telegram_credential.encrypted_other_details:
-                     raise CredentialError("Credenciales de Telegram o 'other_details' no encontrados.", code="TELEGRAM_CREDENTIAL_INCOMPLETE")
-                
-                other_details = json.loads(telegram_credential.encrypted_other_details)
-                chat_id = other_details.get("chat_id")
-
-                if not chat_id:
-                    raise CredentialError("chat_id no encontrado en las credenciales de Telegram.", code="TELEGRAM_CHAT_ID_MISSING")
-
-                telegram_adapter = await self._get_telegram_adapter()
-                if not telegram_adapter:
-                    raise TelegramNotificationError("No se pudo inicializar TelegramAdapter.", code="TELEGRAM_ADAPTER_INIT_FAILED")
-
-                telegram_notification = Notification(
-                    userId=self._user_id, eventType=event_type, channel="telegram",
-                    title=title, message=message, dataPayload=effective_payload
-                )
-                await self.save_notification(telegram_notification)
-
                 full_message = f"<b>{title}</b>\n\n{message}"
                 if opportunity_id:
                     full_message += f"\n\nOportunidad ID: {opportunity_id}"
                 
-                await telegram_adapter.send_message(chat_id, full_message)
+                await self.notification_port.send_alert(full_message, "high")
                 logger.info(f"Notificación Telegram para evento '{event_type}' (OID: {opportunity_id}) enviada.")
                 sent_to_at_least_one_channel = True
-
-            except (CredentialError, TelegramNotificationError, NotificationError) as e:
-                logger.error(f"Error al procesar notificación Telegram para OID {opportunity_id}: {e}")
-            except (json.JSONDecodeError, TypeError):
-                logger.error("Error al decodificar 'other_details' de credencial Telegram.")
             except Exception as e:
                 logger.error(f"Error inesperado al enviar notificación Telegram para OID {opportunity_id}: {e}", exc_info=True)
 
@@ -412,5 +329,7 @@ class NotificationService:
             logger.error(f"Error al procesar notificación de estado de orden real ({status_level}): {e}", exc_info=True)
 
     async def close(self):
-        if self._telegram_adapter:
-            await self._telegram_adapter.close()
+        # La responsabilidad de cerrar la conexión ahora recae en el adaptador
+        # que se inyecta a través del puerto.
+        if hasattr(self.notification_port, 'close'):
+            await self.notification_port.close()

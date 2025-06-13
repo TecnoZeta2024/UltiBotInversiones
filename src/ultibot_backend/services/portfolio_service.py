@@ -1,15 +1,18 @@
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from uuid import UUID
-from datetime import datetime
-from fastapi import Depends
+from datetime import datetime, timezone
+from decimal import Decimal
 
 # Importar modelos de dominio y tipos de datos compartidos
-from shared.data_types import PortfolioSnapshot, PortfolioSummary, PortfolioAsset, AssetBalance, Trade
+from ultibot_backend.core.domain_models.portfolio import Portfolio, PortfolioSnapshot, Position, UserId
+from ultibot_backend.core.domain_models.trading import Trade, TradingMode
+from shared.data_types import PortfolioSummary, PortfolioAsset, AssetBalance
 from ultibot_backend.core.domain_models.user_configuration_models import UserConfiguration, PaperTradingAsset
 from ultibot_backend.services.market_data_service import MarketDataService
 from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 from ultibot_backend.core.exceptions import UltiBotError, ConfigurationError, ExternalAPIError, PortfolioError
+from ultibot_backend.app_config import AppSettings # Importar AppSettings
 
 logger = logging.getLogger(__name__)
 
@@ -19,11 +22,13 @@ class PortfolioService:
     """
     def __init__(self, 
                  market_data_service: MarketDataService, 
-                 persistence_service: SupabasePersistenceService
+                 persistence_service: SupabasePersistenceService,
+                 app_settings: AppSettings # Añadir app_settings como dependencia
                  ):
         self.market_data_service = market_data_service
         self.persistence_service = persistence_service
-        self.paper_trading_balance: float = 0.0
+        self.app_settings = app_settings # Guardar app_settings
+        self.paper_trading_balance: Decimal = Decimal("0.0")
         self.paper_trading_assets: Dict[str, PortfolioAsset] = {} # Símbolo -> PortfolioAsset
         self.user_id: Optional[UUID] = None
 
@@ -66,18 +71,10 @@ class PortfolioService:
         self.paper_trading_assets = {}
         try:
             config_data = await self.persistence_service.get_user_configuration(user_id)
-            if config_data:
-                if 'id' in config_data and isinstance(config_data['id'], UUID):
-                    config_data['id'] = str(config_data['id'])
-                if 'user_id' in config_data and isinstance(config_data['user_id'], UUID):
-                    config_data['user_id'] = str(config_data['user_id'])
-                
-                user_config = UserConfiguration(**config_data)
-            else:
-                user_config = None
+            user_config = UserConfiguration(**config_data) if config_data else None
             
             if user_config:
-                self.paper_trading_balance = user_config.default_paper_trading_capital or 10000.0
+                self.paper_trading_balance = Decimal(str(user_config.default_paper_trading_capital or 10000.0))
                 if user_config.paper_trading_assets:
                     for asset_data in user_config.paper_trading_assets:
                         self.paper_trading_assets[asset_data.asset] = PortfolioAsset(
@@ -91,33 +88,65 @@ class PortfolioService:
                         )
                     logger.info(f"{len(self.paper_trading_assets)} activos de paper trading cargados para {user_id}.")
             else:
-                self.paper_trading_balance = 10000.0
+                self.paper_trading_balance = Decimal("10000.0")
                 logger.info(f"No se encontró configuración para {user_id}. Usando valores por defecto.")
 
             logger.info(f"Portafolio de paper trading inicializado para {user_id} con capital: {self.paper_trading_balance}")
         except Exception as e:
             logger.critical(f"Error inesperado al inicializar el portafolio para {user_id}: {e}", exc_info=True)
-            self.paper_trading_balance = 10000.0
+            self.paper_trading_balance = Decimal("10000.0")
             raise UltiBotError(f"Error inesperado al inicializar el portafolio: {e}")
 
-    async def get_portfolio_snapshot(self, user_id: UUID) -> PortfolioSnapshot:
+    async def update_portfolio_snapshot(self, user_id: UUID, trading_mode: str) -> Portfolio:
+        """
+        Actualiza y retorna el portafolio para un usuario y modo de trading específicos.
+        """
+        logger.info(f"Actualizando portafolio para {user_id} en modo {trading_mode}.")
+        
+        summary = await self.get_portfolio_summary(user_id, trading_mode)
+        
+        positions = {}
+        for asset in summary.assets:
+            positions[asset.symbol] = Position(
+                asset=asset.symbol,
+                quantity=Decimal(str(asset.quantity)),
+                average_price=Decimal(str(asset.entry_price or "0.0")),
+                current_price=Decimal(str(asset.current_price or "0.0")),
+                market_value=Decimal(str(asset.current_value_usd or "0.0")),
+                unrealized_pnl=Decimal(str(asset.unrealized_pnl_usd or "0.0"))
+            )
+
+        return Portfolio(
+            user_id=UserId(user_id),
+            trading_mode=TradingMode(trading_mode),
+            positions=positions,
+            cash_balance=Decimal(str(summary.available_balance_usdt)),
+            total_value_usd=Decimal(str(summary.total_portfolio_value_usd)),
+            updated_at=datetime.now(timezone.utc)
+        )
+
+    async def get_portfolio_snapshot(self, user_id: UUID, trading_mode_str: str) -> PortfolioSnapshot:
+        """
+        Obtiene un snapshot completo del portafolio filtrado por modo de trading.
+        """
         if self.user_id is None or self.user_id != user_id:
             await self.initialize_portfolio(user_id)
 
-        real_trading_summary = await self._get_real_trading_summary(user_id)
-        paper_trading_summary = await self._get_paper_trading_summary()
+        portfolio = await self.update_portfolio_snapshot(user_id, trading_mode_str)
 
         return PortfolioSnapshot(
-            paper_trading=paper_trading_summary,
-            real_trading=real_trading_summary,
-            last_updated=datetime.utcnow()
+            portfolio_id=portfolio.id,
+            total_value_usd=portfolio.total_value_usd,
+            positions=list(portfolio.positions.values()),
+            cash_balance=portfolio.cash_balance,
+            timestamp=datetime.now(timezone.utc)
         )
 
     async def _get_real_trading_summary(self, user_id: UUID) -> PortfolioSummary:
         real_assets: List[PortfolioAsset] = []
-        available_balance_usdt = 0.0
-        total_assets_value_usd = 0.0
-        market_data = {}
+        available_balance_usdt = Decimal("0.0")
+        total_assets_value_usd = Decimal("0.0")
+        market_data: Dict[str, Any] = {}
 
         try:
             binance_balances: List[AssetBalance] = await self.market_data_service.get_binance_spot_balances()
@@ -135,7 +164,7 @@ class PortfolioService:
                     price_info = market_data.get(symbol_pair)
                     
                     if price_info and "lastPrice" in price_info:
-                        current_price = price_info["lastPrice"]
+                        current_price = Decimal(price_info["lastPrice"])
                         current_value = balance.total * current_price
                         total_assets_value_usd += current_value
                         real_assets.append(PortfolioAsset(symbol=balance.asset, quantity=balance.total, entry_price=None, current_price=current_price, current_value_usd=current_value, unrealized_pnl_usd=None, unrealized_pnl_percentage=None))
@@ -144,9 +173,9 @@ class PortfolioService:
                         real_assets.append(PortfolioAsset(symbol=balance.asset, quantity=balance.total, entry_price=None, current_price=None, current_value_usd=None, unrealized_pnl_usd=None, unrealized_pnl_percentage=None))
             
             return PortfolioSummary(
-                available_balance_usdt=available_balance_usdt,
-                total_assets_value_usd=total_assets_value_usd,
-                total_portfolio_value_usd=available_balance_usdt + total_assets_value_usd,
+                available_balance_usdt=float(available_balance_usdt),
+                total_assets_value_usd=float(total_assets_value_usd),
+                total_portfolio_value_usd=float(available_balance_usdt + total_assets_value_usd),
                 assets=real_assets,
                 error_message=None
             )
@@ -158,19 +187,18 @@ class PortfolioService:
             return PortfolioSummary(available_balance_usdt=0.0, total_assets_value_usd=0.0, total_portfolio_value_usd=0.0, assets=[], error_message="Error inesperado.")
 
     async def _get_paper_trading_summary(self) -> PortfolioSummary:
-        total_assets_value_usd = 0.0
+        total_assets_value_usd = Decimal("0.0")
         paper_assets: List[PortfolioAsset] = []
 
         if self.paper_trading_assets:
             assets_to_value = [f"{asset.symbol}USDT" for asset in self.paper_trading_assets.values()]
             if assets_to_value:
-                effective_user_id = self.user_id or UUID("00000000-0000-0000-0000-000000000001")
-                market_data = await self.market_data_service.get_market_data_rest(assets_to_value)
+                market_data: Dict[str, Any] = await self.market_data_service.get_market_data_rest(assets_to_value)
                 for symbol, asset in self.paper_trading_assets.items():
                     symbol_pair = f"{symbol}USDT"
                     price_info = market_data.get(symbol_pair)
                     if price_info and "lastPrice" in price_info:
-                        current_price = price_info["lastPrice"]
+                        current_price = Decimal(price_info["lastPrice"])
                         current_value = asset.quantity * current_price
                         total_assets_value_usd += current_value
                         asset.current_price = current_price
@@ -188,9 +216,9 @@ class PortfolioService:
                     paper_assets.append(asset)
 
         return PortfolioSummary(
-            available_balance_usdt=self.paper_trading_balance,
-            total_assets_value_usd=total_assets_value_usd,
-            total_portfolio_value_usd=self.paper_trading_balance + total_assets_value_usd,
+            available_balance_usdt=float(self.paper_trading_balance),
+            total_assets_value_usd=float(total_assets_value_usd),
+            total_portfolio_value_usd=float(self.paper_trading_balance + total_assets_value_usd),
             assets=paper_assets,
             error_message=None
         )
@@ -199,20 +227,13 @@ class PortfolioService:
         if self.user_id is None or self.user_id != user_id:
             await self.initialize_portfolio(user_id)
 
-        self.paper_trading_balance += amount
+        self.paper_trading_balance += Decimal(str(amount))
         try:
             config_data = await self.persistence_service.get_user_configuration(user_id)
-            if config_data:
-                if 'id' in config_data and isinstance(config_data['id'], UUID):
-                    config_data['id'] = str(config_data['id'])
-                if 'user_id' in config_data and isinstance(config_data['user_id'], UUID):
-                    config_data['user_id'] = str(config_data['user_id'])
-                user_config = UserConfiguration(**config_data)
-            else:
-                user_config = None
+            user_config = UserConfiguration(**config_data) if config_data else None
 
             if user_config:
-                user_config.default_paper_trading_capital = self.paper_trading_balance
+                user_config.default_paper_trading_capital = float(self.paper_trading_balance)
                 await self.persistence_service.upsert_user_configuration(user_config.model_dump(mode='json', by_alias=True, exclude_none=True))
             else:
                 raise ConfigurationError(f"No se encontró config para {user_id}.")
@@ -220,11 +241,15 @@ class PortfolioService:
             raise UltiBotError(f"Error al actualizar saldo de paper trading: {e}")
 
     async def update_paper_portfolio_after_entry(self, trade: Trade):
-        user_id = trade.user_id
+        if not trade.entryOrder:
+            logger.error(f"Trade {trade.id} no tiene entryOrder, no se puede actualizar portafolio.")
+            return
+            
+        user_id = trade.portfolio_id
         symbol = trade.symbol
-        quantity = trade.entryOrder.executedQuantity
-        executed_price = trade.entryOrder.executedPrice
-        side = trade.side
+        quantity = trade.entryOrder.executedQty or trade.quantity
+        executed_price = trade.entryOrder.executedPrice or trade.price
+        side = trade.trade_type
 
         if self.user_id is None or self.user_id != user_id:
             await self.initialize_portfolio(user_id)
@@ -260,26 +285,30 @@ class PortfolioService:
         logger.info(f"Portafolio de paper (entrada) actualizado para {user_id}. Balance: {self.paper_trading_balance}")
 
     async def update_paper_portfolio_after_exit(self, trade: Trade):
-        user_id = trade.user_id
+        if not trade.entryOrder:
+            logger.error(f"Trade {trade.id} no tiene entryOrder, no se puede actualizar portafolio.")
+            return
+
+        user_id = trade.portfolio_id
         symbol = trade.symbol
-        quantity = trade.entryOrder.executedQuantity
-        pnl_usd = trade.pnl_usd
-        side = trade.side
+        quantity = trade.entryOrder.executedQty or trade.quantity
+        pnl = trade.pnl
+        side = trade.trade_type
 
         if self.user_id is None or self.user_id != user_id:
             await self.initialize_portfolio(user_id)
 
-        if pnl_usd is not None:
-            self.paper_trading_balance += pnl_usd
+        if pnl is not None:
+            self.paper_trading_balance += pnl
 
         if symbol in self.paper_trading_assets:
             asset = self.paper_trading_assets[symbol]
-            if side == 'BUY':
+            if side == 'BUY': # Closing a short position
                 if asset.quantity <= quantity:
                     del self.paper_trading_assets[symbol]
                 else:
                     asset.quantity -= quantity
-            elif side == 'SELL':
+            elif side == 'SELL': # Closing a long position
                 if asset.quantity >= -quantity:
                      del self.paper_trading_assets[symbol]
                 else:
@@ -290,10 +319,10 @@ class PortfolioService:
         await self._persist_paper_trading_assets(user_id)
         logger.info(f"Portafolio de paper (salida) actualizado para {user_id}. Balance: {self.paper_trading_balance}")
 
-    async def get_real_usdt_balance(self, user_id: UUID) -> float:
+    async def get_real_usdt_balance(self, user_id: UUID) -> Decimal:
         try:
             binance_balances: List[AssetBalance] = await self.market_data_service.get_binance_spot_balances()
-            usdt_balance = next((b.free for b in binance_balances if b.asset == "USDT"), 0.0)
+            usdt_balance = next((b.free for b in binance_balances if b.asset == "USDT"), Decimal("0.0"))
             return usdt_balance
         except ExternalAPIError as e:
             raise PortfolioError(f"No se pudo obtener el saldo de USDT de Binance: {e}") from e
@@ -304,7 +333,7 @@ class PortfolioService:
         """
         Obtiene un snapshot completo del portafolio filtrado por modo de trading.
         """
-        return await self.get_portfolio_snapshot(user_id)
+        return await self.get_portfolio_snapshot(user_id, trading_mode)
 
     async def get_portfolio_summary(self, user_id: UUID, trading_mode: str) -> PortfolioSummary:
         """
@@ -320,7 +349,7 @@ class PortfolioService:
         else:
             raise ValueError(f"Modo de trading no válido: {trading_mode}")
 
-    async def get_available_balance(self, user_id: UUID, trading_mode: str) -> float:
+    async def get_available_balance(self, user_id: UUID, trading_mode: str) -> Decimal:
         """
         Obtiene el balance disponible para un modo de trading específico.
         """

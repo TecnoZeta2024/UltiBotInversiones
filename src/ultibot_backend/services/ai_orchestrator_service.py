@@ -23,7 +23,9 @@ from ultibot_backend.core.domain_models.ai_models import (
 
 logger = logging.getLogger(__name__)
 
-class AIOrchestratorService:
+from ultibot_backend.core.ports import IAIOrchestrator
+
+class AIOrchestratorService(IAIOrchestrator):
     """
     Orchestrates the flow of data to AI models, executes tools,
     interprets responses, and synthesizes trading recommendations.

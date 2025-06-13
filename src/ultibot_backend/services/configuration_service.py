@@ -1,15 +1,18 @@
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, TYPE_CHECKING
 from uuid import UUID
 
 from fastapi import HTTPException
 from pydantic import ValidationError
 
 from ultibot_backend.core.domain_models.user_configuration_models import UserConfiguration, RealTradingSettings
-from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from ultibot_backend.services.notification_service import NotificationService
+from ultibot_backend.core.ports import IPersistencePort, INotificationPort, IPortfolioManager, ICredentialService
 from ultibot_backend.core.exceptions import ConfigurationError, RealTradeLimitReachedError, InsufficientUSDTBalanceError
-from ultibot_backend.app_config import settings
+from ultibot_backend.app_config import AppSettings # Importar AppSettings
+from datetime import datetime, timezone # Importar timezone
+
+if TYPE_CHECKING:
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -20,21 +23,23 @@ class ConfigurationService:
 
     def __init__(
         self,
-        persistence_service: SupabasePersistenceService,
-        notification_service: NotificationService,
-        portfolio_service: Any, # Evitar importación circular
-        credential_service: Any, # Evitar importación circular
+        persistence_port: IPersistencePort,
+        notification_port: INotificationPort,
+        portfolio_service: "IPortfolioManager",
+        credential_service: "ICredentialService",
+        app_settings: AppSettings # Añadir app_settings como dependencia
     ):
-        self.persistence_service = persistence_service
-        self.notification_service = notification_service
+        self.persistence_port = persistence_port
+        self.notification_port = notification_port
         self.portfolio_service = portfolio_service
         self.credential_service = credential_service
+        self.app_settings = app_settings # Guardar app_settings
         self._user_configuration: Optional[UserConfiguration] = None
 
     async def _load_config_from_db(self, user_id: UUID) -> UserConfiguration:
         try:
-            await self.persistence_service._check_pool()
-            config_data = await self.persistence_service.get_user_configuration(user_id)
+            # La verificación del pool debe ser manejada por el adaptador
+            config_data = await self.persistence_port.get_user_configuration(user_id)
             if config_data:
                 # Convertir UUIDs a strings antes de la validación de Pydantic
                 if 'id' in config_data and isinstance(config_data['id'], UUID):
@@ -76,9 +81,8 @@ class ConfigurationService:
             raise ConfigurationError("User ID is required to save a configuration.")
 
         try:
-            await self.persistence_service._check_pool()
             config_dict = config.model_dump(mode='json', by_alias=True, exclude_none=True)
-            await self.persistence_service.upsert_user_configuration(config_dict)
+            await self.persistence_port.upsert_user_configuration(config_dict)
             logger.info(f"Configuration saved successfully for user {config.user_id}.")
             self._user_configuration = config
         except Exception as e:
@@ -87,14 +91,16 @@ class ConfigurationService:
 
     def get_default_configuration(self, user_id: UUID) -> UserConfiguration:
         return UserConfiguration(
-            user_id=str(user_id),
-            id=str(UUID(int=0)), # A default, placeholder ID
+            user_id=user_id, # Usar UUID directamente
+            id=UUID(int=0), # Usar UUID directamente
             paper_trading_active=True,
             real_trading_settings=RealTradingSettings(
                 real_trading_mode_active=False,
                 real_trades_executed_count=0,
                 max_real_trades=5
-            )
+            ),
+            createdAt=datetime.now(timezone.utc), # Añadir createdAt
+            updatedAt=datetime.now(timezone.utc) # Añadir updatedAt
         )
 
     def is_paper_trading_mode_active(self) -> bool:
@@ -117,8 +123,14 @@ class ConfigurationService:
         real_settings.real_trading_mode_active = True
         await self.save_user_configuration(config)
         logger.info(f"Real trading mode activated successfully for user {user_id}.")
-        if self.notification_service:
-            await self.notification_service.send_real_trading_mode_activated_notification(config)
+        if self.notification_port:
+            # Asumiendo que el notification_port tiene un método específico o uno genérico
+            # await self.notification_port.send_real_trading_mode_activated_notification(config)
+            await self.notification_port.send_alert(
+                message=f"Real trading mode activated for user {user_id}",
+                priority="info"
+            )
+
 
     async def deactivate_real_trading_mode(self, user_id: UUID):
         config = await self.get_user_configuration(user_id)

@@ -25,9 +25,9 @@ def test_load_credential_encryption_key_success():
     with patch.dict(os.environ, required_env_vars, clear=True):
         # Instantiate AppSettings directly to ensure it loads based on the patched environment
         current_settings = AppSettings()
-        assert current_settings.CREDENTIAL_ENCRYPTION_KEY == test_key
-        assert current_settings.SUPABASE_URL == "http://fake-supabase.url"
-        assert current_settings.LOG_LEVEL == "DEBUG"
+        assert current_settings.credential_encryption_key == test_key
+        assert current_settings.supabase_url == "http://fake-supabase.url"
+        assert current_settings.log_level == "DEBUG"
 
 def test_load_credential_encryption_key_missing_raises_validation_error():
     """
@@ -77,4 +77,4 @@ def test_log_level_default():
     }
     with patch.dict(os.environ, minimal_env_vars_for_log_test, clear=True):
         current_settings = AppSettings()
-        assert current_settings.LOG_LEVEL == "INFO" # Default value in AppSettings
+        assert current_settings.log_level == "INFO" # Default value in AppSettings

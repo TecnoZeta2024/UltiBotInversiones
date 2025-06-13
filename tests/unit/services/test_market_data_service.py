@@ -8,6 +8,7 @@ from ultibot_backend.services.credential_service import CredentialService, Crede
 from ultibot_backend.adapters.binance_adapter import BinanceAdapter, BinanceAPIError
 from shared.data_types import APICredential, ServiceName, BinanceConnectionStatus, AssetBalance
 from ultibot_backend.core.exceptions import UltiBotError
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService # Importar SupabasePersistenceService
 
 @pytest.fixture
 def mock_credential_service():
@@ -23,8 +24,13 @@ def mock_binance_adapter():
     return adapter
 
 @pytest.fixture
-def market_data_service(mock_credential_service, mock_binance_adapter):
-    return MarketDataService(mock_credential_service, mock_binance_adapter)
+def mock_persistence_service(): # Nueva fixture para mockear persistence_service
+    service = AsyncMock(spec=SupabasePersistenceService)
+    return service
+
+@pytest.fixture
+def market_data_service(mock_credential_service, mock_binance_adapter, mock_persistence_service):
+    return MarketDataService(mock_credential_service, mock_binance_adapter, mock_persistence_service)
 
 @pytest.fixture
 def sample_user_id():
