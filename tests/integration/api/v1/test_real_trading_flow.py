@@ -4,8 +4,6 @@ from uuid import uuid4, UUID
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
-from src.ultibot_backend.services.trading_engine_service import TradingEngineService
-from src.ultibot_backend.services.config_service import ConfigService
 from src.ultibot_backend.services.order_execution_service import OrderExecutionService
 from src.ultibot_backend.services.credential_service import CredentialService
 from src.ultibot_backend.services.market_data_service import MarketDataService
@@ -34,6 +32,8 @@ async def test_complete_real_trading_flow_with_capital_management():
     - Actualización de contadores y configuración
     - Persistencia de datos
     """
+    from src.ultibot_backend.services.trading_engine_service import TradingEngineService
+    from src.ultibot_backend.services.config_service import ConfigService
     # Setup de servicios simulados
     mock_config_service = AsyncMock(spec=ConfigService)
     mock_order_execution_service = AsyncMock(spec=OrderExecutionService)
@@ -285,6 +285,8 @@ async def test_complete_real_trading_flow_capital_limit_exceeded():
     """
     Test de integración que verifica el comportamiento cuando se excede el límite de capital diario.
     """
+    from src.ultibot_backend.services.trading_engine_service import TradingEngineService
+    from src.ultibot_backend.services.config_service import ConfigService
     # Setup básico similar al test anterior
     mock_config_service = AsyncMock(spec=ConfigService)
     mock_order_execution_service = AsyncMock(spec=OrderExecutionService)
@@ -403,6 +405,8 @@ async def test_complete_real_trading_tsl_monitoring_and_execution():
     
     Simula un trade real abierto y el monitoreo que detecta la ejecución del TSL.
     """
+    from src.ultibot_backend.services.trading_engine_service import TradingEngineService
+    from src.ultibot_backend.services.config_service import ConfigService
     # Setup de servicios
     mock_config_service = AsyncMock(spec=ConfigService)
     mock_order_execution_service = AsyncMock(spec=OrderExecutionService)
@@ -558,6 +562,8 @@ async def test_capital_management_daily_reset():
     """
     Test que verifica el reinicio automático del capital diario arriesgado.
     """
+    from src.ultibot_backend.services.trading_engine_service import TradingEngineService
+    from src.ultibot_backend.services.config_service import ConfigService
     mock_config_service = AsyncMock(spec=ConfigService)
     mock_order_execution_service = AsyncMock(spec=OrderExecutionService)
     mock_paper_order_execution_service = AsyncMock()

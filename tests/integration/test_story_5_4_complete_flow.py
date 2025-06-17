@@ -11,9 +11,7 @@ from unittest.mock import AsyncMock, patch, MagicMock
 from uuid import uuid4
 from datetime import datetime, timezone
 
-from src.ultibot_backend.services.trading_engine_service import TradingEngine, TradingDecision
 from src.ultibot_backend.services.strategy_service import StrategyService
-from src.ultibot_backend.services.config_service import ConfigService
 from src.ultibot_backend.services.ai_orchestrator_service import AIOrchestrator
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 
@@ -23,14 +21,6 @@ from src.ultibot_backend.core.domain_models.trading_strategy_models import (
     ScalpingParameters,
     DayTradingParameters,
     ApplicabilityRules,
-)
-from src.ultibot_backend.core.domain_models.opportunity_models import (
-    Opportunity,
-    OpportunityStatus,
-    InitialSignal,
-    OpportunitySourceType,
-    AIAnalysis,
-    SuggestedAction,
 )
 from src.ultibot_backend.core.domain_models.trade_models import Trade
 from src.ultibot_backend.core.domain_models.user_configuration_models import (
@@ -58,6 +48,7 @@ def strategy_service(mock_persistence_service):
 
 @pytest.fixture
 def config_service(mock_persistence_service):
+    from src.ultibot_backend.services.config_service import ConfigService
     return ConfigService(mock_persistence_service)
 
 
@@ -68,6 +59,7 @@ def ai_orchestrator():
 
 @pytest.fixture
 def trading_engine(strategy_service, config_service, ai_orchestrator):
+    from src.ultibot_backend.services.trading_engine_service import TradingEngine
     return TradingEngine(
         strategy_service=strategy_service,
         configuration_service=config_service,
@@ -78,6 +70,14 @@ def trading_engine(strategy_service, config_service, ai_orchestrator):
 @pytest.fixture
 def btc_opportunity(user_id):
     """Sample BTC opportunity for testing."""
+    from src.ultibot_backend.core.domain_models.opportunity_models import (
+        Opportunity,
+        OpportunityStatus,
+        InitialSignal,
+        OpportunitySourceType,
+        AIAnalysis,
+        SuggestedAction,
+    )
     return Opportunity(
         id=str(uuid4()),
         user_id=user_id,
@@ -103,6 +103,14 @@ def btc_opportunity(user_id):
 @pytest.fixture
 def eth_opportunity(user_id):
     """Sample ETH opportunity for testing."""
+    from src.ultibot_backend.core.domain_models.opportunity_models import (
+        Opportunity,
+        OpportunityStatus,
+        InitialSignal,
+        OpportunitySourceType,
+        AIAnalysis,
+        SuggestedAction,
+    )
     return Opportunity(
         id=str(uuid4()),
         user_id=user_id,
@@ -236,6 +244,9 @@ class TestCompleteOpportunityProcessingFlow:
         user_id,
     ):
         """Test complete flow: opportunity → single applicable strategy → paper trade execution."""
+        from src.ultibot_backend.core.domain_models.opportunity_models import (
+            OpportunityStatus,
+        )
         mode = "paper"
         
         # Mock database responses
@@ -288,6 +299,9 @@ class TestCompleteOpportunityProcessingFlow:
         user_id,
     ):
         """Test flow with multiple strategies where one uses AI analysis."""
+        from src.ultibot_backend.core.domain_models.opportunity_models import (
+            SuggestedAction,
+        )
         mode = "paper"
         
         # Mock active strategies (both apply to BTCUSDT)
@@ -353,6 +367,9 @@ class TestCompleteOpportunityProcessingFlow:
         user_id,
     ):
         """Test flow where active strategies exist but none are applicable."""
+        from src.ultibot_backend.core.domain_models.opportunity_models import (
+            OpportunityStatus,
+        )
         mode = "paper"
         
         # Mock BTC-only strategy as active
@@ -390,6 +407,10 @@ class TestCompleteOpportunityProcessingFlow:
         user_id,
     ):
         """Test flow where AI analysis confidence is below threshold."""
+        from src.ultibot_backend.core.domain_models.opportunity_models import (
+            OpportunityStatus,
+            SuggestedAction,
+        )
         mode = "real"  # Real mode has higher confidence threshold
         
         # Mock active strategy
@@ -437,6 +458,9 @@ class TestCompleteOpportunityProcessingFlow:
         user_id,
     ):
         """Test flow where real mode requires user confirmation."""
+        from src.ultibot_backend.core.domain_models.opportunity_models import (
+            OpportunityStatus,
+        )
         mode = "real"
         
         # Modify strategy to be active in real mode
@@ -480,6 +504,9 @@ class TestCompleteOpportunityProcessingFlow:
         user_id,
     ):
         """Test that individual strategy errors don't break the entire flow."""
+        from src.ultibot_backend.core.domain_models.opportunity_models import (
+            OpportunityStatus,
+        )
         mode = "paper"
         
         # Mock both strategies as active
@@ -549,6 +576,7 @@ class TestTradeCreationWithStrategyAssociation:
         scalping_strategy_btc,
     ):
         """Test that created trades have correct strategy_id association."""
+        from src.ultibot_backend.services.trading_engine_service import TradingDecision
         decision = TradingDecision(
             decision="execute_trade",
             confidence=0.8,
@@ -582,6 +610,7 @@ class TestTradeCreationWithStrategyAssociation:
         scalping_strategy_btc,
     ):
         """Test that trade side is correctly determined from opportunity signal."""
+        from src.ultibot_backend.services.trading_engine_service import TradingDecision
         # Test buy signal
         btc_opportunity.initial_signal.direction_sought = "buy"
         decision = TradingDecision(

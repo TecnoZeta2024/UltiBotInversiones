@@ -93,11 +93,11 @@ class DependencyContainer:
 
         # Level 4: Depend on previous levels
         self.config_service = ConfigurationService(
-            persistence_service=self.persistence_service,
-            credential_service=self.credential_service,
-            portfolio_service=self.portfolio_service,
-            notification_service=self.notification_service
+            persistence_service=self.persistence_service
         )
+        self.config_service.set_credential_service(self.credential_service)
+        self.config_service.set_portfolio_service(self.portfolio_service)
+        self.config_service.set_notification_service(self.notification_service)
 
         # Level 5: Depend on previous levels
         self.strategy_service = StrategyService(

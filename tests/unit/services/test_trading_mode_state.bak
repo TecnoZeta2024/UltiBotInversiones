@@ -246,3 +246,6 @@ class TestGlobalStateManager:
         # Get again and verify state persisted
         same_manager = get_trading_mode_manager()
         assert same_manager.current_mode == "real"
+
+if __name__ == "__main__":
+    pytest.main([__file__])

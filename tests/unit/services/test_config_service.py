@@ -2,7 +2,6 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
-from src.ultibot_backend.services.config_service import ConfigService
 from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 from src.ultibot_backend.services.credential_service import CredentialService
 from src.ultibot_backend.services.portfolio_service import PortfolioService
@@ -34,6 +33,7 @@ def mock_notification_service(): # Nuevo fixture para NotificationService
 
 @pytest.fixture
 def config_service(mock_persistence_service, mock_credential_service, mock_portfolio_service, mock_notification_service):
+    from src.ultibot_backend.services.config_service import ConfigService
     return ConfigService(
         persistence_service=mock_persistence_service,
         credential_service=mock_credential_service,

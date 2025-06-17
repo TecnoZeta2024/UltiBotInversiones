@@ -17,7 +17,6 @@ from datetime import datetime, timezone
 
 from src.ultibot_backend.services.trading_engine_service import TradingEngine, TradingDecision
 from src.ultibot_backend.services.strategy_service import StrategyService
-from src.ultibot_backend.services.config_service import ConfigService
 from src.ultibot_backend.services.ai_orchestrator_service import AIOrchestrator
 from src.ultibot_backend.core.domain_models.trading_strategy_models import (
     TradingStrategyConfig,
@@ -55,6 +54,7 @@ def mock_strategy_service():
 
 @pytest.fixture
 def mock_config_service():
+    from src.ultibot_backend.services.config_service import ConfigService
     return AsyncMock(spec=ConfigService)
 
 

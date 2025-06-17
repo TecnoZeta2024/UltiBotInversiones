@@ -4,8 +4,6 @@ from unittest.mock import AsyncMock, patch, MagicMock
 from uuid import uuid4, UUID
 from datetime import datetime, timezone
 
-from src.ultibot_backend.services.trading_engine_service import TradingEngine
-from src.ultibot_backend.services.config_service import ConfigService
 from src.ultibot_backend.services.order_execution_service import OrderExecutionService
 from src.ultibot_backend.services.credential_service import CredentialService
 from src.ultibot_backend.services.market_data_service import MarketDataService
@@ -38,6 +36,7 @@ TSL_CALLBACK_RATE_DEFAULT = 0.005
 
 @pytest.fixture
 def mock_config_service():
+    from src.ultibot_backend.services.config_service import ConfigService
     return AsyncMock(spec=ConfigService)
 
 @pytest.fixture
@@ -84,6 +83,7 @@ def trading_engine_service(
     mock_notification_service,
     mock_binance_adapter
 ):
+    from src.ultibot_backend.services.trading_engine_service import TradingEngine as TradingEngineService
     return TradingEngineService(
         config_service=mock_config_service,
         order_execution_service=mock_order_execution_service,
@@ -98,7 +98,7 @@ def trading_engine_service(
 
 @pytest.mark.asyncio
 async def test_execute_real_trade_sets_tsl_tp_from_user_config(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_config_service: AsyncMock,
     mock_persistence_service: AsyncMock,
     mock_market_data_service: AsyncMock,
@@ -220,7 +220,7 @@ async def test_execute_real_trade_sets_tsl_tp_from_user_config(
 
 @pytest.mark.asyncio
 async def test_execute_real_trade_sets_tsl_tp_from_defaults_if_not_in_config(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_config_service: AsyncMock,
     mock_persistence_service: AsyncMock,
     mock_market_data_service: AsyncMock,
@@ -308,7 +308,7 @@ async def test_execute_real_trade_sets_tsl_tp_from_defaults_if_not_in_config(
 
 @pytest.mark.asyncio
 async def test_monitor_real_trade_adjusts_tsl_for_buy_trade_favorably(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_market_data_service: AsyncMock,
     mock_persistence_service: AsyncMock
 ):
@@ -380,7 +380,7 @@ async def test_monitor_real_trade_adjusts_tsl_for_buy_trade_favorably(
 
 @pytest.mark.asyncio
 async def test_monitor_real_trade_adjusts_tsl_for_sell_trade_favorably(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_market_data_service: AsyncMock,
     mock_persistence_service: AsyncMock
 ):
@@ -444,7 +444,7 @@ async def test_monitor_real_trade_adjusts_tsl_for_sell_trade_favorably(
 
 @pytest.mark.asyncio
 async def test_monitor_real_trade_does_not_adjust_tsl_for_buy_trade_unfavorably(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_market_data_service: AsyncMock,
     mock_persistence_service: AsyncMock
 ):
@@ -491,7 +491,7 @@ async def test_monitor_real_trade_does_not_adjust_tsl_for_buy_trade_unfavorably(
 
 @pytest.mark.asyncio
 async def test_monitor_real_trade_does_not_adjust_tsl_for_sell_trade_unfavorably(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_market_data_service: AsyncMock,
     mock_persistence_service: AsyncMock
 ):
@@ -538,7 +538,7 @@ async def test_monitor_real_trade_does_not_adjust_tsl_for_sell_trade_unfavorably
 
 @pytest.mark.asyncio
 async def test_monitor_real_trade_detects_tp_hit_for_buy_trade(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_market_data_service: AsyncMock,
     mock_persistence_service: AsyncMock,
     mock_portfolio_service: AsyncMock,
@@ -591,7 +591,7 @@ async def test_monitor_real_trade_detects_tp_hit_for_buy_trade(
 
 @pytest.mark.asyncio
 async def test_monitor_real_trade_detects_tp_hit_for_sell_trade(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_market_data_service: AsyncMock,
     mock_persistence_service: AsyncMock,
     mock_portfolio_service: AsyncMock,
@@ -643,7 +643,7 @@ async def test_monitor_real_trade_detects_tp_hit_for_sell_trade(
 
 @pytest.mark.asyncio
 async def test_monitor_real_trade_detects_tsl_hit_for_buy_trade(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_market_data_service: AsyncMock,
     mock_persistence_service: AsyncMock,
     mock_portfolio_service: AsyncMock,
@@ -698,7 +698,7 @@ async def test_monitor_real_trade_detects_tsl_hit_for_buy_trade(
 
 @pytest.mark.asyncio
 async def test_monitor_real_trade_detects_tsl_hit_for_sell_trade(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_market_data_service: AsyncMock,
     mock_persistence_service: AsyncMock,
     mock_portfolio_service: AsyncMock,
@@ -753,7 +753,7 @@ async def test_monitor_real_trade_detects_tsl_hit_for_sell_trade(
 
 @pytest.mark.asyncio
 async def test_monitor_real_trade_handles_no_tsl_configured(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_market_data_service: AsyncMock,
     mock_persistence_service: AsyncMock,
     mock_notification_service: AsyncMock
@@ -797,7 +797,7 @@ async def test_monitor_real_trade_handles_no_tsl_configured(
 
 @pytest.mark.asyncio
 async def test_monitor_real_trade_handles_market_data_service_failure(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_market_data_service: AsyncMock,
     mock_persistence_service: AsyncMock,
     mock_notification_service: AsyncMock
@@ -840,7 +840,7 @@ async def test_monitor_real_trade_handles_market_data_service_failure(
 
 @pytest.mark.asyncio
 async def test_close_real_trade_successful_execution(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_order_execution_service: AsyncMock,
     mock_persistence_service: AsyncMock,
     mock_portfolio_service: AsyncMock,
@@ -913,7 +913,7 @@ async def test_close_real_trade_successful_execution(
 
 @pytest.mark.asyncio
 async def test_close_real_trade_handles_credential_error(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_credential_service: AsyncMock,
     mock_notification_service: AsyncMock
 ):
@@ -961,7 +961,7 @@ async def test_close_real_trade_handles_credential_error(
 
 @pytest.mark.asyncio
 async def test_close_real_trade_handles_order_execution_error(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_order_execution_service: AsyncMock,
     mock_credential_service: AsyncMock,
     mock_notification_service: AsyncMock
@@ -1012,7 +1012,7 @@ async def test_close_real_trade_handles_order_execution_error(
 
 @pytest.mark.asyncio
 async def test_close_real_trade_handles_persistence_error(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_order_execution_service: AsyncMock,
     mock_persistence_service: AsyncMock,
     mock_credential_service: AsyncMock,
@@ -1071,7 +1071,7 @@ async def test_close_real_trade_handles_persistence_error(
 
 @pytest.mark.asyncio
 async def test_close_real_trade_handles_portfolio_update_error(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_order_execution_service: AsyncMock,
     mock_persistence_service: AsyncMock,
     mock_portfolio_service: AsyncMock,
@@ -1137,7 +1137,7 @@ async def test_close_real_trade_handles_portfolio_update_error(
 
 @pytest.mark.asyncio
 async def test_close_real_trade_handles_notification_error(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_order_execution_service: AsyncMock,
     mock_persistence_service: AsyncMock,
     mock_portfolio_service: AsyncMock,
@@ -1201,7 +1201,7 @@ async def test_close_real_trade_handles_notification_error(
 
 @pytest.mark.asyncio
 async def test_execute_real_trade_fails_if_opportunity_not_pending_confirmation(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_persistence_service: AsyncMock,
     mock_notification_service: AsyncMock
 ):
@@ -1236,7 +1236,7 @@ async def test_execute_real_trade_fails_if_opportunity_not_pending_confirmation(
 
 @pytest.mark.asyncio
 async def test_execute_real_trade_fails_if_user_config_missing(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_config_service: AsyncMock,
     mock_persistence_service: AsyncMock,
     mock_notification_service: AsyncMock
@@ -1273,7 +1273,7 @@ async def test_execute_real_trade_fails_if_user_config_missing(
 
 @pytest.mark.asyncio
 async def test_execute_real_trade_fails_if_daily_capital_limit_exceeded(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_config_service: AsyncMock,
     mock_persistence_service: AsyncMock,
     mock_portfolio_service: AsyncMock,
@@ -1335,7 +1335,7 @@ async def test_execute_real_trade_fails_if_daily_capital_limit_exceeded(
 
 @pytest.mark.asyncio
 async def test_execute_real_trade_fails_if_capital_to_invest_is_zero_or_negative(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_config_service: AsyncMock,
     mock_persistence_service: AsyncMock,
     mock_portfolio_service: AsyncMock,
@@ -1396,7 +1396,7 @@ async def test_execute_real_trade_fails_if_capital_to_invest_is_zero_or_negative
 
 @pytest.mark.asyncio
 async def test_execute_real_trade_handles_market_data_error(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_config_service: AsyncMock,
     mock_persistence_service: AsyncMock,
     mock_portfolio_service: AsyncMock,
@@ -1456,7 +1456,7 @@ async def test_execute_real_trade_handles_market_data_error(
 
 @pytest.mark.asyncio
 async def test_execute_real_trade_handles_credential_error(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_config_service: AsyncMock,
     mock_persistence_service: AsyncMock,
     mock_portfolio_service: AsyncMock,
@@ -1519,7 +1519,7 @@ async def test_execute_real_trade_handles_credential_error(
 
 @pytest.mark.asyncio
 async def test_execute_real_trade_handles_order_execution_error(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_config_service: AsyncMock,
     mock_persistence_service: AsyncMock,
     mock_portfolio_service: AsyncMock,
@@ -1585,7 +1585,7 @@ async def test_execute_real_trade_handles_order_execution_error(
 
 @pytest.mark.asyncio
 async def test_execute_real_trade_handles_persistence_error_after_order(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_config_service: AsyncMock,
     mock_persistence_service: AsyncMock,
     mock_portfolio_service: AsyncMock,
@@ -1659,7 +1659,7 @@ async def test_execute_real_trade_handles_persistence_error_after_order(
 
 @pytest.mark.asyncio
 async def test_execute_real_trade_handles_opportunity_status_update_error(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_config_service: AsyncMock,
     mock_persistence_service: AsyncMock,
     mock_portfolio_service: AsyncMock,
@@ -1732,7 +1732,7 @@ async def test_execute_real_trade_handles_opportunity_status_update_error(
 
 @pytest.mark.asyncio
 async def test_execute_real_trade_handles_config_save_error(
-    trading_engine_service: TradingEngineService,
+    trading_engine_service,
     mock_config_service: AsyncMock,
     mock_persistence_service: AsyncMock,
     mock_portfolio_service: AsyncMock,

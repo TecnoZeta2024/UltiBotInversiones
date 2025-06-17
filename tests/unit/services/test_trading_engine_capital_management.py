@@ -4,8 +4,6 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4, UUID
 from datetime import datetime, timezone, timedelta
 
-from src.ultibot_backend.services.trading_engine_service import TradingEngineService
-from src.ultibot_backend.services.config_service import ConfigService
 from src.ultibot_backend.services.order_execution_service import OrderExecutionService
 from src.ultibot_backend.services.credential_service import CredentialService
 from src.ultibot_backend.services.market_data_service import MarketDataService
@@ -25,6 +23,8 @@ from src.shared.data_types import (
 @pytest.fixture
 def trading_engine_service():
     """Fixture que crea una instancia de TradingEngineService con mocks."""
+    from src.ultibot_backend.services.config_service import ConfigService
+    from src.ultibot_backend.services.trading_engine_service import TradingEngineService
     mock_config_service = AsyncMock(spec=ConfigService)
     mock_order_execution_service = AsyncMock(spec=OrderExecutionService)
     mock_paper_order_execution_service = AsyncMock()

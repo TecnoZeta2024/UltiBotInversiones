@@ -12,9 +12,16 @@ from src.ultibot_backend.api.v1.models.performance_models import StrategyPerform
 from src.shared.data_types import Trade
 from src.ultibot_backend.core.domain_models.trade_models import PositionStatus
 from src.ultibot_backend.core.domain_models.trading_strategy_models import TradingStrategyConfig, BaseStrategyType
-# Importar la función get_current_user_id desde el propio módulo de endpoints de performance
-from src.ultibot_backend.api.v1.endpoints.performance import get_current_user_id 
 from uuid import UUID # Añadir importación de UUID
+
+# Mock de la dependencia de usuario para los endpoints
+def get_current_user_id() -> UUID:
+    """
+    Función de dependencia mockeada que será sobreescrita en las pruebas.
+    """
+    # Esta implementación no se usará, pero es necesaria para que FastAPI
+    # reconozca la dependencia antes de que sea sobreescrita.
+    raise NotImplementedError("This dependency should be overridden in tests.")
 
 # Usuario fijo para las pruebas de integración
 FIXED_TEST_USER_ID = uuid4()

@@ -12,29 +12,37 @@ from src.ultibot_backend.core.exceptions import (
     RealTradeLimitReachedError,
     CredentialError
 )
-from src.ultibot_backend.services.credential_service import CredentialService
-from src.ultibot_backend.services.portfolio_service import PortfolioService
 from src.ultibot_backend.app_config import settings
 
 if TYPE_CHECKING:
+    from src.ultibot_backend.services.credential_service import CredentialService
+    from src.ultibot_backend.services.portfolio_service import PortfolioService
     from src.ultibot_backend.services.notification_service import NotificationService
 
 logger = logging.getLogger(__name__)
 
 class ConfigurationService:
-    def __init__(self, 
-                 persistence_service: SupabasePersistenceService, 
-                 credential_service: CredentialService,
-                 portfolio_service: PortfolioService,
-                 notification_service: Optional[NotificationService] = None):
+    def __init__(self, persistence_service: SupabasePersistenceService):
         self.persistence_service = persistence_service
-        self.credential_service = credential_service
-        self.portfolio_service = portfolio_service
-        self.notification_service = notification_service
+        self.credential_service: Optional["CredentialService"] = None
+        self.portfolio_service: Optional["PortfolioService"] = None
+        self.notification_service: Optional["NotificationService"] = None
         self._user_configuration: Optional[UserConfiguration] = None
         self._user_id: UUID = settings.FIXED_USER_ID
 
-    def set_notification_service(self, notification_service: NotificationService):
+    def set_credential_service(self, credential_service: "CredentialService"):
+        if not self.credential_service:
+            self.credential_service = credential_service
+        else:
+            logger.warning("CredentialService already set in ConfigService, ignoring attempt to reset.")
+
+    def set_portfolio_service(self, portfolio_service: "PortfolioService"):
+        if not self.portfolio_service:
+            self.portfolio_service = portfolio_service
+        else:
+            logger.warning("PortfolioService already set in ConfigService, ignoring attempt to reset.")
+
+    def set_notification_service(self, notification_service: "NotificationService"):
         if not self.notification_service:
             self.notification_service = notification_service
         else:
@@ -121,6 +129,9 @@ class ConfigurationService:
         return self._user_configuration.paperTradingActive is True
 
     async def activate_real_trading_mode(self, min_usdt_balance: float = 10.0):
+        if not self.credential_service or not self.portfolio_service:
+            raise ConfigurationError("Services (Credential, Portfolio) not initialized in ConfigService.")
+
         config = await self.get_user_configuration()
         real_settings = config.realTradingSettings
         assert real_settings is not None
@@ -146,7 +157,7 @@ class ConfigurationService:
             raise e
 
         try:
-            usdt_balance = await self.portfolio_service.get_real_usdt_balance()
+            usdt_balance = await self.portfolio_service.get_real_usdt_balance(self._user_id)
             if usdt_balance < min_usdt_balance:
                 error_message = f"Saldo de USDT insuficiente. Se requiere al menos {min_usdt_balance} USDT."
                 if self.notification_service:

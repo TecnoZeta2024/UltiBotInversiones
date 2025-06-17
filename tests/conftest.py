@@ -25,3 +25,4 @@ def pytest_configure(config):
     sys.modules['PyQt5.QtWidgets'] = mock_pyqt
     sys.modules['PyQt5.QtGui'] = mock_pyqt
     sys.modules['PyQt5.QtPrintSupport'] = mock_pyqt
+    sys.modules['PyQt5.QtChart'] = mock_pyqt
