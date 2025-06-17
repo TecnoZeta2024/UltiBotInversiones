@@ -88,12 +88,23 @@ class SRSTTriage:
         ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
         return ansi_escape.sub('', text)
 
-    def run_pytest_collect(self) -> str:
+    def run_pytest_collect(self, execution_mode: bool = False) -> str:
         """
         Ejecuta pytest para recolectar errores y captura la salida en tiempo real.
+        
+        Args:
+            execution_mode: Si True, ejecuta los tests (runtime errors). 
+                          Si False, solo colecta (import errors).
         """
-        print("🚀 Ejecutando 'poetry run pytest --collect-only -q' para obtener datos frescos...")
-        command = ["poetry", "run", "pytest", "--collect-only", "-q"]
+        if execution_mode:
+            print("🚀 Ejecutando 'poetry run pytest' para obtener errores de runtime...")
+            command = ["poetry", "run", "pytest"]
+            timeout = 600  # 10 minutos para ejecución completa
+        else:
+            print("🚀 Ejecutando 'poetry run pytest --collect-only -q' para obtener errores de colección...")
+            command = ["poetry", "run", "pytest", "--collect-only", "-q"]
+            timeout = 300  # 5 minutos para colección
+            
         try:
             result = subprocess.run(
                 command,
@@ -102,7 +113,7 @@ class SRSTTriage:
                 encoding='utf-8',
                 errors='replace',
                 check=False,
-                timeout=300  # 5 minutos de timeout
+                timeout=timeout
             )
             
             output = result.stdout + result.stderr
@@ -118,7 +129,7 @@ class SRSTTriage:
             print("❌ Error: 'poetry' no se encontró. Asegúrate de que poetry esté instalado y en el PATH.")
             return ""
         except subprocess.TimeoutExpired:
-            print("❌ Error: La ejecución de pytest excedió el tiempo límite de 5 minutos.")
+            print(f"❌ Error: La ejecución de pytest excedió el tiempo límite de {timeout//60} minutos.")
             return ""
         except Exception as e:
             print(f"❌ Ocurrió un error inesperado al ejecutar pytest: {e}")
@@ -171,22 +182,27 @@ class SRSTTriage:
             return tickets
 
         summary_content = summary_match.group(1)
-        error_lines = re.findall(r'^(ERROR\s.*)$', summary_content, re.MULTILINE)
+        
+        # Capturar tanto ERROR como FAILED
+        error_lines = re.findall(r'^((?:ERROR|FAILED)\s.*)$', summary_content, re.MULTILINE)
         
         for line in error_lines:
             parts = line.split(' - ', 1)
-            scope = parts[0].replace('ERROR ', '').strip()
-            error_message = parts[1] if len(parts) > 1 else "Error durante la recolección de tests."
+            prefix = parts[0].split()[0]  # ERROR o FAILED
+            scope = parts[0].replace(f'{prefix} ', '').strip()
+            error_message = parts[1] if len(parts) > 1 else f"{prefix} durante la ejecución de tests."
             
             if scope in processed_scopes:
                 continue
             processed_scopes.add(scope)
 
-            error_block_match = re.search(
-                rf'_{5,}\sERROR collecting\s{re.escape(scope)}\s_{5,}(.*?)(?=\n_{5,}|\Z)',
-                output,
-                re.DOTALL
-            )
+            # Buscar bloques de error tanto para ERROR como para FAILED
+            if prefix == "ERROR":
+                error_block_pattern = rf'_{{{5,}}}\sERROR\s(?:collecting\s|at setup of\s)?{re.escape(scope)}\s_{{{5,}}}(.*?)(?=\n_{{{5,}}}|\n={{{5,}}}|\Z)'
+            else:  # FAILED
+                error_block_pattern = rf'_{{{5,}}}\s{re.escape(scope)}\s_{{{5,}}}(.*?)(?=\n_{{{5,}}}|\n={{{5,}}}|\Z)'
+            
+            error_block_match = re.search(error_block_pattern, output, re.DOTALL)
             
             file_path = scope
             line_number = 0
@@ -194,15 +210,29 @@ class SRSTTriage:
 
             if error_block_match:
                 block_content = error_block_match.group(1)
+                
+                # Buscar archivo y línea del traceback
                 traceback_match = re.search(r'([^\s>]+?\.py):(\d+):', block_content)
                 if traceback_match:
                     file_path = traceback_match.group(1)
                     line_number = int(traceback_match.group(2))
                 
+                # Buscar línea con E que contiene el error específico
                 e_line_match = re.search(r'\nE\s+(.*?)$', block_content, re.MULTILINE)
                 if e_line_match:
                     error_message = e_line_match.group(1).strip()
                     error_type = error_message.split(':')[0]
+                else:
+                    # Si no hay línea E, buscar el tipo de error en el traceback
+                    exception_match = re.search(r'\n([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*Error[^:\n]*)', block_content)
+                    if exception_match:
+                        error_type = exception_match.group(1).split('.')[-1]
+
+            # Extraer el archivo de test desde el scope si no se encontró en traceback
+            if file_path == scope:
+                test_file_match = re.match(r'([^:]+\.py)', scope)
+                if test_file_match:
+                    file_path = test_file_match.group(1)
 
             category, _ = self.classify_error(error_type)
             priority = self.determine_priority(file_path, category)
@@ -382,13 +412,18 @@ poetry run pytest -k "{ticket.test_scope}" -v
                 resolved_scopes.add(match.group(1).strip())
         
         try:
-            output = self.run_pytest_collect()
+            # Primero intenta obtener errores de runtime (execution_mode=True)
+            output = self.run_pytest_collect(execution_mode=True)
             if not output or not output.strip():
-                print("⚠️ No se obtuvo salida de pytest o la salida está vacía. El triage no puede continuar.")
-                self.tickets = []
-                self.generate_progress_tracker() # Genera un reporte vacío para mantener consistencia
-                print("✅ Triage finalizado: No se encontraron nuevos errores.")
-                return
+                print("⚠️ No se obtuvo salida de runtime. Intentando modo de colección...")
+                # Si no hay salida de runtime, intenta errores de colección
+                output = self.run_pytest_collect(execution_mode=False)
+                if not output or not output.strip():
+                    print("⚠️ No se obtuvo salida de pytest o la salida está vacía. El triage no puede continuar.")
+                    self.tickets = []
+                    self.generate_progress_tracker() # Genera un reporte vacío para mantener consistencia
+                    print("✅ Triage finalizado: No se encontraron nuevos errores.")
+                    return
         except Exception as e:
             print(f"❌ Error crítico durante la ejecución de pytest: {e}")
             return

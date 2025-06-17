@@ -177,7 +177,7 @@ class ConfidenceThresholds(BaseModel):
         description="Confidence threshold for real trading"
     )
 
-    @validator('real_trading')
+    @validator('real_trading', allow_reuse=True)
     def real_trading_should_be_higher_than_paper(cls, v, values):
         """Validate that real trading threshold is higher than paper trading."""
         if v is not None and 'paper_trading' in values and values['paper_trading'] is not None:
@@ -390,7 +390,7 @@ class UserConfiguration(BaseModel):
             datetime: lambda v: v.isoformat() if v else None
         }
 
-    @validator('ai_strategy_configurations')
+    @validator('ai_strategy_configurations', allow_reuse=True)
     def validate_unique_ai_config_ids(cls, v):
         """Validate that AI configuration IDs are unique."""
         if v is None:
@@ -401,7 +401,7 @@ class UserConfiguration(BaseModel):
             raise ValueError('AI strategy configuration IDs must be unique')
         return v
 
-    @validator('watchlists')
+    @validator('watchlists', allow_reuse=True)
     def validate_unique_watchlist_ids(cls, v):
         """Validate that watchlist IDs are unique."""
         if v is None:
@@ -412,7 +412,7 @@ class UserConfiguration(BaseModel):
             raise ValueError('Watchlist IDs must be unique')
         return v
 
-    @validator('mcp_server_preferences')
+    @validator('mcp_server_preferences', allow_reuse=True)
     def validate_unique_mcp_ids(cls, v):
         """Validate that MCP server IDs are unique."""
         if v is None:

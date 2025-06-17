@@ -7,6 +7,9 @@ from typing import AsyncGenerator
 from httpx import AsyncClient
 from unittest.mock import AsyncMock, MagicMock
 
+# Añadir el directorio 'src' al sys.path para que las importaciones de módulos funcionen correctamente
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
+
 from ultibot_backend.main import app
 from ultibot_backend.dependencies import (
     get_performance_service,

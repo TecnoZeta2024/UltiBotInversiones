@@ -5,7 +5,7 @@ results with strategy logic to make informed trading decisions.
 """
 
 import logging
-from uuid import UUID
+from uuid import UUID, uuid4
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
@@ -41,13 +41,19 @@ from ultibot_backend.core.domain_models.trade_models import (
     OrderType,
     TradeOrderDetails,
     OrderStatus,
-    TradeMode, 
-    TradeSide
+    TradeMode,
+    TradeSide,
+    OrderCategory,
 )
 from ultibot_backend.services.market_data_service import MarketDataService
 from ultibot_backend.services.unified_order_execution_service import UnifiedOrderExecutionService
 from ultibot_backend.services.credential_service import CredentialService
-from ultibot_backend.core.exceptions import MarketDataError, BinanceAPIError, OrderExecutionError
+from ultibot_backend.core.exceptions import (
+    MarketDataError, 
+    BinanceAPIError, 
+    OrderExecutionError, 
+    ConfigurationError
+)
 from shared.data_types import ServiceName
 
 # Conditional imports for type checking to avoid circular dependencies
@@ -88,7 +94,7 @@ class TradingDecision:
         self.risk_assessment = risk_assessment
         self.warnings = warnings or []
         self.timestamp = datetime.now(timezone.utc)
-        self.decision_id = str(UUID())
+        self.decision_id = str(uuid4())
 
 
 class TradingEngine:
@@ -119,6 +125,18 @@ class TradingEngine:
     async def execute_trade_from_confirmed_opportunity(self, opportunity: Opportunity) -> Optional[Trade]:
         logger.info(f"Executing trade directly from confirmed opportunity {opportunity.id}")
 
+        user_config = await self.configuration_service.get_user_configuration(opportunity.user_id)
+        if not user_config:
+            raise OrderExecutionError(f"User configuration not found for user {opportunity.user_id}")
+
+        portfolio_snapshot = await self.portfolio_service.get_portfolio_snapshot(UUID(opportunity.user_id))
+        if not portfolio_snapshot:
+            raise OrderExecutionError(f"Portfolio snapshot not found for user {opportunity.user_id}")
+
+        current_price = await self.market_data_service.get_latest_price(opportunity.symbol)
+        if not current_price:
+            raise MarketDataError(f"Could not retrieve current price for {opportunity.symbol}")
+
         strategies = await self.strategy_service.get_active_strategies(str(opportunity.user_id), "real")
         if not strategies:
             raise OrderExecutionError(f"No active real strategies found for user {opportunity.user_id} to execute confirmed opportunity {opportunity.id}")
@@ -138,15 +156,7 @@ class TradingEngine:
 
         trade = await self.create_trade_from_decision(decision, opportunity, strategy)
 
-        if trade:
-            logger.info(f"Successfully created trade {trade.id} from confirmed opportunity.")
-            await self._update_opportunity_status(
-                opportunity,
-                OpportunityStatus.CONVERTED_TO_TRADE_REAL,
-                "trade_executed_by_confirmation",
-                f"Trade {trade.id} executed based on user confirmation."
-            )
-        else:
+        if not trade:
             logger.error(f"Failed to create trade from confirmed opportunity {opportunity.id}")
             await self._update_opportunity_status(
                 opportunity,
@@ -154,21 +164,69 @@ class TradingEngine:
                 "trade_creation_failed",
                 "Failed to create trade object after user confirmation."
             )
-        return trade
+            return None
+
+        try:
+            # Get credentials for execution
+            credential = await self.credential_service.get_credential(
+                service_name=ServiceName.BINANCE_SPOT,
+                credential_label="default_binance_spot"
+            )
+            if not credential:
+                raise ConfigurationError("No active credentials found for trade execution.")
+
+            api_key = self.credential_service.decrypt_data(credential.encrypted_api_key)
+            api_secret = self.credential_service.decrypt_data(credential.encrypted_api_secret) if credential.encrypted_api_secret else None
+
+            # Execute the trade
+            executed_order = await self.unified_order_execution_service.execute_market_order(
+                user_id=trade.user_id,
+                symbol=trade.symbol,
+                side=trade.side.upper(),
+                quantity=trade.entryOrder.requestedQuantity,
+                trading_mode="real",
+                api_key=api_key,
+                api_secret=api_secret
+            )
+            trade.entryOrder = executed_order
+            trade.positionStatus = PositionStatus.OPEN.value
+            
+            logger.info(f"Successfully executed trade {trade.id} from confirmed opportunity.")
+            await self.persistence_service.upsert_trade(trade.user_id, trade.model_dump())
+            
+            await self._update_opportunity_status(
+                opportunity,
+                OpportunityStatus.CONVERTED_TO_TRADE_REAL,
+                "trade_executed_by_confirmation",
+                f"Trade {trade.id} executed based on user confirmation."
+            )
+            return trade
+        except Exception as e:
+            logger.error(f"Failed to execute trade for opportunity {opportunity.id}: {e}", exc_info=True)
+            trade.positionStatus = PositionStatus.ERROR.value
+            trade.closingReason = str(e)
+            await self.persistence_service.upsert_trade(trade.user_id, trade.model_dump())
+            await self._update_opportunity_status(
+                opportunity,
+                OpportunityStatus.ERROR_IN_PROCESSING,
+                "trade_execution_failed",
+                f"Failed to execute trade: {e}"
+            )
+            return trade
 
     async def create_trade_from_decision(
-        self, 
-        decision: TradingDecision, 
+        self,
+        decision: TradingDecision,
         opportunity: Opportunity,
         strategy: TradingStrategyConfig,
     ) -> Optional[Trade]:
         if decision.decision != "execute_trade":
             return None
-        
+
         try:
             trade_side = self._determine_trade_side_from_opportunity(opportunity)
-            trade_mode_str = getattr(decision, 'mode', 'paper')
-            
+            trade_mode_str = getattr(decision, "mode", "paper")
+
             actual_trade_mode = TradeMode(trade_mode_str)
             actual_trade_side = TradeSide(trade_side)
 
@@ -179,92 +237,82 @@ class TradingEngine:
                     tp_price = float(tp_value[0])
                 elif isinstance(tp_value, (float, int)):
                     tp_price = float(tp_value)
+            
+            stop_loss_price = decision.recommended_trade_params.get("stop_loss") if decision.recommended_trade_params else None
 
             trade = Trade(
-                id=str(UUID()),
-                user_id=str(strategy.user_id),
-                mode=actual_trade_mode,
+                user_id=UUID(str(strategy.user_id)),
+                mode=actual_trade_mode.value,
                 symbol=opportunity.symbol,
-                side=actual_trade_side,
-                strategy_id=str(strategy.id),
-                opportunity_id=str(opportunity.id),
-                position_status=PositionStatus.PENDING_ENTRY_CONDITIONS,
-                entry_order=self._create_entry_order_from_decision(decision, opportunity),
-                ai_analysis_confidence=decision.confidence if decision.ai_analysis_used else None,
-                notes=f"Trade from strategy '{strategy.config_name}': {decision.reasoning}",
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
-                stop_loss_price=decision.recommended_trade_params.get("stop_loss") if decision.recommended_trade_params else None,
-                take_profit_price=tp_price,
-                exit_orders=[],
-                initial_risk_quote_amount=None,
-                initial_reward_to_risk_ratio=None,
-                risk_reward_adjustments=[],
-                current_risk_quote_amount=None,
-                current_reward_to_risk_ratio=None,
-                pnl=None,
+                side=actual_trade_side.value,
+                entryOrder=self._create_entry_order_from_decision(
+                    decision, opportunity
+                ),
+                positionStatus=PositionStatus.PENDING_ENTRY_CONDITIONS.value,
+                strategyId=UUID(str(strategy.id)),
+                opportunityId=UUID(str(opportunity.id)),
+                aiAnalysisConfidence=(
+                    decision.confidence if decision.ai_analysis_used else None
+                ),
+                pnl_usd=None,
                 pnl_percentage=None,
-                closing_reason=None,
-                exit_order_oco_id=None,
-                exit_price=None,
-                market_context_snapshots=None,
-                external_event_or_analysis_link=None,
-                backtest_details=None,
-                ai_influence_details=None,
-                opened_at=None,
+                closingReason=None,
+                ocoOrderListId=None,
+                takeProfitPrice=tp_price,
+                trailingStopActivationPrice=stop_loss_price,
+                trailingStopCallbackRate=None,
+                currentStopPrice_tsl=None,
                 closed_at=None,
-                strategy_execution_instance_id=None
             )
-            
-            if decision.ai_analysis_used and decision.ai_analysis_profile_id:
-                trade.add_ai_influence_details(
-                    ai_analysis_profile_id=decision.ai_analysis_profile_id,
-                    ai_confidence=decision.confidence,
-                    ai_suggested_action=opportunity.ai_analysis.suggested_action.value if opportunity.ai_analysis else "UNKNOWN",
-                    ai_reasoning_summary=opportunity.ai_analysis.reasoning_ai[:500] if opportunity.ai_analysis else "N/A",
-                )
 
             logger.info(f"Created trade {trade.id} from decision {decision.decision_id}")
-            
-            await self.persistence_service.upsert_trade(UUID(trade.user_id), trade.model_dump())
+
+            await self.persistence_service.upsert_trade(
+                trade.user_id, trade.model_dump()
+            )
             logger.info(f"Trade {trade.id} persisted before execution.")
 
             return trade
         except Exception as e:
-            logger.error(f"Error creating trade object from decision {decision.decision_id}: {e}", exc_info=True)
-            raise HTTPException(status_code=500, detail=f"Failed to create trade object: {str(e)}")
+            logger.error(
+                f"Error creating trade object from decision {decision.decision_id}: {e}",
+                exc_info=True,
+            )
+            raise HTTPException(
+                status_code=500, detail=f"Failed to create trade object: {str(e)}"
+            )
 
-    def _create_entry_order_from_decision(self, decision: TradingDecision, opportunity: Opportunity) -> 'TradeOrderDetails':
+    def _create_entry_order_from_decision(
+        self, decision: TradingDecision, opportunity: Opportunity
+    ) -> "TradeOrderDetails":
         params = decision.recommended_trade_params or {}
-        entry_price = params.get("entry_price", opportunity.initial_signal.entry_price_target if opportunity.initial_signal else None)
+        entry_price = params.get(
+            "entry_price",
+            opportunity.initial_signal.entry_price_target
+            if opportunity.initial_signal
+            else None,
+        )
         quantity = params.get("position_size_percentage", 1.0)
 
         return TradeOrderDetails(
-            order_id_internal=str(UUID()),
-            type=OrderType.MARKET,
-            status=OrderStatus.NEW,
-            requested_price=float(entry_price) if entry_price else None,
-            requested_quantity=float(quantity),
-            timestamp=datetime.now(timezone.utc),
-            order_id_exchange=None,
-            client_order_id_exchange=None,
-            exchange_status_raw=None,
-            rejection_reason_code=None,
-            rejection_reason_message=None,
-            stop_price=None,
-            executed_price=None,
-            slippage_amount=None,
-            slippage_percentage=None,
-            executed_quantity=None,
-            cumulative_quote_qty=None,
+            orderId_internal=uuid4(),
+            orderCategory=OrderCategory.ENTRY,
+            type=OrderType.MARKET.value,
+            status=OrderStatus.NEW.value,
+            requestedPrice=float(entry_price) if entry_price else None,
+            requestedQuantity=float(quantity),
+            executedQuantity=0.0,
+            executedPrice=0.0,
+            orderId_exchange=None,
+            clientOrderId_exchange=None,
+            cumulativeQuoteQty=None,
             commissions=None,
-            submitted_at=None,
-            last_update_timestamp=None,
-            fill_timestamp=None,
-            trailing_stop_activation_price=None,
-            trailing_stop_callback_rate=None,
-            current_stop_price_tsl=None,
-            oco_group_id_exchange=None
+            commission=None,
+            commissionAsset=None,
+            submittedAt=None,
+            fillTimestamp=None,
+            rawResponse=None,
+            ocoOrderListId=None,
         )
 
     async def _update_opportunity_status(self, opportunity: Opportunity, status: OpportunityStatus, reason_code: str, reason_text: str) -> None:
@@ -276,7 +324,6 @@ class TradingEngine:
         try:
             await self.persistence_service.update_opportunity_status(
                 opportunity_id=UUID(opportunity.id), 
-                user_id=UUID(opportunity.user_id), 
                 new_status=status, 
                 status_reason=reason_text
             )
@@ -296,4 +343,3 @@ class TradingEngine:
         
     # ... (otros métodos del servicio que no necesitan cambios inmediatos) ...
     # Se omiten por brevedad, pero estarían aquí en el archivo real.
-

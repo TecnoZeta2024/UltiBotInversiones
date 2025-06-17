@@ -16,6 +16,9 @@ from ultibot_backend.core.domain_models.trade_models import (
     TradeOrderDetails,
     OrderCategory,
 )
+from ultibot_backend.core.domain_models.user_configuration_models import (
+    RealTradingSettings,
+)
 
 
 class Kline(BaseModel):
@@ -168,18 +171,6 @@ class RiskProfileSettings(BaseModel):
     takeProfitPercentage: Optional[float] = Field(0.02, description="Porcentaje de ganancia objetivo para Take Profit (ej. 0.02 para 2%).")
     trailingStopLossPercentage: Optional[float] = Field(0.01, description="Porcentaje de pérdida inicial para Trailing Stop Loss (ej. 0.01 para 1%).")
     trailingStopCallbackRate: Optional[float] = Field(0.005, description="Porcentaje de retroceso para el Trailing Stop (ej. 0.005 para 0.5%).")
-
-class RealTradingSettings(BaseModel):
-    real_trading_mode_active: bool = Field(default=False, description="Indica si el modo de operativa real limitada está activo.")
-    real_trades_executed_count: int = Field(default=0, description="Contador de operaciones reales ejecutadas en el modo limitado.")
-    max_real_trades: int = Field(5, description="Número máximo de operaciones reales permitidas en el modo limitado.")
-    daily_capital_risked_usd: float = Field(default=0.0, description="Capital total en USD arriesgado en operaciones reales en el día actual.")
-    last_daily_reset: datetime = Field(default_factory=datetime.utcnow, description="Marca de tiempo del último reinicio del contador diario de capital arriesgado.")
-    maxConcurrentOperations: Optional[int] = None
-    dailyLossLimitAbsolute: Optional[float] = None
-    dailyProfitTargetAbsolute: Optional[float] = None
-    assetSpecificStopLoss: Optional[Dict[str, Dict[str, float]]] = None
-    autoPauseTradingConditions: Optional[Dict[str, Any]] = None
 
 class AIAnalysisConfidenceThresholds(BaseModel):
     paperTrading: Optional[float] = Field(0.70, description="Umbral para paper trading (0.0 a 1.0).")
@@ -419,4 +410,3 @@ __all__ = [
     "ConfirmRealTradeRequest",
     "CapitalManagementStatus",
 ]
-
