@@ -1,0 +1,190 @@
+# SRST Progress Tracker - 2025-06-16 17:35:57
+
+## Sesión Actual
+**Tickets generados:** 172
+
+## Tickets por Prioridad
+
+### 🚨 CRITICAL (12 tickets)
+- [ ] **SRST-020:** ImportError en `tests/integration/test_deployment.py` (Test: tests/integration/test_deployment.py::test_application_startup_and_shutdown) - ⏱️ 20min
+- [ ] **SRST-021:** ImportError en `tests/integration/test_deployment_validation.py` (Test: tests/integration/test_deployment_validation.py::TestDeploymentValidation::test_1_backend_module_imports) - ⏱️ 20min
+- [ ] **SRST-022:** ImportError en `tests/integration/test_deployment_validation.py` (Test: tests/integration/test_deployment_validation.py::TestDeploymentValidation::test_2_frontend_module_imports) - ⏱️ 20min
+- [ ] **SRST-023:** ImportError en `tests/integration/test_deployment_validation.py` (Test: tests/integration/test_deployment_validation.py::TestDeploymentValidation::test_3_environment_configuration) - ⏱️ 20min
+- [ ] **SRST-024:** ImportError en `tests/integration/test_deployment_validation.py` (Test: tests/integration/test_deployment_validation.py::TestDeploymentValidation::test_4_port_availability) - ⏱️ 20min
+- [ ] **SRST-025:** ImportError en `tests/integration/test_deployment_validation.py` (Test: tests/integration/test_deployment_validation.py::TestDeploymentValidation::test_5_database_connectivity) - ⏱️ 20min
+- [ ] **SRST-026:** ImportError en `tests/integration/test_deployment_validation.py` (Test: tests/integration/test_deployment_validation.py::TestDeploymentValidation::test_6_poetry_environment) - ⏱️ 20min
+- [ ] **SRST-027:** ImportError en `tests/integration/test_deployment_validation.py` (Test: tests/integration/test_deployment_validation.py::TestDeploymentValidation::test_7_backend_startup_simulation) - ⏱️ 20min
+- [ ] **SRST-028:** ImportError en `tests/integration/test_deployment_validation.py` (Test: tests/integration/test_deployment_validation.py::TestDeploymentValidation::test_8_frontend_startup_simulation) - ⏱️ 20min
+- [ ] **SRST-029:** ImportError en `tests/integration/test_deployment_validation.py` (Test: tests/integration/test_deployment_validation.py::TestDeploymentValidation::test_9_batch_script_components) - ⏱️ 20min
+- [ ] **SRST-030:** ImportError en `tests/integration/test_deployment_validation.py` (Test: tests/integration/test_deployment_validation.py::TestDeploymentValidation::test_10_integration_readiness) - ⏱️ 20min
+- [ ] **SRST-031:** ImportError en `tests/integration/test_deployment_validation.py` (Test: tests/integration/test_deployment_validation.py::test_batch_script_full_validation) - ⏱️ 20min
+
+### 🔥 HIGH (55 tickets)
+- [ ] **SRST-001:** ValidationError en `tests/integration/api/v1/endpoints/test_performance_endpoints.py` (Test: tests/integration/api/v1/endpoints/test_performance_endpoints.py::test_get_strategies_performance_endpoint_no_data) - ⏱️ 20min
+- [ ] **SRST-002:** ValidationError en `tests/integration/api/v1/endpoints/test_performance_endpoints.py` (Test: tests/integration/api/v1/endpoints/test_performance_endpoints.py::test_get_strategies_performance_endpoint_with_data) - ⏱️ 20min
+- [ ] **SRST-003:** ValidationError en `tests/integration/api/v1/endpoints/test_performance_endpoints.py` (Test: tests/integration/api/v1/endpoints/test_performance_endpoints.py::test_get_strategies_performance_endpoint_filter_real_mode) - ⏱️ 20min
+- [ ] **SRST-004:** ValidationError en `tests/integration/api/v1/endpoints/test_performance_endpoints.py` (Test: tests/integration/api/v1/endpoints/test_performance_endpoints.py::test_get_strategies_performance_endpoint_invalid_mode_parameter) - ⏱️ 20min
+- [ ] **SRST-005:** ValidationError en `tests/integration/api/v1/endpoints/test_performance_endpoints.py` (Test: tests/integration/api/v1/endpoints/test_performance_endpoints.py::test_get_strategies_performance_endpoint_missing_user_id) - ⏱️ 20min
+- [ ] **SRST-006:** ConfigurationError en `tests/integration/api/v1/test_config_endpoints.py` (Test: tests/integration/api/v1/test_config_endpoints.py::test_get_user_config_initial) - ⏱️ 20min
+- [ ] **SRST-007:** ConfigurationError en `tests/integration/api/v1/test_config_endpoints.py` (Test: tests/integration/api/v1/test_config_endpoints.py::test_patch_user_config_update_paper_trading) - ⏱️ 20min
+- [ ] **SRST-008:** ConfigurationError en `tests/integration/api/v1/test_config_endpoints.py` (Test: tests/integration/api/v1/test_config_endpoints.py::test_patch_user_config_only_paper_trading_active) - ⏱️ 20min
+- [ ] **SRST-009:** ConfigurationError en `tests/integration/api/v1/test_config_endpoints.py` (Test: tests/integration/api/v1/test_config_endpoints.py::test_patch_user_config_only_capital) - ⏱️ 20min
+- [ ] **SRST-010:** ConfigurationError en `tests/integration/api/v1/test_config_endpoints.py` (Test: tests/integration/api/v1/test_config_endpoints.py::test_patch_user_config_invalid_data) - ⏱️ 20min
+- [ ] **SRST-070:** ConfigurationError en `tests/unit/services/test_config_service.py` (Test: tests/unit/services/test_config_service.py::TestConfigService::test_get_user_configuration_loads_from_db) - ⏱️ 20min
+- [ ] **SRST-071:** ConfigurationError en `tests/unit/services/test_config_service.py` (Test: tests/unit/services/test_config_service.py::TestConfigService::test_get_user_configuration_returns_default_if_not_found) - ⏱️ 20min
+- [ ] **SRST-072:** ConfigurationError en `tests/unit/services/test_config_service.py` (Test: tests/unit/services/test_config_service.py::TestConfigService::test_save_user_configuration) - ⏱️ 20min
+- [ ] **SRST-073:** ConfigurationError en `tests/unit/services/test_config_service.py` (Test: tests/unit/services/test_config_service.py::TestConfigService::test_activate_real_trading_mode_success) - ⏱️ 20min
+- [ ] **SRST-074:** ConfigurationError en `tests/unit/services/test_config_service.py` (Test: tests/unit/services/test_config_service.py::TestConfigService::test_activate_real_trading_mode_limit_reached) - ⏱️ 20min
+- [ ] **SRST-075:** ConfigurationError en `tests/unit/services/test_config_service.py` (Test: tests/unit/services/test_config_service.py::TestConfigService::test_activate_real_trading_mode_binance_api_error) - ⏱️ 20min
+- [ ] **SRST-076:** ConfigurationError en `tests/unit/services/test_config_service.py` (Test: tests/unit/services/test_config_service.py::TestConfigService::test_activate_real_trading_mode_insufficient_usdt_balance) - ⏱️ 20min
+- [ ] **SRST-077:** ConfigurationError en `tests/unit/services/test_config_service.py` (Test: tests/unit/services/test_config_service.py::TestConfigService::test_deactivate_real_trading_mode_success) - ⏱️ 20min
+- [ ] **SRST-078:** ConfigurationError en `tests/unit/services/test_config_service.py` (Test: tests/unit/services/test_config_service.py::TestConfigService::test_deactivate_real_trading_mode_already_inactive) - ⏱️ 20min
+- [ ] **SRST-079:** ConfigurationError en `tests/unit/services/test_config_service.py` (Test: tests/unit/services/test_config_service.py::TestConfigService::test_increment_real_trades_count_success) - ⏱️ 20min
+- [ ] **SRST-080:** ConfigurationError en `tests/unit/services/test_config_service.py` (Test: tests/unit/services/test_config_service.py::TestConfigService::test_increment_real_trades_count_at_limit) - ⏱️ 20min
+- [ ] **SRST-081:** ConfigurationError en `tests/unit/services/test_config_service.py` (Test: tests/unit/services/test_config_service.py::TestConfigService::test_get_real_trading_status) - ⏱️ 20min
+- [ ] **SRST-091:** TypeError en `tests/unit/services/test_market_data_service.py` (Test: tests/unit/services/test_market_data_service.py::test_get_binance_connection_status_success) - ⏱️ 20min
+- [ ] **SRST-092:** TypeError en `tests/unit/services/test_market_data_service.py` (Test: tests/unit/services/test_market_data_service.py::test_get_binance_connection_status_no_credentials) - ⏱️ 20min
+- [ ] **SRST-093:** TypeError en `tests/unit/services/test_market_data_service.py` (Test: tests/unit/services/test_market_data_service.py::test_get_binance_connection_status_verification_failed) - ⏱️ 20min
+- [ ] **SRST-094:** TypeError en `tests/unit/services/test_market_data_service.py` (Test: tests/unit/services/test_market_data_service.py::test_get_binance_connection_status_credential_error) - ⏱️ 20min
+- [ ] **SRST-095:** TypeError en `tests/unit/services/test_market_data_service.py` (Test: tests/unit/services/test_market_data_service.py::test_get_binance_connection_status_binance_api_error) - ⏱️ 20min
+- [ ] **SRST-096:** TypeError en `tests/unit/services/test_market_data_service.py` (Test: tests/unit/services/test_market_data_service.py::test_get_binance_spot_balances_success) - ⏱️ 20min
+- [ ] **SRST-097:** TypeError en `tests/unit/services/test_market_data_service.py` (Test: tests/unit/services/test_market_data_service.py::test_get_binance_spot_balances_credential_not_found) - ⏱️ 20min
+- [ ] **SRST-098:** TypeError en `tests/unit/services/test_market_data_service.py` (Test: tests/unit/services/test_market_data_service.py::test_get_binance_spot_balances_api_error) - ⏱️ 20min
+- [ ] **SRST-099:** ValidationError en `tests/unit/services/test_performance_service.py` (Test: tests/unit/services/test_performance_service.py::test_get_all_strategies_performance_no_trades) - ⏱️ 20min
+- [ ] **SRST-100:** ValidationError en `tests/unit/services/test_performance_service.py` (Test: tests/unit/services/test_performance_service.py::test_get_all_strategies_performance_no_closed_trades) - ⏱️ 20min
+- [ ] **SRST-101:** ValidationError en `tests/unit/services/test_performance_service.py` (Test: tests/unit/services/test_performance_service.py::test_get_all_strategies_performance_with_closed_trades) - ⏱️ 20min
+- [ ] **SRST-102:** ValidationError en `tests/unit/services/test_performance_service.py` (Test: tests/unit/services/test_performance_service.py::test_get_all_strategies_performance_multiple_trades_mixed_pnl) - ⏱️ 20min
+- [ ] **SRST-103:** ValidationError en `tests/unit/services/test_performance_service.py` (Test: tests/unit/services/test_performance_service.py::test_get_all_strategies_performance_mode_filtering_real) - ⏱️ 20min
+- [ ] **SRST-104:** ValidationError en `tests/unit/services/test_performance_service.py` (Test: tests/unit/services/test_performance_service.py::test_get_all_strategies_performance_unknown_strategy) - ⏱️ 20min
+- [ ] **SRST-105:** ValidationError en `tests/unit/services/test_performance_service.py` (Test: tests/unit/services/test_performance_service.py::test_get_all_strategies_performance_multiple_strategies_different_modes) - ⏱️ 20min
+- [ ] **SRST-106:** ValidationError en `tests/unit/services/test_performance_service.py` (Test: tests/unit/services/test_performance_service.py::test_get_all_strategies_performance_breakeven_trades) - ⏱️ 20min
+- [ ] **SRST-107:** ValidationError en `tests/unit/services/test_performance_service.py` (Test: tests/unit/services/test_performance_service.py::test_get_all_strategies_performance_trade_with_none_strategy_id) - ⏱️ 20min
+- [ ] **SRST-108:** ValidationError en `tests/unit/services/test_performance_service.py` (Test: tests/unit/services/test_performance_service.py::test_get_all_strategies_performance_win_rate_edge_cases[trades_pnl0-0.0-No) - ⏱️ 20min
+- [ ] **SRST-109:** ValidationError en `tests/unit/services/test_performance_service.py` (Test: tests/unit/services/test_performance_service.py::test_get_all_strategies_performance_win_rate_edge_cases[trades_pnl1-100.0-All) - ⏱️ 20min
+- [ ] **SRST-110:** ValidationError en `tests/unit/services/test_performance_service.py` (Test: tests/unit/services/test_performance_service.py::test_get_all_strategies_performance_win_rate_edge_cases[trades_pnl2-0.0-All) - ⏱️ 20min
+- [ ] **SRST-111:** ValidationError en `tests/unit/services/test_performance_service.py` (Test: tests/unit/services/test_performance_service.py::test_get_all_strategies_performance_win_rate_edge_cases[trades_pnl3-expected_win_rate3-Mixed) - ⏱️ 20min
+- [ ] **SRST-112:** ValidationError en `tests/unit/services/test_performance_service.py` (Test: tests/unit/services/test_performance_service.py::test_get_all_strategies_performance_win_rate_edge_cases[trades_pnl4-0.0-All) - ⏱️ 20min
+- [ ] **SRST-113:** TypeError en `tests/unit/services/test_trading_engine_capital_management.py` (Test: tests/unit/services/test_trading_engine_capital_management.py::TestCapitalManagementLogic::test_daily_capital_risk_calculation_basic) - ⏱️ 20min
+- [ ] **SRST-114:** TypeError en `tests/unit/services/test_trading_engine_capital_management.py` (Test: tests/unit/services/test_trading_engine_capital_management.py::TestCapitalManagementLogic::test_daily_capital_limit_boundary_conditions) - ⏱️ 20min
+- [ ] **SRST-115:** TypeError en `tests/unit/services/test_trading_engine_capital_management.py` (Test: tests/unit/services/test_trading_engine_capital_management.py::TestCapitalManagementLogic::test_daily_capital_reset_edge_cases) - ⏱️ 20min
+- [ ] **SRST-116:** TypeError en `tests/unit/services/test_trading_engine_capital_management.py` (Test: tests/unit/services/test_trading_engine_capital_management.py::TestCapitalManagementLogic::test_capital_calculation_with_zero_available_balance) - ⏱️ 20min
+- [ ] **SRST-117:** TypeError en `tests/unit/services/test_trading_engine_capital_management.py` (Test: tests/unit/services/test_trading_engine_capital_management.py::TestCapitalManagementLogic::test_capital_calculation_with_extreme_percentages) - ⏱️ 20min
+- [ ] **SRST-118:** TypeError en `tests/unit/services/test_trading_engine_capital_management.py` (Test: tests/unit/services/test_trading_engine_capital_management.py::TestCapitalManagementLogic::test_max_real_trades_limit_enforcement) - ⏱️ 20min
+- [ ] **SRST-119:** TypeError en `tests/unit/services/test_trading_engine_capital_management.py` (Test: tests/unit/services/test_trading_engine_capital_management.py::TestCapitalManagementLogic::test_default_risk_percentages_fallback) - ⏱️ 20min
+- [ ] **SRST-120:** TypeError en `tests/unit/services/test_trading_engine_service.py` (Test: tests/unit/services/test_trading_engine_service.py::TestTradingEngineService::test_instantiation_with_mocks) - ⏱️ 20min
+- [ ] **SRST-121:** TypeError en `tests/unit/services/test_trading_engine_service_corrected.py` (Test: tests/unit/services/test_trading_engine_service_corrected.py::test_execute_real_trade_logic) - ⏱️ 20min
+- [ ] **SRST-122:** TypeError en `tests/unit/services/test_trading_engine_story_5_4.py` (Test: tests/unit/services/test_trading_engine_story_5_4.py::TestProcessOpportunityWithActiveStrategies::test_placeholder) - ⏱️ 20min
+- [ ] **SRST-171:** ConfigurationError en `tests/unit/test_config_loading.py` (Test: tests/unit/test_config_loading.py::test_settings_import_and_validation) - ⏱️ 20min
+
+### 📋 MEDIUM (105 tickets)
+- [ ] **SRST-011:** UNKNOWNTest en `tests/integration/api/v1/test_real_trading_flow.py` (Test: tests/integration/api/v1/test_real_trading_flow.py::test_complete_real_trading_flow_with_capital_management) - ⏱️ 20min
+- [ ] **SRST-012:** UNKNOWNTest en `tests/integration/api/v1/test_real_trading_flow.py` (Test: tests/integration/api/v1/test_real_trading_flow.py::test_complete_real_trading_flow_capital_limit_exceeded) - ⏱️ 20min
+- [ ] **SRST-013:** UNKNOWNTest en `tests/integration/api/v1/test_real_trading_flow.py` (Test: tests/integration/api/v1/test_real_trading_flow.py::test_complete_real_trading_tsl_monitoring_and_execution) - ⏱️ 20min
+- [ ] **SRST-014:** UNKNOWNTest en `tests/integration/api/v1/test_real_trading_flow.py` (Test: tests/integration/api/v1/test_real_trading_flow.py::test_capital_management_daily_reset) - ⏱️ 20min
+- [ ] **SRST-015:** UNKNOWNTest en `tests/integration/api/v1/test_reports_endpoints.py` (Test: tests/integration/api/v1/test_reports_endpoints.py::test_get_trading_summary_report_success) - ⏱️ 20min
+- [ ] **SRST-016:** UNKNOWNTest en `tests/integration/api/v1/test_reports_endpoints.py` (Test: tests/integration/api/v1/test_reports_endpoints.py::test_get_trading_summary_report_no_trades) - ⏱️ 20min
+- [ ] **SRST-017:** UNKNOWNTest en `tests/integration/api/v1/test_reports_endpoints.py` (Test: tests/integration/api/v1/test_reports_endpoints.py::test_get_pnl_timeseries_report_success) - ⏱️ 20min
+- [ ] **SRST-018:** UNKNOWNTest en `tests/integration/api/v1/test_reports_endpoints.py` (Test: tests/integration/api/v1/test_reports_endpoints.py::test_get_pnl_timeseries_report_default_period) - ⏱️ 20min
+- [ ] **SRST-019:** UNKNOWNTest en `tests/integration/api/v1/test_reports_endpoints.py` (Test: tests/integration/api/v1/test_reports_endpoints.py::test_get_pnl_timeseries_report_invalid_period) - ⏱️ 20min
+- [ ] **SRST-032:** UNKNOWNTest en `tests/integration/test_story_4_5_trading_mode_integration.py` (Test: tests/integration/test_story_4_5_trading_mode_integration.py::TestTradingModeAPIIntegration::test_portfolio_snapshot_with_trading_mode) - ⏱️ 20min
+- [ ] **SRST-033:** UNKNOWNTest en `tests/integration/test_story_4_5_trading_mode_integration.py` (Test: tests/integration/test_story_4_5_trading_mode_integration.py::TestTradingModeAPIIntegration::test_market_order_execution_paper_mode) - ⏱️ 20min
+- [ ] **SRST-034:** UNKNOWNTest en `tests/integration/test_story_4_5_trading_mode_integration.py` (Test: tests/integration/test_story_4_5_trading_mode_integration.py::TestTradingModeAPIIntegration::test_market_order_execution_real_mode) - ⏱️ 20min
+- [ ] **SRST-035:** UNKNOWNTest en `tests/integration/test_story_4_5_trading_mode_integration.py` (Test: tests/integration/test_story_4_5_trading_mode_integration.py::TestTradingModeAPIIntegration::test_market_order_real_mode_missing_credentials) - ⏱️ 20min
+- [ ] **SRST-036:** UNKNOWNTest en `tests/integration/test_story_4_5_trading_mode_integration.py` (Test: tests/integration/test_story_4_5_trading_mode_integration.py::TestTradingModeAPIIntegration::test_get_open_trades_by_mode) - ⏱️ 20min
+- [ ] **SRST-037:** UNKNOWNTest en `tests/integration/test_story_4_5_trading_mode_integration.py` (Test: tests/integration/test_story_4_5_trading_mode_integration.py::TestTradingModeStateIntegration::test_state_propagation) - ⏱️ 20min
+- [ ] **SRST-038:** UNKNOWNTest en `tests/integration/test_story_4_5_trading_mode_integration.py` (Test: tests/integration/test_story_4_5_trading_mode_integration.py::TestTradingModeStateIntegration::test_multiple_components_sync) - ⏱️ 20min
+- [ ] **SRST-039:** UNKNOWNTest en `tests/integration/test_story_4_5_trading_mode_integration.py` (Test: tests/integration/test_story_4_5_trading_mode_integration.py::TestEndToEndTradingModeFlow::test_complete_paper_trading_workflow) - ⏱️ 20min
+- [ ] **SRST-040:** UNKNOWNTest en `tests/integration/test_story_4_5_trading_mode_integration.py` (Test: tests/integration/test_story_4_5_trading_mode_integration.py::TestEndToEndTradingModeFlow::test_complete_real_trading_workflow) - ⏱️ 20min
+- [ ] **SRST-041:** UNKNOWNTest en `tests/integration/test_story_5_4_complete_flow.py` (Test: tests/integration/test_story_5_4_complete_flow.py::TestCompleteOpportunityProcessingFlow::test_single_strategy_paper_trade_execution_flow) - ⏱️ 20min
+- [ ] **SRST-042:** UNKNOWNTest en `tests/integration/test_story_5_4_complete_flow.py` (Test: tests/integration/test_story_5_4_complete_flow.py::TestCompleteOpportunityProcessingFlow::test_multiple_strategies_with_ai_integration_flow) - ⏱️ 20min
+- [ ] **SRST-043:** UNKNOWNTest en `tests/integration/test_story_5_4_complete_flow.py` (Test: tests/integration/test_story_5_4_complete_flow.py::TestCompleteOpportunityProcessingFlow::test_no_applicable_strategies_rejection_flow) - ⏱️ 20min
+- [ ] **SRST-044:** UNKNOWNTest en `tests/integration/test_story_5_4_complete_flow.py` (Test: tests/integration/test_story_5_4_complete_flow.py::TestCompleteOpportunityProcessingFlow::test_confidence_threshold_rejection_flow) - ⏱️ 20min
+- [ ] **SRST-045:** UNKNOWNTest en `tests/integration/test_story_5_4_complete_flow.py` (Test: tests/integration/test_story_5_4_complete_flow.py::TestCompleteOpportunityProcessingFlow::test_real_mode_confirmation_required_flow) - ⏱️ 20min
+- [ ] **SRST-046:** UNKNOWNTest en `tests/integration/test_story_5_4_complete_flow.py` (Test: tests/integration/test_story_5_4_complete_flow.py::TestCompleteOpportunityProcessingFlow::test_strategy_evaluation_error_resilience_flow) - ⏱️ 20min
+- [ ] **SRST-047:** UNKNOWNTest en `tests/integration/test_story_5_4_complete_flow.py` (Test: tests/integration/test_story_5_4_complete_flow.py::TestTradeCreationWithStrategyAssociation::test_trade_strategy_id_association) - ⏱️ 20min
+- [ ] **SRST-048:** UNKNOWNTest en `tests/integration/test_story_5_4_complete_flow.py` (Test: tests/integration/test_story_5_4_complete_flow.py::TestTradeCreationWithStrategyAssociation::test_trade_side_determination) - ⏱️ 20min
+- [ ] **SRST-049:** UNKNOWNTest en `tests/integration/test_strategy_ai_trading_flow.py` (Test: tests/integration/test_strategy_ai_trading_flow.py::TestStrategyAITradingEngineIntegration::test_trading_engine_instantiation) - ⏱️ 20min
+- [ ] **SRST-050:** UNKNOWNTest en `tests/ui/unit/test_main_ui.py` (Test: tests/ui/unit/test_main_ui.py::test_start_application_success) - ⏱️ 20min
+- [ ] **SRST-051:** UNKNOWNTest en `tests/unit/adapters/test_binance_adapter.py` (Test: tests/unit/adapters/test_binance_adapter.py::test_get_account_info_success) - ⏱️ 20min
+- [ ] **SRST-052:** UNKNOWNTest en `tests/unit/adapters/test_binance_adapter.py` (Test: tests/unit/adapters/test_binance_adapter.py::test_get_account_info_api_error) - ⏱️ 20min
+- [ ] **SRST-053:** UNKNOWNTest en `tests/unit/adapters/test_binance_adapter.py` (Test: tests/unit/adapters/test_binance_adapter.py::test_get_spot_balances_success) - ⏱️ 20min
+- [ ] **SRST-054:** UNKNOWNTest en `tests/unit/adapters/test_binance_adapter.py` (Test: tests/unit/adapters/test_binance_adapter.py::test_get_spot_balances_parsing_error) - ⏱️ 20min
+- [ ] **SRST-055:** UNKNOWNTest en `tests/unit/adapters/test_binance_adapter.py` (Test: tests/unit/adapters/test_binance_adapter.py::test_make_request_get_success) - ⏱️ 20min
+- [ ] **SRST-056:** UNKNOWNTest en `tests/unit/adapters/test_binance_adapter.py` (Test: tests/unit/adapters/test_binance_adapter.py::test_make_request_retry_on_5xx_then_success) - ⏱️ 20min
+- [ ] **SRST-057:** UNKNOWNTest en `tests/unit/adapters/test_binance_adapter.py` (Test: tests/unit/adapters/test_binance_adapter.py::test_make_request_fail_after_retries_on_5xx) - ⏱️ 20min
+- [ ] **SRST-058:** UNKNOWNTest en `tests/unit/adapters/test_binance_adapter.py` (Test: tests/unit/adapters/test_binance_adapter.py::test_make_request_client_error_no_retry) - ⏱️ 20min
+- [ ] **SRST-059:** UNKNOWNTest en `tests/unit/adapters/test_persistence_service.py` (Test: tests/unit/adapters/test_persistence_service.py::test_get_user_configuration_found) - ⏱️ 20min
+- [ ] **SRST-060:** UNKNOWNTest en `tests/unit/adapters/test_persistence_service.py` (Test: tests/unit/adapters/test_persistence_service.py::test_get_user_configuration_not_found) - ⏱️ 20min
+- [ ] **SRST-061:** UNKNOWNTest en `tests/unit/adapters/test_persistence_service.py` (Test: tests/unit/adapters/test_persistence_service.py::test_get_user_configuration_db_error) - ⏱️ 20min
+- [ ] **SRST-062:** UNKNOWNTest en `tests/unit/adapters/test_persistence_service.py` (Test: tests/unit/adapters/test_persistence_service.py::test_upsert_user_configuration_insert) - ⏱️ 20min
+- [ ] **SRST-063:** UNKNOWNTest en `tests/unit/adapters/test_persistence_service.py` (Test: tests/unit/adapters/test_persistence_service.py::test_upsert_user_configuration_update) - ⏱️ 20min
+- [ ] **SRST-064:** UNKNOWNTest en `tests/unit/adapters/test_persistence_service.py` (Test: tests/unit/adapters/test_persistence_service.py::test_upsert_user_configuration_db_error) - ⏱️ 20min
+- [ ] **SRST-065:** UNKNOWNTest en `tests/unit/adapters/test_persistence_service.py` (Test: tests/unit/adapters/test_persistence_service.py::test_save_credential) - ⏱️ 20min
+- [ ] **SRST-066:** UNKNOWNTest en `tests/unit/core/domain_models/test_ai_models.py` (Test: tests/unit/core/domain_models/test_ai_models.py::TestAIAnalysisResult::test_ai_analysis_result_creation) - ⏱️ 20min
+- [ ] **SRST-067:** UNKNOWNTest en `tests/unit/core/domain_models/test_ai_models.py` (Test: tests/unit/core/domain_models/test_ai_models.py::TestAIAnalysisResult::test_ai_analysis_result_to_dict) - ⏱️ 20min
+- [ ] **SRST-068:** UNKNOWNTest en `tests/unit/core/domain_models/test_ai_models.py` (Test: tests/unit/core/domain_models/test_ai_models.py::TestOpportunityData::test_opportunity_data_creation) - ⏱️ 20min
+- [ ] **SRST-069:** UNKNOWNTest en `tests/unit/services/test_ai_orchestrator_service.py` (Test: tests/unit/services/test_ai_orchestrator_service.py::TestAIOrchestrator::test_analyze_opportunity_successful_analysis) - ⏱️ 20min
+- [ ] **SRST-082:** UNKNOWNTest en `tests/unit/services/test_credential_service.py` (Test: tests/unit/services/test_credential_service.py::test_encrypt_decrypt_data) - ⏱️ 20min
+- [ ] **SRST-083:** UNKNOWNTest en `tests/unit/services/test_credential_service.py` (Test: tests/unit/services/test_credential_service.py::test_decrypt_invalid_token) - ⏱️ 20min
+- [ ] **SRST-084:** UNKNOWNTest en `tests/unit/services/test_credential_service.py` (Test: tests/unit/services/test_credential_service.py::test_add_credential) - ⏱️ 20min
+- [ ] **SRST-085:** UNKNOWNTest en `tests/unit/services/test_credential_service.py` (Test: tests/unit/services/test_credential_service.py::test_get_credential_success) - ⏱️ 20min
+- [ ] **SRST-086:** UNKNOWNTest en `tests/unit/services/test_credential_service.py` (Test: tests/unit/services/test_credential_service.py::test_get_credential_decryption_failure_key) - ⏱️ 20min
+- [ ] **SRST-087:** UNKNOWNTest en `tests/unit/services/test_credential_service.py` (Test: tests/unit/services/test_credential_service.py::test_verify_credential_binance_success) - ⏱️ 20min
+- [ ] **SRST-088:** UNKNOWNTest en `tests/unit/services/test_credential_service.py` (Test: tests/unit/services/test_credential_service.py::test_verify_credential_binance_api_error) - ⏱️ 20min
+- [ ] **SRST-089:** UNKNOWNTest en `tests/unit/services/test_credential_service.py` (Test: tests/unit/services/test_credential_service.py::test_verify_credential_decryption_error) - ⏱️ 20min
+- [ ] **SRST-090:** UNKNOWNTest en `tests/unit/services/test_credential_service.py` (Test: tests/unit/services/test_credential_service.py::test_verify_credential_telegram_success) - ⏱️ 20min
+- [ ] **SRST-123:** UNKNOWNTest en `tests/unit/services/test_trading_mode_basic.py` (Test: tests/unit/services/test_trading_mode_basic.py::TestTradingModeEnum::test_enum_values) - ⏱️ 20min
+- [ ] **SRST-124:** UNKNOWNTest en `tests/unit/services/test_trading_mode_basic.py` (Test: tests/unit/services/test_trading_mode_basic.py::TestTradingModeEnum::test_display_names) - ⏱️ 20min
+- [ ] **SRST-125:** UNKNOWNTest en `tests/unit/services/test_trading_mode_basic.py` (Test: tests/unit/services/test_trading_mode_basic.py::TestTradingModeEnum::test_colors) - ⏱️ 20min
+- [ ] **SRST-126:** UNKNOWNTest en `tests/unit/services/test_trading_mode_basic.py` (Test: tests/unit/services/test_trading_mode_basic.py::TestTradingModeEnum::test_icons) - ⏱️ 20min
+- [ ] **SRST-127:** UNKNOWNTest en `tests/unit/services/test_trading_mode_basic.py` (Test: tests/unit/services/test_trading_mode_basic.py::TestBasicTradingModeLogic::test_trading_mode_enum_properties) - ⏱️ 20min
+- [ ] **SRST-128:** UNKNOWNTest en `tests/unit/services/test_trading_mode_basic.py` (Test: tests/unit/services/test_trading_mode_basic.py::TestAPIClientTradingModeSupport::test_market_order_data_validation) - ⏱️ 20min
+- [ ] **SRST-129:** UNKNOWNTest en `tests/unit/services/test_trading_mode_state.py` (Test: tests/unit/services/test_trading_mode_state.py::TestTradingModeEnum::test_enum_values) - ⏱️ 20min
+- [ ] **SRST-130:** UNKNOWNTest en `tests/unit/services/test_trading_mode_state.py` (Test: tests/unit/services/test_trading_mode_state.py::TestTradingModeEnum::test_display_names) - ⏱️ 20min
+- [ ] **SRST-131:** UNKNOWNTest en `tests/unit/services/test_trading_mode_state.py` (Test: tests/unit/services/test_trading_mode_state.py::TestTradingModeEnum::test_colors) - ⏱️ 20min
+- [ ] **SRST-132:** UNKNOWNTest en `tests/unit/services/test_trading_mode_state.py` (Test: tests/unit/services/test_trading_mode_state.py::TestTradingModeEnum::test_icons) - ⏱️ 20min
+- [ ] **SRST-133:** UNKNOWNTest en `tests/unit/services/test_trading_mode_state.py` (Test: tests/unit/services/test_trading_mode_state.py::TestTradingModeStateManager::test_initial_mode) - ⏱️ 20min
+- [ ] **SRST-134:** UNKNOWNTest en `tests/unit/services/test_trading_mode_state.py` (Test: tests/unit/services/test_trading_mode_state.py::TestTradingModeStateManager::test_initial_mode_custom) - ⏱️ 20min
+- [ ] **SRST-135:** UNKNOWNTest en `tests/unit/services/test_trading_mode_state.py` (Test: tests/unit/services/test_trading_mode_state.py::TestTradingModeStateManager::test_set_trading_mode_valid) - ⏱️ 20min
+- [ ] **SRST-136:** UNKNOWNTest en `tests/unit/services/test_trading_mode_state.py` (Test: tests/unit/services/test_trading_mode_state.py::TestTradingModeStateManager::test_set_trading_mode_invalid) - ⏱️ 20min
+- [ ] **SRST-137:** UNKNOWNTest en `tests/unit/services/test_trading_mode_state.py` (Test: tests/unit/services/test_trading_mode_state.py::TestTradingModeStateManager::test_set_same_mode_no_signal) - ⏱️ 20min
+- [ ] **SRST-138:** UNKNOWNTest en `tests/unit/services/test_trading_mode_state.py` (Test: tests/unit/services/test_trading_mode_state.py::TestTradingModeStateManager::test_toggle_mode) - ⏱️ 20min
+- [ ] **SRST-139:** UNKNOWNTest en `tests/unit/services/test_trading_mode_state.py` (Test: tests/unit/services/test_trading_mode_state.py::TestTradingModeStateManager::test_current_mode_enum) - ⏱️ 20min
+- [ ] **SRST-140:** UNKNOWNTest en `tests/unit/services/test_trading_mode_state.py` (Test: tests/unit/services/test_trading_mode_state.py::TestTradingModeStateManager::test_get_available_modes) - ⏱️ 20min
+- [ ] **SRST-141:** UNKNOWNTest en `tests/unit/services/test_trading_mode_state.py` (Test: tests/unit/services/test_trading_mode_state.py::TestTradingModeStateManager::test_get_mode_display_info) - ⏱️ 20min
+- [ ] **SRST-142:** UNKNOWNTest en `tests/unit/services/test_trading_mode_state.py` (Test: tests/unit/services/test_trading_mode_state.py::TestTradingModeStateManager::test_get_all_modes_info) - ⏱️ 20min
+- [ ] **SRST-143:** UNKNOWNTest en `tests/unit/services/test_trading_mode_state.py` (Test: tests/unit/services/test_trading_mode_state.py::TestTradingModeStateManager::test_subscribe_unsubscribe) - ⏱️ 20min
+- [ ] **SRST-144:** UNKNOWNTest en `tests/unit/services/test_trading_mode_state.py` (Test: tests/unit/services/test_trading_mode_state.py::TestTradingModeStateManager::test_subscribe_error_handling) - ⏱️ 20min
+- [ ] **SRST-145:** UNKNOWNTest en `tests/unit/services/test_trading_mode_state.py` (Test: tests/unit/services/test_trading_mode_state.py::TestTradingModeStateManager::test_save_load_config) - ⏱️ 20min
+- [ ] **SRST-146:** UNKNOWNTest en `tests/unit/services/test_trading_mode_state.py` (Test: tests/unit/services/test_trading_mode_state.py::TestTradingModeStateManager::test_load_config_invalid_mode) - ⏱️ 20min
+- [ ] **SRST-147:** UNKNOWNTest en `tests/unit/services/test_trading_mode_state.py` (Test: tests/unit/services/test_trading_mode_state.py::TestGlobalStateManager::test_singleton_behavior) - ⏱️ 20min
+- [ ] **SRST-148:** UNKNOWNTest en `tests/unit/services/test_trading_mode_state.py` (Test: tests/unit/services/test_trading_mode_state.py::TestGlobalStateManager::test_reset_functionality) - ⏱️ 20min
+- [ ] **SRST-149:** UNKNOWNTest en `tests/unit/services/test_trading_mode_state.py` (Test: tests/unit/services/test_trading_mode_state.py::TestGlobalStateManager::test_state_persistence_across_calls) - ⏱️ 20min
+- [ ] **SRST-150:** UNKNOWNTest en `tests/unit/services/test_trading_report_service.py` (Test: tests/unit/services/test_trading_report_service.py::TestTradingReportService::test_get_closed_trades_success) - ⏱️ 20min
+- [ ] **SRST-151:** UNKNOWNTest en `tests/unit/services/test_trading_report_service.py` (Test: tests/unit/services/test_trading_report_service.py::TestTradingReportService::test_get_closed_trades_with_filters) - ⏱️ 20min
+- [ ] **SRST-152:** UNKNOWNTest en `tests/unit/services/test_trading_report_service.py` (Test: tests/unit/services/test_trading_report_service.py::TestTradingReportService::test_get_closed_trades_empty_result) - ⏱️ 20min
+- [ ] **SRST-153:** UNKNOWNTest en `tests/unit/services/test_trading_report_service.py` (Test: tests/unit/services/test_trading_report_service.py::TestTradingReportService::test_get_closed_trades_error_handling) - ⏱️ 20min
+- [ ] **SRST-154:** UNKNOWNTest en `tests/unit/services/test_trading_report_service.py` (Test: tests/unit/services/test_trading_report_service.py::TestTradingReportService::test_calculate_performance_metrics_success) - ⏱️ 20min
+- [ ] **SRST-155:** UNKNOWNTest en `tests/unit/services/test_trading_report_service.py` (Test: tests/unit/services/test_trading_report_service.py::TestTradingReportService::test_calculate_performance_metrics_no_trades) - ⏱️ 20min
+- [ ] **SRST-156:** UNKNOWNTest en `tests/unit/services/test_trading_report_service.py` (Test: tests/unit/services/test_trading_report_service.py::TestTradingReportService::test_calculate_performance_metrics_with_filters) - ⏱️ 20min
+- [ ] **SRST-157:** UNKNOWNTest en `tests/unit/services/test_trading_report_service.py` (Test: tests/unit/services/test_trading_report_service.py::TestTradingReportService::test_calculate_performance_metrics_only_winning_trades) - ⏱️ 20min
+- [ ] **SRST-158:** UNKNOWNTest en `tests/unit/services/test_trading_report_service.py` (Test: tests/unit/services/test_trading_report_service.py::TestTradingReportService::test_calculate_performance_metrics_error_handling) - ⏱️ 20min
+- [ ] **SRST-159:** UNKNOWNTest en `tests/unit/services/test_trading_report_service.py` (Test: tests/unit/services/test_trading_report_service.py::TestTradingReportService::test_win_rate_calculation_with_zero_pnl_trades) - ⏱️ 20min
+- [ ] **SRST-160:** UNKNOWNTest en `tests/unit/test_app_config.py` (Test: tests/unit/test_app_config.py::test_load_credential_encryption_key_success) - ⏱️ 20min
+- [ ] **SRST-161:** UNKNOWNTest en `tests/unit/test_app_config.py` (Test: tests/unit/test_app_config.py::test_load_credential_encryption_key_missing_raises_validation_error) - ⏱️ 20min
+- [ ] **SRST-162:** UNKNOWNTest en `tests/unit/test_app_config.py` (Test: tests/unit/test_app_config.py::test_log_level_default) - ⏱️ 20min
+- [ ] **SRST-163:** UNKNOWNTest en `tests/unit/test_autonomous_strategies.py` (Test: tests/unit/test_autonomous_strategies.py::TestAutonomousScalpingStrategy::test_autonomous_scalping_evaluation) - ⏱️ 20min
+- [ ] **SRST-164:** UNKNOWNTest en `tests/unit/test_autonomous_strategies.py` (Test: tests/unit/test_autonomous_strategies.py::TestAutonomousScalpingStrategy::test_scalping_autonomous_trade_parameters) - ⏱️ 20min
+- [ ] **SRST-165:** UNKNOWNTest en `tests/unit/test_autonomous_strategies.py` (Test: tests/unit/test_autonomous_strategies.py::TestAutonomousDayTradingStrategy::test_autonomous_day_trading_evaluation) - ⏱️ 20min
+- [ ] **SRST-166:** UNKNOWNTest en `tests/unit/test_autonomous_strategies.py` (Test: tests/unit/test_autonomous_strategies.py::TestAutonomousArbitrageStrategy::test_autonomous_arbitrage_evaluation) - ⏱️ 20min
+- [ ] **SRST-167:** UNKNOWNTest en `tests/unit/test_autonomous_strategies.py` (Test: tests/unit/test_autonomous_strategies.py::TestUnknownStrategyType::test_unknown_strategy_type_autonomous_evaluation) - ⏱️ 20min
+- [ ] **SRST-168:** UNKNOWNTest en `tests/unit/test_autonomous_strategies.py` (Test: tests/unit/test_autonomous_strategies.py::TestStrategyServiceIntegration::test_strategy_service_autonomous_validation) - ⏱️ 20min
+- [ ] **SRST-169:** UNKNOWNTest en `tests/unit/test_autonomous_strategies.py` (Test: tests/unit/test_autonomous_strategies.py::TestStrategyServiceIntegration::test_strategy_logging_for_autonomous_decisions) - ⏱️ 20min
+- [ ] **SRST-170:** UNKNOWNTest en `tests/unit/test_autonomous_strategies.py` (Test: tests/unit/test_autonomous_strategies.py::TestPerformanceConsiderations::test_autonomous_evaluation_performance) - ⏱️ 20min
+- [ ] **SRST-172:** UNKNOWNTest en `tests/unit/test_hello_world.py` (Test: tests/unit/test_hello_world.py::test_hello_world) - ⏱️ 20min
+
+### 📝 LOW (0 tickets)
+Ninguno
+
+## Recomendación de Sesión
+**Empezar con:** SRST-020

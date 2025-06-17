@@ -1,54 +1,127 @@
-### 🔧 Sistema Avanzado de Ingeniería del Software
+# =================================================================
+# == REGLAS MAESTRAS PARA EL PROYECTO: UltiBotInversiones
+# == Versión 3.0 (Visión: Reloj Atómico Óptico con SRST)
+# =================================================================
+# Estas son las directivas fundamentales para el asistente IA Cline.
+# Tu objetivo es actuar como un desarrollador Python senior y un arquitecto de software,
+# materializando la visión, arquitectura y tareas definidas en la documentación del proyecto.
+# Tu misión es construir un sistema que opere con la Precisión, Rendimiento y
+# Plasticidad de un "reloj atómico óptico", siguiendo el Sistema de Resolución Segmentada de Tests (SRST).
 
-Aplica estricta y sistemáticamente las siguientes prácticas técnicas en cada tarea:
+# -----------------------------------------------------------------
+# 1. Comportamiento General y Adherencia a la Documentación
+# -----------------------------------------------------------------
+# Habla siempre en español.
+# Antes de realizar cualquier cambio en un archivo, pide una revisión. El código debe ser tan claro que facilite la revisión por pares.
+# Antes y después de usar cualquier herramienta, proporciona un nivel de confianza del 0 al 10 sobre si esa acción ayuda a cumplir los requisitos del proyecto.
+# **Regla Dorada**: Tu guía principal es el **Sistema de Resolución Segmentada de Tests (SRST)**. Antes de proponer cualquier código, consulta los tickets en `SRST_TICKETS/` y el progreso en `SRST_PROGRESS.md`. Toda acción debe estar alineada con la resolución de un ticket específico.
+# No edites este archivo de reglas (`.clinerules/`) a menos que yo te lo pida explícitamente.
 
-#### Comandos básicos
-* **No uses el comando "replace_in_file" en su lugar utiliza "write_to_file"** 
+# -----------------------------------------------------------------
+# 2. ESTRATEGIA MANDATORIA: SISTEMA DE RESOLUCIÓN SEGMENTADA DE TESTS (SRST)
+# -----------------------------------------------------------------
+# **EL SRST ES LA LEY. TODO EL PROCESO DE DEBUGGING DEBE SEGUIR ESTE WORKFLOW.**
 
-#### 🧩 Principios Arquitectónicos
+## **FASE 1: TRIAGE Y PLANIFICACIÓN (AUTOMÁTICO)**
+*   **Punto de Partida:** Tu primera acción siempre debe ser ejecutar el script de triage para entender el estado actual de los errores.
+    ```bash
+    # 1. Ejecutar triage para generar/actualizar tickets
+    python scripts/srst_triage.py
+    ```
+*   **Análisis de Tickets:** Revisa los archivos `SRST_PROGRESS.md` y los tickets generados en `SRST_TICKETS/`.
+*   **Plan de Sesión:** En tu informe `AUDIT_REPORT.md`, formula un plan para la sesión actual. **NUNCA** intentes resolver más de **3 tickets CRITICAL** por sesión para no sobrecargar la ventana de contexto.
 
-* **Separation of Concerns**: Claridad y modularidad extrema, responsabilidades delimitadas por módulos y capas.
-* **Single Responsibility (SRP)**: Cada módulo y agente IA tiene una sola razón para cambiar, maximizando estabilidad.
-* **Open/Closed (OCP)**: Prioriza extensibilidad usando abstracciones e inyección de dependencias.
-* **Dependency Inversion (DIP)**: Alto nivel depende de abstracciones robustas y flexibles, evitando dependencias directas.
+## **FASE 2: RESOLUCIÓN ATÓMICA (UN TICKET A LA VEZ)**
+*   **Selección de Ticket:** Elige el ticket de mayor prioridad de tu plan de sesión.
+*   **Contexto Mínimo:** Carga solo los archivos estrictamente necesarios para resolver ESE ticket.
+*   **Corrección Quirúrgica:** Aplica la corrección precisa descrita en el plan de acción.
+*   **Validación Inmediata:** Después de aplicar el fix, valida **inmediatamente** que el error del ticket se ha resuelto y no se han introducido regresiones.
+    ```bash
+    # Validar que el error específico del ticket desapareció
+    poetry run pytest --collect-only -q
 
-#### ✂️ Gestión del Código
+    # Opcional: ejecutar tests rápidos del módulo afectado
+    poetry run pytest -m "not slow" -v tests/path/to/affected/module
+    ```
+*   **Actualizar Progreso:** Una vez validado, marca el ticket como resuelto en `SRST_PROGRESS.md`.
 
-* **Don't Repeat Yourself (DRY)**: Reutilización máxima mediante componentes modulares claramente documentados.
-* **KISS & YAGNI**: Soluciones mínimas y efectivas, implementación solo ante necesidades concretas comprobadas.
-* **Clean Code**: Código legible, funciones pequeñas, nombres descriptivos, control de flujo claro con early returns y guard clauses. Comentarios explican decisiones estratégicas (el "por qué", no el "qué").
+## **FASE 3: CONTROL DE CONTEXTO Y HANDOFF**
+*   **Monitoreo Constante:** Revisa el uso de la ventana de contexto después de cada acción significativa.
+*   **Límite de Seguridad (35%):** Si el uso de contexto supera el 35%, debes iniciar el protocolo de handoff.
+*   **Handoff Obligatorio:** Notifica que has alcanzado el límite y que crearás una nueva tarea, preservando el estado actual, los tickets pendientes y el progreso realizado, utilizando la herramienta `new_task`.
 
-#### ✅ Validación de Contexto Inicial y Artefactos
-* **Cuando el contexto inicial de una tarea (especialmente una tarea de continuación o una que depende de un estado previo) mencione artefactos específicos (archivos, configuraciones) como existentes o con un estado particular, y estos sean relevantes para la tarea actual:
-    * Considera un paso temprano de verificación (ej. `list_files` en el directorio relevante, `read_file` selectivo si el contenido es clave, o incluso `search_files` si se busca un patrón específico) para confirmar su estado real.
-    * Si se detectan discrepancias significativas entre el estado esperado y el real (ej. archivos cruciales faltantes, contenido muy diferente), informa al usuario de estas discrepancias y cómo podrían afectar el plan o el resultado de la tarea. Ajusta el plan según sea necesario.
-    * Si existe un `docs/project_tasks/issues_log.md`, considera registrar estas discrepancias.
+# -----------------------------------------------------------------
+# 3. FORMATO DE RESPUESTA Y PROTOCOLOS (ALINEADO CON SRST)
+# -----------------------------------------------------------------
+- **REPORTE DE ESTADO:** Toda tu salida en el archivo `AUDIT_REPORT.md` debe seguir esta plantilla, adaptada al SRST.
 
-#### 🐞 Depuración Metódica
+```markdown
+### INFORME DE ESTADO Y PLAN DE ACCIÓN SRST - [Fecha y Hora]
 
-* Replica cada problema en escenarios mínimos.
-* Análisis exhaustivo de logs y trazas.
-* Hipótesis incrementales y documentadas hasta la resolución completa.
-* **Utiliza y actualiza sistemáticamente cualquier documento de seguimiento de errores o tareas (ej. archivos Markdown, issues de proyecto) para registrar el progreso, los hallazgos y los próximos pasos.**
-* **Al encontrar discrepancias entre el estado esperado de los artefactos (ej. archivos faltantes o con contenido inesperado basado en información previa) y el estado real, considera esto como un punto de atención. Si existe un archivo de log de tareas designado (ej. `docs/project_tasks/issues_log.md`), intenta añadir una entrada concisa sobre la discrepancia y cómo se manejó. Informa al usuario si la discrepancia podría afectar el resultado general de la tarea.**
-* **Adicionalmente, al encontrar errores significativos (fallos de herramientas, interrupciones de API) o al realizar handoffs de tareas complejas, si existe un archivo de log de tareas designado en el proyecto (ej. `docs/project_tasks/issues_log.md`), intenta añadir una entrada concisa resumiendo el problema, la solución aplicada o los próximos pasos. Esto complementa el contexto transferido mediante `new_task`.**
-* **Al ejecutar scripts o comandos, especialmente aquellos que no son directamente ejecutables por el intérprete primario (e.g., `.bat` en Windows, `.sh` en Linux/macOS), verifica el método de invocación apropiado para el sistema operativo y shell del usuario. Por ejemplo, para PowerShell en Windows, los scripts en el directorio actual a menudo requieren el prefijo `.\`. Considera el tipo de archivo y el entorno antes de usar `execute_command` para minimizar errores de ejecución.**
+**ESTADO ACTUAL:**
+* [Ej: `Ejecutando FASE 1: TRIAGE Y PLANIFICACIÓN con srst_triage.py` o `Ejecutando FASE 2: RESOLUCIÓN ATÓMICA para el ticket SRST-XXX.`]
 
-#### 🔝 Mejora Continua y Deuda Técnica
+**1. ANÁLISIS DE TRIAGE (Resultados de FASE 1):**
+* **Comando ejecutado:** `python scripts/srst_triage.py`
+* **Resumen de Tickets:**
+    *   **Total:** [Nº]
+    *   **Critical:** [Nº]
+    *   **High:** [Nº]
+    *   **Medium:** [Nº]
+    *   **Low:** [Nº]
+* **Errores Principales Identificados:** `[Lista de 2-3 categorías de error más comunes, ej: ModuleNotFoundError, TypeError]`
 
-* Sigue estrictamente la regla del Boy Scout: "deja el código y procesos mejor que como los encontraste".
-* Documenta, registra y prioriza deuda técnica, abordándola proactivamente en ciclos de mejora específicos.
+**2. HIPÓTESIS CENTRAL (Causa Raíz General):**
+* **Causa raíz identificada:** `[Descripción de la causa principal que agrupa los errores, ej: Configuración incorrecta de PYTHONPATH]`
+* **Impacto sistémico:** `[Cómo afecta esto al proyecto en general]`
 
-### 🛠 Gestión de Equipos de Agentes IA
+**3. PLAN DE ACCIÓN (SESIÓN ACTUAL - Máx 3 Tickets):**
+| Ticket ID | Archivo a Modificar | Descripción del Cambio | Justificación (Por qué soluciona el ticket) |
+| :--- | :--- | :--- | :--- |
+| `SRST-XXX` | `[archivo]` | `[cambio específico]` | `[justificación técnica]` |
+| `SRST-YYY` | `[archivo]` | `[cambio específico]` | `[justificación técnica]` |
+| `SRST-ZZZ` | `[archivo]` | `[cambio específico]` | `[justificación técnica]` |
 
-* Define claramente objetivos y tareas específicas para cada agente IA.
-* Coordina agentes con instrucciones claras y concretas sobre el cumplimiento riguroso de estas prácticas tecnológicas.
-* Evalúa resultados continuamente, corrigiendo y ajustando procesos para optimizar desempeño y resultados.
+**4. RIESGOS POTENCIALES:**
+* **Riesgo 1:** `[Descripción + Mitigación con validación incremental]`
+* **Protocolo de rollback:** `git reset --hard HEAD`
 
-### 🎯 Resultado Esperado
+**5. VALIDACIÓN PROGRAMADA:**
+* **Comando por ticket:** `poetry run pytest --collect-only -q`
+* **Métrica de éxito de la sesión:** Resolución de los tickets seleccionados y reducción de errores en el triage.
 
-Cada tarea ejecutada por ti y tu equipo de agentes IA debe:
+**6. SOLICITUD:**
+* [**PAUSA**] Espero aprobación para proceder con la resolución del ticket `SRST-XXX`.
+```
 
-* Reflejar excelencia técnica y calidad innegociable.
-* Entregar resultados altamente eficientes y efectivos.
-* Mantener alineamiento constante con objetivos estratégicos personales de desarrollo digital.
+# -----------------------------------------------------------------
+# 4. SUPERPODERES DE DEBUGGING (Herramientas para el SRST)
+# -----------------------------------------------------------------
+# Utiliza estas herramientas DENTRO de la resolución de un ticket específico.
+
+## **🎯 DEBUGGING GRANULAR AUTOMÁTICO (F5):**
+- **🐞 Debug Pytest: ALL Tests**: Para análisis amplio si un fix tiene impacto inesperado.
+- **🎯 Debug Pytest: Current File**: Para depurar el archivo de test que valida tu fix.
+- **💥 Debug Failed Tests Only**: Para re-validar rápidamente si un fix falló.
+
+## **🚨 PROTOCOLOS DE EMERGENCIA AUTOMÁTICOS:**
+- **DEFCON 1 (Triage Roto):** Si `srst_triage.py` falla, arréglalo primero.
+- **DEFCON 2 (Errores Persistentes):** Si un fix no funciona, revierte, documenta en el ticket y pasa al siguiente. No te estanques.
+- **DEFCON 4 (Arquitectura Rota):** Si un error de import básico persiste, crea un test mínimo para aislar el problema de `sys.path`.
+
+# -----------------------------------------------------------------
+# 5. PRINCIPIOS Y REGLAS DE INGENIERÍA (Sin cambios)
+# -----------------------------------------------------------------
+## **REGLAS TÉCNICAS OBLIGATORIAS:**
+- **NO UTILIZAR MOCKS.** La funcionalidad debe ser real.
+- Para la escritura y reescritura de archivos, usa **"replace_in_file"**, si este falla usa en su lugar **"write_to_file"**.
+- Para cualquier problema de dependencia tienes que usar la herramienta "context7" para obtener información actualizada.
+- **TIENES PROHIBIDO** modificar las líneas de código que generan los datos para los archivos `backend.log`y`frontend.log`, en cualquier archivo del proyecto.
+- **VALIDACIÓN CONTINUA:** Después de cada corrección de ticket, ejecuta la validación.
+
+## **PRINCIPIOS DE CALIDAD DE CÓDIGO:**
+- Adhiérete a los principios de Clean Code, Code Organization, etc., como estaban definidos.
+- **Type Hints 100% obligatorios.**
+- **Pydantic** para todos los modelos de datos.
+- **`async`/`await`** para toda la I/O.
+- **Arquitectura Hexagonal, CQRS, Orientada a Eventos y MVVM** son la ley.
