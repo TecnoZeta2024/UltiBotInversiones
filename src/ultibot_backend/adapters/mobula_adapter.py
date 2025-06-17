@@ -3,8 +3,8 @@ import logging
 from typing import Optional, Dict, Any, List
 from uuid import UUID
 
-from src.ultibot_backend.services.credential_service import CredentialService, ServiceName
-from src.ultibot_backend.core.exceptions import MobulaAPIError # Necesitaremos definir esta excepción
+from ultibot_backend.services.credential_service import CredentialService, ServiceName
+from ultibot_backend.core.exceptions import MobulaAPIError # Necesitaremos definir esta excepción
 
 logger = logging.getLogger(__name__)
 
@@ -121,3 +121,4 @@ class MobulaAdapter:
     async def close(self):
         """Cierra el cliente HTTP."""
         await self.http_client.aclose()
+

@@ -6,10 +6,10 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QGroupBox, QFormLayout
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QObject, QRunnable, QThreadPool
 from PyQt5.QtGui import QFont, QColor
 
-from src.shared.data_types import PortfolioSnapshot, PortfolioSummary, PortfolioAsset
-from src.ultibot_backend.services.portfolio_service import PortfolioService
-from src.ultibot_backend.services.config_service import ConfigService
-from src.ultibot_backend.services.market_data_service import MarketDataService
+from shared.data_types import PortfolioSnapshot, PortfolioSummary, PortfolioAsset
+from ultibot_backend.services.portfolio_service import PortfolioService
+from ultibot_backend.services.config_service import ConfigService
+from ultibot_backend.services.market_data_service import MarketDataService
 
 logger = logging.getLogger(__name__)
 
@@ -275,13 +275,13 @@ if __name__ == "__main__":
 
     from PyQt5.QtWidgets import QApplication, QMainWindow
 
-    from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
-    from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-    from src.ultibot_backend.services.credential_service import CredentialService
-    from src.ultibot_backend.services.config_service import ConfigService
-    from src.ultibot_backend.services.market_data_service import MarketDataService
-    from src.ultibot_backend.services.portfolio_service import PortfolioService
-    from src.shared.data_types import AssetBalance, ServiceName, APICredential # Importar tipos necesarios
+    from ultibot_backend.adapters.binance_adapter import BinanceAdapter
+    from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+    from ultibot_backend.services.credential_service import CredentialService
+    from ultibot_backend.services.config_service import ConfigService
+    from ultibot_backend.services.market_data_service import MarketDataService
+    from ultibot_backend.services.portfolio_service import PortfolioService
+    from shared.data_types import AssetBalance, ServiceName, APICredential # Importar tipos necesarios
 
     # Configurar un logger básico para el ejemplo
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -376,3 +376,4 @@ if __name__ == "__main__":
 
     # Ejecutar el test asíncrono
     asyncio.run(run_widget_test())
+

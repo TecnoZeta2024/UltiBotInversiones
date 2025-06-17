@@ -9,13 +9,14 @@ os.environ['QT_API'] = 'pyside6'
 
 from unittest.mock import AsyncMock, patch, MagicMock
 from PySide6.QtWidgets import QApplication, QMessageBox
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QTimer, Qt
+from PySide6.QtCore import QCoreApplication
 
 # Asegurarse de que el path de src esté en sys.path para las importaciones relativas
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'src')))
 
 # Importar la función a testear
-from src.ultibot_ui.main import start_application
+from ultibot_ui.main import start_application
 
 @pytest.fixture(scope="session")
 def qapp():
@@ -104,3 +105,4 @@ async def test_start_application_success(qapp):
                                         # Para este test básico, nos centraremos en la inicialización.
                                         # Un test más avanzado podría mockear app.aboutToQuit para verificar la conexión.
                                         # Por ahora, asumimos que si no hay errores, el flujo de cleanup se configuró.
+

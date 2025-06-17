@@ -10,10 +10,10 @@ from typing import List, Optional, Any
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from src.shared.data_types import Notification, NotificationPriority
-from src.ultibot_ui.models import BaseMainWindow
-from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
-from src.ultibot_ui.workers import ApiWorker
+from shared.data_types import Notification, NotificationPriority
+from ultibot_ui.models import BaseMainWindow
+from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
+from ultibot_ui.workers import ApiWorker
 
 class NotificationWidget(QWidget):
     """
@@ -337,3 +337,4 @@ if __name__ == '__main__':
 
     main_window_widget.show()
     sys.exit(app.exec_())
+

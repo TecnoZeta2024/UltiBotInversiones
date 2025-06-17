@@ -3,10 +3,10 @@
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
 from uuid import UUID
 
-from src.ultibot_backend.api.v1.models.strategy_models import (
+from ultibot_backend.api.v1.models.strategy_models import (
     CreateTradingStrategyRequest,
     UpdateTradingStrategyRequest,
     TradingStrategyResponse,
@@ -15,10 +15,10 @@ from src.ultibot_backend.api.v1.models.strategy_models import (
     StrategyActivationResponse,
     ErrorResponse,
 )
-from src.ultibot_backend.core.domain_models.trading_strategy_models import BaseStrategyType
-from src.ultibot_backend.services.strategy_service import StrategyService
-from src.ultibot_backend import dependencies as deps
-from src.ultibot_backend.app_config import settings
+from ultibot_backend.core.domain_models.trading_strategy_models import BaseStrategyType
+from ultibot_backend.services.strategy_service import StrategyService
+from ultibot_backend import dependencies as deps
+from ultibot_backend.app_config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +38,7 @@ router = APIRouter()
 )
 async def create_strategy(
     strategy_request: CreateTradingStrategyRequest,
+    request: Request,
     strategy_service: StrategyService = Depends(deps.get_strategy_service)
 ) -> TradingStrategyResponse:
     """Create a new trading strategy configuration for the fixed user."""
@@ -68,6 +69,7 @@ async def create_strategy(
     description="Get all trading strategy configurations for the user",
 )
 async def list_strategies(
+    request: Request,
     strategy_service: StrategyService = Depends(deps.get_strategy_service)
 ) -> StrategyListResponse:
     """List all trading strategy configurations for the fixed user."""
@@ -101,6 +103,7 @@ async def list_strategies(
 )
 async def get_strategy(
     strategy_id: str,
+    request: Request,
     strategy_service: StrategyService = Depends(deps.get_strategy_service)
 ) -> TradingStrategyResponse:
     """Get a trading strategy configuration by ID for the fixed user."""
@@ -136,6 +139,7 @@ async def get_strategy(
 async def update_strategy(
     strategy_id: str,
     strategy_request: UpdateTradingStrategyRequest,
+    request: Request,
     strategy_service: StrategyService = Depends(deps.get_strategy_service)
 ) -> TradingStrategyResponse:
     """Update a trading strategy configuration for the fixed user."""
@@ -172,6 +176,7 @@ async def update_strategy(
 )
 async def delete_strategy(
     strategy_id: str,
+    request: Request,
     strategy_service: StrategyService = Depends(deps.get_strategy_service)
 ) -> None:
     """Delete a trading strategy configuration for the fixed user."""
@@ -205,6 +210,7 @@ async def delete_strategy(
 async def activate_strategy(
     strategy_id: str,
     activation_request: ActivateStrategyRequest,
+    request: Request,
     strategy_service: StrategyService = Depends(deps.get_strategy_service)
 ) -> StrategyActivationResponse:
     """Activate a trading strategy in the specified mode for the fixed user."""
@@ -251,6 +257,7 @@ async def activate_strategy(
 async def deactivate_strategy(
     strategy_id: str,
     deactivation_request: ActivateStrategyRequest,
+    request: Request,
     strategy_service: StrategyService = Depends(deps.get_strategy_service)
 ) -> StrategyActivationResponse:
     """Deactivate a trading strategy in the specified mode for the fixed user."""
@@ -296,6 +303,7 @@ async def deactivate_strategy(
 )
 async def get_active_strategies_by_mode(
     mode: str,
+    request: Request,
     strategy_service: StrategyService = Depends(deps.get_strategy_service)
 ) -> StrategyListResponse:
     """Get all active strategies for a specific trading mode for the fixed user."""
@@ -324,3 +332,4 @@ async def get_active_strategies_by_mode(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve active {mode} strategies"
         )
+

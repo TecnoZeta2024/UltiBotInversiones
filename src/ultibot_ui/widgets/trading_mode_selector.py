@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer
 from PyQt5.QtGui import QFont, QPalette, QColor
 
-from src.ultibot_ui.services.trading_mode_state import (
+from ultibot_ui.services.trading_mode_state import (
     get_trading_mode_manager, TradingModeStateManager, TradingModeEnum, TradingMode
 )
 
@@ -383,3 +383,4 @@ class TradingModeStatusBar(QWidget):
                 background-color: {mode_info['color']};
             }}
         """)
+

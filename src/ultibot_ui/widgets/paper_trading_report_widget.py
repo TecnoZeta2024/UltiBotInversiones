@@ -15,10 +15,10 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QDate, QThread
 from PySide6.QtGui import QFont, QColor
 
-from src.ultibot_ui.services.api_client import UltiBotAPIClient
-from src.shared.data_types import Trade, PerformanceMetrics
-from src.ultibot_ui.workers import ApiWorker
-from src.ultibot_ui.models import BaseMainWindow
+from ultibot_ui.services.api_client import UltiBotAPIClient
+from shared.data_types import Trade, PerformanceMetrics
+from ultibot_ui.workers import ApiWorker
+from ultibot_ui.models import BaseMainWindow
 
 logger = logging.getLogger(__name__)
 
@@ -344,3 +344,4 @@ class PaperTradingReportWidget(QWidget):
         """Limpia los recursos del widget."""
         logger.info("PaperTradingReportWidget cleanup: No hay acciones que tomar.")
         pass
+

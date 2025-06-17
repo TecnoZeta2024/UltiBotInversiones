@@ -1,24 +1,25 @@
 import logging
 from functools import lru_cache
 from typing import Optional
-
 import httpx
-from src.ultibot_backend.services.order_execution_service import PaperOrderExecutionService
-from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
-from src.ultibot_backend.adapters.mobula_adapter import MobulaAdapter
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService as PersistenceService
-from src.ultibot_backend.services.ai_orchestrator_service import AIOrchestrator as AIOrchestratorService
-from src.ultibot_backend.services.config_service import ConfigurationService
-from src.ultibot_backend.services.credential_service import CredentialService
-from src.ultibot_backend.services.market_data_service import MarketDataService
-from src.ultibot_backend.services.notification_service import NotificationService
-from src.ultibot_backend.services.order_execution_service import OrderExecutionService
-from src.ultibot_backend.services.performance_service import PerformanceService
-from src.ultibot_backend.services.portfolio_service import PortfolioService
-from src.ultibot_backend.services.strategy_service import StrategyService
-from src.ultibot_backend.services.trading_engine_service import TradingEngine as TradingEngineService
-from src.ultibot_backend.services.trading_report_service import TradingReportService
-from src.ultibot_backend.services.unified_order_execution_service import UnifiedOrderExecutionService
+
+from fastapi import Request
+from ultibot_backend.services.order_execution_service import PaperOrderExecutionService
+from ultibot_backend.adapters.binance_adapter import BinanceAdapter
+from ultibot_backend.adapters.mobula_adapter import MobulaAdapter
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService as PersistenceService
+from ultibot_backend.services.ai_orchestrator_service import AIOrchestrator as AIOrchestratorService
+from ultibot_backend.services.config_service import ConfigurationService
+from ultibot_backend.services.credential_service import CredentialService
+from ultibot_backend.services.market_data_service import MarketDataService
+from ultibot_backend.services.notification_service import NotificationService
+from ultibot_backend.services.order_execution_service import OrderExecutionService
+from ultibot_backend.services.performance_service import PerformanceService
+from ultibot_backend.services.portfolio_service import PortfolioService
+from ultibot_backend.services.strategy_service import StrategyService
+from ultibot_backend.services.trading_engine_service import TradingEngine as TradingEngineService
+from ultibot_backend.services.trading_report_service import TradingReportService
+from ultibot_backend.services.unified_order_execution_service import UnifiedOrderExecutionService
 
 logger = logging.getLogger(__name__)
 
@@ -136,84 +137,84 @@ class DependencyContainer:
         logger.info("Dependency container shut down.")
 
 
-@lru_cache()
-def get_container() -> DependencyContainer:
-    return DependencyContainer()
+def get_container(request: Request) -> DependencyContainer:
+    return request.app.state.container
 
 
-async def get_persistence_service() -> PersistenceService:
-    container = get_container()
-    assert container.persistence_service is not None
+async def get_persistence_service(request: Request) -> PersistenceService:
+    container = get_container(request)
+    assert container.persistence_service is not None, "PersistenceService not initialized"
     return container.persistence_service
 
 
-async def get_credential_service() -> CredentialService:
-    container = get_container()
-    assert container.credential_service is not None
+async def get_credential_service(request: Request) -> CredentialService:
+    container = get_container(request)
+    assert container.credential_service is not None, "CredentialService not initialized"
     return container.credential_service
 
 
-async def get_notification_service() -> NotificationService:
-    container = get_container()
-    assert container.notification_service is not None
+async def get_notification_service(request: Request) -> NotificationService:
+    container = get_container(request)
+    assert container.notification_service is not None, "NotificationService not initialized"
     return container.notification_service
 
 
-async def get_config_service() -> ConfigurationService:
-    container = get_container()
-    assert container.config_service is not None
+async def get_config_service(request: Request) -> ConfigurationService:
+    container = get_container(request)
+    assert container.config_service is not None, "ConfigurationService not initialized"
     return container.config_service
 
 
-async def get_market_data_service() -> MarketDataService:
-    container = get_container()
-    assert container.market_data_service is not None
+async def get_market_data_service(request: Request) -> MarketDataService:
+    container = get_container(request)
+    assert container.market_data_service is not None, "MarketDataService not initialized"
     return container.market_data_service
 
 
-async def get_portfolio_service() -> PortfolioService:
-    container = get_container()
-    assert container.portfolio_service is not None
+async def get_portfolio_service(request: Request) -> PortfolioService:
+    container = get_container(request)
+    assert container.portfolio_service is not None, "PortfolioService not initialized"
     return container.portfolio_service
 
 
-async def get_strategy_service() -> StrategyService:
-    container = get_container()
-    assert container.strategy_service is not None
+async def get_strategy_service(request: Request) -> StrategyService:
+    container = get_container(request)
+    assert container.strategy_service is not None, "StrategyService not initialized"
     return container.strategy_service
 
 
-async def get_order_execution_service() -> OrderExecutionService:
-    container = get_container()
-    assert container.order_execution_service is not None
+async def get_order_execution_service(request: Request) -> OrderExecutionService:
+    container = get_container(request)
+    assert container.order_execution_service is not None, "OrderExecutionService not initialized"
     return container.order_execution_service
 
 
-async def get_unified_order_execution_service() -> UnifiedOrderExecutionService:
-    container = get_container()
-    assert container.unified_order_execution_service is not None
+async def get_unified_order_execution_service(request: Request) -> UnifiedOrderExecutionService:
+    container = get_container(request)
+    assert container.unified_order_execution_service is not None, "UnifiedOrderExecutionService not initialized"
     return container.unified_order_execution_service
 
 
-async def get_trading_engine_service() -> TradingEngineService:
-    container = get_container()
-    assert container.trading_engine_service is not None
+async def get_trading_engine_service(request: Request) -> TradingEngineService:
+    container = get_container(request)
+    assert container.trading_engine_service is not None, "TradingEngineService not initialized"
     return container.trading_engine_service
 
 
-async def get_trading_report_service() -> TradingReportService:
-    container = get_container()
-    assert container.trading_report_service is not None
+async def get_trading_report_service(request: Request) -> TradingReportService:
+    container = get_container(request)
+    assert container.trading_report_service is not None, "TradingReportService not initialized"
     return container.trading_report_service
 
 
-async def get_performance_service() -> PerformanceService:
-    container = get_container()
-    assert container.performance_service is not None
+async def get_performance_service(request: Request) -> PerformanceService:
+    container = get_container(request)
+    assert container.performance_service is not None, "PerformanceService not initialized"
     return container.performance_service
 
 
-async def get_ai_orchestrator_service() -> AIOrchestratorService:
-    container = get_container()
-    assert container.ai_orchestrator_service is not None
+async def get_ai_orchestrator_service(request: Request) -> AIOrchestratorService:
+    container = get_container(request)
+    assert container.ai_orchestrator_service is not None, "AIOrchestratorService not initialized"
     return container.ai_orchestrator_service
+

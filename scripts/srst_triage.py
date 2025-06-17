@@ -5,6 +5,8 @@ Clasifica automáticamente errores de tests y genera tickets atómicos.
 """
 
 import re
+import shutil
+import subprocess
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Tuple, Any, Set
@@ -72,6 +74,15 @@ class SRSTTriage:
             "src/ultibot_backend/dependencies.py"
         ]
 
+    def _recreate_ticket_directory(self):
+        """Limpia el directorio de tickets para una nueva generación."""
+        print("🧹 Limpiando directorio de tickets anterior...")
+        tickets_dir = self.base_path / "SRST_TICKETS"
+        if tickets_dir.exists():
+            shutil.rmtree(tickets_dir)
+        tickets_dir.mkdir()
+        print("✅ Directorio de tickets listo.")
+
     def _remove_ansi_codes(self, text: str) -> str:
         """Elimina los códigos de color ANSI del texto."""
         ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
@@ -79,22 +90,39 @@ class SRSTTriage:
 
     def run_pytest_collect(self) -> str:
         """
-        Lee la salida de pytest desde un archivo para un desarrollo de parser consistente.
-        Maneja múltiples codificaciones de archivo y limpia códigos ANSI.
+        Ejecuta pytest para recolectar errores y captura la salida en tiempo real.
         """
-        output_file = self.base_path / "pytest_debug_output.txt"
-        if not output_file.exists():
-            raise FileNotFoundError(f"El archivo de debug '{output_file}' no existe. Ejecute pytest primero.")
-        
-        raw_output = ""
+        print("🚀 Ejecutando 'poetry run pytest --collect-only -q' para obtener datos frescos...")
+        command = ["poetry", "run", "pytest", "--collect-only", "-q"]
         try:
-            raw_output = output_file.read_text(encoding='utf-16')
-        except UnicodeDecodeError:
-            try:
-                raw_output = output_file.read_text(encoding='utf-8')
-            except UnicodeDecodeError as e:
-                raise IOError(f"No se pudo decodificar el archivo {output_file} con utf-16 o utf-8.") from e
-        return self._remove_ansi_codes(raw_output)
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                encoding='utf-8',
+                errors='replace',
+                check=False,
+                timeout=300  # 5 minutos de timeout
+            )
+            
+            output = result.stdout + result.stderr
+            
+            if result.returncode != 0 and not output.strip():
+                print(f"⚠️  El comando pytest falló con código {result.returncode} pero no produjo salida.")
+                return ""
+
+            print("✅ Salida de pytest capturada exitosamente.")
+            return self._remove_ansi_codes(output)
+
+        except FileNotFoundError:
+            print("❌ Error: 'poetry' no se encontró. Asegúrate de que poetry esté instalado y en el PATH.")
+            return ""
+        except subprocess.TimeoutExpired:
+            print("❌ Error: La ejecución de pytest excedió el tiempo límite de 5 minutos.")
+            return ""
+        except Exception as e:
+            print(f"❌ Ocurrió un error inesperado al ejecutar pytest: {e}")
+            return ""
 
     def classify_error(self, error_type: str) -> Tuple[ErrorCategory, str]:
         """Clasifica un error en una categoría SRST."""
@@ -240,66 +268,38 @@ poetry run pytest -k "{ticket.test_scope}" -v
 
     def generate_progress_tracker(self) -> None:
         """
-        Genera o actualiza el archivo SRST_PROGRESS.md de forma inteligente,
-        preservando el estado de los tickets existentes y clasificándolos correctamente.
+        Genera o actualiza el archivo SRST_PROGRESS.md combinando los tickets
+        resueltos existentes con los nuevos tickets generados.
         """
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         progress_file = self.base_path / "SRST_PROGRESS.md"
-        
-        # 1. Cargar tickets existentes desde el archivo de progreso
-        existing_tickets_lines: Dict[str, str] = {}
-        if progress_file.exists():
-            content = progress_file.read_text(encoding='utf-8')
-            ticket_pattern = re.compile(r"(- \[( |x|✅)\].*?SRST-\d{3,}.*?\))")
-            for line in content.splitlines():
-                if ticket_pattern.match(line):
-                    id_match = re.search(r"\*\*(SRST-\d{3,})\*\*", line)
-                    if id_match:
-                        existing_tickets_lines[id_match.group(1)] = line
 
-        # 2. Crear un mapa de todos los tickets (nuevos y existentes) con su información completa
-        all_tickets_map: Dict[str, Any] = {}
+        # 1. Generar líneas de texto para los nuevos tickets
+        new_ticket_lines = []
         for ticket in self.tickets:
-            all_tickets_map[ticket.id] = ticket
+            formatted_line = (
+                f"- [ ] **{ticket.id}:** {ticket.error_type} en `{ticket.file_path}` "
+                f"(Test: {ticket.test_scope}) - ⏱️ {ticket.estimated_time}min "
+                f"[P:{ticket.priority.value}]"
+            )
+            new_ticket_lines.append(formatted_line)
 
-        # 3. Generar líneas de texto para cada ticket, asegurando que tengan la prioridad
-        all_ticket_lines: Dict[str, str] = {}
-        for ticket_id, ticket_data in all_tickets_map.items():
-            if ticket_id in existing_tickets_lines:
-                 # Si el ticket ya existe, verificamos si la línea ya tiene la prioridad
-                if f"P:{ticket_data.priority.value}" not in existing_tickets_lines[ticket_id]:
-                    # Añadimos la prioridad si no está
-                    existing_line = existing_tickets_lines[ticket_id]
-                    all_ticket_lines[ticket_id] = f"{existing_line} [P:{ticket_data.priority.value}]"
-                else:
-                    all_ticket_lines[ticket_id] = existing_tickets_lines[ticket_id]
-            else:
-                # Formatear línea para nuevos tickets
-                formatted_line = (
-                    f"- [ ] **{ticket_data.id}:** {ticket_data.error_type} en `{ticket_data.file_path}` "
-                    f"(Test: {ticket_data.test_scope}) - ⏱️ {ticket_data.estimated_time}min "
-                    f"[P:{ticket_data.priority.value}]"
-                )
-                all_ticket_lines[ticket_id] = formatted_line
+        # 2. Combinar con las líneas de tickets previamente resueltos
+        all_lines = new_ticket_lines + self.resolved_lines
+
+        # 3. Clasificar todas las líneas por prioridad
+        critical_lines = sorted([line for line in all_lines if "[P:CRITICAL]" in line])
+        high_lines = sorted([line for line in all_lines if "[P:HIGH]" in line])
+        medium_lines = sorted([line for line in all_lines if "[P:MEDIUM]" in line])
+        low_lines = sorted([line for line in all_lines if "[P:LOW]" in line])
         
-        # Añadir tickets existentes que no están en los nuevos tickets
-        for ticket_id, line in existing_tickets_lines.items():
-            if ticket_id not in all_ticket_lines:
-                all_ticket_lines[ticket_id] = line
-
-        # 4. Clasificar las líneas de texto por prioridad
-        lines = list(all_ticket_lines.values())
-        critical_lines = sorted([line for line in lines if "[P:CRITICAL]" in line])
-        high_lines = sorted([line for line in lines if "[P:HIGH]" in line])
-        medium_lines = sorted([line for line in lines if "[P:MEDIUM]" in line])
-        low_lines = sorted([line for line in lines if "[P:LOW]" in line])
-
-        # 5. Construir el contenido del archivo
+        # 4. Construir el contenido del archivo
+        total_tickets = len(critical_lines) + len(high_lines) + len(medium_lines) + len(low_lines)
         progress_content = f"""# SRST Progress Tracker - {timestamp}
 
 ## Sesión Actual
 **Nuevos tickets generados:** {len(self.tickets)}
-**Total de tickets (incluyendo resueltos):** {len(all_ticket_lines)}
+**Total de tickets (incluyendo resueltos):** {total_tickets}
 
 ## Tickets por Prioridad
 
@@ -320,23 +320,27 @@ poetry run pytest -k "{ticket.test_scope}" -v
 """
         progress_file.write_text(progress_content, encoding='utf-8')
 
-    def _get_resolved_scopes(self) -> Set[str]:
-        """Lee SRST_PROGRESS.md y extrae los scopes de los tests resueltos."""
+    def _get_resolved_ticket_lines(self) -> List[str]:
+        """Lee SRST_PROGRESS.md y extrae las líneas de los tickets resueltos."""
         progress_file = self.base_path / "SRST_PROGRESS.md"
-        resolved_scopes: Set[str] = set()
+        resolved_lines: List[str] = []
         if not progress_file.exists():
-            return resolved_scopes
+            return resolved_lines
 
         content = progress_file.read_text(encoding='utf-8')
-        resolved_pattern = re.compile(r"- \[(x|✅)\].*\(Test: (.*?)\)")
+        # Patrón para encontrar cualquier línea que empiece con el marcador de ticket resuelto
+        resolved_pattern = re.compile(r"^\s*-\s*\[(x|✅)\].*$", re.MULTILINE)
         
+        matches = resolved_pattern.findall(content)
+        
+        # Para obtener las líneas completas, necesitamos un enfoque diferente
         for line in content.splitlines():
-            match = resolved_pattern.search(line)
-            if match:
-                resolved_scopes.add(match.group(2).strip())
-        
-        print(f"✅ Encontrados {len(resolved_scopes)} tests previamente resueltos.")
-        return resolved_scopes
+            # Ajuste del regex para ser menos sensible a espacios/marcadores exactos
+            if re.match(r"^\s*-\s*\[[x✅]\].*", line):
+                resolved_lines.append(line)
+
+        print(f"✅ Encontrados {len(resolved_lines)} tickets previamente resueltos.")
+        return resolved_lines
 
     def _get_max_ticket_id(self) -> int:
         """Encuentra el ID de ticket más alto en el sistema."""
@@ -366,13 +370,27 @@ poetry run pytest -k "{ticket.test_scope}" -v
         """Ejecuta el triage completo del SRST de forma stateful."""
         print("🚨 INICIANDO TRIAGE AUTOMÁTICO SRST (STATEFUL)...")
         
-        self.resolved_scopes = self._get_resolved_scopes()
+        self._recreate_ticket_directory()
         
-        print("📊 Leyendo salida de pytest desde 'pytest_debug_output.txt'...")
+        # Cargar las líneas de los tickets resueltos y extraer sus scopes
+        self.resolved_lines = self._get_resolved_ticket_lines()
+        resolved_scopes: Set[str] = set()
+        scope_pattern = re.compile(r"\(Test: (.*?)\)")
+        for line in self.resolved_lines:
+            match = scope_pattern.search(line)
+            if match:
+                resolved_scopes.add(match.group(1).strip())
+        
         try:
             output = self.run_pytest_collect()
-        except FileNotFoundError as e:
-            print(f"❌ Error: {e}")
+            if not output or not output.strip():
+                print("⚠️ No se obtuvo salida de pytest o la salida está vacía. El triage no puede continuar.")
+                self.tickets = []
+                self.generate_progress_tracker() # Genera un reporte vacío para mantener consistencia
+                print("✅ Triage finalizado: No se encontraron nuevos errores.")
+                return
+        except Exception as e:
+            print(f"❌ Error crítico durante la ejecución de pytest: {e}")
             return
         
         print("🔍 Analizando salida de pytest...")
@@ -382,7 +400,7 @@ poetry run pytest -k "{ticket.test_scope}" -v
         
         self.tickets = [
             ticket for ticket in all_potential_tickets 
-            if ticket.test_scope not in self.resolved_scopes
+            if ticket.test_scope not in resolved_scopes
         ]
         
         print(f"✨ {len(all_potential_tickets) - len(self.tickets)} errores ya resueltos fueron ignorados.")

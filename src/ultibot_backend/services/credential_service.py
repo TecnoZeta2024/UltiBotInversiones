@@ -7,11 +7,11 @@ from uuid import UUID
 from dotenv import load_dotenv
 from fastapi import Depends
 
-from src.shared.data_types import APICredential, ServiceName
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
-from src.ultibot_backend.core.exceptions import BinanceAPIError, CredentialError
-from src.ultibot_backend.app_config import settings
+from shared.data_types import APICredential, ServiceName
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from ultibot_backend.adapters.binance_adapter import BinanceAdapter
+from ultibot_backend.core.exceptions import BinanceAPIError, CredentialError
+from ultibot_backend.app_config import settings
 from datetime import datetime
 import logging
 
@@ -266,3 +266,4 @@ class CredentialService:
             logger.error(f"Error inesperado durante la verificación de la API Key de Binance para {self.fixed_user_id}: {str(e)}", exc_info=True)
             await self.persistence_service.update_credential_status(binance_credential.id, "verification_failed", datetime.utcnow())
             raise BinanceAPIError(message="Error inesperado al verificar la API Key de Binance.", original_exception=e)
+

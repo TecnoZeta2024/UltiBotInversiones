@@ -11,8 +11,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QFontDatabase
 from PySide6.QtWidgets import QApplication, QSplashScreen
 
-from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
-from src.ultibot_ui.windows.main_window import MainWindow
+from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
+from ultibot_ui.windows.main_window import MainWindow
 
 # --- Configuración de Logging ---
 LOGS_DIR = "logs"
@@ -116,3 +116,4 @@ if __name__ == "__main__":
         logger.info("Application interrupted by user.")
     except Exception as e:
         logger.critical(f"Unhandled exception in main: {e}", exc_info=True)
+

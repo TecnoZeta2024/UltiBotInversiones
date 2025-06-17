@@ -5,8 +5,8 @@ from PyQt5.QtGui import QFont, QColor, QPalette
 from typing import Any
 import asyncio
 
-from src.shared.data_types import Opportunity, OpportunityStatus
-from src.ultibot_ui.services.api_client import UltiBotAPIClient
+from shared.data_types import Opportunity, OpportunityStatus
+from ultibot_ui.services.api_client import UltiBotAPIClient
 
 logger = logging.getLogger(__name__)
 
@@ -261,3 +261,4 @@ class RealTradeConfirmationDialog(QDialog):
             self.calculated_quantity_label.setText(f"{simulated_quantity:.8f} {self.opportunity.symbol.split('/')[0]}")
         else:
             self.calculated_quantity_label.setText(f"{simulated_quantity:.8f} N/A")
+

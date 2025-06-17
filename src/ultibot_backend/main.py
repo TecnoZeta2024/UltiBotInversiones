@@ -14,12 +14,12 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from src.ultibot_backend.api.v1.endpoints import (
+from ultibot_backend.api.v1.endpoints import (
     config, market_data, notifications, opportunities,
     performance, portfolio, reports, strategies, trades, trading
 )
-from src.ultibot_backend.dependencies import get_container
-from src.ultibot_backend.core.exceptions import UltiBotError
+from ultibot_backend.dependencies import DependencyContainer
+from ultibot_backend.core.exceptions import UltiBotError
 
 # --- Nueva Configuración de Logging ---
 LOGS_DIR = "logs"
@@ -70,24 +70,27 @@ logger.info("Logging configurado exitosamente usando dictConfig.")
 async def lifespan(app: FastAPI):
     """
     Context manager para manejar el ciclo de vida de la aplicación.
+    Crea y gestiona una única instancia del DependencyContainer.
     """
     logger.info("Iniciando UltiBot Backend...")
-    container = get_container()
-    app.state.container = container
+    
+    # Instanciar el contenedor directamente aquí
+    container = DependencyContainer()
+    app.state.container = container  # Adjuntar a app.state
+    
     try:
         await container.initialize_services()
         logger.info("Contenedor de dependencias inicializado.")
         
     except Exception as e:
         logger.critical(f"Error fatal durante el arranque de la aplicación: {e}", exc_info=True)
-        # Es importante relanzar la excepción para que el proceso falle si la inicialización no es exitosa.
         raise
 
     logger.info("Aplicación iniciada correctamente.")
     yield
     
     logger.info("Apagando UltiBot Backend...")
-    await container.shutdown()
+    await app.state.container.shutdown()
     logger.info("Recursos liberados y aplicación apagada.")
 
 app = FastAPI(

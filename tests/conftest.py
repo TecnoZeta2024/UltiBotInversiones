@@ -1,28 +1,61 @@
+import asyncio
+import pytest
+import pytest_asyncio
 import sys
-from unittest.mock import MagicMock
+import os
+from typing import AsyncGenerator
+from httpx import AsyncClient
+from unittest.mock import AsyncMock, MagicMock
 
-def pytest_configure(config):
+from ultibot_backend.main import app
+from ultibot_backend.dependencies import (
+    get_performance_service,
+    get_strategy_service,
+    get_persistence_service,
+)
+from ultibot_backend.services.performance_service import PerformanceService
+from ultibot_backend.services.strategy_service import StrategyService
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+
+@pytest.fixture(scope="session")
+def event_loop():
+    """Crea una instancia del event loop para toda la sesión de tests."""
+    policy = asyncio.get_event_loop_policy()
+    loop = policy.new_event_loop()
+    yield loop
+    loop.close()
+
+@pytest.fixture
+def mock_persistence_service_integration():
+    """Mock para el servicio de persistencia."""
+    mock = AsyncMock(spec=SupabasePersistenceService)
+    mock.get_all_trades_for_user.return_value = []
+    return mock
+
+@pytest.fixture
+def mock_strategy_service_integration():
+    """Mock para el servicio de estrategias."""
+    return MagicMock(spec=StrategyService)
+
+@pytest_asyncio.fixture
+async def client(
+    mock_persistence_service_integration, mock_strategy_service_integration
+) -> AsyncGenerator[AsyncClient, None]:
     """
-    Hook executed before test collection.
-    Used here to globally mock UI libraries that are not needed for most
-    backend and integration tests, preventing ModuleNotFoundError in
-    headless environments like CI/CD.
+    Fixture que proporciona un AsyncClient para interactuar con la aplicación de forma asíncrona.
+    Este enfoque es crucial para asegurar que el ciclo de vida (lifespan) de la aplicación FastAPI
+    se ejecute correctamente, inicializando el contenedor de dependencias antes de las pruebas.
     """
-    # A standard MagicMock is sufficient. It will create mocks for any accessed
-    # attributes on the fly. The previous custom class caused a RecursionError.
-    mock_pyqt = MagicMock()
+    mocked_performance_service = PerformanceService(
+        persistence_service=mock_persistence_service_integration,
+        strategy_service=mock_strategy_service_integration
+    )
+    
+    app.dependency_overrides[get_persistence_service] = lambda: mock_persistence_service_integration
+    app.dependency_overrides[get_strategy_service] = lambda: mock_strategy_service_integration
+    app.dependency_overrides[get_performance_service] = lambda: mocked_performance_service
 
-    # The key to preventing `TypeError: metaclass conflict` when a class in the
-    # tested code inherits from a PyQt class (like QObject) is to ensure that
-    # the mocked base class is a real, inheritable class. `object` is perfect.
-    mock_pyqt.QObject = object
+    async with AsyncClient(app=app, base_url="http://test") as c:
+        yield c
 
-    # Assign the same mock instance to all PyQt5 modules. This ensures that
-    # `from PyQt5.QtCore import QObject` and `from PyQt5.QtWidgets import QWidget`
-    # all resolve to the same mocked namespace.
-    sys.modules['PyQt5'] = mock_pyqt
-    sys.modules['PyQt5.QtCore'] = mock_pyqt
-    sys.modules['PyQt5.QtWidgets'] = mock_pyqt
-    sys.modules['PyQt5.QtGui'] = mock_pyqt
-    sys.modules['PyQt5.QtPrintSupport'] = mock_pyqt
-    sys.modules['PyQt5.QtChart'] = mock_pyqt
+    app.dependency_overrides.clear()

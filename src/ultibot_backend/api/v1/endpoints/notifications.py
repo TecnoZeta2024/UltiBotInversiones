@@ -1,17 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from typing import List
 from uuid import UUID
 
-from src.ultibot_backend import dependencies as deps
-from src.ultibot_backend.app_config import settings
-from src.shared.data_types import Notification
-from src.ultibot_backend.services.notification_service import NotificationService
-from src.ultibot_backend.core.exceptions import NotificationError
+from ultibot_backend import dependencies as deps
+from ultibot_backend.app_config import settings
+from shared.data_types import Notification
+from ultibot_backend.services.notification_service import NotificationService
+from ultibot_backend.core.exceptions import NotificationError
 
 router = APIRouter()
 
 @router.get("/history", response_model=List[Notification])
 async def get_notification_history(
+    request: Request,
     limit: int = 50,
     notification_service: NotificationService = Depends(deps.get_notification_service)
 ):
@@ -19,8 +20,8 @@ async def get_notification_history(
     Recupera el historial de notificaciones para el usuario.
     """
     try:
-        user_id = settings.FIXED_USER_ID
-        notifications = await notification_service.get_notification_history(user_id, limit)
+        user_id = settings.FIXED_USER_ID # Se mantiene para consistencia si se necesita en el futuro
+        notifications = await notification_service.get_notification_history(limit)
         return notifications
     except NotificationError as e:
         raise HTTPException(
@@ -36,14 +37,15 @@ async def get_notification_history(
 @router.post("/{notification_id}/mark-as-read", response_model=Notification)
 async def mark_notification_as_read(
     notification_id: UUID,
+    request: Request,
     notification_service: NotificationService = Depends(deps.get_notification_service)
 ):
     """
     Marca una notificación específica como leída para el usuario.
     """
     try:
-        user_id = settings.FIXED_USER_ID
-        updated_notification = await notification_service.mark_notification_as_read(notification_id, user_id)
+        user_id = settings.FIXED_USER_ID # Se mantiene para consistencia si se necesita en el futuro
+        updated_notification = await notification_service.mark_notification_as_read(notification_id)
         if not updated_notification:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

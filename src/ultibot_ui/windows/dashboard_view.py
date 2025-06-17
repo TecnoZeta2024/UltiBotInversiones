@@ -6,13 +6,13 @@ import asyncio
 from PySide6.QtCore import Signal as pyqtSignal, QObject, QThread
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QFrame
 
-from src.shared.data_types import Trade
-from src.ultibot_ui.models import BaseMainWindow
-from src.ultibot_ui.services.api_client import UltiBotAPIClient
-from src.ultibot_ui.widgets.chart_widget import ChartWidget
-from src.ultibot_ui.widgets.notification_widget import NotificationWidget
-from src.ultibot_ui.widgets.portfolio_widget import PortfolioWidget
-from src.ultibot_ui.workers import ApiWorker
+from shared.data_types import Trade
+from ultibot_ui.models import BaseMainWindow
+from ultibot_ui.services.api_client import UltiBotAPIClient
+from ultibot_ui.widgets.chart_widget import ChartWidget
+from ultibot_ui.widgets.notification_widget import NotificationWidget
+from ultibot_ui.widgets.portfolio_widget import PortfolioWidget
+from ultibot_ui.workers import ApiWorker
 
 logger = logging.getLogger(__name__)
 
@@ -140,3 +140,4 @@ class DashboardView(QWidget):
         if hasattr(self.notification_widget, 'cleanup'): self.notification_widget.cleanup()
 
         logger.info("DashboardView: Limpieza completada.")
+

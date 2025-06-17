@@ -3,17 +3,17 @@ import logging
 from uuid import UUID
 from typing import List, Dict, Any, Coroutine, Callable
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget, QTableWidgetItem,
     QHeaderView, QPushButton, QMessageBox, QAbstractItemView, QFrame, QGraphicsDropShadowEffect
 )
-from PyQt5.QtCore import Qt, QThread, QTimer, QDateTime
-from PyQt5.QtGui import QColor
+from PySide6.QtCore import Qt, QThread, QTimer, QDateTime
+from PySide6.QtGui import QColor
 
-from src.shared.data_types import Opportunity
-from src.ultibot_ui.models import BaseMainWindow
-from src.ultibot_ui.services.api_client import UltiBotAPIClient
-from src.ultibot_ui.workers import ApiWorker
+from shared.data_types import Opportunity
+from ultibot_ui.models import BaseMainWindow
+from ultibot_ui.services.api_client import UltiBotAPIClient
+from ultibot_ui.workers import ApiWorker
 
 logger = logging.getLogger(__name__)
 
@@ -204,9 +204,10 @@ class OpportunitiesView(QWidget):
         logger.info("OpportunitiesView cleanup finished.")
 
 if __name__ == '__main__':
-    from PyQt5.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
     import sys
 
     app = QApplication(sys.argv)
     
     print("To test this view, please run it as part of the main application.")
+

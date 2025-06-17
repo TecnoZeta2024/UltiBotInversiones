@@ -8,10 +8,10 @@ from uuid import UUID
 import asyncio
 from unittest.mock import MagicMock # Importar MagicMock
 
-from src.ultibot_ui.models import BaseMainWindow
-from src.ultibot_ui.workers import ApiWorker
-from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
-from src.shared.data_types import Kline
+from ultibot_ui.models import BaseMainWindow
+from ultibot_ui.workers import ApiWorker
+from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
+from shared.data_types import Kline
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import logging
@@ -233,7 +233,7 @@ if __name__ == '__main__':
     from PySide6.QtWidgets import QApplication, QMainWindow
     import sys
     import logging
-    from src.ultibot_ui.workers import ApiWorker
+    from ultibot_ui.workers import ApiWorker
     import qasync
 
     logging.basicConfig(level=logging.INFO)
@@ -273,3 +273,4 @@ if __name__ == '__main__':
     asyncio.set_event_loop(event_loop)
     with event_loop:
         sys.exit(app.exec_())
+

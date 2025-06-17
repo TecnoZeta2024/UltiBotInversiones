@@ -13,10 +13,10 @@ from PySide6.QtGui import QFont, QColor
 
 import qasync
 
-from src.ultibot_ui.models import BaseMainWindow
-from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
-from src.ultibot_ui.services.trading_mode_state import get_trading_mode_manager, TradingModeStateManager
-from src.ultibot_ui.workers import ApiWorker
+from ultibot_ui.models import BaseMainWindow
+from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
+from ultibot_ui.services.trading_mode_state import get_trading_mode_manager, TradingModeStateManager
+from ultibot_ui.workers import ApiWorker
 
 logger = logging.getLogger(__name__)
 
@@ -368,3 +368,4 @@ class PortfolioWidget(QWidget):
                 thread.wait(5000)
         self.active_workers.clear()
         logger.info("PortfolioWidget: Limpieza completada.")
+

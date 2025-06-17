@@ -1,13 +1,13 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QLineEdit, QPushButton, QGroupBox, QDoubleSpinBox, QMessageBox
-from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QThread
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QLineEdit, QPushButton, QGroupBox, QDoubleSpinBox, QMessageBox
+from PySide6.QtCore import Qt, Signal as pyqtSignal, QTimer, QThread
 import logging
 from typing import Optional, Dict, Any, List
 from uuid import UUID
 import asyncio
 
-from src.ultibot_ui.services.api_client import UltiBotAPIClient
-from src.shared.data_types import UserConfiguration, RealTradingSettings
-from src.ultibot_ui.workers import ApiWorker
+from ultibot_ui.services.api_client import UltiBotAPIClient
+from shared.data_types import UserConfiguration, RealTradingSettings
+from ultibot_ui.workers import ApiWorker
 
 logger = logging.getLogger(__name__)
 
@@ -214,11 +214,11 @@ class SettingsView(QWidget):
             self, 
             "Confirmar Activación de Modo Real", 
             warning_message, 
-            QMessageBox.Yes | QMessageBox.No, 
-            QMessageBox.No
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, 
+            QMessageBox.StandardButton.No
         )
 
-        if reply == QMessageBox.Yes:
+        if reply == QMessageBox.StandardButton.Yes:
             logger.info("SettingsView: Solicitando activar modo de operativa real.")
             coro_factory = lambda api_client: api_client.activate_real_trading_mode()
             self._start_api_worker(coro_factory, self._handle_activate_real_trading_result, self._handle_activate_real_trading_error)
@@ -250,3 +250,4 @@ class SettingsView(QWidget):
         logger.error(f"Error al desactivar el modo de operativa real: {error_message}")
         QMessageBox.critical(self, "Error de Desactivación", f"No se pudo desactivar el modo real: {error_message}")
         self.real_trading_checkbox.setChecked(True)
+

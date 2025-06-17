@@ -15,9 +15,9 @@ from PyQt5.QtGui import QColor, QFont
 
 import qasync
 
-from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
-from src.ultibot_ui.workers import ApiWorker
-from src.shared.data_types import UserConfiguration
+from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
+from ultibot_ui.workers import ApiWorker
+from shared.data_types import UserConfiguration
 
 logger = logging.getLogger(__name__)
 
@@ -315,3 +315,4 @@ if __name__ == '__main__':
             qasync.run(main_async)
         except KeyboardInterrupt:
             logger.info("Aplicación de prueba cerrada.")
+

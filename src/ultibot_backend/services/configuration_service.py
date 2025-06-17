@@ -13,8 +13,8 @@ from typing import Any, Dict, List, Optional
 from fastapi import HTTPException
 from pydantic import ValidationError
 
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend.core.domain_models.user_configuration_models import (
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from ultibot_backend.core.domain_models.user_configuration_models import (
     UserConfiguration,
     AIStrategyConfiguration,
     ConfidenceThresholds,
@@ -213,13 +213,13 @@ class ConfigurationService:
             "paper_trading_active": config.paper_trading_active,
             "watchlists": to_json(config.watchlists),
             "favorite_pairs": json.dumps(config.favorite_pairs) if config.favorite_pairs else None,
-            "risk_profile": config.risk_profile.value if config.risk_profile else None,
+            "risk_profile": config.risk_profile,
             "risk_profile_settings": to_json(config.risk_profile_settings),
             "real_trading_settings": to_json(config.real_trading_settings),
             "ai_strategy_configurations": to_json(config.ai_strategy_configurations),
             "ai_analysis_confidence_thresholds": to_json(config.ai_analysis_confidence_thresholds),
             "mcp_server_preferences": to_json(config.mcp_server_preferences),
-            "selected_theme": config.selected_theme.value if config.selected_theme else None,
+            "selected_theme": config.selected_theme,
             "dashboard_layout_profiles": to_json(config.dashboard_layout_profiles),
             "active_dashboard_layout_profile_id": config.active_dashboard_layout_profile_id,
             "dashboard_layout_config": to_json(config.dashboard_layout_config),
@@ -377,3 +377,4 @@ class ConfigurationService:
             await self.persistence_service.connection.rollback()
             logger.error(f"Database error saving user configuration: {e}")
             raise
+

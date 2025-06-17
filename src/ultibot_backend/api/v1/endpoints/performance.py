@@ -1,16 +1,16 @@
-from fastapi import APIRouter, Depends, Query, HTTPException, status
+from fastapi import APIRouter, Depends, Query, HTTPException, status, Request
 from typing import Optional
 from uuid import UUID
 from datetime import datetime
 
-from src.ultibot_backend.api.v1.models.performance_models import (
+from ultibot_backend.api.v1.models.performance_models import (
     StrategyPerformanceResponse,
     OperatingMode,
 )
-from src.shared.data_types import PerformanceMetrics
-from src.ultibot_backend.services.performance_service import PerformanceService
-from src.ultibot_backend.dependencies import get_performance_service
-from src.ultibot_backend.app_config import settings
+from shared.data_types import PerformanceMetrics
+from ultibot_backend.services.performance_service import PerformanceService
+from ultibot_backend.dependencies import get_performance_service
+from ultibot_backend.app_config import settings
 
 router = APIRouter()
 
@@ -22,6 +22,7 @@ router = APIRouter()
                 "optionally filtered by operating mode.",
 )
 async def get_strategies_performance(
+    request: Request,
     performance_service: PerformanceService = Depends(get_performance_service),
     mode: Optional[OperatingMode] = Query(
         None,
@@ -54,6 +55,7 @@ async def get_strategies_performance(
                 "filterable by trading mode and date range.",
 )
 async def get_trades_performance(
+    request: Request,
     trading_mode: OperatingMode = Query(..., description="The trading mode to filter by ('paper' or 'real')."),
     date_from: Optional[datetime] = Query(None, description="Start date for the analysis period (ISO 8601 format)."),
     date_to: Optional[datetime] = Query(None, description="End date for the analysis period (ISO 8601 format)."),
@@ -76,3 +78,4 @@ async def get_trades_performance(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred while fetching trade performance metrics: {str(e)}"
         )
+

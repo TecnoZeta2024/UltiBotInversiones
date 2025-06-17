@@ -12,15 +12,15 @@ from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 from fastapi import HTTPException
 
 # Use domain models exclusively for internal logic
-from src.ultibot_backend.core.domain_models.trading_strategy_models import (
+from ultibot_backend.core.domain_models.trading_strategy_models import (
     TradingStrategyConfig,
     BaseStrategyType,
 )
-from src.ultibot_backend.core.domain_models.user_configuration_models import (
+from ultibot_backend.core.domain_models.user_configuration_models import (
     AIStrategyConfiguration,
     ConfidenceThresholds,
 )
-from src.ultibot_backend.core.domain_models.opportunity_models import (
+from ultibot_backend.core.domain_models.opportunity_models import (
     Opportunity,
     OpportunityStatus,
     AIAnalysis,
@@ -29,12 +29,12 @@ from src.ultibot_backend.core.domain_models.opportunity_models import (
     DataVerification,
     InitialSignal,
 )
-from src.ultibot_backend.services.ai_orchestrator_service import (
+from ultibot_backend.services.ai_orchestrator_service import (
     AIOrchestrator,
     AIAnalysisResult,
     OpportunityData,
 )
-from src.ultibot_backend.core.domain_models.trade_models import (
+from ultibot_backend.core.domain_models.trade_models import (
     Trade,
     AIInfluenceDetails,
     PositionStatus,
@@ -44,19 +44,19 @@ from src.ultibot_backend.core.domain_models.trade_models import (
     TradeMode, 
     TradeSide
 )
-from src.ultibot_backend.services.market_data_service import MarketDataService
-from src.ultibot_backend.services.unified_order_execution_service import UnifiedOrderExecutionService
-from src.ultibot_backend.services.credential_service import CredentialService
-from src.ultibot_backend.core.exceptions import MarketDataError, BinanceAPIError, OrderExecutionError
-from src.shared.data_types import ServiceName
+from ultibot_backend.services.market_data_service import MarketDataService
+from ultibot_backend.services.unified_order_execution_service import UnifiedOrderExecutionService
+from ultibot_backend.services.credential_service import CredentialService
+from ultibot_backend.core.exceptions import MarketDataError, BinanceAPIError, OrderExecutionError
+from shared.data_types import ServiceName
 
 # Conditional imports for type checking to avoid circular dependencies
 if TYPE_CHECKING:
-    from src.ultibot_backend.services.strategy_service import StrategyService
-    from src.ultibot_backend.services.config_service import ConfigurationService
-    from src.ultibot_backend.services.notification_service import NotificationService
-    from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-    from src.ultibot_backend.services.portfolio_service import PortfolioService
+    from ultibot_backend.services.strategy_service import StrategyService
+    from ultibot_backend.services.config_service import ConfigurationService
+    from ultibot_backend.services.notification_service import NotificationService
+    from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+    from ultibot_backend.services.portfolio_service import PortfolioService
 
 logger = logging.getLogger(__name__)
 
@@ -296,3 +296,4 @@ class TradingEngine:
         
     # ... (otros métodos del servicio que no necesitan cambios inmediatos) ...
     # Se omiten por brevedad, pero estarían aquí en el archivo real.
+

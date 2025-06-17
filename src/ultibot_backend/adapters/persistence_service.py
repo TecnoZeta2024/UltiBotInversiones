@@ -18,11 +18,11 @@ import json
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-from src.ultibot_backend.app_config import settings
-from src.ultibot_backend.core.domain_models.opportunity_models import Opportunity, OpportunityStatus
-from src.ultibot_backend.core.domain_models.trade_models import Trade, TradeOrderDetails
-from src.ultibot_backend.core.domain_models.trading_strategy_models import TradingStrategyConfig
-from src.shared.data_types import APICredential, ServiceName, Notification, MarketData
+from ultibot_backend.app_config import settings
+from ultibot_backend.core.domain_models.opportunity_models import Opportunity, OpportunityStatus
+from ultibot_backend.core.domain_models.trade_models import Trade, TradeOrderDetails
+from ultibot_backend.core.domain_models.trading_strategy_models import TradingStrategyConfig
+from shared.data_types import APICredential, ServiceName, Notification, MarketData
 
 logger = logging.getLogger(__name__)
 
@@ -66,10 +66,14 @@ class SupabasePersistenceService:
             )
             await self.pool.open()
             logger.info(f"Pool de conexiones a Supabase (psycopg_pool) establecido exitosamente. Min: {min_size}, Max: {max_size}")
-        except Exception as e:
+        except psycopg.Error as e:
             logger.error(f"Error al establecer el pool de conexiones a Supabase (psycopg_pool): {e}")
-            if isinstance(e, psycopg.Error) and hasattr(e, 'diag') and e.diag:
+            if hasattr(e, 'diag') and e.diag:
                  logger.error(f"Detalles del error de PSQL (diag): {e.diag.message_primary}")
+            self.pool = None
+            raise
+        except Exception as e: # Catch any other unexpected exceptions
+            logger.error(f"Error inesperado al establecer el pool de conexiones a Supabase (psycopg_pool): {e}")
             self.pool = None
             raise
 
@@ -592,12 +596,12 @@ class SupabasePersistenceService:
             logger.error(f"Error al obtener oportunidades por estado para user {self.fixed_user_id}, status={status.value} (psycopg_pool): {e}", exc_info=True)
             raise
 
-    async def get_all_trades_for_user(self, mode: Optional[str] = None) -> List[Trade]:
+    async def get_all_trades_for_user(self, user_id: UUID, mode: Optional[str] = None) -> List[Trade]:
         await self._check_pool()
         assert self.pool is not None
 
         query_base = SQL("SELECT * FROM trades WHERE user_id = %s")
-        params_list: List[Any] = [self.fixed_user_id]
+        params_list: List[Any] = [user_id]
         
         if mode:
             query_base = Composed([query_base, SQL(" AND mode = %s")])
@@ -612,7 +616,7 @@ class SupabasePersistenceService:
                     records = await cur.fetchall()
                 return [Trade(**record) for record in records]
         except Exception as e:
-            logger.error(f"Error al obtener todos los trades para el usuario {self.fixed_user_id} (psycopg_pool): {e}", exc_info=True)
+            logger.error(f"Error al obtener todos los trades para el usuario {user_id} (psycopg_pool): {e}", exc_info=True)
             raise
 
     async def get_closed_trades(self, filters: Dict[str, Any], start_date: Optional[datetime] = None, end_date: Optional[datetime] = None, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:

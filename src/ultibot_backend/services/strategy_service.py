@@ -7,8 +7,8 @@ from typing import Any, Dict, List, Optional
 from fastapi import HTTPException
 from pydantic import ValidationError
 
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend.core.domain_models.trading_strategy_models import (
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from ultibot_backend.core.domain_models.trading_strategy_models import (
     BaseStrategyType,
     TradingStrategyConfig,
     StrategySpecificParameters,
@@ -20,11 +20,11 @@ from src.ultibot_backend.core.domain_models.trading_strategy_models import (
     GridTradingParameters,
     DCAInvestingParameters,
 )
-from src.ultibot_backend.core.domain_models.user_configuration_models import (
+from ultibot_backend.core.domain_models.user_configuration_models import (
     UserConfiguration,
     AIStrategyConfiguration,
 )
-from src.ultibot_backend.services.config_service import ConfigurationService
+from ultibot_backend.services.config_service import ConfigurationService
 
 logger = logging.getLogger(__name__)
 
@@ -218,3 +218,4 @@ class StrategyService:
             except ValidationError as e:
                 logger.warning(f"Failed to validate parameters for {strategy_type}: {e}")
         return parameters_data
+

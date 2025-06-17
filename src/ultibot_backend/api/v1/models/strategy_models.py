@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field, validator
 
-from src.ultibot_backend.core.domain_models.trading_strategy_models import (
+from ultibot_backend.core.domain_models.trading_strategy_models import (
     BaseStrategyType,
     TradingStrategyConfig,
     StrategySpecificParameters,
@@ -258,3 +258,4 @@ class ErrorResponse(BaseModel):
     detail: str = Field(..., description="Error detail message")
     error_code: Optional[str] = Field(None, description="Specific error code")
     context: Optional[Dict[str, Any]] = Field(None, description="Additional error context")
+

@@ -12,15 +12,17 @@ from uuid import UUID, uuid4
 # Add src to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
-from src.ultibot_ui.services.api_client import UltiBotAPIClient
-from src.ultibot_ui.services.trading_mode_state import get_trading_mode_manager, reset_trading_mode_manager
+from ultibot_ui.services.api_client import UltiBotAPIClient
+from ultibot_ui.services.trading_mode_state import get_trading_mode_manager, reset_trading_mode_manager
 
 class TestTradingModeAPIIntegration:
     """Integration tests for trading mode aware API endpoints."""
     
     def setup_method(self):
         """Set up test fixtures."""
-        self.api_client = UltiBotAPIClient(base_url="http://test-backend:8000")
+        import httpx
+        self.http_client = httpx.AsyncClient()
+        self.api_client = UltiBotAPIClient(base_url="http://test-backend:8000", client=self.http_client)
         self.user_id = uuid4()
         reset_trading_mode_manager()
     
@@ -258,7 +260,9 @@ class TestEndToEndTradingModeFlow:
         """Set up test fixtures."""
         reset_trading_mode_manager()
         self.mode_manager = get_trading_mode_manager()
-        self.api_client = UltiBotAPIClient(base_url="http://test-backend:8000")
+        import httpx
+        self.http_client = httpx.AsyncClient()
+        self.api_client = UltiBotAPIClient(base_url="http://test-backend:8000", client=self.http_client)
         self.user_id = uuid4()
     
     @pytest.mark.asyncio
@@ -361,3 +365,4 @@ class TestEndToEndTradingModeFlow:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+

@@ -3,9 +3,9 @@ from typing import Optional, Dict, Any, List # Added List
 from uuid import UUID
 from pathlib import Path
 
-from src.ultibot_ui.services.api_client import UltiBotAPIClient
+from ultibot_ui.services.api_client import UltiBotAPIClient
 # Assuming a Pydantic model for configuration might exist in the future, e.g.:
-# from src.ultibot_ui.models import UserConfiguration
+# from ultibot_ui.models import UserConfiguration
 
 # For local fallback or if not using API for certain configs
 DEFAULT_FAVORITE_PAIRS = ["BTC-USD", "ETH-USD", "SOL-USD"]
@@ -143,3 +143,4 @@ class UIConfigService:
 #     favoritePairs: List[str] = DEFAULT_FAVORITE_PAIRS
 #     displaySettings: Optional[Dict[str, Any]] = None
 #     # ... other config fields
+

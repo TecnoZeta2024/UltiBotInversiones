@@ -4,7 +4,7 @@ from unittest.mock import patch
 from pydantic_core import ValidationError
 
 # Adjust the import path if AppSettings is located elsewhere
-from src.ultibot_backend.app_config import AppSettings
+from ultibot_backend.app_config import AppSettings
 
 def test_load_credential_encryption_key_success():
     """
@@ -78,3 +78,4 @@ def test_log_level_default():
     with patch.dict(os.environ, minimal_env_vars_for_log_test, clear=True):
         current_settings = AppSettings()
         assert current_settings.LOG_LEVEL == "INFO" # Default value in AppSettings
+

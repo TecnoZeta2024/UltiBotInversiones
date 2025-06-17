@@ -4,9 +4,9 @@ from uuid import uuid4, UUID
 from datetime import datetime
 from cryptography.fernet import Fernet, InvalidToken
 
-from src.ultibot_backend.services.credential_service import CredentialService, CredentialError
-from src.shared.data_types import APICredential, ServiceName
-from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter, BinanceAPIError
+from ultibot_backend.services.credential_service import CredentialService, CredentialError
+from shared.data_types import APICredential, ServiceName
+from ultibot_backend.adapters.binance_adapter import BinanceAdapter, BinanceAPIError
 
 # Generar una clave Fernet válida para las pruebas
 TEST_FERNET_KEY = Fernet.generate_key().decode('utf-8')
@@ -201,3 +201,4 @@ async def test_verify_credential_telegram_success(credential_service: Credential
     )
 
 # Se pueden añadir más pruebas para update_credential, delete_credential, otros servicios, etc.
+

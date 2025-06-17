@@ -7,13 +7,13 @@ from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, Depends
+from fastapi import APIRouter, HTTPException, Query, Depends, Request
 from pydantic import BaseModel
 
-from src.shared.data_types import Trade, PerformanceMetrics
-from src.ultibot_backend.services.trading_report_service import TradingReportService
-from src.ultibot_backend import dependencies as deps
-from src.ultibot_backend.app_config import settings
+from shared.data_types import Trade, PerformanceMetrics
+from ultibot_backend.services.trading_report_service import TradingReportService
+from ultibot_backend import dependencies as deps
+from ultibot_backend.app_config import settings
 
 # Configurar logging
 logger = logging.getLogger(__name__)
@@ -38,6 +38,7 @@ class TradeHistoryResponse(BaseModel):
 
 @router.get("/trades/history/paper", response_model=TradeHistoryResponse, tags=["reports"])
 async def get_paper_trading_history(
+    request: Request,
     symbol: Optional[str] = Query(None, description="Filtrar por par de trading (ej. BTCUSDT)"),
     start_date: Optional[datetime] = Query(None, description="Fecha de inicio para filtrar"),
     end_date: Optional[datetime] = Query(None, description="Fecha de fin para filtrar"),
@@ -92,6 +93,7 @@ async def get_paper_trading_history(
 
 @router.get("/portfolio/paper/performance_summary", response_model=PerformanceMetrics, tags=["reports"])
 async def get_paper_trading_performance(
+    request: Request,
     symbol: Optional[str] = Query(None, description="Filtrar por par de trading (ej. BTCUSDT)"),
     start_date: Optional[datetime] = Query(None, description="Fecha de inicio para filtrar"),
     end_date: Optional[datetime] = Query(None, description="Fecha de fin para filtrar"),
@@ -120,6 +122,7 @@ async def get_paper_trading_performance(
 
 @router.get("/trades/history/real", response_model=TradeHistoryResponse, tags=["reports"])
 async def get_real_trading_history(
+    request: Request,
     symbol: Optional[str] = Query(None, description="Filtrar por par de trading (ej. BTCUSDT)"),
     start_date: Optional[datetime] = Query(None, description="Fecha de inicio para filtrar"),
     end_date: Optional[datetime] = Query(None, description="Fecha de fin para filtrar"),
@@ -174,6 +177,7 @@ async def get_real_trading_history(
 
 @router.get("/portfolio/real/performance_summary", response_model=PerformanceMetrics, tags=["reports"])
 async def get_real_trading_performance(
+    request: Request,
     symbol: Optional[str] = Query(None, description="Filtrar por par de trading (ej. BTCUSDT)"),
     start_date: Optional[datetime] = Query(None, description="Fecha de inicio para filtrar"),
     end_date: Optional[datetime] = Query(None, description="Fecha de fin para filtrar"),
@@ -199,3 +203,4 @@ async def get_real_trading_performance(
             status_code=500,
             detail=f"Error al calcular métricas de rendimiento real: {str(e)}"
         )
+

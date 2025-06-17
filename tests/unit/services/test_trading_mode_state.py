@@ -13,7 +13,7 @@ sys.modules['PyQt5.QtCore'] = MagicMock()
 # Add src to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'src'))
 
-from src.ultibot_ui.services.trading_mode_state import (
+from ultibot_ui.services.trading_mode_state import (
     TradingModeStateManager, 
     TradingModeEnum,
     get_trading_mode_manager,
@@ -246,3 +246,4 @@ class TestGlobalStateManager:
         # Get again and verify state persisted
         same_manager = get_trading_mode_manager()
         assert same_manager.current_mode == "real"
+

@@ -3,8 +3,8 @@ import httpx
 from unittest.mock import AsyncMock, patch, MagicMock
 import pytest_asyncio # Importar pytest_asyncio
 
-from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter, BinanceAPIError
-from src.shared.data_types import AssetBalance
+from ultibot_backend.adapters.binance_adapter import BinanceAdapter, BinanceAPIError
+from shared.data_types import AssetBalance
 
 @pytest_asyncio.fixture # Usar pytest_asyncio.fixture
 async def binance_adapter():
@@ -221,3 +221,4 @@ async def test_make_request_client_error_no_retry(MockAsyncClient):
         assert excinfo.value.status_code == 400
         assert mock_client_instance.get.call_count == 1 # Solo un intento
         mock_sleep.assert_not_called() # No se debe llamar a sleep
+

@@ -1,8 +1,8 @@
 from typing import Optional, List, Dict, Any 
 from uuid import UUID
 
-from src.ultibot_ui.services.api_client import UltiBotAPIClient
-from src.shared.data_types import PortfolioSnapshot, MarketData, Notification, Kline, Ticker
+from ultibot_ui.services.api_client import UltiBotAPIClient
+from shared.data_types import PortfolioSnapshot, MarketData, Notification, Kline, Ticker
 
 class UIMarketDataService:
     def __init__(self, api_client: UltiBotAPIClient):
@@ -39,3 +39,4 @@ class UIMarketDataService:
         Placeholder for any cleanup if needed.
         """
         print("UIMarketDataService closed.")
+

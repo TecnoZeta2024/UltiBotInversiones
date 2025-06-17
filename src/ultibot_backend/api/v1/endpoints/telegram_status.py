@@ -1,13 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from uuid import UUID
-from typing import Optional
+from typing import Optional, Annotated
 
-from src.shared.data_types import TelegramConnectionStatus, ServiceName
-from src.ultibot_backend.services.credential_service import CredentialService # Mantener para type hinting
-from src.ultibot_backend.services.notification_service import NotificationService # Mantener para type hinting
-from src.ultibot_backend.core.exceptions import CredentialError, TelegramNotificationError, NotificationError
-from src.ultibot_backend import dependencies as deps # Importar deps
-from src.ultibot_backend.app_config import settings # Importar settings
+from shared.data_types import TelegramConnectionStatus, ServiceName
+from ultibot_backend.services.credential_service import CredentialService
+from ultibot_backend.services.notification_service import NotificationService
+from ultibot_backend.core.exceptions import CredentialError, TelegramNotificationError, NotificationError
+from ultibot_backend import dependencies as deps # Importar deps
+from ultibot_backend.app_config import settings # Importar settings
 
 router = APIRouter()
 
@@ -15,14 +15,14 @@ router = APIRouter()
 
 @router.get("/telegram/status", response_model=TelegramConnectionStatus, summary="Obtener el estado de la conexión de Telegram")
 async def get_telegram_connection_status(
-    credential_service: CredentialService = Depends(deps.get_credential_service),
-    notification_service: NotificationService = Depends(deps.get_notification_service) # Aunque no se usa directamente, puede ser parte de la lógica de verificación futura
+    request: Request,
+    credential_service: Annotated[CredentialService, Depends(deps.get_credential_service)],
+    notification_service: Annotated[NotificationService, Depends(deps.get_notification_service)]
 ):
     """
     Obtiene el estado actual de la conexión del bot de Telegram para el usuario.
     """
     telegram_credential = await credential_service.get_credential(
-        user_id=settings.FIXED_USER_ID,
         service_name=ServiceName.TELEGRAM_BOT,
         credential_label="default_telegram_bot"
     )
@@ -55,14 +55,14 @@ async def get_telegram_connection_status(
 
 @router.post("/telegram/verify", response_model=TelegramConnectionStatus, summary="Disparar verificación manual de la conexión de Telegram")
 async def verify_telegram_connection_manually(
-    credential_service: CredentialService = Depends(deps.get_credential_service),
-    notification_service: NotificationService = Depends(deps.get_notification_service)
+    request: Request,
+    credential_service: Annotated[CredentialService, Depends(deps.get_credential_service)],
+    notification_service: Annotated[NotificationService, Depends(deps.get_notification_service)]
 ):
     """
     Permite al usuario disparar manualmente un reintento de verificación de la conexión de Telegram.
     """
     telegram_credential = await credential_service.get_credential(
-        user_id=settings.FIXED_USER_ID,
         service_name=ServiceName.TELEGRAM_BOT,
         credential_label="default_telegram_bot"
     )
@@ -81,7 +81,6 @@ async def verify_telegram_connection_manually(
         
         # Recargar la credencial para obtener el estado más reciente después de la verificación
         updated_credential = await credential_service.get_credential(
-            user_id=settings.FIXED_USER_ID,
             service_name=ServiceName.TELEGRAM_BOT,
             credential_label="default_telegram_bot"
         )
@@ -115,3 +114,4 @@ async def verify_telegram_connection_manually(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error inesperado durante la verificación de Telegram: {e}"
         )
+

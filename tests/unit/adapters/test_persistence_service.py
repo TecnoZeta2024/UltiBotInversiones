@@ -8,9 +8,9 @@ import asyncpg # Importar asyncpg
 from psycopg.sql import SQL, Literal # Importar SQL y Literal
 import os # Importar os para mockear variables de entorno
 
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend.app_config import settings
-from src.shared.data_types import UserConfiguration, APICredential, ServiceName
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from ultibot_backend.app_config import settings
+from shared.data_types import UserConfiguration, APICredential, ServiceName
 
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch # Importar patch
 
@@ -223,3 +223,4 @@ async def test_save_credential(persistence_service, mock_asyncpg_connection, fix
     mock_asyncpg_connection.commit.assert_called_once()
     assert saved_credential.id == mock_credential.id
     assert saved_credential.service_name == mock_credential.service_name # Debería comparar el Enum
+

@@ -3,12 +3,12 @@ from typing import List, Optional, Dict, Set, Callable, Any
 from uuid import UUID
 from fastapi import Depends
 
-from src.shared.data_types import AssetBalance, ServiceName, BinanceConnectionStatus, MarketData
-from src.ultibot_backend.adapters.binance_adapter import BinanceAdapter
-from src.ultibot_backend.services.credential_service import CredentialService
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend.core.exceptions import BinanceAPIError, CredentialError, UltiBotError, ExternalAPIError, MarketDataError
-from src.ultibot_backend.app_config import settings
+from shared.data_types import AssetBalance, ServiceName, BinanceConnectionStatus, MarketData
+from ultibot_backend.adapters.binance_adapter import BinanceAdapter
+from ultibot_backend.services.credential_service import CredentialService
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from ultibot_backend.core.exceptions import BinanceAPIError, CredentialError, UltiBotError, ExternalAPIError, MarketDataError
+from ultibot_backend.app_config import settings
 from datetime import datetime, timezone
 import asyncio
 
@@ -313,3 +313,4 @@ class MarketDataService:
         
         await self.binance_adapter.close()
         logger.info("MarketDataService: Cierre completado.")
+

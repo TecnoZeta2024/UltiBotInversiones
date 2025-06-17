@@ -1,12 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from typing import Annotated, Optional, List, Literal, Any
 from uuid import UUID
 from datetime import date
 
-from src.shared.data_types import Trade
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend import dependencies as deps
-from src.ultibot_backend.app_config import settings
+from shared.data_types import Trade
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from ultibot_backend import dependencies as deps
+from ultibot_backend.app_config import settings
 
 router = APIRouter()
 
@@ -15,6 +15,7 @@ TradingMode = Literal["paper", "real", "both"]
 
 @router.get("", response_model=List[Trade], status_code=status.HTTP_200_OK)
 async def get_user_trades(
+    request: Request,
     persistence_service: Annotated[SupabasePersistenceService, Depends(deps.get_persistence_service)],
     trading_mode: Annotated[TradingMode, Query(description="Trading mode filter: 'paper', 'real', or 'both'")] = "both",
     status_filter: Annotated[Optional[str], Query(description="Position status filter: 'open', 'closed', etc.")] = None,
@@ -59,6 +60,7 @@ async def get_user_trades(
 
 @router.get("/open", response_model=List[Trade], status_code=status.HTTP_200_OK)
 async def get_open_trades(
+    request: Request,
     persistence_service: Annotated[SupabasePersistenceService, Depends(deps.get_persistence_service)],
     trading_mode: Annotated[TradingMode, Query(description="Trading mode filter: 'paper', 'real', or 'both'")] = "both"
 ):
@@ -66,7 +68,9 @@ async def get_open_trades(
     Get only open trades for the fixed user and trading mode.
     """
     try:
+        # We need to pass the request object to the redirected call
         return await get_user_trades(
+            request=request,
             persistence_service=persistence_service,
             trading_mode=trading_mode,
             status_filter="open"
@@ -80,6 +84,7 @@ async def get_open_trades(
 
 @router.get("/count", status_code=status.HTTP_200_OK)
 async def get_trades_count(
+    request: Request,
     persistence_service: Annotated[SupabasePersistenceService, Depends(deps.get_persistence_service)],
     trading_mode: Annotated[TradingMode, Query(description="Trading mode filter: 'paper', 'real', or 'both'")] = "both",
     status_filter: Annotated[Optional[str], Query(description="Position status filter: 'open', 'closed', etc.")] = None,
@@ -121,3 +126,4 @@ async def get_trades_count(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to count trades: {str(e)}"
         )
+

@@ -9,8 +9,8 @@ import websockets
 from typing import Dict, Any, List, Optional, Callable
 from datetime import datetime
 
-from src.ultibot_backend.core.exceptions import BinanceAPIError, ExternalAPIError, CredentialError
-from src.shared.data_types import AssetBalance
+from ultibot_backend.core.exceptions import BinanceAPIError, ExternalAPIError, CredentialError
+from shared.data_types import AssetBalance
 
 class BinanceAdapter:
     """
@@ -359,3 +359,4 @@ class BinanceAdapter:
             print("BinanceAdapter: Cliente HTTP cerrado y adaptador marcado como cerrado.")
         else:
             print("BinanceAdapter: Ya estaba cerrado.")
+

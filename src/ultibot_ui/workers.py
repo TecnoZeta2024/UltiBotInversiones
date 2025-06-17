@@ -2,9 +2,9 @@ import asyncio
 import logging
 from typing import Optional, Callable, Coroutine
 
-from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
+from PySide6.QtCore import QObject, Signal as pyqtSignal, Slot as pyqtSlot
 
-from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
+from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
 
 logger = logging.getLogger(__name__)
 
@@ -57,5 +57,11 @@ class ApiWorker(QObject):
             self.error_occurred.emit(str(exc))
         finally:
             logger.debug("ApiWorker: Closing event loop.")
-            loop.close()
+            try:
+                loop.run_until_complete(asyncio.gather(*asyncio.all_tasks(loop)))
+            except RuntimeError as e:
+                logger.error(f"Error al cerrar el event loop: {e}")
+            finally:
+                loop.close()
             logger.debug("ApiWorker: run method finished.")
+

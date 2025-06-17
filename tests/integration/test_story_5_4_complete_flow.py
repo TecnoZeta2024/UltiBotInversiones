@@ -4,6 +4,8 @@ Integration tests for Story 5.4 - Complete flow from opportunity to trade execut
 Tests the full integration between TradingEngineService, StrategyService, and related components
 for the active strategy-based opportunity processing workflow.
 """
+import sys
+sys.path.insert(0, 'src')
 
 import pytest
 import asyncio
@@ -11,23 +13,26 @@ from unittest.mock import AsyncMock, patch, MagicMock
 from uuid import uuid4
 from datetime import datetime, timezone
 
-from src.ultibot_backend.services.strategy_service import StrategyService
-from src.ultibot_backend.services.ai_orchestrator_service import AIOrchestrator
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from ultibot_backend.services.strategy_service import StrategyService
+from ultibot_backend.services.ai_orchestrator_service import AIOrchestrator
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 
-from src.ultibot_backend.core.domain_models.trading_strategy_models import (
+from ultibot_backend.core.domain_models.trading_strategy_models import (
     TradingStrategyConfig,
     BaseStrategyType,
     ScalpingParameters,
     DayTradingParameters,
     ApplicabilityRules,
+    Timeframe,
 )
-from src.ultibot_backend.core.domain_models.trade_models import Trade
-from src.ultibot_backend.core.domain_models.user_configuration_models import (
+from ultibot_backend.core.domain_models.trade_models import Trade
+from ultibot_backend.core.domain_models.user_configuration_models import (
     UserConfiguration,
     AIStrategyConfiguration,
     ConfidenceThresholds,
     RealTradingSettings,
+    RiskProfile,
+    Theme,
 )
 
 
@@ -42,14 +47,14 @@ def mock_persistence_service():
 
 
 @pytest.fixture
-def strategy_service(mock_persistence_service):
-    return StrategyService(mock_persistence_service)
+def configuration_service(mock_persistence_service):
+    from ultibot_backend.services.config_service import ConfigurationService
+    return ConfigurationService(mock_persistence_service)
 
 
 @pytest.fixture
-def config_service(mock_persistence_service):
-    from src.ultibot_backend.services.config_service import ConfigService
-    return ConfigService(mock_persistence_service)
+def strategy_service(mock_persistence_service, configuration_service):
+    return StrategyService(mock_persistence_service, configuration_service)
 
 
 @pytest.fixture
@@ -58,11 +63,29 @@ def ai_orchestrator():
 
 
 @pytest.fixture
-def trading_engine(strategy_service, config_service, ai_orchestrator):
-    from src.ultibot_backend.services.trading_engine_service import TradingEngine
+def trading_engine(
+    strategy_service,
+    configuration_service,
+    ai_orchestrator,
+    mock_persistence_service,  # Añadido para completitud
+):
+    from ultibot_backend.services.trading_engine_service import TradingEngine
+    # Mock de otros servicios necesarios para el constructor de TradingEngine
+    mock_market_data_service = AsyncMock()
+    mock_unified_order_execution_service = AsyncMock()
+    mock_credential_service = AsyncMock()
+    mock_notification_service = AsyncMock()
+    mock_portfolio_service = AsyncMock()
+
     return TradingEngine(
+        persistence_service=mock_persistence_service,
+        market_data_service=mock_market_data_service,
+        unified_order_execution_service=mock_unified_order_execution_service,
+        credential_service=mock_credential_service,
+        notification_service=mock_notification_service,
         strategy_service=strategy_service,
-        configuration_service=config_service,
+        configuration_service=configuration_service,
+        portfolio_service=mock_portfolio_service,
         ai_orchestrator=ai_orchestrator,
     )
 
@@ -70,66 +93,96 @@ def trading_engine(strategy_service, config_service, ai_orchestrator):
 @pytest.fixture
 def btc_opportunity(user_id):
     """Sample BTC opportunity for testing."""
-    from src.ultibot_backend.core.domain_models.opportunity_models import (
+    from ultibot_backend.core.domain_models.opportunity_models import (
         Opportunity,
         OpportunityStatus,
         InitialSignal,
-        OpportunitySourceType,
+        SourceType,
         AIAnalysis,
         SuggestedAction,
+        Direction,
     )
     return Opportunity(
         id=str(uuid4()),
         user_id=user_id,
         symbol="BTCUSDT",
         detected_at=datetime.now(timezone.utc),
-        source_type=OpportunitySourceType.MCP_SIGNAL,
+        source_type=SourceType.MCP_SIGNAL,
         source_name="test_mcp_btc",
         initial_signal=InitialSignal(
-            direction_sought="buy",
+            direction_sought=Direction.BUY,
             entry_price_target=50000.0,
             stop_loss_target=49000.0,
             take_profit_target=[51000.0, 52000.0],
             timeframe="15m",
             confidence_source=0.85,
             reasoning_source_text="Strong bullish signal detected",
+            reasoning_source_structured=None,
         ),
         status=OpportunityStatus.NEW,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
+        source_data=None,
+        system_calculated_priority_score=None,
+        last_priority_calculation_at=None,
+        status_reason_code=None,
+        status_reason_text=None,
+        ai_analysis=None,
+        investigation_details=None,
+        user_feedback=None,
+        linked_trade_ids=None,
+        expires_at=None,
+        expiration_logic=None,
+        post_trade_feedback=None,
+        post_facto_simulation_results=None,
     )
 
 
 @pytest.fixture
 def eth_opportunity(user_id):
     """Sample ETH opportunity for testing."""
-    from src.ultibot_backend.core.domain_models.opportunity_models import (
+    from ultibot_backend.core.domain_models.opportunity_models import (
         Opportunity,
         OpportunityStatus,
         InitialSignal,
-        OpportunitySourceType,
+        SourceType,
         AIAnalysis,
         SuggestedAction,
+        Direction,
     )
     return Opportunity(
         id=str(uuid4()),
         user_id=user_id,
         symbol="ETHUSDT",
         detected_at=datetime.now(timezone.utc),
-        source_type=OpportunitySourceType.INTERNAL_INDICATOR_ALGO,
+        source_type=SourceType.INTERNAL_INDICATOR_ALGO,
         source_name="rsi_oversold_detector",
         initial_signal=InitialSignal(
-            direction_sought="sell",
+            direction_sought=Direction.SELL,
             entry_price_target=3000.0,
             stop_loss_target=3100.0,
             take_profit_target=[2900.0],
             timeframe="1h",
             confidence_source=0.75,
             reasoning_source_text="RSI oversold, potential reversal",
+            reasoning_source_structured=None
         ),
         status=OpportunityStatus.NEW,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
+        source_data=None,
+        system_calculated_priority_score=None,
+        last_priority_calculation_at=None,
+        status_reason_code=None,
+        status_reason_text=None,
+        ai_analysis=None,
+        investigation_details=None,
+        user_feedback=None,
+        linked_trade_ids=None,
+        expires_at=None,
+        expiration_logic=None,
+        post_trade_feedback=None,
+        post_facto_simulation_results=None,
     )
 
 
@@ -153,9 +206,17 @@ def scalping_strategy_btc(user_id):
         applicability_rules=ApplicabilityRules(
             explicit_pairs=["BTCUSDT"],
             include_all_spot=False,
+            dynamic_filter=None,
         ),
         ai_analysis_profile_id=None,  # No AI for this strategy
+        risk_parameters_override=None,
         version=1,
+        parent_config_id=None,
+        performance_metrics=None,
+        market_condition_filters=None,
+        activation_schedule=None,
+        depends_on_strategies=None,
+        sharing_metadata=None,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
     )
@@ -179,15 +240,23 @@ def day_trading_strategy_multi(user_id):
             macd_fast_period=12,
             macd_slow_period=26,
             macd_signal_period=9,
-            entry_timeframes=["1h", "4h"],
-            exit_timeframes=["15m", "1h"],
+            entry_timeframes=[Timeframe.ONE_HOUR, Timeframe.FOUR_HOURS],
+            exit_timeframes=[Timeframe.FIFTEEN_MINUTES, Timeframe.ONE_HOUR],
         ),
         applicability_rules=ApplicabilityRules(
             explicit_pairs=["BTCUSDT", "ETHUSDT", "ADAUSDT"],
             include_all_spot=False,
+            dynamic_filter=None,
         ),
         ai_analysis_profile_id="ai_profile_1",  # Uses AI
+        risk_parameters_override=None,
         version=1,
+        parent_config_id=None,
+        performance_metrics=None,
+        market_condition_filters=None,
+        activation_schedule=None,
+        depends_on_strategies=None,
+        sharing_metadata=None,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
     )
@@ -199,8 +268,12 @@ def ai_strategy_config():
     return AIStrategyConfiguration(
         id="ai_profile_1",
         name="Conservative Day Trading AI",
+        applies_to_strategies=None,
+        applies_to_pairs=None,
         gemini_prompt_template="Analyze this {symbol} opportunity for day trading. Market data: {market_data}. Strategy: {strategy_params}",
         tools_available_to_gemini=["price_history", "volume_analysis", "technical_indicators"],
+        output_parser_config=None,
+        indicator_weights=None,
         confidence_thresholds=ConfidenceThresholds(
             paper_trading=0.65,
             real_trading=0.80,
@@ -213,20 +286,40 @@ def ai_strategy_config():
 def user_configuration(user_id, ai_strategy_config):
     """Complete user configuration for testing."""
     return UserConfiguration(
+        id=str(uuid4()),
         user_id=user_id,
+        telegram_chat_id=None,
+        notification_preferences=None,
+        enable_telegram_notifications=True,
+        default_paper_trading_capital=10000.0,
         paper_trading_active=True,
+        paper_trading_assets=[],
+        watchlists=[],
+        favorite_pairs=["BTCUSDT", "ETHUSDT"],
+        risk_profile=RiskProfile.MODERATE,
+        risk_profile_settings=None,
         real_trading_settings=RealTradingSettings(
             real_trading_mode_active=True,
-            max_real_trades=5,
-            real_trades_executed_count=1,
-            daily_capital_risked_usd=200.0,
-            last_daily_reset=datetime.now(timezone.utc),
+            real_trades_executed_count=0,
+            max_concurrent_operations=5,
+            daily_loss_limit_absolute=500.0,
+            daily_profit_target_absolute=1000.0,
+            asset_specific_stop_loss=None,
+            auto_pause_trading_conditions=None,
         ),
         ai_strategy_configurations=[ai_strategy_config],
         ai_analysis_confidence_thresholds=ConfidenceThresholds(
             paper_trading=0.60,
             real_trading=0.75,
         ),
+        mcp_server_preferences=None,
+        selected_theme=Theme.DARK,
+        dashboard_layout_profiles=None,
+        active_dashboard_layout_profile_id=None,
+        dashboard_layout_config=None,
+        cloud_sync_preferences=None,
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
     )
 
 
@@ -244,7 +337,7 @@ class TestCompleteOpportunityProcessingFlow:
         user_id,
     ):
         """Test complete flow: opportunity → single applicable strategy → paper trade execution."""
-        from src.ultibot_backend.core.domain_models.opportunity_models import (
+        from ultibot_backend.core.domain_models.opportunity_models import (
             OpportunityStatus,
         )
         mode = "paper"
@@ -299,7 +392,7 @@ class TestCompleteOpportunityProcessingFlow:
         user_id,
     ):
         """Test flow with multiple strategies where one uses AI analysis."""
-        from src.ultibot_backend.core.domain_models.opportunity_models import (
+        from ultibot_backend.core.domain_models.opportunity_models import (
             SuggestedAction,
         )
         mode = "paper"
@@ -367,7 +460,7 @@ class TestCompleteOpportunityProcessingFlow:
         user_id,
     ):
         """Test flow where active strategies exist but none are applicable."""
-        from src.ultibot_backend.core.domain_models.opportunity_models import (
+        from ultibot_backend.core.domain_models.opportunity_models import (
             OpportunityStatus,
         )
         mode = "paper"
@@ -407,7 +500,7 @@ class TestCompleteOpportunityProcessingFlow:
         user_id,
     ):
         """Test flow where AI analysis confidence is below threshold."""
-        from src.ultibot_backend.core.domain_models.opportunity_models import (
+        from ultibot_backend.core.domain_models.opportunity_models import (
             OpportunityStatus,
             SuggestedAction,
         )
@@ -458,7 +551,7 @@ class TestCompleteOpportunityProcessingFlow:
         user_id,
     ):
         """Test flow where real mode requires user confirmation."""
-        from src.ultibot_backend.core.domain_models.opportunity_models import (
+        from ultibot_backend.core.domain_models.opportunity_models import (
             OpportunityStatus,
         )
         mode = "real"
@@ -504,7 +597,7 @@ class TestCompleteOpportunityProcessingFlow:
         user_id,
     ):
         """Test that individual strategy errors don't break the entire flow."""
-        from src.ultibot_backend.core.domain_models.opportunity_models import (
+        from ultibot_backend.core.domain_models.opportunity_models import (
             OpportunityStatus,
         )
         mode = "paper"
@@ -541,6 +634,10 @@ class TestCompleteOpportunityProcessingFlow:
 
     def _strategy_to_db_format(self, strategy: TradingStrategyConfig) -> dict:
         """Convert strategy to database format for mocking."""
+        parameters_dump = strategy.parameters
+        if not isinstance(parameters_dump, dict):
+            parameters_dump = parameters_dump.model_dump()
+
         return {
             "id": strategy.id,
             "user_id": strategy.user_id,
@@ -549,8 +646,8 @@ class TestCompleteOpportunityProcessingFlow:
             "description": strategy.description,
             "is_active_paper_mode": strategy.is_active_paper_mode,
             "is_active_real_mode": strategy.is_active_real_mode,
-            "parameters": strategy.parameters.dict() if hasattr(strategy.parameters, 'dict') else strategy.parameters,
-            "applicability_rules": strategy.applicability_rules.dict() if strategy.applicability_rules else None,
+            "parameters": parameters_dump,
+            "applicability_rules": strategy.applicability_rules.model_dump() if strategy.applicability_rules else None,
             "ai_analysis_profile_id": strategy.ai_analysis_profile_id,
             "risk_parameters_override": None,
             "version": strategy.version,
@@ -576,7 +673,7 @@ class TestTradeCreationWithStrategyAssociation:
         scalping_strategy_btc,
     ):
         """Test that created trades have correct strategy_id association."""
-        from src.ultibot_backend.services.trading_engine_service import TradingDecision
+        from ultibot_backend.services.trading_engine_service import TradingDecision
         decision = TradingDecision(
             decision="execute_trade",
             confidence=0.8,
@@ -610,7 +707,7 @@ class TestTradeCreationWithStrategyAssociation:
         scalping_strategy_btc,
     ):
         """Test that trade side is correctly determined from opportunity signal."""
-        from src.ultibot_backend.services.trading_engine_service import TradingDecision
+        from ultibot_backend.services.trading_engine_service import TradingDecision
         # Test buy signal
         btc_opportunity.initial_signal.direction_sought = "buy"
         decision = TradingDecision(
@@ -638,3 +735,4 @@ class TestTradeCreationWithStrategyAssociation:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+

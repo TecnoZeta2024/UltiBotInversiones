@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from uuid import UUID
 
-from src.shared.data_types import UserConfiguration
-from src.ultibot_backend.services.config_service import ConfigurationService
-from src.ultibot_backend.dependencies import get_config_service
-from src.ultibot_backend.core.exceptions import (
+from shared.data_types import UserConfiguration
+from ultibot_backend.services.config_service import ConfigurationService
+from ultibot_backend.dependencies import get_config_service
+from ultibot_backend.core.exceptions import (
     ConfigurationError,
     BinanceAPIError,
     InsufficientUSDTBalanceError,

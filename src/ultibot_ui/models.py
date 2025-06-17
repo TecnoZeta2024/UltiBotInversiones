@@ -1,4 +1,4 @@
-from PyQt5.QtCore import QObject, QThread
+from PySide6.QtCore import QObject, QThread
 
 class BaseMainWindow(QObject):
     """

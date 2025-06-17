@@ -4,7 +4,11 @@ version = "0.1.0"
 description = "Plataforma de trading personal avanzada y de alto rendimiento."
 authors = ["BMad Agent <bmad@example.com>"]
 readme = "README.md"
-packages = [{include = "src"}]
+packages = [
+    { include = "ultibot_backend", from = "src" },
+    { include = "ultibot_ui", from = "src" },
+    { include = "shared", from = "src" },
+]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.13"
@@ -66,3 +70,8 @@ select = [
 # quote-style = "double"
 # indent-style = "space"
 # skip-magic-trailing-comma = false
+
+[tool.pytest.ini_options]
+pythonpath = [
+  "src"
+]

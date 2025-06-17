@@ -25,18 +25,18 @@ from PySide6.QtWidgets import (
     QWidget
 )
 
-from src.shared.data_types import UserConfiguration, AiStrategyConfiguration
-from src.ultibot_ui.models import BaseMainWindow
-from src.ultibot_ui.widgets.sidebar_navigation_widget import SidebarNavigationWidget
-from src.ultibot_ui.windows.dashboard_view import DashboardView
-from src.ultibot_ui.windows.history_view import HistoryView
-from src.ultibot_ui.windows.settings_view import SettingsView
-from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
-from src.ultibot_ui.services.ui_strategy_service import UIStrategyService
-from src.ultibot_ui.views.strategies_view import StrategiesView
-from src.ultibot_ui.views.opportunities_view import OpportunitiesView
-from src.ultibot_ui.views.portfolio_view import PortfolioView
-from src.ultibot_ui.workers import ApiWorker
+from shared.data_types import UserConfiguration, AiStrategyConfiguration
+from ultibot_ui.models import BaseMainWindow
+from ultibot_ui.widgets.sidebar_navigation_widget import SidebarNavigationWidget
+from ultibot_ui.windows.dashboard_view import DashboardView
+from ultibot_ui.windows.history_view import HistoryView
+from ultibot_ui.windows.settings_view import SettingsView
+from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
+from ultibot_ui.services.ui_strategy_service import UIStrategyService
+from ultibot_ui.views.strategies_view import StrategiesView
+from ultibot_ui.views.opportunities_view import OpportunitiesView
+from ultibot_ui.views.portfolio_view import PortfolioView
+from ultibot_ui.workers import ApiWorker
 
 logger = logging.getLogger(__name__)
 
@@ -255,3 +255,4 @@ class MainWindow(QMainWindow, BaseMainWindow):
         """Maneja el evento de cierre de la ventana."""
         self.cleanup()
         super().closeEvent(event)
+

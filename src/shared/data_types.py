@@ -11,7 +11,7 @@ from enum import Enum
 from pydantic import BaseModel, Field, ConfigDict
 
 # Importar modelos de dominio para mantener una única fuente de verdad
-from src.ultibot_backend.core.domain_models.trade_models import (
+from ultibot_backend.core.domain_models.trade_models import (
     Trade,
     TradeOrderDetails,
     OrderCategory,
@@ -419,3 +419,4 @@ __all__ = [
     "ConfirmRealTradeRequest",
     "CapitalManagementStatus",
 ]
+

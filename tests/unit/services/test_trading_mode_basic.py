@@ -15,28 +15,28 @@ class TestTradingModeEnum:
     def test_enum_values(self):
         """Test that enum has correct values."""
         # Import locally to avoid Qt issues
-        from src.ultibot_ui.services.trading_mode_state import TradingModeEnum
+        from ultibot_ui.services.trading_mode_state import TradingModeEnum
         
         assert TradingModeEnum.PAPER.value == "paper"
         assert TradingModeEnum.REAL.value == "real"
     
     def test_display_names(self):
         """Test display names are correct."""
-        from src.ultibot_ui.services.trading_mode_state import TradingModeEnum
+        from ultibot_ui.services.trading_mode_state import TradingModeEnum
         
         assert TradingModeEnum.PAPER.display_name == "Paper Trading"
         assert TradingModeEnum.REAL.display_name == "Real Trading"
     
     def test_colors(self):
         """Test that colors are defined."""
-        from src.ultibot_ui.services.trading_mode_state import TradingModeEnum
+        from ultibot_ui.services.trading_mode_state import TradingModeEnum
         
         assert TradingModeEnum.PAPER.color == "#4CAF50"  # Green
         assert TradingModeEnum.REAL.color == "#FF9800"   # Orange
     
     def test_icons(self):
         """Test that icons are defined."""
-        from src.ultibot_ui.services.trading_mode_state import TradingModeEnum
+        from ultibot_ui.services.trading_mode_state import TradingModeEnum
         
         assert TradingModeEnum.PAPER.icon == "📊"
         assert TradingModeEnum.REAL.icon == "💰"
@@ -46,7 +46,7 @@ class TestBasicTradingModeLogic:
     
     def test_trading_mode_enum_properties(self):
         """Test that the enum properties work correctly."""
-        from src.ultibot_ui.services.trading_mode_state import TradingModeEnum
+        from ultibot_ui.services.trading_mode_state import TradingModeEnum
         
         # Test paper mode
         paper_mode = TradingModeEnum.PAPER
@@ -98,3 +98,4 @@ class TestAPIClientTradingModeSupport:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+

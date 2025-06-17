@@ -3,13 +3,13 @@ from uuid import UUID
 from typing import Annotated, Literal, Optional
 from pydantic import BaseModel, Field
 
-from src.shared.data_types import ConfirmRealTradeRequest, OpportunityStatus, Opportunity, TradeOrderDetails
-from src.ultibot_backend.services.trading_engine_service import TradingEngine
-from src.ultibot_backend.services.config_service import ConfigurationService
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend.services.unified_order_execution_service import UnifiedOrderExecutionService
-from src.ultibot_backend import dependencies as deps
-from src.ultibot_backend.app_config import settings
+from shared.data_types import ConfirmRealTradeRequest, OpportunityStatus, Opportunity, TradeOrderDetails
+from ultibot_backend.services.trading_engine_service import TradingEngine
+from ultibot_backend.services.config_service import ConfigurationService
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from ultibot_backend.services.unified_order_execution_service import UnifiedOrderExecutionService
+from ultibot_backend import dependencies as deps
+from ultibot_backend.app_config import settings
 
 router = APIRouter()
 
@@ -206,3 +206,4 @@ async def get_supported_trading_modes(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve supported trading modes: {str(e)}"
         )
+

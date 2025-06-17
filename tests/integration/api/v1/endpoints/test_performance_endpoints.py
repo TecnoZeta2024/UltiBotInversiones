@@ -4,27 +4,17 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 from datetime import datetime, timezone
 
-from src.ultibot_backend.main import app # Importar la app FastAPI
-from src.ultibot_backend.services.performance_service import PerformanceService
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend.services.strategy_service import StrategyService
-from src.ultibot_backend.api.v1.models.performance_models import StrategyPerformanceData, OperatingMode
-from src.shared.data_types import Trade
-from src.ultibot_backend.core.domain_models.trade_models import PositionStatus
-from src.ultibot_backend.core.domain_models.trading_strategy_models import TradingStrategyConfig, BaseStrategyType
-from uuid import UUID # Añadir importación de UUID
-
-# Mock de la dependencia de usuario para los endpoints
-def get_current_user_id() -> UUID:
-    """
-    Función de dependencia mockeada que será sobreescrita en las pruebas.
-    """
-    # Esta implementación no se usará, pero es necesaria para que FastAPI
-    # reconozca la dependencia antes de que sea sobreescrita.
-    raise NotImplementedError("This dependency should be overridden in tests.")
-
-# Usuario fijo para las pruebas de integración
-FIXED_TEST_USER_ID = uuid4()
+from ultibot_backend.main import app # Importar la app FastAPI
+from ultibot_backend.services.performance_service import PerformanceService
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from ultibot_backend.services.strategy_service import StrategyService
+from ultibot_backend.api.v1.models.performance_models import StrategyPerformanceData, OperatingMode
+from shared.data_types import Trade
+from ultibot_backend.core.domain_models.trade_models import PositionStatus, TradeOrderDetails, OrderCategory
+from ultibot_backend.core.domain_models.trading_strategy_models import TradingStrategyConfig, BaseStrategyType, ScalpingParameters, DayTradingParameters
+from uuid import UUID
+from ultibot_backend.app_config import settings
+from decimal import Decimal # Necesario para TradeOrderDetails
 
 # Mock del servicio de persistencia para integración
 @pytest.fixture
@@ -38,40 +28,6 @@ def mock_strategy_service_integration():
     # Configurar un comportamiento por defecto si es necesario o en cada prueba
     return service
 
-# Override de la dependencia get_current_user_id para usar el usuario fijo
-async def override_get_current_user_id() -> UUID:
-    return FIXED_TEST_USER_ID
-
-app.dependency_overrides[get_current_user_id] = override_get_current_user_id
-
-# Cliente de prueba de FastAPI
-@pytest.fixture
-def client(mock_persistence_service_integration, mock_strategy_service_integration):
-    # Aquí podríamos sobreescribir las dependencias de los servicios si es necesario
-    # Por ahora, asumimos que PerformanceService se inyectará correctamente
-    # o que podemos mockear sus dependencias a nivel de la app o del router.
-    # Para este caso, vamos a mockear directamente PerformanceService.
-    
-    # Mock de PerformanceService para controlar su comportamiento en las pruebas de integración
-    mock_performance_service_instance = AsyncMock(spec=PerformanceService)
-
-    def get_mock_performance_service():
-        return mock_performance_service_instance
-
-    # Sobreescribir la dependencia de PerformanceService en el router de performance
-    # Esto requiere conocer cómo se inyecta PerformanceService.
-    # Asumiendo que se inyecta a través de una función `get_performance_service`
-    # from src.ultibot_backend.api.v1.endpoints.performance import get_performance_service
-    # app.dependency_overrides[get_performance_service] = get_mock_performance_service
-    # Si no, necesitaríamos una forma de inyectar este mock_performance_service_instance
-    # en el endpoint. Una forma más directa es mockear los servicios que PerformanceService usa.
-
-    # Para simplificar, vamos a asumir que PerformanceService usa los mocks de persistencia y estrategia
-    # que ya estamos creando y que la app los inyectará correctamente.
-    # Si esto no funciona, tendríamos que mockear PerformanceService directamente como arriba.
-
-    return TestClient(app)
-
 
 @pytest.mark.asyncio
 async def test_get_strategies_performance_endpoint_no_data(client, mock_persistence_service_integration):
@@ -84,11 +40,11 @@ async def test_get_strategies_performance_endpoint_no_data(client, mock_persiste
     # PerformanceService usará el mock_persistence_service_integration.
     # No necesitamos mockear PerformanceService directamente si sus dependencias están mockeadas.
 
-    response = client.get("/api/v1/performance/strategies")
+    response = await client.get("/api/v1/performance/strategies")
     
     assert response.status_code == 200
     assert response.json() == []
-    mock_persistence_service_integration.get_all_trades_for_user.assert_called_once_with(FIXED_TEST_USER_ID, None)
+    mock_persistence_service_integration.get_all_trades_for_user.assert_called_once_with(user_id=settings.FIXED_USER_ID, mode=None)
 
 
 @pytest.mark.asyncio
@@ -101,11 +57,21 @@ async def test_get_strategies_performance_endpoint_with_data(client, mock_persis
 
     closed_trade = Trade(
         id=trade_id,
-        user_id=FIXED_TEST_USER_ID,
+        user_id=settings.FIXED_USER_ID, # user_id en Trade es UUID
         mode="paper",
         symbol="BTCUSDT",
         side="BUY",
-        entryOrder=MagicMock(),
+        entryOrder=TradeOrderDetails(
+            orderId_internal=uuid4(),
+            orderCategory=OrderCategory.ENTRY,
+            type="LIMIT",
+            status="FILLED",
+            requestedQuantity=float(Decimal("0.002")),
+            executedQuantity=float(Decimal("0.002")),
+            executedPrice=float(Decimal("50000.0")),
+            timestamp=datetime.now(timezone.utc),
+            requestedPrice=float(Decimal("50000.0")),
+        ),
         positionStatus=PositionStatus.CLOSED.value,
         strategyId=strategy_id,
         pnl_usd=100.0,
@@ -120,10 +86,10 @@ async def test_get_strategies_performance_endpoint_with_data(client, mock_persis
 
     strategy_config = TradingStrategyConfig(
         id=str(strategy_id),
-        user_id=str(FIXED_TEST_USER_ID),
+        user_id=str(settings.FIXED_USER_ID), # user_id en TradingStrategyConfig es str
         config_name="Integration Test Strategy",
         base_strategy_type=BaseStrategyType.SCALPING,
-        parameters={},
+        parameters=ScalpingParameters(profit_target_percentage=0.01, stop_loss_percentage=0.005),
         is_active_paper_mode=True,
         is_active_real_mode=False,
         description="Strategy for integration test",
@@ -133,7 +99,7 @@ async def test_get_strategies_performance_endpoint_with_data(client, mock_persis
     )
     mock_strategy_service_integration.get_strategy_config.return_value = strategy_config
 
-    response = client.get("/api/v1/performance/strategies?mode=paper")
+    response = await client.get("/api/v1/performance/strategies?mode=paper")
     
     assert response.status_code == 200
     data = response.json()
@@ -147,8 +113,8 @@ async def test_get_strategies_performance_endpoint_with_data(client, mock_persis
     assert perf_data["totalPnl"] == 100.0
     assert perf_data["win_rate"] == 100.0
 
-    mock_persistence_service_integration.get_all_trades_for_user.assert_called_once_with(FIXED_TEST_USER_ID, "paper")
-    mock_strategy_service_integration.get_strategy_config.assert_called_once_with(str(strategy_id), str(FIXED_TEST_USER_ID))
+    mock_persistence_service_integration.get_all_trades_for_user.assert_called_once_with(user_id=settings.FIXED_USER_ID, mode="paper")
+    mock_strategy_service_integration.get_strategy_config.assert_called_once_with(str(strategy_id), str(settings.FIXED_USER_ID))
 
 
 @pytest.mark.asyncio
@@ -161,11 +127,21 @@ async def test_get_strategies_performance_endpoint_filter_real_mode(client, mock
 
     real_trade = Trade(
         id=trade_id_real,
-        user_id=FIXED_TEST_USER_ID,
+        user_id=settings.FIXED_USER_ID, # user_id en Trade es UUID
         mode="real", # Crucial para este test
         symbol="ETHUSDT",
         side="SELL",
-        entryOrder=MagicMock(),
+        entryOrder=TradeOrderDetails(
+            orderId_internal=uuid4(),
+            orderCategory=OrderCategory.ENTRY,
+            type="LIMIT",
+            status="FILLED",
+            requestedQuantity=float(Decimal("0.1")),
+            executedQuantity=float(Decimal("0.1")),
+            executedPrice=float(Decimal("2000.0")),
+            timestamp=datetime.now(timezone.utc),
+            requestedPrice=float(Decimal("2000.0")),
+        ),
         positionStatus=PositionStatus.CLOSED.value,
         strategyId=strategy_id_real,
         pnl_usd=250.0,
@@ -181,10 +157,10 @@ async def test_get_strategies_performance_endpoint_filter_real_mode(client, mock
 
     strategy_config_real = TradingStrategyConfig(
         id=str(strategy_id_real),
-        user_id=str(FIXED_TEST_USER_ID),
+        user_id=str(settings.FIXED_USER_ID), # user_id en TradingStrategyConfig es str
         config_name="Real Mode Strategy",
         base_strategy_type=BaseStrategyType.DAY_TRADING,
-        parameters={},
+        parameters=DayTradingParameters(entry_timeframes=["1h"]), # DayTradingParameters requiere entry_timeframes
         is_active_paper_mode=False, # No activo en paper
         is_active_real_mode=True,   # Activo en real
         description="Strategy for real mode integration test",
@@ -194,7 +170,7 @@ async def test_get_strategies_performance_endpoint_filter_real_mode(client, mock
     )
     mock_strategy_service_integration.get_strategy_config.return_value = strategy_config_real
 
-    response = client.get("/api/v1/performance/strategies?mode=real")
+    response = await client.get("/api/v1/performance/strategies?mode=real")
     
     assert response.status_code == 200
     data = response.json()
@@ -208,8 +184,8 @@ async def test_get_strategies_performance_endpoint_filter_real_mode(client, mock
     assert perf_data["totalPnl"] == 250.0
     assert perf_data["win_rate"] == 100.0
 
-    mock_persistence_service_integration.get_all_trades_for_user.assert_called_once_with(FIXED_TEST_USER_ID, "real")
-    mock_strategy_service_integration.get_strategy_config.assert_called_once_with(str(strategy_id_real), str(FIXED_TEST_USER_ID))
+    mock_persistence_service_integration.get_all_trades_for_user.assert_called_once_with(user_id=settings.FIXED_USER_ID, mode="real")
+    mock_strategy_service_integration.get_strategy_config.assert_called_once_with(str(strategy_id_real), str(settings.FIXED_USER_ID))
 
 
 @pytest.mark.asyncio
@@ -224,7 +200,18 @@ async def test_get_strategies_performance_endpoint_multiple_strategies(client, m
     trade_id_3 = uuid4()
 
     common_trade_params_integration = {
-        "user_id": FIXED_TEST_USER_ID, "entryOrder": MagicMock(),
+        "user_id": settings.FIXED_USER_ID, # user_id en Trade es UUID
+        "entryOrder": TradeOrderDetails(
+            orderId_internal=uuid4(),
+            orderCategory=OrderCategory.ENTRY,
+            type="MARKET",
+            status="FILLED",
+            requestedQuantity=float(Decimal("1.0")),
+            executedQuantity=float(Decimal("1.0")),
+            executedPrice=float(Decimal("1.0")),
+            timestamp=datetime.now(timezone.utc),
+            requestedPrice=float(Decimal("1.0")),
+        ),
         "positionStatus": PositionStatus.CLOSED.value,
         "opened_at": datetime.now(timezone.utc), "closed_at": datetime.now(timezone.utc),
         "pnl_percentage": 0.1, "opportunityId": None, "aiAnalysisConfidence": None,
@@ -250,16 +237,16 @@ async def test_get_strategies_performance_endpoint_multiple_strategies(client, m
     ]
 
     config_strat1 = TradingStrategyConfig(
-        id=str(strategy_id_1), user_id=str(FIXED_TEST_USER_ID), config_name="Multi Strat Paper",
-        base_strategy_type=BaseStrategyType.SCALPING, parameters={},
+        id=str(strategy_id_1), user_id=str(settings.FIXED_USER_ID), config_name="Multi Strat Paper",
+        base_strategy_type=BaseStrategyType.SCALPING, parameters=ScalpingParameters(profit_target_percentage=0.01, stop_loss_percentage=0.005),
         is_active_paper_mode=True, is_active_real_mode=False, description="Paper multi test", version=1,
         applicability_rules=None, ai_analysis_profile_id=None, risk_parameters_override=None, parent_config_id=None,
         performance_metrics=None, market_condition_filters=None, activation_schedule=None,
         depends_on_strategies=None, sharing_metadata=None, created_at=None, updated_at=None
     )
     config_strat2 = TradingStrategyConfig(
-        id=str(strategy_id_2), user_id=str(FIXED_TEST_USER_ID), config_name="Multi Strat Real",
-        base_strategy_type=BaseStrategyType.DAY_TRADING, parameters={},
+        id=str(strategy_id_2), user_id=str(settings.FIXED_USER_ID), config_name="Multi Strat Real",
+        base_strategy_type=BaseStrategyType.DAY_TRADING, parameters=DayTradingParameters(entry_timeframes=["1h"]),
         is_active_paper_mode=False, is_active_real_mode=True, description="Real multi test", version=1,
         applicability_rules=None, ai_analysis_profile_id=None, risk_parameters_override=None, parent_config_id=None,
         performance_metrics=None, market_condition_filters=None, activation_schedule=None,
@@ -275,7 +262,7 @@ async def test_get_strategies_performance_endpoint_multiple_strategies(client, m
     mock_strategy_service_integration.get_strategy_config.side_effect = side_effect_get_strategy_config
     
     # Test sin filtro de modo (debería devolver ambas)
-    response_all = client.get("/api/v1/performance/strategies")
+    response_all = await client.get("/api/v1/performance/strategies")
     assert response_all.status_code == 200
     data_all = response_all.json()
     assert len(data_all) == 2
@@ -295,7 +282,7 @@ async def test_get_strategies_performance_endpoint_multiple_strategies(client, m
     assert perf_strat2["totalPnl"] == 75.0
     assert perf_strat2["win_rate"] == 100.0
     
-    mock_persistence_service_integration.get_all_trades_for_user.assert_called_with(FIXED_TEST_USER_ID, None)
+    mock_persistence_service_integration.get_all_trades_for_user.assert_called_with(user_id=settings.FIXED_USER_ID, mode=None)
     assert mock_strategy_service_integration.get_strategy_config.call_count == 2 # Una vez por cada estrategia
 
 
@@ -309,11 +296,21 @@ async def test_get_strategies_performance_endpoint_strategy_not_found(client, mo
 
     trade_with_unknown_strategy = Trade(
         id=trade_id,
-        user_id=FIXED_TEST_USER_ID,
+        user_id=settings.FIXED_USER_ID, # user_id en Trade es UUID
         mode="paper",
         symbol="LINKUSDT",
         side="BUY",
-        entryOrder=MagicMock(),
+        entryOrder=TradeOrderDetails(
+            orderId_internal=uuid4(),
+            orderCategory=OrderCategory.ENTRY,
+            type="LIMIT",
+            status="FILLED",
+            requestedQuantity=float(Decimal("3.0")),
+            executedQuantity=float(Decimal("3.0")),
+            executedPrice=float(Decimal("10.0")),
+            timestamp=datetime.now(timezone.utc),
+            requestedPrice=float(Decimal("10.0")),
+        ),
         positionStatus=PositionStatus.CLOSED.value,
         strategyId=unknown_strategy_id, # Este ID no tendrá una config asociada
         pnl_usd=30.0,
@@ -329,7 +326,7 @@ async def test_get_strategies_performance_endpoint_strategy_not_found(client, mo
     # Simular que get_strategy_config devuelve None para este ID
     mock_strategy_service_integration.get_strategy_config.return_value = None
 
-    response = client.get("/api/v1/performance/strategies?mode=paper")
+    response = await client.get("/api/v1/performance/strategies?mode=paper")
     
     assert response.status_code == 200
     data = response.json()
@@ -343,8 +340,8 @@ async def test_get_strategies_performance_endpoint_strategy_not_found(client, mo
     assert perf_data["totalPnl"] == 30.0
     assert perf_data["win_rate"] == 100.0
 
-    mock_persistence_service_integration.get_all_trades_for_user.assert_called_once_with(FIXED_TEST_USER_ID, "paper")
-    mock_strategy_service_integration.get_strategy_config.assert_called_once_with(str(unknown_strategy_id), str(FIXED_TEST_USER_ID))
+    mock_persistence_service_integration.get_all_trades_for_user.assert_called_once_with(user_id=settings.FIXED_USER_ID, mode="paper")
+    mock_strategy_service_integration.get_strategy_config.assert_called_once_with(str(unknown_strategy_id), str(settings.FIXED_USER_ID))
 
 
 @pytest.mark.asyncio
@@ -353,7 +350,7 @@ async def test_get_strategies_performance_endpoint_invalid_mode_parameter(client
     Test GET /api/v1/performance/strategies with an invalid 'mode' query parameter.
     FastAPI should return a 422 Unprocessable Entity error.
     """
-    response = client.get("/api/v1/performance/strategies?mode=invalid_mode")
+    response = await client.get("/api/v1/performance/strategies?mode=invalid_mode")
     
     assert response.status_code == 422 # Unprocessable Entity
     data = response.json()
@@ -377,7 +374,19 @@ async def test_get_strategies_performance_endpoint_no_mode_filter(client, mock_p
     trade_real_id = uuid4()
 
     common_trade_params_no_filter = {
-        "user_id": FIXED_TEST_USER_ID, "entryOrder": MagicMock(),
+        "user_id": settings.FIXED_USER_ID, # user_id en Trade es UUID
+        "entryOrder": TradeOrderDetails(
+            orderId_internal=uuid4(),
+            # "symbol": "NOFILTER", # Este campo no existe en TradeOrderDetails, se elimina
+            orderCategory=OrderCategory.ENTRY,
+            type="MARKET",
+            status="FILLED",
+            requestedQuantity=float(Decimal("1.0")),
+            executedQuantity=float(Decimal("1.0")),
+            executedPrice=float(Decimal("1.0")),
+            timestamp=datetime.now(timezone.utc),
+            requestedPrice=float(Decimal("1.0")),
+        ),
         "positionStatus": PositionStatus.CLOSED.value,
         "opened_at": datetime.now(timezone.utc), "closed_at": datetime.now(timezone.utc),
         "pnl_percentage": 0.1, "opportunityId": None, "aiAnalysisConfidence": None,
@@ -398,16 +407,16 @@ async def test_get_strategies_performance_endpoint_no_mode_filter(client, mock_p
     mock_persistence_service_integration.get_all_trades_for_user.return_value = [paper_trade, real_trade]
 
     config_paper = TradingStrategyConfig(
-        id=str(strategy_id_paper), user_id=str(FIXED_TEST_USER_ID), config_name="NoFilter Paper Strat",
-        base_strategy_type=BaseStrategyType.SCALPING, parameters={},
+        id=str(strategy_id_paper), user_id=str(settings.FIXED_USER_ID), config_name="NoFilter Paper Strat",
+        base_strategy_type=BaseStrategyType.SCALPING, parameters=ScalpingParameters(profit_target_percentage=0.01, stop_loss_percentage=0.005),
         is_active_paper_mode=True, is_active_real_mode=False, description="Paper no filter", version=1,
         applicability_rules=None, ai_analysis_profile_id=None, risk_parameters_override=None, parent_config_id=None,
         performance_metrics=None, market_condition_filters=None, activation_schedule=None,
         depends_on_strategies=None, sharing_metadata=None, created_at=None, updated_at=None
     )
     config_real = TradingStrategyConfig(
-        id=str(strategy_id_real), user_id=str(FIXED_TEST_USER_ID), config_name="NoFilter Real Strat",
-        base_strategy_type=BaseStrategyType.DAY_TRADING, parameters={},
+        id=str(strategy_id_real), user_id=str(settings.FIXED_USER_ID), config_name="NoFilter Real Strat",
+        base_strategy_type=BaseStrategyType.DAY_TRADING, parameters=DayTradingParameters(entry_timeframes=["1h"]),
         is_active_paper_mode=False, is_active_real_mode=True, description="Real no filter", version=1,
         applicability_rules=None, ai_analysis_profile_id=None, risk_parameters_override=None, parent_config_id=None,
         performance_metrics=None, market_condition_filters=None, activation_schedule=None,
@@ -422,7 +431,7 @@ async def test_get_strategies_performance_endpoint_no_mode_filter(client, mock_p
         return None
     mock_strategy_service_integration.get_strategy_config.side_effect = side_effect_get_strategy_config
     
-    response = client.get("/api/v1/performance/strategies") # Sin parámetro 'mode'
+    response = await client.get("/api/v1/performance/strategies") # Sin parámetro 'mode'
     
     assert response.status_code == 200
     data = response.json()
@@ -439,6 +448,6 @@ async def test_get_strategies_performance_endpoint_no_mode_filter(client, mock_p
     assert perf_real["mode"] == "real"
     assert perf_real["totalPnl"] == 90.0
     
-    mock_persistence_service_integration.get_all_trades_for_user.assert_called_once_with(FIXED_TEST_USER_ID, None)
+    mock_persistence_service_integration.get_all_trades_for_user.assert_called_once_with(user_id=settings.FIXED_USER_ID, mode=None)
     # Se debe llamar a get_strategy_config para cada estrategia
     assert mock_strategy_service_integration.get_strategy_config.call_count == 2

@@ -2,7 +2,7 @@ import httpx
 import logging
 import asyncio # Importar asyncio
 from typing import Optional, Dict, Any
-from src.ultibot_backend.core.exceptions import ExternalAPIError # Importar la excepción
+from ultibot_backend.core.exceptions import ExternalAPIError # Importar la excepción
 
 # Configuración básica de logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -125,3 +125,4 @@ class TelegramAdapter:
 # if __name__ == "__main__":
 #     import asyncio
 #     asyncio.run(main())
+

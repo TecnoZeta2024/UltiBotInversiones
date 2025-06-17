@@ -8,8 +8,8 @@ from uuid import UUID
 from datetime import datetime, timedelta
 from urllib.parse import urlencode
 
-from src.ultibot_backend.main import app
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from ultibot_backend.main import app
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 
 # User ID fijo para las pruebas
 FIXED_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
@@ -389,3 +389,4 @@ class TestRealTradingEndpoints:
         
         # Debe retornar error de validación
         assert response.status_code == 422
+

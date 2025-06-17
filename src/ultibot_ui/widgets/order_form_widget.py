@@ -14,10 +14,10 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QObject, QThread
 from PyQt5.QtGui import QFont, QColor, QDoubleValidator
 
-from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
-from src.ultibot_ui.services.trading_mode_state import get_trading_mode_manager, TradingModeStateManager
-from src.shared.data_types import TradeOrderDetails
-from src.ultibot_ui.workers import ApiWorker
+from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
+from ultibot_ui.services.trading_mode_state import get_trading_mode_manager, TradingModeStateManager
+from shared.data_types import TradeOrderDetails
+from ultibot_ui.workers import ApiWorker
 
 logger = logging.getLogger(__name__)
 
@@ -443,3 +443,4 @@ Por favor, verifique:
                 worker.deleteLater()
                 thread.deleteLater()
         logger.info("OrderFormWidget: Limpieza de ApiWorkers completada.")
+

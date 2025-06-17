@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import pyqtSignal, Qt, QObject, QThread
 
 # Importar ApiWorker para type hinting y uso.
-from src.ultibot_ui.workers import ApiWorker
+from ultibot_ui.workers import ApiWorker
 
 logger = logging.getLogger(__name__)
 
@@ -169,3 +169,4 @@ class LoginDialog(QDialog):
         event.accept()
 
 # El bloque de prueba __main__ ha sido eliminado para centrarse en la integración real.
+

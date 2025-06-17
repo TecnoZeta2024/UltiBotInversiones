@@ -25,7 +25,7 @@ from PyQt5.QtCore import Qt
 from portfolio_widget import PortfolioWidget, UltiBotAPIClient
 
 # Importar tipos de datos
-from src.shared.data_types import (
+from shared.data_types import (
     PortfolioSnapshot, PortfolioSummary, PortfolioAsset, 
     AssetBalance, ServiceName, APICredential
 )
@@ -342,3 +342,4 @@ async def run_demo():
 if __name__ == "__main__":
     # Ejecutar el demo
     asyncio.run(run_demo())
+

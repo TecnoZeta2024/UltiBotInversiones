@@ -3,9 +3,9 @@ from httpx import AsyncClient
 from uuid import UUID, uuid4
 from datetime import datetime, timezone
 
-from src.ultibot_backend.main import app # Importar 'app' desde la ruta correcta
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.shared.data_types import UserConfiguration
+from ultibot_backend.main import app # Importar 'app' desde la ruta correcta
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from shared.data_types import UserConfiguration
 
 # Para la v1.0, se puede asumir un user_id fijo como en el backend
 FIXED_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
@@ -124,3 +124,4 @@ async def test_patch_user_config_invalid_data(client):
     
     assert response.status_code == 422 # Unprocessable Entity (error de validación de Pydantic)
     assert "value is not a valid float" in response.json()["detail"][0]["msg"]
+

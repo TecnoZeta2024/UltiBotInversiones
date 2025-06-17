@@ -3,21 +3,21 @@ import logging
 from typing import Optional, Dict, Any, TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from src.shared.data_types import UserConfiguration, RealTradingSettings, AIAnalysisConfidenceThresholds, ServiceName
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend.core.exceptions import (
+from shared.data_types import UserConfiguration, RealTradingSettings, AIAnalysisConfidenceThresholds, ServiceName
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from ultibot_backend.core.exceptions import (
     ConfigurationError,
     BinanceAPIError,
     InsufficientUSDTBalanceError,
     RealTradeLimitReachedError,
     CredentialError
 )
-from src.ultibot_backend.app_config import settings
+from ultibot_backend.app_config import settings
 
 if TYPE_CHECKING:
-    from src.ultibot_backend.services.credential_service import CredentialService
-    from src.ultibot_backend.services.portfolio_service import PortfolioService
-    from src.ultibot_backend.services.notification_service import NotificationService
+    from ultibot_backend.services.credential_service import CredentialService
+    from ultibot_backend.services.portfolio_service import PortfolioService
+    from ultibot_backend.services.notification_service import NotificationService
 
 logger = logging.getLogger(__name__)
 
@@ -208,3 +208,4 @@ class ConfigurationService:
             "executedCount": real_settings.real_trades_executed_count,
             "limit": REAL_TRADE_LIMIT
         }
+

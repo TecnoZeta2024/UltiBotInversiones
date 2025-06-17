@@ -20,16 +20,16 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain.output_parsers import OutputFixingParser
 
-from src.ultibot_backend.core.domain_models.trading_strategy_models import (
+from ultibot_backend.core.domain_models.trading_strategy_models import (
     TradingStrategyConfig,
     BaseStrategyType,
 )
-from src.ultibot_backend.core.domain_models.user_configuration_models import (
+from ultibot_backend.core.domain_models.user_configuration_models import (
     AIStrategyConfiguration,
     ConfidenceThresholds,
 )
-from src.ultibot_backend.services.market_data_service import MarketDataService
-from src.ultibot_backend.app_config import settings as app_settings
+from ultibot_backend.services.market_data_service import MarketDataService
+from ultibot_backend.app_config import settings as app_settings
 
 logger = logging.getLogger(__name__)
 
@@ -330,3 +330,4 @@ You MUST respond ONLY with a valid JSON object that conforms to the schema provi
         if ai_result.data_verification:
             verification_summary = ", ".join([f"{k}={v}" for k, v in ai_result.data_verification.items()])
             logger.info(f"AI Data Verification {ai_result.analysis_id}: {verification_summary}")
+

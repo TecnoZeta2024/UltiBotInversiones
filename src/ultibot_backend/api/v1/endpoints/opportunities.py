@@ -1,17 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from typing import List
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from typing import List, Annotated
 from uuid import UUID
 
-from src.ultibot_backend.core.domain_models.opportunity_models import Opportunity, OpportunityStatus
-from src.shared.data_types import UserConfiguration, RealTradingSettings
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend.services.config_service import ConfigurationService
+from ultibot_backend.core.domain_models.opportunity_models import Opportunity, OpportunityStatus
+from shared.data_types import UserConfiguration, RealTradingSettings
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from ultibot_backend.services.config_service import ConfigurationService
 import logging
-from src.ultibot_backend.dependencies import (
-    get_persistence_service,
-    get_config_service
-)
-from src.ultibot_backend.app_config import settings
+from ultibot_backend import dependencies as deps
+from ultibot_backend.app_config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +16,9 @@ router = APIRouter()
 
 @router.get("/opportunities/real-trading-candidates", response_model=List[Opportunity])
 async def get_real_trading_candidates(
-    persistence_service: SupabasePersistenceService = Depends(get_persistence_service),
-    config_service: ConfigurationService = Depends(get_config_service)
+    request: Request,
+    persistence_service: Annotated[SupabasePersistenceService, Depends(deps.get_persistence_service)],
+    config_service: Annotated[ConfigurationService, Depends(deps.get_config_service)]
 ):
     """
     Devuelve una lista de oportunidades de muy alta confianza pendientes de confirmación
@@ -52,7 +50,6 @@ async def get_real_trading_candidates(
     #     )
 
     closed_real_trades_count = await persistence_service.get_closed_trades_count(
-        user_id=user_id,
         is_real_trade=True
     )
 
@@ -63,8 +60,8 @@ async def get_real_trading_candidates(
         )
 
     opportunities = await persistence_service.get_opportunities_by_status(
-        user_id=user_id,
         status=OpportunityStatus.PENDING_USER_CONFIRMATION_REAL
     )
 
     return opportunities
+

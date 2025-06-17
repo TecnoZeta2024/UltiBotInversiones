@@ -12,9 +12,9 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 
-from src.ultibot_ui.models import BaseMainWindow
-from src.ultibot_ui.widgets.paper_trading_report_widget import PaperTradingReportWidget
-from src.ultibot_ui.services.api_client import UltiBotAPIClient
+from ultibot_ui.models import BaseMainWindow
+from ultibot_ui.widgets.paper_trading_report_widget import PaperTradingReportWidget
+from ultibot_ui.services.api_client import UltiBotAPIClient
 
 logger = logging.getLogger(__name__)
 
@@ -129,3 +129,4 @@ class HistoryView(QWidget):
         if hasattr(self, 'paper_trading_report_widget'):
             self.paper_trading_report_widget.cleanup()
         logger.info("HistoryView cleanup completado")
+

@@ -2,18 +2,18 @@ import logging
 from uuid import UUID
 from typing import List, Dict, Any, Optional
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget, QTableWidgetItem,
-    QHeaderView, QPushButton, QMessageBox, QFrame, QSplitter, QScrollArea, QGroupBox, QAbstractItemView
+    QHeaderView, QPushButton, QMessageBox, QFrame, QSplitter, QScrollArea, QGroupBox, QAbstractItemView, QApplication
 )
-from PyQt5.QtCore import Qt, QThread, QTimer, pyqtSignal, QObject
-from PyQt5.QtGui import QPainter, QFont, QColor
-from PyQt5.QtChart import QChart, QChartView, QPieSeries, QPieSlice
+from PySide6.QtCore import Qt, QThread, QTimer, Signal, QObject, QCoreApplication
+from PySide6.QtGui import QPainter, QFont, QColor
+from PySide6.QtCharts import QChart, QChartView, QPieSeries, QPieSlice
 
-from src.shared.data_types import PortfolioSnapshot, PortfolioAsset
-from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
-from src.ultibot_ui.services.trading_mode_state import get_trading_mode_manager, TradingModeStateManager
-from src.ultibot_ui.workers import ApiWorker
+from shared.data_types import PortfolioSnapshot, PortfolioAsset
+from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
+from ultibot_ui.services.trading_mode_state import get_trading_mode_manager, TradingModeStateManager
+from ultibot_ui.workers import ApiWorker
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,7 @@ class PortfolioView(QWidget):
         self.status_label.setObjectName("statusLabel")
         main_layout.addWidget(self.status_label)
 
-        content_splitter = QSplitter(Qt.Orientation.Horizontal)
+        content_splitter = QSplitter(Qt.Horizontal)
         main_layout.addWidget(content_splitter, 1)
 
         left_panel_widget = QWidget()
@@ -78,7 +78,7 @@ class PortfolioView(QWidget):
         self.chart_group.setObjectName("assetDistributionChartGroup")
         chart_layout = QVBoxLayout(self.chart_group)
         self.pie_chart_view = QChartView()
-        self.pie_chart_view.setRenderHint(QPainter.Antialiasing)
+        self.pie_chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
         chart_layout.addWidget(self.pie_chart_view)
         left_panel_layout.addWidget(self.chart_group, 1)
 
@@ -94,12 +94,12 @@ class PortfolioView(QWidget):
         ])
         h_header = self.assets_table.horizontalHeader()
         if h_header:
-            h_header.setSectionResizeMode(QHeaderView.Stretch)
+            h_header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         v_header = self.assets_table.verticalHeader()
         if v_header:
             v_header.setVisible(False)
-        self.assets_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.assets_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.assets_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.assets_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.assets_table.setAlternatingRowColors(True)
         assets_layout.addWidget(self.assets_table)
         content_splitter.addWidget(self.assets_group)
@@ -193,9 +193,9 @@ class PortfolioView(QWidget):
             pnl_pct = asset.unrealized_pnl_percentage or 0.0
             pnl_item = QTableWidgetItem(f"{pnl_pct:,.2f}%")
             if pnl_pct > 0:
-                pnl_item.setForeground(QColor(Qt.GlobalColor.green))
+                pnl_item.setForeground(QColor(Qt.green))
             elif pnl_pct < 0:
-                pnl_item.setForeground(QColor(Qt.GlobalColor.red))
+                pnl_item.setForeground(QColor(Qt.red))
             self.assets_table.setItem(row, 5, pnl_item)
 
         if not assets_data and self.assets_table.rowCount() == 0:
@@ -248,10 +248,10 @@ class PortfolioView(QWidget):
         legend = chart.legend()
         if legend:
             legend.setVisible(True)
-            legend.setAlignment(Qt.AlignmentFlag.AlignBottom)
-            legend.setFont(QFont("Arial", 10))
+            legend.setAlignment(Qt.AlignBottom)
+            legend.setFont(QFont("Arial", 10, QFont.Weight.Bold))
         chart.setBackgroundVisible(False)
-        chart.setTitleFont(QFont("Arial", 14, QFont.Bold))
+        chart.setTitleFont(QFont("Arial", 14, QFont.Weight.Bold))
 
         self.pie_chart_view.setChart(chart)
 
@@ -270,12 +270,11 @@ class PortfolioView(QWidget):
         logger.info("PortfolioView: Cleanup finished.")
 
 if __name__ == '__main__':
-    from PyQt5.QtWidgets import QApplication
     import sys
 
     class MockApiWorker(QObject):
-        result_ready = pyqtSignal(object)
-        error_occurred = pyqtSignal(str)
+        result_ready = Signal(object)
+        error_occurred = Signal(str)
         def __init__(self, coroutine_factory, api_client):
             super().__init__()
             self.coro_factory = coroutine_factory
@@ -305,3 +304,4 @@ if __name__ == '__main__':
 
     ApiWorker = OriginalApiWorker
     sys.exit(app.exec_())
+

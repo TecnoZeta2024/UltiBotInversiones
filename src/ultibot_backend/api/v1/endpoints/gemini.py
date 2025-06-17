@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException
 from typing import List
-from src.ultibot_backend.services.ai_orchestrator_service import AIOrchestrator, OpportunityData
-from src.ultibot_backend.core.domain_models.trading_strategy_models import TradingStrategyConfig, BaseStrategyType
-from src.ultibot_backend.core.domain_models.user_configuration_models import AIStrategyConfiguration, ConfidenceThresholds
+from ultibot_backend.services.ai_orchestrator_service import AIOrchestrator, OpportunityData
+from ultibot_backend.core.domain_models.trading_strategy_models import TradingStrategyConfig, BaseStrategyType
+from ultibot_backend.core.domain_models.user_configuration_models import AIStrategyConfiguration, ConfidenceThresholds
 from datetime import datetime, timezone
 import threading
 import logging
@@ -118,3 +118,4 @@ async def get_gemini_opportunities():
         _cached_ia_data = result
         _cached_ia_timestamp = now
     return result
+

@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from typing import Annotated, Optional, Literal
 from uuid import UUID
 
-from src.shared.data_types import PortfolioSnapshot, PortfolioSummary
-from src.ultibot_backend.services.portfolio_service import PortfolioService
-from src.ultibot_backend import dependencies as deps
-from src.ultibot_backend.app_config import settings
+from shared.data_types import PortfolioSnapshot, PortfolioSummary
+from ultibot_backend.services.portfolio_service import PortfolioService
+from ultibot_backend import dependencies as deps
+from ultibot_backend.app_config import settings
 
 router = APIRouter()
 
@@ -14,6 +14,7 @@ TradingMode = Literal["paper", "real", "both"]
 
 @router.get("/snapshot", response_model=PortfolioSnapshot, status_code=status.HTTP_200_OK)
 async def get_portfolio_snapshot(
+    request: Request,
     portfolio_service: Annotated[PortfolioService, Depends(deps.get_portfolio_service)],
     trading_mode: Annotated[TradingMode, Query(description="Trading mode filter: 'paper', 'real', or 'both'")] = "both"
 ):
@@ -72,6 +73,7 @@ async def get_portfolio_snapshot(
 
 @router.get("/summary", response_model=PortfolioSummary, status_code=status.HTTP_200_OK)
 async def get_portfolio_summary(
+    request: Request,
     portfolio_service: Annotated[PortfolioService, Depends(deps.get_portfolio_service)],
     trading_mode: Annotated[TradingMode, Query(description="Trading mode: 'paper' or 'real'")] = "paper"
 ):
@@ -110,6 +112,7 @@ async def get_portfolio_summary(
 
 @router.get("/balance", status_code=status.HTTP_200_OK)
 async def get_available_balance(
+    request: Request,
     portfolio_service: Annotated[PortfolioService, Depends(deps.get_portfolio_service)],
     trading_mode: Annotated[TradingMode, Query(description="Trading mode: 'paper', 'real', or 'both'")] = "paper"
 ):
@@ -158,3 +161,4 @@ async def get_available_balance(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve available balance: {str(e)}"
         )
+

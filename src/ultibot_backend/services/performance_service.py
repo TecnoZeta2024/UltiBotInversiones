@@ -5,15 +5,15 @@ from collections import defaultdict
 from enum import Enum
 from datetime import datetime
 
-from src.ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from src.ultibot_backend.services.strategy_service import StrategyService
-from src.ultibot_backend.api.v1.models.performance_models import (
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from ultibot_backend.services.strategy_service import StrategyService
+from ultibot_backend.api.v1.models.performance_models import (
     StrategyPerformanceData,
     OperatingMode,
     StrategyPerformanceResponse
 )
-from src.shared.data_types import PerformanceMetrics
-from src.ultibot_backend.core.domain_models.trade_models import Trade, PositionStatus
+from shared.data_types import PerformanceMetrics
+from ultibot_backend.core.domain_models.trade_models import Trade, PositionStatus
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ class PerformanceService:
         """
         logger.info(f"Fetching trade performance metrics for user {user_id}, mode: {trading_mode}")
         
-        all_trades: List[Trade] = await self.persistence_service.get_all_trades_for_user(mode=trading_mode)
+        all_trades: List[Trade] = await self.persistence_service.get_all_trades_for_user(user_id=user_id, mode=trading_mode)
         
         if start_date:
             all_trades = [t for t in all_trades if t.created_at and t.created_at >= start_date]
@@ -109,7 +109,7 @@ class PerformanceService:
         logger.info(f"Fetching performance data for user {user_id}, mode_filter: {mode_filter}")
 
         all_user_trades: List[Trade] = await self.persistence_service.get_all_trades_for_user(
-            mode=mode_filter.value if mode_filter else None
+            user_id=user_id, mode=mode_filter.value if mode_filter else None
         )
 
         closed_trades = [
