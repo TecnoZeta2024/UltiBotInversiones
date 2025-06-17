@@ -565,3 +565,6 @@ user_id
 2025-06-08 19:26:11,404 - ultibot_backend - INFO - [MainThread] - main.py:104 - Middleware: Solicitud procesada: GET /api/v1/trades - Status: 200
 2025-06-08 19:26:11,405 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:55775 - "GET /api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open HTTP/1.1" 200
 2025-06-08 19:26:25,306 - ultibot_backend - INFO - [MainThread] - main.py:102 - Middleware: Solicitud entrante: GET /api/v1/trades
+2025-06-16 21:35:29,422 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
+2025-06-16 21:35:29,422 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
+2025-06-16 21:35:29,467 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
