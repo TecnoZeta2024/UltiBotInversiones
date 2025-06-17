@@ -1,0 +1,2 @@
+[MAIN]
+load-plugins=pylint.extensions.mccabe,pylint.extensions.typing,pylint_pyside6

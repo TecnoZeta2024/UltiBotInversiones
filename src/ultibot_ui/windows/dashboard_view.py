@@ -3,8 +3,8 @@ from typing import Optional, List, Dict, Any, Callable, Coroutine
 from uuid import UUID
 import asyncio
 
-from PyQt5.QtCore import pyqtSignal, QObject, QThread
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QFrame
+from PySide6.QtCore import Signal as pyqtSignal, QObject, QThread
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QFrame
 
 from src.shared.data_types import Trade
 from src.ultibot_ui.models import BaseMainWindow

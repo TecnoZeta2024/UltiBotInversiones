@@ -7,9 +7,9 @@ from uuid import UUID
 
 import httpx
 import qasync
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFontDatabase
-from PyQt5.QtWidgets import QApplication, QSplashScreen
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QFontDatabase
+from PySide6.QtWidgets import QApplication, QSplashScreen
 
 from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
 from src.ultibot_ui.windows.main_window import MainWindow
@@ -64,7 +64,7 @@ def load_stylesheet(app: QApplication):
     except FileNotFoundError:
         logger.error(f"Stylesheet not found at {stylesheet_path}")
 
-async def main():
+async def start_application():
     """Punto de entrada principal para la aplicación de UI."""
     logger.info("Initializing application...")
     
@@ -111,7 +111,7 @@ if __name__ == "__main__":
         if sys.platform == "win32" and sys.version_info >= (3, 8):
              asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
              
-        asyncio.run(main())
+        asyncio.run(start_application())
     except KeyboardInterrupt:
         logger.info("Application interrupted by user.")
     except Exception as e:

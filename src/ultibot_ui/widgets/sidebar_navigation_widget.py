@@ -1,9 +1,9 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel
-from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import Qt, pyqtSignal
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel
+from PySide6.QtGui import QIcon
+from PySide6.QtCore import Qt, Signal
 
 class SidebarNavigationWidget(QWidget):
-    navigation_requested = pyqtSignal(str)
+    navigation_requested = Signal(str)
 
     def __init__(self):
         super().__init__()

@@ -10,19 +10,19 @@ import logging
 from typing import Optional, List, Callable, Coroutine
 from uuid import UUID
 
-from PyQt5.QtCore import Qt, QTimer, QThread
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt, QTimer, QThread
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMainWindow,
     QPushButton,
     QStackedWidget,
     QStatusBar,
-    QAction,
     QTextEdit,
     QVBoxLayout,
     QMenuBar,
-    QWidget  # Importación corregida
+    QWidget
 )
 
 from src.shared.data_types import UserConfiguration, AiStrategyConfiguration

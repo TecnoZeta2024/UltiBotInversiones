@@ -6,11 +6,11 @@ import logging
 from typing import Optional
 from uuid import UUID
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QLabel, QSplitter
 )
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont
 
 from src.ultibot_ui.models import BaseMainWindow
 from src.ultibot_ui.widgets.paper_trading_report_widget import PaperTradingReportWidget

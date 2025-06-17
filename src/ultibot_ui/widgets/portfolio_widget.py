@@ -3,13 +3,13 @@ import asyncio
 from typing import Optional, List, Dict, Any, Callable, Coroutine, Tuple
 from uuid import UUID
 from datetime import datetime
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QGroupBox, QFormLayout, QHBoxLayout, 
     QTableWidget, QTableWidgetItem, QHeaderView, QScrollArea, QFrame, QPushButton,
     QTabWidget, QProgressBar, QMessageBox
 )
-from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QObject, QThread
-from PyQt5.QtGui import QFont, QColor
+from PySide6.QtCore import Qt, Signal as pyqtSignal, QTimer, QObject, QThread
+from PySide6.QtGui import QFont, QColor
 
 import qasync
 
@@ -196,11 +196,11 @@ class PortfolioWidget(QWidget):
         
         h_header = table.horizontalHeader()
         if h_header:
-            h_header.setSectionResizeMode(QHeaderView.Stretch)
+            h_header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         v_header = table.verticalHeader()
         if v_header:
             v_header.setVisible(False)
-        table.setEditTriggers(QTableWidget.NoEditTriggers)
+        table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         table.setAlternatingRowColors(True)
         return table
 
@@ -214,11 +214,11 @@ class PortfolioWidget(QWidget):
         
         h_header = table.horizontalHeader()
         if h_header:
-            h_header.setSectionResizeMode(QHeaderView.Stretch)
+            h_header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         v_header = table.verticalHeader()
         if v_header:
             v_header.setVisible(False)
-        table.setEditTriggers(QTableWidget.NoEditTriggers)
+        table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         table.setAlternatingRowColors(True)
         return table
 
@@ -303,7 +303,7 @@ class PortfolioWidget(QWidget):
         self.balance_label.setText(f"{portfolio_mode_dict.get('available_balance_usdt', 0.0):,.2f} {currency}")
         self.total_assets_label.setText(f"{portfolio_mode_dict.get('total_assets_value_usd', 0.0):,.2f} USD")
         self.portfolio_value_label.setText(f"{portfolio_mode_dict.get('total_portfolio_value_usd', 0.0):,.2f} USD")
-        self._populate_assets_table(self.assets_table, portfolio_mode_dict.get('assets', []))
+        self._populate_assets_table(portfolio_mode_dict.get('assets', []))
         other_mode = "real" if mode == "paper" else "paper"
         other_mode_dict = snapshot_dict.get(f"{other_mode}_trading", {})
         self.comparison_info.setText(f"Portafolio {other_mode.title()}: {other_mode_dict.get('total_portfolio_value_usd', 0.0):,.2f} USD")
@@ -344,6 +344,20 @@ class PortfolioWidget(QWidget):
 
     def stop_updates(self):
         self.update_timer.stop()
+
+    def _populate_assets_table(self, assets: List[Dict[str, Any]]):
+        self.assets_table.setRowCount(len(assets))
+        for row, asset in enumerate(assets):
+            self._set_item(self.assets_table, row, 0, str(asset.get('symbol')))
+            self._set_item(self.assets_table, row, 1, f"{asset.get('free', 0):.6f}")
+            self._set_item(self.assets_table, row, 2, f"{asset.get('avg_entry_price', 0):.4f}")
+            self._set_item(self.assets_table, row, 3, f"{asset.get('current_price', 0):.4f}")
+            self._set_item(self.assets_table, row, 4, f"{asset.get('usd_value', 0):.2f}")
+            
+            pnl_percentage = asset.get('pnl_percentage', 0) * 100
+            pnl_item = QTableWidgetItem(f"{pnl_percentage:.2f}%")
+            pnl_item.setForeground(QColor('green') if pnl_percentage >= 0 else QColor('red'))
+            self.assets_table.setItem(row, 5, pnl_item)
 
     def cleanup(self):
         logger.info("PortfolioWidget: Limpiando hilos y workers activos.")

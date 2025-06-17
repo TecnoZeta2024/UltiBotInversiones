@@ -1,11 +1,12 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QComboBox, QHBoxLayout
-from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QThread
-from PyQt5.QtGui import QPainter, QColor, QPen
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QComboBox, QHBoxLayout
+from PySide6.QtCore import Qt, Signal as pyqtSignal, QTimer, QThread
+from PySide6.QtGui import QPainter, QColor, QPen
 import mplfinance as mpf
 import pandas as pd
 from typing import List, Dict, Any, Optional
 from uuid import UUID
 import asyncio
+from unittest.mock import MagicMock # Importar MagicMock
 
 from src.ultibot_ui.models import BaseMainWindow
 from src.ultibot_ui.workers import ApiWorker
@@ -14,6 +15,7 @@ from src.shared.data_types import Kline
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import logging
+import httpx # Importar httpx para el mock
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +55,8 @@ class ChartWidget(QWidget):
         self.interval_label = QLabel("Temporalidad:")
         self.interval_combo = QComboBox()
         self.interval_combo.addItems(["1m", "5m", "15m", "1H", "4H", "1D"])
-        self.interval_combo.setCurrentText(self.current_interval)
+        if self.current_interval is not None: # Corrección para el error de tipo
+            self.interval_combo.setCurrentText(self.current_interval)
         self.interval_combo.currentIndexChanged.connect(self._on_interval_changed)
 
         self.controls_layout.addWidget(self.symbol_label)
@@ -213,11 +216,21 @@ class ChartWidget(QWidget):
             logger.critical(f"Error al renderizar el gráfico: {e}", exc_info=True)
 
 
+    def start_updates(self):
+        """Inicia la carga inicial de datos del gráfico."""
+        self.load_chart_data()
+        # No hay un temporizador de actualización continua para el gráfico,
+        # ya que se actualiza al cambiar símbolo/intervalo o al ser solicitado.
+
+    def stop_updates(self):
+        """Detiene cualquier proceso de actualización (no aplica directamente aquí)."""
+        pass # No hay un temporizador activo para detener en este widget
+
     def cleanup(self):
         logger.info("ChartWidget: Limpieza completada.")
 
 if __name__ == '__main__':
-    from PyQt5.QtWidgets import QApplication, QMainWindow
+    from PySide6.QtWidgets import QApplication, QMainWindow
     import sys
     import logging
     from src.ultibot_ui.workers import ApiWorker
@@ -237,8 +250,8 @@ if __name__ == '__main__':
     main_window_widget.setGeometry(100, 100, 800, 600)
 
     class MockAPIClient(UltiBotAPIClient):
-        def __init__(self, base_url: str, token: Optional[str] = None):
-            super().__init__(base_url, token)
+        def __init__(self, base_url: str, client: httpx.AsyncClient): # Corregido el constructor
+            super().__init__(base_url, client)
 
         async def get_candlestick_data(self, symbol: str, interval: str, limit: int = 200) -> List[Kline]:
             logger.info(f"MockAPIClient: Obteniendo datos de velas para {symbol}-{interval}")
@@ -251,7 +264,7 @@ if __name__ == '__main__':
             ]
             return [Kline(**d) for d in sample_data]
 
-    mock_api_client = MockAPIClient(base_url="http://mock-api")
+    mock_api_client = MockAPIClient(base_url="http://mock-api", client=MagicMock(spec=httpx.AsyncClient)) # Pasa un mock de httpx.AsyncClient
     chart_widget = ChartWidget(api_client=mock_api_client, main_window=mock_main_window)
     main_window_widget.setCentralWidget(chart_widget)
     main_window_widget.show()

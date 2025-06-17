@@ -1,11 +1,11 @@
 import sys
 import asyncio
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
     QPushButton, QApplication, QAbstractItemView, QSizePolicy
 )
-from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QThread, QObject
-from PyQt5.QtGui import QColor, QFont, QIcon
+from PySide6.QtCore import Qt, Signal as pyqtSignal, QTimer, QThread, QObject
+from PySide6.QtGui import QColor, QFont, QIcon
 from typing import List, Optional, Any
 from datetime import datetime
 from uuid import UUID, uuid4
@@ -287,11 +287,20 @@ class NotificationWidget(QWidget):
         self.mark_all_read_button.setEnabled(has_notifications)
         self.dismiss_selected_button.setEnabled(has_notifications and len(self.notification_list.selectedItems()) > 0)
 
+    def start_updates(self):
+        """Inicia la actualización de notificaciones en tiempo real."""
+        if not self.update_timer.isActive():
+            self.update_timer.start()
+            self._fetch_notifications() # Fetch immediately on start
+
+    def stop_updates(self):
+        """Detiene la actualización de notificaciones en tiempo real."""
+        if self.update_timer.isActive():
+            self.update_timer.stop()
+
     def cleanup(self):
         print("NotificationWidget: cleanup called.")
-        if hasattr(self, 'update_timer') and self.update_timer.isActive():
-            print("NotificationWidget: Stopping update timer.")
-            self.update_timer.stop()
+        self.stop_updates()
         print("NotificationWidget: cleanup finished.")
 
 if __name__ == '__main__':

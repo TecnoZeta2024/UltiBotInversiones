@@ -4,7 +4,7 @@ Manages the global trading mode state across the UI application.
 """
 import logging
 from typing import Literal, Optional, Callable, List
-from PyQt5.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 from enum import Enum
 
 logger = logging.getLogger(__name__)
@@ -53,7 +53,7 @@ class TradingModeStateManager(QObject):
     """
     
     # Signal emitted when trading mode changes
-    trading_mode_changed = pyqtSignal(str)  # Emits the new trading mode as string
+    trading_mode_changed = Signal(str)  # Emits the new trading mode as string
     
     def __init__(self, initial_mode: TradingMode = "paper"):
         """
@@ -209,9 +209,9 @@ class TradingModeStateManager(QObject):
                 logger.warning(f"Invalid trading mode in config: {mode}. Using default.")
 
 # Global state manager instance
-_global_state_manager: Optional[TradingModeStateManager] = None
+_global_state_manager: "Optional[TradingModeStateManager]" = None
 
-def get_trading_mode_manager() -> TradingModeStateManager:
+def get_trading_mode_manager() -> "TradingModeStateManager":
     """
     Get the global trading mode state manager instance.
     

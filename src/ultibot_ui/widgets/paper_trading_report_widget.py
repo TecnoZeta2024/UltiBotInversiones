@@ -3,16 +3,17 @@ Widget para visualizar resultados y rendimiento del Paper Trading.
 """
 
 import logging
-from typing import Optional, List, Dict, Any, Callable, Coroutine
+import datetime
+from typing import Optional, List, Dict, Any, Callable, Coroutine, cast
 from uuid import UUID
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
     QLabel, QComboBox, QDateEdit, QPushButton, QGroupBox, QGridLayout,
     QHeaderView, QMessageBox, QProgressBar, QSplitter
 )
-from PyQt5.QtCore import Qt, QDate, QThread
-from PyQt5.QtGui import QFont, QColor
+from PySide6.QtCore import Qt, QDate, QThread
+from PySide6.QtGui import QFont, QColor
 
 from src.ultibot_ui.services.api_client import UltiBotAPIClient
 from src.shared.data_types import Trade, PerformanceMetrics
@@ -222,10 +223,10 @@ class PaperTradingReportWidget(QWidget):
         if symbol:
             filters['symbol_filter'] = symbol
         
-        start_date = self.start_date_edit.date().toPyDate()
+        start_date = cast(datetime.date, self.start_date_edit.date().toPython())
         filters['date_from'] = start_date.isoformat()
         
-        end_date = self.end_date_edit.date().toPyDate()
+        end_date = cast(datetime.date, self.end_date_edit.date().toPython())
         filters['date_to'] = end_date.isoformat()
         
         return filters

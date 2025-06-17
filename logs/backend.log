@@ -568,3 +568,113 @@ user_id
 2025-06-16 21:35:29,422 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
 2025-06-16 21:35:29,422 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
 2025-06-16 21:35:29,467 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
+2025-06-16 21:52:51,547 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
+2025-06-16 21:52:51,548 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
+2025-06-16 21:52:51,566 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
+2025-06-16 22:12:08,369 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
+2025-06-16 22:12:08,370 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
+2025-06-16 22:12:08,388 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
+2025-06-16 22:14:59,042 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
+2025-06-16 22:14:59,042 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
+2025-06-16 22:14:59,064 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
+2025-06-16 22:15:23,583 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
+2025-06-16 22:15:23,583 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
+2025-06-16 22:15:23,588 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
+2025-06-16 22:15:51,988 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
+2025-06-16 22:15:51,988 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
+2025-06-16 22:15:52,008 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
+2025-06-16 22:15:52,314 - qasync - INFO - [MainThread] - __init__.py:57 - Forcing use of PySide6 as Qt Implementation
+2025-06-16 22:16:25,254 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
+2025-06-16 22:16:25,255 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
+2025-06-16 22:16:25,271 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
+2025-06-16 22:16:25,573 - qasync - INFO - [MainThread] - __init__.py:57 - Forcing use of PySide6 as Qt Implementation
+2025-06-16 22:16:57,987 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
+2025-06-16 22:16:57,987 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
+2025-06-16 22:16:58,011 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
+2025-06-16 22:16:58,311 - qasync - INFO - [MainThread] - __init__.py:57 - Forcing use of PySide6 as Qt Implementation
+2025-06-16 22:17:31,378 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
+2025-06-16 22:17:31,378 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
+2025-06-16 22:17:31,387 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
+2025-06-16 22:17:31,683 - qasync - INFO - [MainThread] - __init__.py:57 - Forcing use of PySide6 as Qt Implementation
+2025-06-16 22:19:33,312 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
+2025-06-16 22:19:33,312 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
+2025-06-16 22:19:33,331 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
+2025-06-16 22:19:33,652 - qasync - INFO - [MainThread] - __init__.py:57 - Forcing use of PySide6 as Qt Implementation
+2025-06-16 22:19:57,264 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
+2025-06-16 22:19:57,266 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
+2025-06-16 22:19:57,286 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
+2025-06-16 22:19:57,587 - qasync - INFO - [MainThread] - __init__.py:57 - Forcing use of PySide6 as Qt Implementation
+2025-06-16 22:20:19,521 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
+2025-06-16 22:20:19,522 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
+2025-06-16 22:20:19,540 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
+2025-06-16 22:20:19,848 - qasync - INFO - [MainThread] - __init__.py:57 - Forcing use of PySide6 as Qt Implementation
+2025-06-16 22:20:38,376 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
+2025-06-16 22:20:38,377 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
+2025-06-16 22:20:38,395 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
+2025-06-16 22:20:38,706 - qasync - INFO - [MainThread] - __init__.py:57 - Forcing use of PySide6 as Qt Implementation
+2025-06-16 22:20:40,865 - matplotlib - DEBUG - [MainThread] - __init__.py:342 - matplotlib data path: C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\matplotlib\mpl-data
+2025-06-16 22:20:40,960 - matplotlib - DEBUG - [MainThread] - __init__.py:342 - CONFIGDIR=C:\Users\zamor\.matplotlib
+2025-06-16 22:20:40,961 - matplotlib - DEBUG - [MainThread] - __init__.py:1557 - interactive is False
+2025-06-16 22:20:40,962 - matplotlib - DEBUG - [MainThread] - __init__.py:1558 - platform is win32
+2025-06-16 22:20:41,507 - matplotlib - DEBUG - [MainThread] - __init__.py:342 - CACHEDIR=C:\Users\zamor\.matplotlib
+2025-06-16 22:20:41,510 - matplotlib.font_manager - DEBUG - [MainThread] - font_manager.py:1635 - Using fontManager instance from C:\Users\zamor\.matplotlib\fontlist-v390.json
+2025-06-16 22:21:41,584 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
+2025-06-16 22:21:41,584 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
+2025-06-16 22:21:41,587 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
+2025-06-16 22:21:41,904 - qasync - INFO - [MainThread] - __init__.py:57 - Forcing use of PySide6 as Qt Implementation
+2025-06-16 22:21:42,038 - matplotlib - DEBUG - [MainThread] - __init__.py:342 - matplotlib data path: C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\matplotlib\mpl-data
+2025-06-16 22:21:42,046 - matplotlib - DEBUG - [MainThread] - __init__.py:342 - CONFIGDIR=C:\Users\zamor\.matplotlib
+2025-06-16 22:21:42,047 - matplotlib - DEBUG - [MainThread] - __init__.py:1557 - interactive is False
+2025-06-16 22:21:42,048 - matplotlib - DEBUG - [MainThread] - __init__.py:1558 - platform is win32
+2025-06-16 22:21:42,139 - matplotlib - DEBUG - [MainThread] - __init__.py:342 - CACHEDIR=C:\Users\zamor\.matplotlib
+2025-06-16 22:21:42,143 - matplotlib.font_manager - DEBUG - [MainThread] - font_manager.py:1635 - Using fontManager instance from C:\Users\zamor\.matplotlib\fontlist-v390.json
+2025-06-16 22:25:14,027 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
+2025-06-16 22:25:14,027 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
+2025-06-16 22:25:14,046 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
+2025-06-16 22:25:14,344 - qasync - INFO - [MainThread] - __init__.py:57 - Forcing use of PySide6 as Qt Implementation
+2025-06-16 22:25:14,487 - matplotlib - DEBUG - [MainThread] - __init__.py:342 - matplotlib data path: C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\matplotlib\mpl-data
+2025-06-16 22:25:14,487 - matplotlib - DEBUG - [MainThread] - __init__.py:342 - CONFIGDIR=C:\Users\zamor\.matplotlib
+2025-06-16 22:25:14,487 - matplotlib - DEBUG - [MainThread] - __init__.py:1557 - interactive is False
+2025-06-16 22:25:14,487 - matplotlib - DEBUG - [MainThread] - __init__.py:1558 - platform is win32
+2025-06-16 22:25:14,587 - matplotlib - DEBUG - [MainThread] - __init__.py:342 - CACHEDIR=C:\Users\zamor\.matplotlib
+2025-06-16 22:25:14,604 - matplotlib.font_manager - DEBUG - [MainThread] - font_manager.py:1635 - Using fontManager instance from C:\Users\zamor\.matplotlib\fontlist-v390.json
+2025-06-16 22:25:40,681 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
+2025-06-16 22:25:40,682 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
+2025-06-16 22:25:40,688 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
+2025-06-16 22:25:40,988 - qasync - INFO - [MainThread] - __init__.py:57 - Forcing use of PySide6 as Qt Implementation
+2025-06-16 22:25:41,130 - matplotlib - DEBUG - [MainThread] - __init__.py:342 - matplotlib data path: C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\matplotlib\mpl-data
+2025-06-16 22:25:41,139 - matplotlib - DEBUG - [MainThread] - __init__.py:342 - CONFIGDIR=C:\Users\zamor\.matplotlib
+2025-06-16 22:25:41,140 - matplotlib - DEBUG - [MainThread] - __init__.py:1557 - interactive is False
+2025-06-16 22:25:41,141 - matplotlib - DEBUG - [MainThread] - __init__.py:1558 - platform is win32
+2025-06-16 22:25:41,257 - matplotlib - DEBUG - [MainThread] - __init__.py:342 - CACHEDIR=C:\Users\zamor\.matplotlib
+2025-06-16 22:25:41,261 - matplotlib.font_manager - DEBUG - [MainThread] - font_manager.py:1635 - Using fontManager instance from C:\Users\zamor\.matplotlib\fontlist-v390.json
+2025-06-16 22:36:43,324 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
+2025-06-16 22:36:43,324 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
+2025-06-16 22:36:43,343 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
+2025-06-16 22:36:43,686 - qasync - INFO - [MainThread] - __init__.py:57 - Forcing use of PySide6 as Qt Implementation
+2025-06-16 22:36:43,830 - matplotlib - DEBUG - [MainThread] - __init__.py:342 - matplotlib data path: C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\matplotlib\mpl-data
+2025-06-16 22:36:43,882 - matplotlib - DEBUG - [MainThread] - __init__.py:342 - CONFIGDIR=C:\Users\zamor\.matplotlib
+2025-06-16 22:36:43,883 - matplotlib - DEBUG - [MainThread] - __init__.py:1557 - interactive is False
+2025-06-16 22:36:43,883 - matplotlib - DEBUG - [MainThread] - __init__.py:1558 - platform is win32
+2025-06-16 22:36:43,938 - matplotlib - DEBUG - [MainThread] - __init__.py:342 - CACHEDIR=C:\Users\zamor\.matplotlib
+2025-06-16 22:36:43,942 - matplotlib.font_manager - DEBUG - [MainThread] - font_manager.py:1635 - Using fontManager instance from C:\Users\zamor\.matplotlib\fontlist-v390.json
+2025-06-16 22:38:10,080 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
+2025-06-16 22:38:10,080 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
+2025-06-16 22:38:10,099 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
+2025-06-16 22:38:10,417 - qasync - INFO - [MainThread] - __init__.py:57 - Forcing use of PySide6 as Qt Implementation
+2025-06-16 22:38:10,563 - matplotlib - DEBUG - [MainThread] - __init__.py:342 - matplotlib data path: C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\matplotlib\mpl-data
+2025-06-16 22:38:10,569 - matplotlib - DEBUG - [MainThread] - __init__.py:342 - CONFIGDIR=C:\Users\zamor\.matplotlib
+2025-06-16 22:38:10,569 - matplotlib - DEBUG - [MainThread] - __init__.py:1557 - interactive is False
+2025-06-16 22:38:10,578 - matplotlib - DEBUG - [MainThread] - __init__.py:1558 - platform is win32
+2025-06-16 22:38:10,683 - matplotlib - DEBUG - [MainThread] - __init__.py:342 - CACHEDIR=C:\Users\zamor\.matplotlib
+2025-06-16 22:38:10,687 - matplotlib.font_manager - DEBUG - [MainThread] - font_manager.py:1635 - Using fontManager instance from C:\Users\zamor\.matplotlib\fontlist-v390.json
+2025-06-16 22:39:43,651 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
+2025-06-16 22:39:43,652 - ultibot_backend - INFO - [MainThread] - main.py:133 - Registrando routers de la API...
+2025-06-16 22:39:43,670 - ultibot_backend - INFO - [MainThread] - main.py:145 - Todos los routers han sido registrados.
+2025-06-16 22:39:43,988 - qasync - INFO - [MainThread] - __init__.py:57 - Forcing use of PySide6 as Qt Implementation
+2025-06-16 22:39:44,190 - matplotlib - DEBUG - [MainThread] - __init__.py:342 - matplotlib data path: C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\matplotlib\mpl-data
+2025-06-16 22:39:44,207 - matplotlib - DEBUG - [MainThread] - __init__.py:342 - CONFIGDIR=C:\Users\zamor\.matplotlib
+2025-06-16 22:39:44,208 - matplotlib - DEBUG - [MainThread] - __init__.py:1557 - interactive is False
+2025-06-16 22:39:44,208 - matplotlib - DEBUG - [MainThread] - __init__.py:1558 - platform is win32
+2025-06-16 22:39:44,262 - matplotlib - DEBUG - [MainThread] - __init__.py:342 - CACHEDIR=C:\Users\zamor\.matplotlib
+2025-06-16 22:39:44,268 - matplotlib.font_manager - DEBUG - [MainThread] - font_manager.py:1635 - Using fontManager instance from C:\Users\zamor\.matplotlib\fontlist-v390.json

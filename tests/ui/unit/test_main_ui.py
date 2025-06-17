@@ -1,9 +1,15 @@
 import pytest
 import sys
 import os
+from unittest.mock import MagicMock
+
+
+# Configurar qasync para que use PySide6
+os.environ['QT_API'] = 'pyside6'
+
 from unittest.mock import AsyncMock, patch, MagicMock
-from PyQt5.QtWidgets import QApplication, QMessageBox
-from PyQt5.QtCore import QTimer
+from PySide6.QtWidgets import QApplication, QMessageBox
+from PySide6.QtCore import QTimer
 
 # Asegurarse de que el path de src esté en sys.path para las importaciones relativas
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'src')))

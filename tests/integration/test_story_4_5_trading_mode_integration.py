@@ -8,9 +8,6 @@ import sys
 import os
 from uuid import UUID, uuid4
 
-# Mock PyQt5 modules before importing
-sys.modules['PyQt5'] = MagicMock()
-sys.modules['PyQt5.QtCore'] = MagicMock()
 
 # Add src to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
