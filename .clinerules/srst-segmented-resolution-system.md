@@ -68,12 +68,12 @@ TICKET_SRST_001/
 ## **WORKFLOW OBLIGATORIO DEL SRST**
 
 ### **FASE 1: TRIAGE AUTOMÁTICO (5 mins max)**
-1. **Ejecutar diagnóstico específico**:
+1. **Ejecutar diagnóstico específico** (Omitir si es una continuación directa de tarea con ticket SRST activo y error principal sin cambios):
    ```bash
    poetry run pytest --collect-only -q 2>&1 | head -20
    ```
 2. **Clasificar errores** por categoría y prioridad
-3. **Crear máximo 3 tickets** para la sesión actual
+3. **Crear máximo 3 tickets** para la sesión actual (o continuar con el ticket activo si es una continuación de tarea).
 4. **Documentar en SRST_TRACKER.md**
 
 ### **FASE 2: RESOLUCIÓN MICRO-SEGMENTADA (15 mins por ticket)**
@@ -85,6 +85,7 @@ TICKET_SRST_001/
    poetry run pytest -xvs {SPECIFIC_TEST}
    ```
 5. **Documentar resultado** en SRST_PROGRESS.md
+*   **Análisis Profundo:** Si un ticket requiere un análisis más profundo o si los logs iniciales no revelan la causa raíz, utilizar la herramienta `sequential-thinking` para desglosar el problema y formular hipótesis antes de proponer cambios en el código.
 
 ### **FASE 3: VALIDACIÓN Y HANDOFF (5 mins)**
 1. **Verificar no-regresión**:

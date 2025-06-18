@@ -3,7 +3,12 @@ import logging
 from typing import Optional, Dict, Any, TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from shared.data_types import UserConfiguration, RealTradingSettings, AIAnalysisConfidenceThresholds, ServiceName
+from ultibot_backend.core.domain_models.user_configuration_models import (
+    UserConfiguration,
+    RiskProfile,
+    Theme,
+)
+from shared.data_types import RealTradingSettings, AIAnalysisConfidenceThresholds, ServiceName
 from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 from ultibot_backend.core.exceptions import (
     ConfigurationError,
@@ -51,22 +56,42 @@ class ConfigurationService:
     async def _load_config_from_db(self) -> UserConfiguration:
         try:
             config_data = await self.persistence_service.get_user_configuration()
-            if config_data:
-                user_config = UserConfiguration(**config_data)
-                if user_config.realTradingSettings is None:
-                    user_config.realTradingSettings = RealTradingSettings(
-                        real_trading_mode_active=False,
-                        real_trades_executed_count=0,
-                        max_real_trades=5
-                    )
-                return user_config
-            else:
-                logger.info("No se encontró configuración. Creando configuración por defecto.")
-                default_config = self.get_default_configuration()
-                await self.save_user_configuration(default_config)
-                return default_config
-        except Exception as e:
-            logger.error(f"Error al cargar la configuración: {e}", exc_info=True)
+            # Si config_data existe y su 'id' no es None, intentar cargarla.
+            if config_data and config_data.get('id') is not None:
+                try:
+                    user_config = UserConfiguration(**config_data)
+                    if user_config.real_trading_settings is None:
+                        user_config.real_trading_settings = RealTradingSettings(
+                            real_trading_mode_active=False,
+                            real_trades_executed_count=0,
+                            max_concurrent_operations=None,
+                            daily_loss_limit_absolute=None,
+                            daily_profit_target_absolute=None,
+                            asset_specific_stop_loss=None,
+                            auto_pause_trading_conditions=None
+                        )
+                    # Asegurar que real_trades_executed_count no sea None después de cargar
+                    elif user_config.real_trading_settings.real_trades_executed_count is None: # 'elif' para evitar reasignar si ya se instanció arriba
+                        user_config.real_trading_settings.real_trades_executed_count = 0
+                    return user_config
+                except Exception as e_load: # Capturar error de validación si id es None a pesar del check (poco probable aquí)
+                    logger.error(f"Error al validar configuración existente (id: {config_data.get('id')}): {e_load}", exc_info=True)
+                    # Caer al flujo de creación de configuración por defecto
+            
+            # Si no hay config_data, o si config_data tiene id=None, o si falló la validación anterior
+            if config_data and config_data.get('id') is None:
+                logger.warning("Se encontró configuración con id=None. Creando y guardando una configuración por defecto.")
+            else: # config_data es None o falló la validación
+                logger.info("No se encontró configuración o la existente es inválida. Creando y guardando configuración por defecto.")
+            
+            default_config = self.get_default_configuration()
+            await self.save_user_configuration(default_config)
+            return default_config
+
+        except Exception as e: # Captura errores de get_user_configuration o save_user_configuration
+            logger.error(f"Error crítico en _load_config_from_db: {e}", exc_info=True)
+            # Como último recurso, devolver una configuración por defecto en memoria si todo falla.
+            # Esto evita que la aplicación se bloquee, pero la configuración no estará persistida.
             return self.get_default_configuration()
 
     async def get_user_configuration(self) -> UserConfiguration:
@@ -98,27 +123,37 @@ class ConfigurationService:
 
     def get_default_configuration(self) -> UserConfiguration:
         return UserConfiguration(
-            id=uuid4(),
-            user_id=self._user_id,
-            selectedTheme='dark',
-            enableTelegramNotifications=False,
-            defaultPaperTradingCapital=10000.0,
-            paperTradingActive=True,
-            aiAnalysisConfidenceThresholds=AIAnalysisConfidenceThresholds(
-                paperTrading=0.7, 
-                realTrading=0.8,
-                dataVerificationPriceDiscrepancyPercent=5.0,
-                dataVerificationMinVolumeQuote=1000.0
+            id=str(uuid4()),
+            user_id=str(self._user_id),
+            telegram_chat_id=None,
+            paper_trading_assets=None,
+            risk_profile=RiskProfile.MODERATE,
+            risk_profile_settings=None,
+            dashboard_layout_profiles=None,
+            active_dashboard_layout_profile_id=None,
+            dashboard_layout_config=None,
+            cloud_sync_preferences=None,
+            selected_theme=Theme.DARK,
+            enable_telegram_notifications=False,
+            default_paper_trading_capital=10000.0,
+            paper_trading_active=True,
+            ai_analysis_confidence_thresholds=AIAnalysisConfidenceThresholds(
+                paper_trading=0.7,
+                real_trading=0.8
             ),
-            favoritePairs=["BTCUSDT", "ETHUSDT", "BNBUSDT"],
-            notificationPreferences=[],
+            favorite_pairs=["BTCUSDT", "ETHUSDT", "BNBUSDT"],
+            notification_preferences=[],
             watchlists=[],
-            aiStrategyConfigurations=[],
-            mcpServerPreferences=[],
-            realTradingSettings=RealTradingSettings(
+            ai_strategy_configurations=[],
+            mcp_server_preferences=[],
+            real_trading_settings=RealTradingSettings(
                 real_trading_mode_active=False,
                 real_trades_executed_count=0,
-                max_real_trades=5
+                max_concurrent_operations=None,
+                daily_loss_limit_absolute=None,
+                daily_profit_target_absolute=None,
+                asset_specific_stop_loss=None,
+                auto_pause_trading_conditions=None
             )
         )
 
@@ -126,23 +161,26 @@ class ConfigurationService:
         if not self._user_configuration:
             logger.warning("Se intentó verificar el modo paper trading sin configuración de usuario cargada.")
             return False 
-        return self._user_configuration.paperTradingActive is True
+        return self._user_configuration.paper_trading_active is True
 
     async def activate_real_trading_mode(self, min_usdt_balance: float = 10.0):
         if not self.credential_service or not self.portfolio_service:
             raise ConfigurationError("Services (Credential, Portfolio) not initialized in ConfigService.")
 
         config = await self.get_user_configuration()
-        real_settings = config.realTradingSettings
+        real_settings = config.real_trading_settings
         assert real_settings is not None
-
-        current_trades_count = real_settings.real_trades_executed_count
-        REAL_TRADE_LIMIT = 5
-        if current_trades_count >= REAL_TRADE_LIMIT:
-            error_message = f"Límite de {REAL_TRADE_LIMIT} operaciones reales alcanzado."
+        
+        # Asegurar que real_trades_executed_count sea un entero
+        current_trades_count = real_settings.real_trades_executed_count if real_settings.real_trades_executed_count is not None else 0
+        
+        # Considerar si el límite debe ser configurable o es fijo. Por ahora, se asume fijo.
+        REAL_TRADE_LIMIT_CONFIGURABLE_O_FIJO = 5 
+        if current_trades_count >= REAL_TRADE_LIMIT_CONFIGURABLE_O_FIJO:
+            error_message = f"Límite de {REAL_TRADE_LIMIT_CONFIGURABLE_O_FIJO} operaciones reales alcanzado."
             if self.notification_service:
                 await self.notification_service.send_real_trading_mode_activation_failed_notification(config, error_message)
-            raise RealTradeLimitReachedError(message=error_message, executed_count=current_trades_count, limit=REAL_TRADE_LIMIT)
+            raise RealTradeLimitReachedError(message=error_message, executed_count=current_trades_count, limit=REAL_TRADE_LIMIT_CONFIGURABLE_O_FIJO)
 
         try:
             credential = await self.credential_service.get_credential(ServiceName.BINANCE_SPOT, "default")
@@ -177,7 +215,7 @@ class ConfigurationService:
 
     async def deactivate_real_trading_mode(self):
         config = await self.get_user_configuration()
-        real_settings = config.realTradingSettings
+        real_settings = config.real_trading_settings
         assert real_settings is not None
         if real_settings.real_trading_mode_active:
             real_settings.real_trading_mode_active = False
@@ -188,24 +226,29 @@ class ConfigurationService:
 
     async def increment_real_trades_count(self):
         config = await self.get_user_configuration()
-        real_settings = config.realTradingSettings
+        real_settings = config.real_trading_settings
         assert real_settings is not None
-        REAL_TRADE_LIMIT = 5
-        if real_settings.real_trades_executed_count < REAL_TRADE_LIMIT:
-            real_settings.real_trades_executed_count += 1
+
+        current_trades_count = real_settings.real_trades_executed_count if real_settings.real_trades_executed_count is not None else 0
+        REAL_TRADE_LIMIT_CONFIGURABLE_O_FIJO = 5 # Asumiendo límite fijo por ahora
+
+        if current_trades_count < REAL_TRADE_LIMIT_CONFIGURABLE_O_FIJO:
+            real_settings.real_trades_executed_count = current_trades_count + 1
             await self.save_user_configuration(config)
             logger.info(f"Contador de operaciones reales incrementado. Nuevo conteo: {real_settings.real_trades_executed_count}")
         else:
-            logger.warning(f"Se intentó incrementar el contador de operaciones reales, pero ya se alcanzó el límite de {REAL_TRADE_LIMIT}.")
+            logger.warning(f"Se intentó incrementar el contador de operaciones reales, pero ya se alcanzó el límite de {REAL_TRADE_LIMIT_CONFIGURABLE_O_FIJO}.")
 
     async def get_real_trading_status(self) -> Dict[str, Any]:
         config = await self.get_user_configuration()
-        real_settings = config.realTradingSettings
+        real_settings = config.real_trading_settings
         assert real_settings is not None
-        REAL_TRADE_LIMIT = 5
+        
+        executed_count = real_settings.real_trades_executed_count if real_settings.real_trades_executed_count is not None else 0
+        REAL_TRADE_LIMIT_CONFIGURABLE_O_FIJO = 5 # Asumiendo límite fijo por ahora
+        
         return {
             "isActive": real_settings.real_trading_mode_active,
-            "executedCount": real_settings.real_trades_executed_count,
-            "limit": REAL_TRADE_LIMIT
+            "executedCount": executed_count,
+            "limit": REAL_TRADE_LIMIT_CONFIGURABLE_O_FIJO
         }
-

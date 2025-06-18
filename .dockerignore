@@ -28,5 +28,4 @@ Dockerfile # Usually not needed inside the image itself unless multi-stage build
 *.log
 *.db
 *.sqlite3
-tests/
 # Add any other project-specific files/directories that shouldn't be in the image

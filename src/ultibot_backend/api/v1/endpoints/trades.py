@@ -1,17 +1,40 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+import logging
+from datetime import datetime, date
 from typing import Annotated, Optional, List, Literal, Any
 from uuid import UUID
-from datetime import date
+
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from pydantic import BaseModel
 
 from shared.data_types import Trade
 from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 from ultibot_backend import dependencies as deps
 from ultibot_backend.app_config import settings
+from ultibot_backend.services.trading_report_service import TradingReportService # Importar TradingReportService
+
+# Configurar logging
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 # Trading mode type alias for consistent validation
 TradingMode = Literal["paper", "real", "both"]
+
+# Modelos para los parámetros de consulta (copia de reports.py)
+class TradeFilters(BaseModel):
+    """Filtros para consultar trades históricos."""
+    symbol: Optional[str] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    limit: int = 100
+    offset: int = 0
+
+class TradeHistoryResponse(BaseModel):
+    """Respuesta para el historial de trades."""
+    trades: List[Trade]
+    total_count: int
+    has_more: bool
 
 @router.get("", response_model=List[Trade], status_code=status.HTTP_200_OK)
 async def get_user_trades(
@@ -53,6 +76,7 @@ async def get_user_trades(
         return trades_data
             
     except Exception as e:
+        logger.error(f"Error al obtener trades de usuario: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve trades: {str(e)}"
@@ -77,6 +101,7 @@ async def get_open_trades(
         )
         
     except Exception as e:
+        logger.error(f"Error al obtener trades abiertos: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve open trades: {str(e)}"
@@ -122,8 +147,118 @@ async def get_trades_count(
             }
             
     except Exception as e:
+        logger.error(f"Error al contar trades: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to count trades: {str(e)}"
         )
 
+@router.get("/history/paper", response_model=TradeHistoryResponse, tags=["trades"])
+async def get_paper_trading_history(
+    request: Request,
+    symbol: Optional[str] = Query(None, description="Filtrar por par de trading (ej. BTCUSDT)"),
+    start_date: Optional[datetime] = Query(None, description="Fecha de inicio para filtrar"),
+    end_date: Optional[datetime] = Query(None, description="Fecha de fin para filtrar"),
+    limit: int = Query(100, ge=1, le=500, description="Número máximo de trades a devolver"),
+    offset: int = Query(0, ge=0, description="Número de trades a saltar (para paginación)"),
+    report_service: TradingReportService = Depends(deps.get_trading_report_service)
+) -> TradeHistoryResponse:
+    """
+    Obtiene el historial de operaciones de Paper Trading cerradas para el usuario fijo.
+    """
+    user_id = settings.FIXED_USER_ID
+    try:
+        trades = await report_service.get_closed_trades(
+            user_id=user_id,
+            mode='paper',
+            symbol=symbol,
+            start_date=start_date,
+            end_date=end_date,
+            limit=limit,
+            offset=offset
+        )
+        
+        has_more = False
+        if len(trades) == limit:
+            check_trades = await report_service.get_closed_trades(
+                user_id=user_id,
+                mode='paper',
+                symbol=symbol,
+                start_date=start_date,
+                end_date=end_date,
+                limit=1,
+                offset=offset + limit
+            )
+            has_more = len(check_trades) > 0
+        
+        total_count = offset + len(trades)
+        if has_more:
+            total_count += 1
+        
+        return TradeHistoryResponse(
+            trades=trades,
+            total_count=total_count,
+            has_more=has_more
+        )
+        
+    except Exception as e:
+        logger.error(f"Error al obtener historial de paper trading: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener historial de operaciones: {str(e)}"
+        )
+
+@router.get("/history/real", response_model=TradeHistoryResponse, tags=["trades"])
+async def get_real_trading_history(
+    request: Request,
+    symbol: Optional[str] = Query(None, description="Filtrar por par de trading (ej. BTCUSDT)"),
+    start_date: Optional[datetime] = Query(None, description="Fecha de inicio para filtrar"),
+    end_date: Optional[datetime] = Query(None, description="Fecha de fin para filtrar"),
+    limit: int = Query(100, ge=1, le=500, description="Número máximo de trades a devolver"),
+    offset: int = Query(0, ge=0, description="Número de trades a saltar (para paginación)"),
+    report_service: TradingReportService = Depends(deps.get_trading_report_service)
+) -> TradeHistoryResponse:
+    """
+    Obtiene el historial de operaciones de Trading Real cerradas para el usuario fijo.
+    """
+    user_id = settings.FIXED_USER_ID
+    try:
+        trades = await report_service.get_closed_trades(
+            user_id=user_id,
+            mode='real',
+            symbol=symbol,
+            start_date=start_date,
+            end_date=end_date,
+            limit=limit,
+            offset=offset
+        )
+        
+        has_more = False
+        if len(trades) == limit:
+            check_trades = await report_service.get_closed_trades(
+                user_id=user_id,
+                mode='real',
+                symbol=symbol,
+                start_date=start_date,
+                end_date=end_date,
+                limit=1,
+                offset=offset + limit
+            )
+            has_more = len(check_trades) > 0
+        
+        total_count = offset + len(trades)
+        if has_more:
+            total_count += 1
+        
+        return TradeHistoryResponse(
+            trades=trades,
+            total_count=total_count,
+            has_more=has_more
+        )
+        
+    except Exception as e:
+        logger.error(f"Error al obtener historial de trading real: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener historial de operaciones reales: {str(e)}"
+        )

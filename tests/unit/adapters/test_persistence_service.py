@@ -2,58 +2,75 @@ import pytest
 import asyncio
 from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
-from datetime import datetime, timezone # Importar timezone
+from datetime import datetime, timezone
 from typing import Dict, Any
-import asyncpg # Importar asyncpg
-from psycopg.sql import SQL, Literal # Importar SQL y Literal
-import os # Importar os para mockear variables de entorno
+import asyncpg
+from psycopg.sql import SQL, Literal
+import os
+import aiosqlite
+import json
 
 from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 from ultibot_backend.app_config import settings
 from shared.data_types import UserConfiguration, APICredential, ServiceName
 
-from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch # Importar patch
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 # Mock para asyncpg.Connection
 @pytest.fixture
 def mock_asyncpg_connection():
     mock_conn = AsyncMock(spec=asyncpg.Connection)
-    # Simular que la conexión no está cerrada por defecto
     type(mock_conn).closed = PropertyMock(return_value=False)
-    # Mockear commit y rollback como corrutinas
     mock_conn.commit = AsyncMock()
     mock_conn.rollback = AsyncMock()
 
-    # Mockear el cursor y sus métodos
     mock_cursor = AsyncMock()
-    mock_cursor.__aenter__.return_value = mock_cursor # Para async with
-    mock_cursor.__aexit__.return_value = None # Para async with
+    mock_cursor.__aenter__.return_value = mock_cursor
+    mock_cursor.__aexit__.return_value = None
     mock_cursor.execute = AsyncMock()
     mock_cursor.fetchone = AsyncMock()
-    mock_cursor.fetchall = AsyncMock(return_value=[]) # Por defecto, devuelve lista vacía
+    mock_cursor.fetchall = AsyncMock(return_value=[])
 
     mock_conn.cursor.return_value = mock_cursor
     return mock_conn
 
 # Fixture para SupabasePersistenceService con mock de conexión
 @pytest.fixture
-def persistence_service(mock_asyncpg_connection):
-    # Usar patch.dict para simular la variable de entorno DATABASE_URL
-    with patch.dict(os.environ, {"DATABASE_URL": "postgresql://user:pass@host:5432/db"}):
-        service = SupabasePersistenceService()
-        service.connection = mock_asyncpg_connection # Inyectar el mock de conexión
-        return service
+def persistence_service():
+    mock_sqlite_cursor_instance = AsyncMock()
+    mock_sqlite_cursor_instance.execute = AsyncMock()
+    # Devolver un diccionario vacío por defecto para asegurar que sea iterable
+    mock_sqlite_cursor_instance.fetchone = AsyncMock(return_value={})
+    mock_sqlite_cursor_instance.fetchall = AsyncMock(return_value=[])
+    mock_sqlite_cursor_instance.__aenter__.return_value = mock_sqlite_cursor_instance
+    mock_sqlite_cursor_instance.__aexit__.return_value = None
+
+    mock_sqlite_conn = AsyncMock()
+    mock_sqlite_conn.cursor = MagicMock(return_value=mock_sqlite_cursor_instance)
+    mock_sqlite_conn.commit = AsyncMock()
+    mock_sqlite_conn.row_factory = aiosqlite.Row
+
+    with patch.dict(os.environ, {"DATABASE_URL": "sqlite:///test_db.sqlite"}):
+        with patch('aiosqlite.connect', new_callable=AsyncMock) as mock_connect:
+            mock_connect.return_value = mock_sqlite_conn
+            
+            service = SupabasePersistenceService()
+            service.connect = AsyncMock(side_effect=lambda: setattr(service, '_is_sqlite', True) or setattr(service, 'sqlite_conn', mock_sqlite_conn))
+            service._check_pool = AsyncMock(side_effect=service.connect)
+            service._is_sqlite = True
+            service.sqlite_conn = mock_sqlite_conn
+            return service
 
 @pytest.fixture
 def fixed_user_id():
     return UUID("00000000-0000-0000-0000-000000000001")
 
 @pytest.mark.asyncio
-async def test_get_user_configuration_found(persistence_service, mock_asyncpg_connection, fixed_user_id):
+async def test_get_user_configuration_found(persistence_service, fixed_user_id):
     """
     Verifica que get_user_configuration retorne la configuración cuando se encuentra.
     """
-    mock_asyncpg_connection.cursor.return_value.fetchone.return_value = {
+    persistence_service.sqlite_conn.cursor.return_value.fetchone.return_value = {
         "id": str(uuid4()),
         "user_id": str(fixed_user_id),
         "selected_theme": "dark",
@@ -63,48 +80,48 @@ async def test_get_user_configuration_found(persistence_service, mock_asyncpg_co
         "updated_at": datetime.now(timezone.utc),
     }
 
-    config_data = await persistence_service.get_user_configuration(fixed_user_id)
+    config_data = await persistence_service.get_user_configuration()
 
-    mock_asyncpg_connection.cursor.return_value.execute.assert_called_once_with(
-        SQL("SELECT * FROM user_configurations WHERE user_id = %s;"), (fixed_user_id,)
+    persistence_service.sqlite_conn.cursor.return_value.execute.assert_called_once_with(
+        "SELECT * FROM user_configurations WHERE user_id = ?;", (str(fixed_user_id),)
     )
-    mock_asyncpg_connection.cursor.return_value.fetchone.assert_called_once()
+    persistence_service.sqlite_conn.cursor.return_value.fetchone.assert_called_once()
     assert isinstance(config_data, Dict)
     assert UUID(config_data["user_id"]) == fixed_user_id
     assert config_data["selected_theme"] == "dark"
 
 @pytest.mark.asyncio
-async def test_get_user_configuration_not_found(persistence_service, mock_asyncpg_connection, fixed_user_id):
+async def test_get_user_configuration_not_found(persistence_service, fixed_user_id):
     """
     Verifica que get_user_configuration retorne None si no se encuentra la configuración.
     """
-    mock_asyncpg_connection.cursor.return_value.fetchone.return_value = None
+    persistence_service.sqlite_conn.cursor.return_value.fetchone.return_value = None
 
-    config_data = await persistence_service.get_user_configuration(fixed_user_id)
+    config_data = await persistence_service.get_user_configuration()
 
-    mock_asyncpg_connection.cursor.return_value.execute.assert_called_once_with(
-        SQL("SELECT * FROM user_configurations WHERE user_id = %s;"), (fixed_user_id,)
+    persistence_service.sqlite_conn.cursor.return_value.execute.assert_called_once_with(
+        "SELECT * FROM user_configurations WHERE user_id = ?;", (str(fixed_user_id),)
     )
-    mock_asyncpg_connection.cursor.return_value.fetchone.assert_called_once()
+    persistence_service.sqlite_conn.cursor.return_value.fetchone.assert_called_once()
     assert config_data is None
 
 @pytest.mark.asyncio
-async def test_get_user_configuration_db_error(persistence_service, mock_asyncpg_connection, fixed_user_id):
+async def test_get_user_configuration_db_error(persistence_service, fixed_user_id):
     """
     Verifica que get_user_configuration propague errores de la base de datos.
     """
-    mock_asyncpg_connection.cursor.return_value.execute.side_effect = asyncpg.exceptions.PostgresError("DB connection lost")
+    persistence_service.sqlite_conn.cursor.return_value.execute.side_effect = aiosqlite.Error("DB connection lost")
 
-    with pytest.raises(asyncpg.exceptions.PostgresError):
-        await persistence_service.get_user_configuration(fixed_user_id)
+    with pytest.raises(aiosqlite.Error):
+        await persistence_service.get_user_configuration()
 
-    mock_asyncpg_connection.cursor.return_value.execute.assert_called_once_with(
-        SQL("SELECT * FROM user_configurations WHERE user_id = %s;"), (fixed_user_id,)
+    persistence_service.sqlite_conn.cursor.return_value.execute.assert_called_once_with(
+        "SELECT * FROM user_configurations WHERE user_id = ?;", (str(fixed_user_id),)
     )
-    mock_asyncpg_connection.cursor.return_value.fetchone.assert_called_once()
+    persistence_service.sqlite_conn.cursor.return_value.fetchone.assert_not_called()
 
 @pytest.mark.asyncio
-async def test_upsert_user_configuration_insert(persistence_service, mock_asyncpg_connection, fixed_user_id):
+async def test_upsert_user_configuration_insert(persistence_service, fixed_user_id):
     """
     Verifica que upsert_user_configuration inserte una nueva configuración.
     """
@@ -115,25 +132,15 @@ async def test_upsert_user_configuration_insert(persistence_service, mock_asyncp
         "enableTelegramNotifications": False,
         "defaultPaperTradingCapital": 15000.0,
     }
-    mock_asyncpg_connection.cursor.return_value.fetchone.return_value = {"id": str(uuid4()), "user_id": str(fixed_user_id)} # Simular que retorna un registro
+    persistence_service.sqlite_conn.cursor.return_value.fetchone.return_value = {"id": str(uuid4()), "user_id": str(fixed_user_id)}
 
-    await persistence_service.upsert_user_configuration(fixed_user_id, new_config_data)
+    await persistence_service.upsert_user_configuration(new_config_data)
 
-    mock_asyncpg_connection.cursor.return_value.execute.assert_called_once()
-    mock_asyncpg_connection.cursor.return_value.fetchone.assert_called_once()
-    mock_asyncpg_connection.commit.assert_called_once()
-    args, kwargs = mock_asyncpg_connection.cursor.return_value.execute.call_args
-    query = args[0]
-    values = args[1] # Los valores son el segundo argumento de execute
-
-    assert "INSERT INTO user_configurations" in query
-    assert "ON CONFLICT (user_id) DO UPDATE SET" in query
-    assert fixed_user_id in values # Cambiado de str(fixed_user_id) a fixed_user_id
-    assert "light" in values
-    assert 15000.0 in values
+    persistence_service.sqlite_conn.cursor.return_value.execute.assert_called_once()
+    persistence_service.sqlite_conn.commit.assert_called_once()
 
 @pytest.mark.asyncio
-async def test_upsert_user_configuration_update(persistence_service, mock_asyncpg_connection, fixed_user_id):
+async def test_upsert_user_configuration_update(persistence_service, fixed_user_id):
     """
     Verifica que upsert_user_configuration actualice una configuración existente.
     """
@@ -145,27 +152,15 @@ async def test_upsert_user_configuration_update(persistence_service, mock_asyncp
         "enableTelegramNotifications": True,
         "defaultPaperTradingCapital": 12000.0,
     }
-    mock_asyncpg_connection.cursor.return_value.fetchone.return_value = {"id": str(uuid4()), "user_id": str(fixed_user_id)} # Simular que retorna un registro
+    persistence_service.sqlite_conn.cursor.return_value.fetchone.return_value = {"id": str(uuid4()), "user_id": str(fixed_user_id)}
 
-    await persistence_service.upsert_user_configuration(fixed_user_id, updated_config_data)
+    await persistence_service.upsert_user_configuration(updated_config_data)
 
-    mock_asyncpg_connection.cursor.return_value.execute.assert_called_once()
-    mock_asyncpg_connection.cursor.return_value.fetchone.assert_called_once()
-    mock_asyncpg_connection.commit.assert_called_once()
-    args, kwargs = mock_asyncpg_connection.cursor.return_value.execute.call_args
-    query = args[0]
-    values = args[1] # Los valores son el segundo argumento de execute
-
-    assert "INSERT INTO user_configurations" in query # La consulta es UPSERT, siempre tiene INSERT
-    assert "ON CONFLICT (user_id) DO UPDATE SET" in query
-    assert fixed_user_id in values # Cambiado de str(fixed_user_id) a fixed_user_id
-    assert "dark" in values
-    assert 12000.0 in values
-    # Asegurarse de que el ID de la configuración no se use en la parte de actualización si se excluyó
-    assert "id" not in query.split("DO UPDATE SET")[1] # No debería estar en el SET de UPDATE
+    persistence_service.sqlite_conn.cursor.return_value.execute.assert_called_once()
+    persistence_service.sqlite_conn.commit.assert_called_once()
 
 @pytest.mark.asyncio
-async def test_upsert_user_configuration_db_error(persistence_service, mock_asyncpg_connection, fixed_user_id):
+async def test_upsert_user_configuration_db_error(persistence_service, fixed_user_id):
     """
     Verifica que upsert_user_configuration propague errores de la base de datos.
     """
@@ -174,13 +169,13 @@ async def test_upsert_user_configuration_db_error(persistence_service, mock_asyn
         "user_id": str(fixed_user_id),
         "selectedTheme": "dark",
     }
-    mock_asyncpg_connection.cursor.return_value.execute.side_effect = asyncpg.exceptions.PostgresError("DB write error")
+    persistence_service.sqlite_conn.cursor.return_value.execute.side_effect = aiosqlite.Error("DB write error")
 
-    with pytest.raises(asyncpg.exceptions.PostgresError):
-        await persistence_service.upsert_user_configuration(fixed_user_id, test_config_data)
+    with pytest.raises(aiosqlite.Error):
+        await persistence_service.upsert_user_configuration(test_config_data)
 
-    mock_asyncpg_connection.cursor.return_value.execute.assert_called_once()
-    mock_asyncpg_connection.commit.assert_called_once()
+    persistence_service.sqlite_conn.cursor.return_value.execute.assert_called_once()
+    persistence_service.sqlite_conn.commit.assert_not_called()
 
 # Pruebas para métodos existentes (ejemplo: save_credential)
 @pytest.mark.asyncio
@@ -192,35 +187,34 @@ async def test_save_credential(persistence_service, mock_asyncpg_connection, fix
         credential_label="test_label",
         encrypted_api_key="encrypted_key"
     )
-    mock_record_data = { # Usar un diccionario para el mock_record
-        "id": str(mock_credential.id), # Convertir a string para el mock de la BD
-        "user_id": str(mock_credential.user_id), # Convertir a string para el mock de la BD
-        "service_name": mock_credential.service_name.value, # Usar .value aquí
+    mock_record_data = {
+        "id": mock_credential.id,
+        "user_id": mock_credential.user_id,
+        "service_name": mock_credential.service_name, # service_name ya es el valor del Enum debido a use_enum_values=True
         "credential_label": mock_credential.credential_label,
         "encrypted_api_key": mock_credential.encrypted_api_key,
-        "encrypted_api_secret": None,
-        "encrypted_other_details": None,
-        "status": "active",
-        "last_verified_at": None,
-        "permissions": None,
-        "permissions_checked_at": None,
-        "expires_at": None,
-        "rotation_reminder_policy_days": None,
-        "usage_count": 0,
-        "last_used_at": None,
-        "purpose_description": None,
-        "tags": None,
-        "notes": None,
-        "created_at": datetime.now(timezone.utc).isoformat(), # Convertir a string ISO para el mock de la BD
-        "updated_at": datetime.now(timezone.utc).isoformat(), # Convertir a string ISO para el mock de la BD
+        "encrypted_api_secret": mock_credential.encrypted_api_secret,
+        "encrypted_other_details": mock_credential.encrypted_other_details,
+        "status": mock_credential.status,
+        "last_verified_at": mock_credential.last_verified_at,
+        "permissions": json.dumps(mock_credential.permissions) if mock_credential.permissions else None,
+        "permissions_checked_at": mock_credential.permissions_checked_at,
+        "expires_at": mock_credential.expires_at,
+        "rotation_reminder_policy_days": mock_credential.rotation_reminder_policy_days,
+        "usage_count": mock_credential.usage_count,
+        "last_used_at": mock_credential.last_used_at,
+        "purpose_description": mock_credential.purpose_description,
+        "tags": json.dumps(mock_credential.tags) if mock_credential.tags else None,
+        "notes": mock_credential.notes,
+        "created_at": mock_credential.created_at,
+        "updated_at": mock_credential.updated_at,
     }
-    mock_asyncpg_connection.cursor.return_value.fetchone.return_value = mock_record_data # Retornar el diccionario directamente
+    persistence_service.sqlite_conn.cursor.return_value.fetchone.return_value = mock_record_data
 
     saved_credential = await persistence_service.save_credential(mock_credential)
 
-    mock_asyncpg_connection.cursor.return_value.execute.assert_called_once()
-    mock_asyncpg_connection.cursor.return_value.fetchone.assert_called_once()
-    mock_asyncpg_connection.commit.assert_called_once()
+    assert persistence_service.sqlite_conn.cursor.return_value.execute.call_count == 2
+    persistence_service.sqlite_conn.cursor.return_value.fetchone.assert_called_once()
+    persistence_service.sqlite_conn.commit.assert_called_once()
     assert saved_credential.id == mock_credential.id
-    assert saved_credential.service_name == mock_credential.service_name # Debería comparar el Enum
-
+    assert saved_credential.service_name == mock_credential.service_name

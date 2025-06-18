@@ -1,4 +1,7 @@
 import logging
+import asyncio # Importar asyncio
+import os
+import asyncpg
 from functools import lru_cache
 from typing import Optional
 import httpx
@@ -49,8 +52,18 @@ class DependencyContainer:
         self.http_client = httpx.AsyncClient(timeout=30.0)
 
         # Level 0: No service dependencies
-        self.persistence_service = PersistenceService()
-        await self.persistence_service.connect()
+        database_url = os.environ["DATABASE_URL"]
+        if database_url.startswith("sqlite+aiosqlite"):
+            from sqlalchemy.ext.asyncio import create_async_engine
+            engine = create_async_engine(database_url)
+            # No hay un pool directo como asyncpg, la sesión se maneja por fixture en tests
+            # Para el servicio de persistencia, pasamos el motor para que pueda crear sesiones
+            self.persistence_service = PersistenceService(engine=engine)
+        else:
+            # Asumir PostgreSQL para otras URLs
+            db_pool = await asyncpg.create_pool(database_url)
+            self.persistence_service = PersistenceService(pool=db_pool) # Mantener compatibilidad si usa pool
+        
         self.binance_adapter = BinanceAdapter()
         self.paper_order_execution_service = PaperOrderExecutionService()
 
@@ -130,15 +143,45 @@ class DependencyContainer:
         logger.info("Shutting down dependency container...")
         if self.http_client:
             await self.http_client.aclose()
-        if self.persistence_service:
-            await self.persistence_service.disconnect()
+        if self.persistence_service and self.persistence_service.pool:
+            await self.persistence_service.pool.close()
         if self.binance_adapter:
             await self.binance_adapter.close()
         logger.info("Dependency container shut down.")
 
 
+_global_container: Optional[DependencyContainer] = None
+
 def get_container(request: Request) -> DependencyContainer:
-    return request.app.state.container
+    global _global_container
+    if hasattr(request.app.state, 'container') and request.app.state.container is not None:
+        return request.app.state.container
+    else:
+        # Esto es una solución de contingencia para entornos de prueba donde el lifespan
+        # de FastAPI podría no inicializar app.state.container correctamente.
+        # En producción, el lifespan siempre debería inicializarlo.
+        if _global_container is None:
+            logger.warning("DependencyContainer no encontrado en app.state. Inicializando contenedor global para tests.")
+            _global_container = DependencyContainer()
+            # Ejecutar inicialización de servicios si es la primera vez que se accede globalmente
+            # Esto es un hack y debería ser manejado por el lifespan en un entorno real.
+            # Esto es crucial para que los servicios estén listos para su uso en tests
+            # que no pasan por el lifespan completo de FastAPI.
+            try:
+                # Ejecutar initialize_services en un loop de eventos si no hay uno corriendo
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    loop.create_task(_global_container.initialize_services())
+                else:
+                    loop.run_until_complete(_global_container.initialize_services())
+            except RuntimeError:
+                # Si no hay un loop de eventos, crear uno temporalmente
+                new_loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(new_loop)
+                new_loop.run_until_complete(_global_container.initialize_services())
+                new_loop.close()
+            logger.info("Contenedor global de contingencia inicializado y servicios cargados.")
+        return _global_container
 
 
 async def get_persistence_service(request: Request) -> PersistenceService:
@@ -217,4 +260,3 @@ async def get_ai_orchestrator_service(request: Request) -> AIOrchestratorService
     container = get_container(request)
     assert container.ai_orchestrator_service is not None, "AIOrchestratorService not initialized"
     return container.ai_orchestrator_service
-

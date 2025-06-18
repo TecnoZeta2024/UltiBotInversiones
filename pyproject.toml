@@ -46,6 +46,8 @@ pytest-asyncio = "*"
 pytest-cov = "*"
 pre-commit = "*"
 pylint = "^3.3.7"
+pytest-qt = "^4.4.0"
+pytest-timeout = "^2.3.1"
 
 [tool.poetry.scripts]
 test = "pytest:main"
@@ -80,3 +82,4 @@ select = [
 pythonpath = [
   "src"
 ]
+asyncio_mode = "auto"

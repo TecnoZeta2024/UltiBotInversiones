@@ -44,6 +44,10 @@ Mantener un historial completo y cronológico de todos los análisis, decisiones
 [... resto de la estructura estándar ...]
 ```
 
+### Mejora sugerida (2025-06-18):
+- Si tras 2 intentos consecutivos de replace_in_file para AUDIT_REPORT.md el SEARCH falla por longitud o autoformato, debe usarse write_to_file para preservar el historial y evitar bloqueos de auditoría.
+- Documentar explícitamente este fallback en el protocolo.
+
 ### Estructura para AUDIT_MORTEN.md:
 ```markdown
 [CONTENIDO EXISTENTE PRESERVADO]

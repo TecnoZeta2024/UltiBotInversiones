@@ -160,6 +160,14 @@ class StrategyService:
 
         return await self.update_strategy_config(strategy_id, user_id, strategy.model_dump())
 
+    async def strategy_can_operate_autonomously(self, strategy_id: str, user_id: str) -> bool:
+        """Checks if a strategy is configured to operate without AI analysis."""
+        strategy = await self.get_strategy_config(strategy_id, user_id)
+        if not strategy:
+            return False
+        # A strategy can operate autonomously if it does not have an AI profile linked.
+        return strategy.ai_analysis_profile_id is None
+
     async def get_active_strategies(self, user_id: str, mode: str) -> List[TradingStrategyConfig]:
         if mode not in ["paper", "real"]:
             raise HTTPException(status_code=400, detail="Mode must be 'paper' or 'real'")
@@ -218,4 +226,3 @@ class StrategyService:
             except ValidationError as e:
                 logger.warning(f"Failed to validate parameters for {strategy_type}: {e}")
         return parameters_data
-

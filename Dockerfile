@@ -4,9 +4,9 @@ FROM python:3.11.9-slim-bullseye
 # Establece el directorio de trabajo en /app
 WORKDIR /app
 
-# Instala curl y otras utilidades básicas, luego Poetry
+# Instala curl, dependencias de sistema para pytest-qt y otras utilidades, luego Poetry
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl ca-certificates && \
+    apt-get install -y --no-install-recommends curl ca-certificates libglib2.0-0 libgl1-mesa-glx libegl1-mesa libfontconfig1 libxkbcommon0 libdbus-1-3 && \
     rm -rf /var/lib/apt/lists/* && \
     pip install poetry && \
     poetry config virtualenvs.create false
@@ -23,10 +23,9 @@ COPY pyproject.toml poetry.lock* ./
 RUN poetry install --no-root --no-interaction \
     && rm -rf /root/.cache/pypoetry
 
-# Copia el código fuente - solo lo necesario para el backend
-COPY src/ultibot_backend /app/src/ultibot_backend
-COPY src/shared /app/src/shared
-COPY src/__init__.py /app/src/__init__.py
+# Copia todo el código fuente
+COPY src /app/src
+COPY tests /app/tests
 
 # Copia el certificado de Supabase
 COPY supabase /app/supabase
@@ -35,7 +34,8 @@ COPY supabase /app/supabase
 EXPOSE 8000
 
 # Variables de entorno predeterminadas (se deben sobrescribir en producción)
-ENV PYTHONPATH=/app \
+# Se añade /app/src a PYTHONPATH para que los módulos sean importables directamente
+ENV PYTHONPATH=/app/src \
     PYTHONUNBUFFERED=1
 
 # IMPORTANT: Ensure CREDENTIAL_ENCRYPTION_KEY and other necessary environment variables
@@ -43,4 +43,5 @@ ENV PYTHONPATH=/app \
 # are provided when running the container in production/staging.
 
 # Comando para ejecutar la aplicación FastAPI
-CMD ["uvicorn", "src.ultibot_backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Con el nuevo PYTHONPATH, se llama directamente al módulo
+CMD ["uvicorn", "ultibot_backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

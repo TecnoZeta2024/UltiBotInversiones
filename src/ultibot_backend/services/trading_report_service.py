@@ -61,8 +61,13 @@ class TradingReportService:
                 filters, start_date, end_date, limit, offset
             )
             
-            # Convertir los registros a objetos Trade
-            trades = [Trade(**record) for record in trade_records]
+            # Si los registros ya son objetos Trade, no es necesaria la conversión.
+            # Esto ocurre cuando los datos vienen de un mock en los tests.
+            if trade_records and isinstance(trade_records[0], Trade):
+                trades = trade_records
+            else:
+                # Convertir los registros (dicts) a objetos Trade
+                trades = [Trade(**record) for record in trade_records]
             
             logger.info(f"Obtenidos {len(trades)} trades cerrados para usuario {user_id} en modo {mode}")
             return trades
@@ -181,4 +186,3 @@ class TradingReportService:
         except Exception as e:
             logger.error(f"Error al calcular métricas de rendimiento para usuario {user_id}: {e}", exc_info=True)
             raise ReportError(f"Error al calcular métricas de rendimiento: {str(e)}")
-

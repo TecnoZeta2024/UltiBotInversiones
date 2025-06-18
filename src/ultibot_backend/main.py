@@ -72,26 +72,30 @@ async def lifespan(app: FastAPI):
     Context manager para manejar el ciclo de vida de la aplicación.
     Crea y gestiona una única instancia del DependencyContainer.
     """
-    logger.info("Iniciando UltiBot Backend...")
+    logger.info("Iniciando UltiBot Backend (lifespan)...")
     
     # Instanciar el contenedor directamente aquí
     container = DependencyContainer()
     app.state.container = container  # Adjuntar a app.state
+    logger.info(f"DependencyContainer adjuntado a app.state: {app.state.container is not None}")
     
     try:
         await container.initialize_services()
-        logger.info("Contenedor de dependencias inicializado.")
+        logger.info("Contenedor de dependencias inicializado en lifespan.")
         
     except Exception as e:
-        logger.critical(f"Error fatal durante el arranque de la aplicación: {e}", exc_info=True)
+        logger.critical(f"Error fatal durante el arranque de la aplicación (lifespan): {e}", exc_info=True)
         raise
 
-    logger.info("Aplicación iniciada correctamente.")
+    logger.info("Aplicación iniciada correctamente (lifespan).")
     yield
     
-    logger.info("Apagando UltiBot Backend...")
-    await app.state.container.shutdown()
-    logger.info("Recursos liberados y aplicación apagada.")
+    logger.info("Apagando UltiBot Backend (lifespan)...")
+    if hasattr(app.state, 'container') and app.state.container:
+        await app.state.container.shutdown()
+        logger.info("Recursos liberados y aplicación apagada (lifespan).")
+    else:
+        logger.warning("No se encontró DependencyContainer en app.state durante el apagado.")
 
 app = FastAPI(
     title="UltiBot Backend",
@@ -136,7 +140,7 @@ api_prefix = "/api/v1"
 logger.info("Registrando routers de la API...")
 app.include_router(config.router, prefix=api_prefix, tags=["configuration"])
 app.include_router(notifications.router, prefix=f"{api_prefix}/notifications", tags=["notifications"])
-app.include_router(reports.router, prefix=f"{api_prefix}/reports", tags=["reports"])
+app.include_router(reports.router, prefix=api_prefix, tags=["reports"]) # reports.py ya no tiene rutas relativas
 app.include_router(portfolio.router, prefix=f"{api_prefix}/portfolio", tags=["portfolio"])
 app.include_router(trades.router, prefix=f"{api_prefix}/trades", tags=["trades"])
 app.include_router(performance.router, prefix=f"{api_prefix}/performance", tags=["performance"])

@@ -17,7 +17,16 @@ from ultibot_backend.core.domain_models.trade_models import (
     OrderCategory,
 )
 from ultibot_backend.core.domain_models.user_configuration_models import (
+    UserConfiguration,
     RealTradingSettings,
+    RiskProfileSettings,
+    NotificationPreference,
+    Watchlist,
+    AIStrategyConfiguration,
+    MCPServerPreference,
+    DashboardLayoutProfile,
+    CloudSyncPreferences,
+    ConfidenceThresholds as AIAnalysisConfidenceThresholds,
 )
 
 
@@ -150,92 +159,8 @@ class PortfolioSnapshot(BaseModel):
     real_trading: PortfolioSummary = Field(..., description="Resumen del portafolio Real.")
     last_updated: datetime = Field(default_factory=datetime.utcnow, description="Marca de tiempo de la última actualización.")
 
-class NotificationPreference(BaseModel):
-    eventType: str
-    channel: str
-    isEnabled: bool
-    minConfidence: Optional[float] = None
-    minProfitability: Optional[float] = None
-
-class Watchlist(BaseModel):
-    id: UUID = Field(default_factory=uuid4)
-    name: str
-    pairs: List[str]
-    defaultAlertProfileId: Optional[str] = None
-    defaultAiAnalysisProfileId: Optional[str] = None
-
-class RiskProfileSettings(BaseModel):
-    dailyCapitalRiskPercentage: Optional[float] = None
-    perTradeCapitalRiskPercentage: Optional[float] = None
-    maxDrawdownPercentage: Optional[float] = None
-    takeProfitPercentage: Optional[float] = Field(0.02, description="Porcentaje de ganancia objetivo para Take Profit (ej. 0.02 para 2%).")
-    trailingStopLossPercentage: Optional[float] = Field(0.01, description="Porcentaje de pérdida inicial para Trailing Stop Loss (ej. 0.01 para 1%).")
-    trailingStopCallbackRate: Optional[float] = Field(0.005, description="Porcentaje de retroceso para el Trailing Stop (ej. 0.005 para 0.5%).")
-
-class AIAnalysisConfidenceThresholds(BaseModel):
-    paperTrading: Optional[float] = Field(0.70, description="Umbral para paper trading (0.0 a 1.0).")
-    realTrading: Optional[float] = Field(0.95, description="Umbral para operativa real (0.0 a 1.0).")
-    dataVerificationPriceDiscrepancyPercent: Optional[float] = Field(5.0, description="Porcentaje máximo de discrepancia de precio permitido entre fuentes de datos para verificación.")
-    dataVerificationMinVolumeQuote: Optional[float] = Field(1000.0, description="Volumen mínimo en la moneda de cotización para que un activo sea considerado líquido para verificación.")
-
-class AiStrategyConfiguration(BaseModel):
-    id: UUID = Field(default_factory=uuid4)
-    name: str
-    appliesToStrategies: Optional[List[str]] = None
-    appliesToPairs: Optional[List[str]] = None
-    geminiModelName: Optional[str] = None
-    geminiPromptTemplate: Optional[str] = None
-    indicatorWeights: Optional[Dict[str, float]] = None
-    confidenceThresholds: Optional[AIAnalysisConfidenceThresholds] = None
-    maxContextWindowTokens: Optional[int] = None
-
-class McpServerPreference(BaseModel):
-    id: str
-    type: str
-    url: Optional[str] = None
-    credentialId: Optional[UUID] = None
-    isEnabled: Optional[bool] = None
-    queryFrequencySeconds: Optional[int] = None
-    reliabilityWeight: Optional[float] = None
-    customParameters: Optional[Dict[str, Any]] = None
-
-class DashboardLayoutProfile(BaseModel):
-    name: str
-    configuration: Any
-
-class CloudSyncPreferences(BaseModel):
-    isEnabled: Optional[bool] = None
-    lastSuccessfulSync: Optional[datetime] = None
-
-class UserConfiguration(BaseModel):
-    id: UUID = Field(default_factory=uuid4)
-    user_id: UUID
-    telegramChatId: Optional[str] = None
-    notificationPreferences: Optional[List[NotificationPreference]] = None
-    enableTelegramNotifications: Optional[bool] = True
-    defaultPaperTradingCapital: Optional[float] = None
-    paperTradingActive: Optional[bool] = False
-    watchlists: Optional[List[Watchlist]] = None
-    favoritePairs: Optional[List[str]] = None
-    riskProfile: Optional[str] = None
-    riskProfileSettings: Optional[RiskProfileSettings] = None
-    realTradingSettings: Optional[RealTradingSettings] = None
-    aiStrategyConfigurations: Optional[List[AiStrategyConfiguration]] = None
-    aiAnalysisConfidenceThresholds: Optional[AIAnalysisConfidenceThresholds] = None
-    mcpServerPreferences: Optional[List[McpServerPreference]] = None
-    selectedTheme: Optional[str] = 'dark'
-    dashboardLayoutProfiles: Optional[Dict[str, DashboardLayoutProfile]] = None
-    activeDashboardLayoutProfileId: Optional[str] = None
-    dashboardLayoutConfig: Optional[Any] = None
-    cloudSyncPreferences: Optional[CloudSyncPreferences] = None
-    createdAt: Optional[datetime] = Field(default_factory=datetime.utcnow)
-    updatedAt: Optional[datetime] = Field(default_factory=datetime.utcnow)
-
-    model_config = ConfigDict(
-        use_enum_values=True,
-        populate_by_name=True,
-        arbitrary_types_allowed=True
-    )
+# The classes previously defined here are now imported from the core domain models
+# to ensure a single source of truth.
 
 class NotificationPriority(str, Enum):
     LOW = "low"
@@ -394,8 +319,8 @@ __all__ = [
     "RiskProfileSettings",
     "RealTradingSettings",
     "AIAnalysisConfidenceThresholds",
-    "AiStrategyConfiguration",
-    "McpServerPreference",
+    "AIStrategyConfiguration",
+    "MCPServerPreference",
     "DashboardLayoutProfile",
     "CloudSyncPreferences",
     "UserConfiguration",

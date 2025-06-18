@@ -1,6 +1,6 @@
-from PySide6.QtCore import QObject, QThread
+from PySide6.QtCore import QThread
 
-class BaseMainWindow(QObject):
+class BaseMainWindow:
     """
     Clase base para type hinting de MainWindow y evitar importaciones circulares.
     """

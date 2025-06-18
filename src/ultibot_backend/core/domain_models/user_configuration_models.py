@@ -8,7 +8,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class NotificationChannel(str, Enum):
@@ -159,6 +159,15 @@ class RealTradingSettings(BaseModel):
         None, 
         description="Auto pause conditions"
     )
+    daily_capital_risked_usd: Optional[float] = Field(
+        0.0, 
+        ge=0, 
+        description="Total capital risked in USD for the current day"
+    )
+    last_daily_reset: Optional[datetime] = Field(
+        None, 
+        description="Timestamp of the last daily capital reset"
+    )
 
 
 class ConfidenceThresholds(BaseModel):
@@ -177,9 +186,11 @@ class ConfidenceThresholds(BaseModel):
         description="Confidence threshold for real trading"
     )
 
-    @validator('real_trading', allow_reuse=True)
-    def real_trading_should_be_higher_than_paper(cls, v, values):
+    @field_validator('real_trading')
+    @classmethod
+    def real_trading_should_be_higher_than_paper(cls, v, info):
         """Validate that real trading threshold is higher than paper trading."""
+        values = info.data
         if v is not None and 'paper_trading' in values and values['paper_trading'] is not None:
             if v <= values['paper_trading']:
                 raise ValueError('Real trading confidence threshold should be higher than paper trading')
@@ -390,7 +401,8 @@ class UserConfiguration(BaseModel):
             datetime: lambda v: v.isoformat() if v else None
         }
 
-    @validator('ai_strategy_configurations', allow_reuse=True)
+    @field_validator('ai_strategy_configurations')
+    @classmethod
     def validate_unique_ai_config_ids(cls, v):
         """Validate that AI configuration IDs are unique."""
         if v is None:
@@ -401,7 +413,8 @@ class UserConfiguration(BaseModel):
             raise ValueError('AI strategy configuration IDs must be unique')
         return v
 
-    @validator('watchlists', allow_reuse=True)
+    @field_validator('watchlists')
+    @classmethod
     def validate_unique_watchlist_ids(cls, v):
         """Validate that watchlist IDs are unique."""
         if v is None:
@@ -412,7 +425,8 @@ class UserConfiguration(BaseModel):
             raise ValueError('Watchlist IDs must be unique')
         return v
 
-    @validator('mcp_server_preferences', allow_reuse=True)
+    @field_validator('mcp_server_preferences')
+    @classmethod
     def validate_unique_mcp_ids(cls, v):
         """Validate that MCP server IDs are unique."""
         if v is None:

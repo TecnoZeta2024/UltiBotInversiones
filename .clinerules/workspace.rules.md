@@ -125,3 +125,4 @@
 - **Pydantic** para todos los modelos de datos.
 - **`async`/`await`** para toda la I/O.
 - **Arquitectura Hexagonal, CQRS, Orientada a Eventos y MVVM** son la ley.
+- **Resolución de Errores de Linter/Type Checker:** Tras aplicar cambios con `replace_in_file` o `write_to_file`, presta atención inmediata a los errores reportados por Pylance, Pylint, mypy, etc. Prioriza la resolución de estos errores, utilizando `read_file` para examinar definiciones relevantes si es necesario, antes de proceder con la validación funcional del test.

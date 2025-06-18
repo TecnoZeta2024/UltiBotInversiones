@@ -4,6 +4,7 @@ from uuid import UUID
 from shared.data_types import UserConfiguration
 from ultibot_backend.services.config_service import ConfigurationService
 from ultibot_backend.dependencies import get_config_service
+from ultibot_backend.api.v1.models.config_models import UserConfigurationUpdate # Importación modificada a absoluta
 from ultibot_backend.core.exceptions import (
     ConfigurationError,
     BinanceAPIError,
@@ -39,7 +40,7 @@ async def get_user_config(
 
 @router.patch("/config", response_model=UserConfiguration)
 async def update_user_config(
-    updated_config: UserConfiguration,
+    config_update_payload: UserConfigurationUpdate, # Parámetro modificado
     config_service: ConfigurationService = Depends(get_config_service)
 ):
     """
@@ -48,7 +49,7 @@ async def update_user_config(
     try:
         existing_config = await config_service.get_user_configuration()
         
-        update_data = updated_config.model_dump(exclude_unset=True)
+        update_data = config_update_payload.model_dump(exclude_unset=True) # Usar nuevo nombre de parámetro
         
         # Prevenir la sobreescritura de campos críticos
         update_data.pop('user_id', None)

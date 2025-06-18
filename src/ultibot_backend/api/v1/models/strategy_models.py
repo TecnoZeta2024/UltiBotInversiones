@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 from ultibot_backend.core.domain_models.trading_strategy_models import (
     BaseStrategyType,
@@ -235,7 +235,8 @@ class ActivateStrategyRequest(BaseModel):
         description="Trading mode to activate/deactivate"
     )
 
-    @validator('mode')
+    @field_validator('mode')
+    @classmethod
     def validate_mode(cls, v):
         """Validate trading mode."""
         if v not in ['paper', 'real']:
@@ -258,4 +259,3 @@ class ErrorResponse(BaseModel):
     detail: str = Field(..., description="Error detail message")
     error_code: Optional[str] = Field(None, description="Specific error code")
     context: Optional[Dict[str, Any]] = Field(None, description="Additional error context")
-

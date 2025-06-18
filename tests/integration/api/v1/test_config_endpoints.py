@@ -19,7 +19,7 @@ async def test_get_user_config_initial(client):
     response = await client.get("/api/v1/config")
     assert response.status_code == 200
     config_data = response.json()
-    assert config_data["userId"] == str(FIXED_USER_ID)
+    assert config_data["user_id"] == str(FIXED_USER_ID)
     assert config_data["selectedTheme"] == "dark"
     assert config_data["defaultPaperTradingCapital"] == 10000.0
     assert config_data["paperTradingActive"] is True # Verificar el nuevo campo
@@ -41,7 +41,7 @@ async def test_patch_user_config_update_paper_trading(client):
     
     assert response.status_code == 200
     updated_config = response.json()
-    assert updated_config["userId"] == str(FIXED_USER_ID)
+    assert updated_config["user_id"] == str(FIXED_USER_ID)
     assert updated_config["paperTradingActive"] is False
     assert updated_config["defaultPaperTradingCapital"] == 500.50
     # Verificar que otros campos por defecto no se hayan alterado

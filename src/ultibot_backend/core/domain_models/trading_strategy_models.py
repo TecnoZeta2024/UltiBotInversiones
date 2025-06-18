@@ -8,7 +8,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field, validator, ValidationError
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 
 class Timeframe(str, Enum):
@@ -107,14 +107,16 @@ class DayTradingParameters(BaseModel):
         description="Timeframes for exit analysis (e.g., ['1h'])"
     )
 
-    @validator('entry_timeframes')
+    @field_validator('entry_timeframes')
+    @classmethod
     def validate_entry_timeframes_not_empty(cls, v):
         """Validate that entry_timeframes is not empty."""
         if not v:
             raise ValueError("Entry timeframes cannot be empty. Must contain at least one timeframe.")
         return v
 
-    @validator('entry_timeframes', 'exit_timeframes')
+    @field_validator('entry_timeframes', 'exit_timeframes')
+    @classmethod
     def validate_and_check_unique_timeframes(cls, v):
         """Validate that timeframes are valid enum members and unique."""
         if v is None:
@@ -129,17 +131,19 @@ class DayTradingParameters(BaseModel):
             unique_timeframes.add(tf)
         return v
 
-    @validator('macd_slow_period')
-    def slow_period_must_be_greater_than_fast(cls, v, values):
+    @field_validator('macd_slow_period')
+    @classmethod
+    def slow_period_must_be_greater_than_fast(cls, v, info):
         """Validate that slow period is greater than fast period."""
-        if 'macd_fast_period' in values and v <= values['macd_fast_period']:
+        if 'macd_fast_period' in info.data and v <= info.data['macd_fast_period']:
             raise ValueError('MACD slow period must be greater than fast period')
         return v
 
-    @validator('rsi_overbought')
-    def overbought_must_be_greater_than_oversold(cls, v, values):
+    @field_validator('rsi_overbought')
+    @classmethod
+    def overbought_must_be_greater_than_oversold(cls, v, info):
         """Validate that overbought threshold is greater than oversold threshold."""
-        if 'rsi_oversold' in values and v <= values['rsi_oversold']:
+        if 'rsi_oversold' in info.data and v <= info.data['rsi_oversold']:
             raise ValueError('RSI overbought must be greater than oversold')
         return v
 
@@ -217,10 +221,11 @@ class GridTradingParameters(BaseModel):
         description="Profit percentage per grid level"
     )
     
-    @validator('grid_upper_price')
-    def upper_price_must_be_greater_than_lower(cls, v, values):
+    @field_validator('grid_upper_price')
+    @classmethod
+    def upper_price_must_be_greater_than_lower(cls, v, info):
         """Validate that upper price is greater than lower price."""
-        if 'grid_lower_price' in values and v <= values['grid_lower_price']:
+        if 'grid_lower_price' in info.data and v <= info.data['grid_lower_price']:
             raise ValueError('Grid upper price must be greater than lower price')
         return v
 
@@ -289,13 +294,14 @@ class DynamicFilter(BaseModel):
         description="Asset categories to include"
     )
 
-    @validator('max_daily_volatility_percentage')
-    def max_volatility_must_be_greater_than_min(cls, v, values):
+    @field_validator('max_daily_volatility_percentage')
+    @classmethod
+    def max_volatility_must_be_greater_than_min(cls, v, info):
         """Validate that max volatility is greater than min volatility."""
         if (v is not None and 
-            'min_daily_volatility_percentage' in values and 
-            values['min_daily_volatility_percentage'] is not None and 
-            v <= values['min_daily_volatility_percentage']):
+            'min_daily_volatility_percentage' in info.data and 
+            info.data['min_daily_volatility_percentage'] is not None and 
+            v <= info.data['min_daily_volatility_percentage']):
             raise ValueError('Max daily volatility must be greater than min daily volatility')
         return v
 
@@ -352,18 +358,20 @@ class PerformanceMetrics(BaseModel):
     sharpe_ratio: Optional[float] = Field(None)
     last_calculated_at: Optional[datetime] = None
 
-    @validator('winning_trades')
-    def winning_trades_validation(cls, v, values):
+    @field_validator('winning_trades')
+    @classmethod
+    def winning_trades_validation(cls, v, info):
         """Validate winning trades count."""
-        if 'total_trades_executed' in values and v > values['total_trades_executed']:
+        if 'total_trades_executed' in info.data and v > info.data['total_trades_executed']:
             raise ValueError('Winning trades cannot exceed total trades')
         return v
 
-    @validator('losing_trades')
-    def losing_trades_validation(cls, v, values):
+    @field_validator('losing_trades')
+    @classmethod
+    def losing_trades_validation(cls, v, info):
         """Validate losing trades count."""
-        total = values.get('total_trades_executed', 0)
-        winning = values.get('winning_trades', 0)
+        total = info.data.get('total_trades_executed', 0)
+        winning = info.data.get('winning_trades', 0)
         if v + winning > total:
             raise ValueError('Sum of winning and losing trades cannot exceed total trades')
         return v
@@ -529,22 +537,24 @@ class TradingStrategyConfig(BaseModel):
             datetime: lambda v: v.isoformat() if v else None
         }
 
-    @validator('config_name')
+    @field_validator('config_name')
+    @classmethod
     def config_name_must_not_be_empty(cls, v):
         """Validate that config name is not empty after stripping."""
         if not v.strip():
             raise ValueError('Configuration name cannot be empty')
         return v.strip()
 
-    @validator('parameters')
-    def validate_parameters_match_strategy_type(cls, v, values):
+    @field_validator('parameters')
+    @classmethod
+    def validate_parameters_match_strategy_type(cls, v, info):
         """Validate that parameters match the strategy type."""
-        if 'base_strategy_type' not in values:
+        if 'base_strategy_type' not in info.data:
             # This should ideally not happen if base_strategy_type is a required field
             # and processed before this validator.
             return v # Or raise an error if base_strategy_type is strictly needed here
 
-        strategy_type_enum_member = values.get('base_strategy_type')
+        strategy_type_enum_member = info.data.get('base_strategy_type')
 
         # Ensure strategy_type_enum_member is an actual Enum member
         if not isinstance(strategy_type_enum_member, BaseStrategyType):
@@ -596,13 +606,14 @@ class TradingStrategyConfig(BaseModel):
 
         return v
 
-    @validator('is_active_real_mode')
-    def real_mode_requires_validation(cls, v, values):
+    @field_validator('is_active_real_mode')
+    @classmethod
+    def real_mode_requires_validation(cls, v, info):
         """Add validation warnings for real mode activation."""
-        if v and values.get('is_active_paper_mode', False):
+        if v and info.data.get('is_active_paper_mode', False):
             # Both modes active - could be intentional for comparison
             pass
-        elif v and not values.get('is_active_paper_mode', False):
+        elif v and not info.data.get('is_active_paper_mode', False):
             # Only real mode active - should have been tested in paper first
             # This is a business logic warning, not a validation error
             pass

@@ -22,8 +22,12 @@ def mock_binance_adapter():
     return adapter
 
 @pytest.fixture
-def market_data_service(mock_credential_service, mock_binance_adapter):
-    return MarketDataService(mock_credential_service, mock_binance_adapter)
+def market_data_service(mock_credential_service, mock_binance_adapter, mock_persistence_service_integration):
+    return MarketDataService(
+        credential_service=mock_credential_service,
+        binance_adapter=mock_binance_adapter,
+        persistence_service=mock_persistence_service_integration
+    )
 
 @pytest.fixture
 def sample_user_id():
@@ -49,7 +53,7 @@ def sample_binance_credential(sample_user_id):
     )
 
 @pytest.mark.asyncio
-async def test_get_binance_connection_status_success(market_data_service: MarketDataService, mock_credential_service, sample_user_id, sample_binance_credential):
+async def test_get_binance_connection_status_success(market_data_service: MarketDataService, mock_credential_service, sample_binance_credential):
     mock_credential_service.get_credential.return_value = sample_binance_credential
     mock_credential_service.verify_credential.return_value = True
     # verify_credential actualiza sample_binance_credential internamente (last_verified_at, permissions)
@@ -57,7 +61,7 @@ async def test_get_binance_connection_status_success(market_data_service: Market
     # o confiar en que el mock de verify_credential lo haría.
     # Por simplicidad, asumimos que los valores en sample_binance_credential son post-verificación.
     
-    status_result = await market_data_service.get_binance_connection_status(sample_user_id)
+    status_result = await market_data_service.get_binance_connection_status()
 
     assert status_result.is_connected is True
     assert status_result.status_message == "Conexión con Binance exitosa."
@@ -69,38 +73,38 @@ async def test_get_binance_connection_status_success(market_data_service: Market
     mock_credential_service.verify_credential.assert_called_once_with(sample_binance_credential)
 
 @pytest.mark.asyncio
-async def test_get_binance_connection_status_no_credentials(market_data_service: MarketDataService, mock_credential_service, sample_user_id):
+async def test_get_binance_connection_status_no_credentials(market_data_service: MarketDataService, mock_credential_service):
     mock_credential_service.get_credential.return_value = None
 
-    status_result = await market_data_service.get_binance_connection_status(sample_user_id)
+    status_result = await market_data_service.get_binance_connection_status()
 
     assert status_result.is_connected is False
     assert status_result.status_message == "Credenciales de Binance no encontradas. Por favor, configúrelas."
     assert status_result.status_code == "CREDENTIALS_NOT_FOUND"
 
 @pytest.mark.asyncio
-async def test_get_binance_connection_status_verification_failed(market_data_service: MarketDataService, mock_credential_service, sample_user_id, sample_binance_credential):
+async def test_get_binance_connection_status_verification_failed(market_data_service: MarketDataService, mock_credential_service, sample_binance_credential):
     mock_credential_service.get_credential.return_value = sample_binance_credential
     mock_credential_service.verify_credential.return_value = False # Simula fallo de verificación
 
-    status_result = await market_data_service.get_binance_connection_status(sample_user_id)
+    status_result = await market_data_service.get_binance_connection_status()
 
     assert status_result.is_connected is False
     assert status_result.status_message == "Fallo en la verificación de conexión con Binance. Revise sus credenciales y permisos."
     assert status_result.status_code == "VERIFICATION_FAILED"
 
 @pytest.mark.asyncio
-async def test_get_binance_connection_status_credential_error(market_data_service: MarketDataService, mock_credential_service, sample_user_id):
+async def test_get_binance_connection_status_credential_error(market_data_service: MarketDataService, mock_credential_service):
     mock_credential_service.get_credential.side_effect = CredentialError("Decryption failed")
 
-    status_result = await market_data_service.get_binance_connection_status(sample_user_id)
+    status_result = await market_data_service.get_binance_connection_status()
     
     assert status_result.is_connected is False
     assert "Error al acceder a las credenciales de Binance: Decryption failed" in status_result.status_message
     assert status_result.status_code == "CREDENTIAL_ERROR"
 
 @pytest.mark.asyncio
-async def test_get_binance_connection_status_binance_api_error(market_data_service: MarketDataService, mock_credential_service, sample_user_id, sample_binance_credential):
+async def test_get_binance_connection_status_binance_api_error(market_data_service: MarketDataService, mock_credential_service, sample_binance_credential):
     mock_credential_service.get_credential.return_value = sample_binance_credential
     
     # Crear una instancia de BinanceAPIError y establecer el atributo code
@@ -108,7 +112,7 @@ async def test_get_binance_connection_status_binance_api_error(market_data_servi
     mock_api_error.code = "BINANCE_SPECIFIC_ERROR_CODE" # Simular un código específico
     mock_credential_service.verify_credential.side_effect = mock_api_error
 
-    status_result = await market_data_service.get_binance_connection_status(sample_user_id)
+    status_result = await market_data_service.get_binance_connection_status()
 
     assert status_result.is_connected is False
     assert "Error de la API de Binance: API unavailable" in status_result.status_message
@@ -116,12 +120,12 @@ async def test_get_binance_connection_status_binance_api_error(market_data_servi
 
 
 @pytest.mark.asyncio
-async def test_get_binance_spot_balances_success(market_data_service: MarketDataService, mock_credential_service, mock_binance_adapter, sample_user_id, sample_binance_credential):
+async def test_get_binance_spot_balances_success(market_data_service: MarketDataService, mock_credential_service, mock_binance_adapter, sample_binance_credential):
     mock_credential_service.get_credential.return_value = sample_binance_credential
     expected_balances = [AssetBalance(asset="BTC", free=1.0, locked=0.0, total=1.0)]
     mock_binance_adapter.get_spot_balances.return_value = expected_balances
 
-    balances = await market_data_service.get_binance_spot_balances(sample_user_id)
+    balances = await market_data_service.get_binance_spot_balances()
 
     assert balances == expected_balances
     mock_credential_service.get_credential.assert_called_once_with(
@@ -133,20 +137,19 @@ async def test_get_binance_spot_balances_success(market_data_service: MarketData
     )
 
 @pytest.mark.asyncio
-async def test_get_binance_spot_balances_credential_not_found(market_data_service: MarketDataService, mock_credential_service, sample_user_id):
+async def test_get_binance_spot_balances_credential_not_found(market_data_service: MarketDataService, mock_credential_service):
     mock_credential_service.get_credential.return_value = None
 
     with pytest.raises(CredentialError) as excinfo:
-        await market_data_service.get_binance_spot_balances(sample_user_id)
+        await market_data_service.get_binance_spot_balances()
     assert "Credenciales de Binance no encontradas para obtener balances." in str(excinfo.value)
 
 @pytest.mark.asyncio
-async def test_get_binance_spot_balances_api_error(market_data_service: MarketDataService, mock_credential_service, mock_binance_adapter, sample_user_id, sample_binance_credential):
+async def test_get_binance_spot_balances_api_error(market_data_service: MarketDataService, mock_credential_service, mock_binance_adapter, sample_binance_credential):
     mock_credential_service.get_credential.return_value = sample_binance_credential
     mock_binance_adapter.get_spot_balances.side_effect = BinanceAPIError("Failed to fetch balances")
 
     from ultibot_backend.core.exceptions import UltiBotError # Importar aquí para evitar error de importación circular si se mueve arriba
     with pytest.raises(UltiBotError) as excinfo: # MarketDataService envuelve BinanceAPIError en UltiBotError
-        await market_data_service.get_binance_spot_balances(sample_user_id)
+        await market_data_service.get_binance_spot_balances()
     assert "No se pudieron obtener los balances de Binance: Failed to fetch balances" in str(excinfo.value)
-

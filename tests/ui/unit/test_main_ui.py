@@ -13,7 +13,7 @@ from PySide6.QtCore import QTimer, Qt, QCoreApplication
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'src')))
 
 # Importar la función a testear
-from ultibot_ui.main import start_application
+from ultibot_ui.main import main as start_application
 
 @pytest.fixture(scope="session")
 def qapp():
@@ -88,17 +88,17 @@ async def test_start_application_success(qapp):
                     with patch('ultibot_ui.main.httpx.AsyncClient') as MockAsyncClient:
                         MockAsyncClient.return_value.__aenter__.return_value = AsyncMock() # Mockear el context manager
 
-                        # Ejecutar la aplicación en un hilo separado o con un temporizador
-                        # para permitir que el loop de eventos de Qt se ejecute brevemente
-                        # y luego se cierre.
-                        
-                        # Usar QTimer.singleShot para cerrar la aplicación después de un breve retraso
-                        # Esto es crucial para que el test no se quede colgado esperando la interacción del usuario
-                        QTimer.singleShot(100, qapp.quit) # Cierra la app después de 100ms
+                        # Mockear sys.exit para evitar que el test falle
+                        with patch('sys.exit') as mock_exit:
+                            # Usar QTimer.singleShot para cerrar la aplicación después de un breve retraso
+                            # Esto es crucial para que el test no se quede colgado esperando la interacción del usuario
+                            QTimer.singleShot(100, qapp.quit) # Cierra la app después de 100ms
 
-                        with pytest.raises(SystemExit) as excinfo:
-                            await start_application()
-                        assert excinfo.value.code == 0
+                            # Ejecutar la aplicación
+                            start_application()
+
+                            # Verificar que sys.exit fue llamado, indicando un cierre limpio
+                            mock_exit.assert_called_once_with(0)
 
                         # Afirmaciones
                         MockAPIClient.assert_called_once()

@@ -33,7 +33,7 @@ class PortfolioService:
             return
 
         try:
-            config_data = await self.persistence_service.get_user_configuration()
+            config_data = await self.persistence_service.get_user_configuration(str(user_id))
             if not config_data:
                 raise ConfigurationError(f"No se encontró configuración para el usuario {user_id}.")
 
@@ -65,7 +65,7 @@ class PortfolioService:
         self.user_id = user_id
         self.paper_trading_assets = {}
         try:
-            config_data = await self.persistence_service.get_user_configuration()
+            config_data = await self.persistence_service.get_user_configuration(str(user_id))
             if config_data:
                 if 'id' in config_data and isinstance(config_data['id'], UUID):
                     config_data['id'] = str(config_data['id'])
@@ -201,7 +201,7 @@ class PortfolioService:
 
         self.paper_trading_balance += amount
         try:
-            config_data = await self.persistence_service.get_user_configuration()
+            config_data = await self.persistence_service.get_user_configuration(str(user_id))
             if config_data:
                 if 'id' in config_data and isinstance(config_data['id'], UUID):
                     config_data['id'] = str(config_data['id'])
@@ -299,4 +299,3 @@ class PortfolioService:
             raise PortfolioError(f"No se pudo obtener el saldo de USDT de Binance: {e}") from e
         except Exception as e:
             raise PortfolioError(f"Error inesperado al obtener el saldo de USDT: {e}") from e
-

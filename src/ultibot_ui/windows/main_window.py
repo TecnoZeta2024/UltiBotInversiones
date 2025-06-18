@@ -12,7 +12,7 @@ from uuid import UUID
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from shared.data_types import UserConfiguration, AiStrategyConfiguration
+from shared.data_types import UserConfiguration, AIStrategyConfiguration
 from ultibot_ui.models import BaseMainWindow
 from ultibot_ui.widgets.sidebar_navigation_widget import SidebarNavigationWidget
 from ultibot_ui.windows.dashboard_view import DashboardView

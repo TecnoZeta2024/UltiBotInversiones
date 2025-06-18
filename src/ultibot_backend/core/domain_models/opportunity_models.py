@@ -26,6 +26,8 @@ class OpportunityStatus(str, Enum):
     PENDING_USER_CONFIRMATION_REAL = "pending_user_confirmation_real"
     CONVERTED_TO_TRADE_PAPER = "converted_to_trade_paper"
     CONVERTED_TO_TRADE_REAL = "converted_to_trade_real"
+    CONFIRMED_BY_AI = "confirmed_by_ai"
+    CONFIRMED_BY_AUTONOMOUS = "confirmed_by_autonomous"
     EXPIRED = "expired"
     ERROR_IN_PROCESSING = "error_in_processing"
     PENDING_FURTHER_INVESTIGATION = "pending_further_investigation"
@@ -264,11 +266,14 @@ class PostFactoSimulationResults(BaseModel):
     notes: Optional[str] = Field(None, description="Simulation notes")
 
 
+from uuid import UUID
+
 class Opportunity(BaseModel):
     """Trading opportunity model."""
     
     id: Optional[str] = Field(None, description="Unique identifier")
     user_id: str = Field(..., description="User identifier")
+    strategy_id: Optional[UUID] = Field(None, description="ID of the strategy associated with this opportunity")
     
     symbol: str = Field(..., description="Trading symbol (e.g., 'BTC/USDT')")
     detected_at: datetime = Field(..., description="When opportunity was detected")

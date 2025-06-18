@@ -1,11 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+import logging
+from datetime import datetime
 from typing import Annotated, Optional, Literal
 from uuid import UUID
 
-from shared.data_types import PortfolioSnapshot, PortfolioSummary
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from pydantic import BaseModel
+
+from shared.data_types import PortfolioSnapshot, PortfolioSummary, PerformanceMetrics # Añadir PerformanceMetrics
 from ultibot_backend.services.portfolio_service import PortfolioService
+from ultibot_backend.services.trading_report_service import TradingReportService # Importar TradingReportService
 from ultibot_backend import dependencies as deps
 from ultibot_backend.app_config import settings
+
+# Configurar logging
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -66,6 +75,7 @@ async def get_portfolio_snapshot(
             )
             
     except Exception as e:
+        logger.error(f"Error al obtener snapshot del portafolio: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve portfolio snapshot: {str(e)}"
@@ -105,6 +115,7 @@ async def get_portfolio_summary(
             )
             
     except Exception as e:
+        logger.error(f"Error al obtener resumen del portafolio: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve portfolio summary: {str(e)}"
@@ -157,8 +168,66 @@ async def get_available_balance(
             )
             
     except Exception as e:
+        logger.error(f"Error al obtener balance disponible: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve available balance: {str(e)}"
         )
 
+@router.get("/paper/performance_summary", response_model=PerformanceMetrics, tags=["portfolio"])
+async def get_paper_trading_performance(
+    request: Request,
+    symbol: Optional[str] = Query(None, description="Filtrar por par de trading (ej. BTCUSDT)"),
+    start_date: Optional[datetime] = Query(None, description="Fecha de inicio para filtrar"),
+    end_date: Optional[datetime] = Query(None, description="Fecha de fin para filtrar"),
+    report_service: TradingReportService = Depends(deps.get_trading_report_service)
+) -> PerformanceMetrics:
+    """
+    Obtiene las métricas de rendimiento consolidadas para Paper Trading del usuario fijo.
+    """
+    user_id = settings.FIXED_USER_ID
+    try:
+        metrics = await report_service.calculate_performance_metrics(
+            user_id=user_id,
+            mode='paper',
+            symbol=symbol,
+            start_date=start_date,
+            end_date=end_date
+        )
+        return metrics
+        
+    except Exception as e:
+        logger.error(f"Error al calcular métricas de rendimiento: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al calcular métricas de rendimiento: {str(e)}"
+        )
+
+@router.get("/real/performance_summary", response_model=PerformanceMetrics, tags=["portfolio"])
+async def get_real_trading_performance(
+    request: Request,
+    symbol: Optional[str] = Query(None, description="Filtrar por par de trading (ej. BTCUSDT)"),
+    start_date: Optional[datetime] = Query(None, description="Fecha de inicio para filtrar"),
+    end_date: Optional[datetime] = Query(None, description="Fecha de fin para filtrar"),
+    report_service: TradingReportService = Depends(deps.get_trading_report_service)
+) -> PerformanceMetrics:
+    """
+    Obtiene las métricas de rendimiento consolidadas para Trading Real del usuario fijo.
+    """
+    user_id = settings.FIXED_USER_ID
+    try:
+        metrics = await report_service.calculate_performance_metrics(
+            user_id=user_id,
+            mode='real',
+            symbol=symbol,
+            start_date=start_date,
+            end_date=end_date
+        )
+        return metrics
+        
+    except Exception as e:
+        logger.error(f"Error al calcular métricas de rendimiento real: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al calcular métricas de rendimiento real: {str(e)}"
+        )
