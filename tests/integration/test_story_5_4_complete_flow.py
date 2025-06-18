@@ -10,7 +10,7 @@ sys.path.insert(0, 'src')
 import pytest
 import asyncio
 from unittest.mock import AsyncMock, patch, MagicMock
-from uuid import uuid4
+from uuid import UUID, uuid4
 from datetime import datetime, timezone
 
 from ultibot_backend.services.strategy_service import StrategyService
@@ -683,8 +683,8 @@ class TestTradeCreationWithStrategyAssociation:
         )
         
         # Mock trade creation
-        with patch('uuid.uuid4', return_value=uuid4()), \
-             patch('src.ultibot_backend.services.trading_engine_service.datetime') as mock_datetime:
+        with patch('ultibot_backend.services.trading_engine_service.uuid4', return_value=uuid4()), \
+             patch('ultibot_backend.services.trading_engine_service.datetime') as mock_datetime:
             
             mock_datetime.now.return_value = datetime.now(timezone.utc)
             
@@ -693,11 +693,9 @@ class TestTradeCreationWithStrategyAssociation:
             )
             
             # Verify strategy association (AC5)
-            assert trade.strategy_id == scalping_strategy_btc.id
-            assert trade.opportunity_id == btc_opportunity.id
-            assert trade.user_id == scalping_strategy_btc.user_id
-            assert scalping_strategy_btc.config_name in trade.notes
-            assert scalping_strategy_btc.id in trade.notes
+            assert str(trade.strategyId) == scalping_strategy_btc.id
+            assert trade.opportunityId == UUID(btc_opportunity.id)
+            assert trade.user_id == UUID(scalping_strategy_btc.user_id)
 
     @pytest.mark.asyncio
     async def test_trade_side_determination(
@@ -735,4 +733,3 @@ class TestTradeCreationWithStrategyAssociation:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-

@@ -10,28 +10,6 @@ from shared.data_types import UserConfiguration
 # Para la v1.0, se puede asumir un user_id fijo como en el backend
 FIXED_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
 
-@pytest.fixture(scope="module")
-async def client():
-    """
-    Fixture para un cliente de prueba asíncrono de FastAPI.
-    """
-    async with AsyncClient(app=app, base_url="http://test") as ac:
-        yield ac
-
-@pytest.fixture(autouse=True)
-async def cleanup_db_after_each_test():
-    """
-    Limpia la base de datos después de cada test para asegurar un estado limpio.
-    """
-    persistence_service = SupabasePersistenceService()
-    await persistence_service.connect()
-    try:
-        # Eliminar la configuración del usuario fijo si existe
-        await persistence_service.execute_raw_sql(f"DELETE FROM user_configurations WHERE user_id = '{FIXED_USER_ID}';")
-        await persistence_service.execute_raw_sql(f"DELETE FROM api_credentials WHERE user_id = '{FIXED_USER_ID}';")
-        await persistence_service.execute_raw_sql(f"DELETE FROM notifications WHERE user_id = '{FIXED_USER_ID}';")
-    finally:
-        await persistence_service.disconnect()
 
 @pytest.mark.asyncio
 async def test_get_user_config_initial(client):
@@ -124,4 +102,3 @@ async def test_patch_user_config_invalid_data(client):
     
     assert response.status_code == 422 # Unprocessable Entity (error de validación de Pydantic)
     assert "value is not a valid float" in response.json()["detail"][0]["msg"]
-

@@ -97,9 +97,9 @@ class SRSTTriage:
                           Si False, solo colecta (import errors).
         """
         if execution_mode:
-            print("🚀 Ejecutando 'poetry run pytest' para obtener errores de runtime...")
+            print("🚀 Ejecutando 'poetry run pytest' para obtener errores de runtime (límite de 15s)...")
             command = ["poetry", "run", "pytest"]
-            timeout = 600  # 10 minutos para ejecución completa
+            timeout = 15  # Límite de 15 segundos para la ejecución de tests
         else:
             print("🚀 Ejecutando 'poetry run pytest --collect-only -q' para obtener errores de colección...")
             command = ["poetry", "run", "pytest", "--collect-only", "-q"]
@@ -129,8 +129,26 @@ class SRSTTriage:
             print("❌ Error: 'poetry' no se encontró. Asegúrate de que poetry esté instalado y en el PATH.")
             return ""
         except subprocess.TimeoutExpired:
-            print(f"❌ Error: La ejecución de pytest excedió el tiempo límite de {timeout//60} minutos.")
-            return ""
+            print(f"⏳ La ejecución de pytest excedió el tiempo límite de {timeout} segundos.")
+            print("📖 Leyendo logs para encontrar la causa del bucle...")
+            log_content = ""
+            try:
+                backend_log = self.base_path / "logs" / "backend.log"
+                frontend_log = self.base_path / "logs" / "frontend.log"
+                if backend_log.exists():
+                    log_content += f"--- Contenido de backend.log ---\n{backend_log.read_text(encoding='utf-8', errors='replace')}\n"
+                if frontend_log.exists():
+                    log_content += f"--- Contenido de frontend.log ---\n{frontend_log.read_text(encoding='utf-8', errors='replace')}\n"
+                
+                if not log_content:
+                    print("⚠️ No se encontraron archivos de log o están vacíos.")
+                    return "TimeoutExpired: No se encontraron logs para analizar."
+                
+                print("✅ Logs leídos. Analizando su contenido.")
+                return self._remove_ansi_codes(log_content)
+            except Exception as log_e:
+                print(f"❌ Error al leer los archivos de log: {log_e}")
+                return f"TimeoutExpired: Ocurrió un error al leer los logs: {log_e}"
         except Exception as e:
             print(f"❌ Ocurrió un error inesperado al ejecutar pytest: {e}")
             return ""

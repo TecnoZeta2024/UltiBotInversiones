@@ -10,20 +10,7 @@ import logging
 from typing import Optional, List, Callable, Coroutine
 from uuid import UUID
 
-from PySide6.QtCore import Qt, QTimer, QThread
-from PySide6.QtGui import QAction
-from PySide6.QtWidgets import (
-    QHBoxLayout,
-    QLabel,
-    QMainWindow,
-    QPushButton,
-    QStackedWidget,
-    QStatusBar,
-    QTextEdit,
-    QVBoxLayout,
-    QMenuBar,
-    QWidget
-)
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from shared.data_types import UserConfiguration, AiStrategyConfiguration
 from ultibot_ui.models import BaseMainWindow
@@ -40,57 +27,56 @@ from ultibot_ui.workers import ApiWorker
 
 logger = logging.getLogger(__name__)
 
-class MainWindow(QMainWindow, BaseMainWindow):
+class MainWindow(QtWidgets.QMainWindow, BaseMainWindow):
     """Ventana principal de la aplicación UltiBotInversiones."""
 
     def __init__(
         self,
         user_id: UUID,
         api_client: UltiBotAPIClient,
-        parent: Optional[QWidget] = None,
+        parent: Optional[QtWidgets.QWidget] = None,
     ):
         """Inicializa la ventana principal."""
         super().__init__(parent)
         self.user_id = user_id
         self.api_client = api_client
         
-        self._initialization_complete = False
-        self.active_threads: List[QThread] = []
+        self.active_threads: List[QtCore.QThread] = []
 
         self.setWindowTitle("UltiBotInversiones")
         self.setGeometry(100, 100, 1280, 720) # Geometría por defecto
         self.setMinimumSize(1024, 600) # Establecer un tamaño mínimo
 
-        self.debug_log_widget = QTextEdit()
+        self.debug_log_widget = QtWidgets.QTextEdit()
         self.debug_log_widget.setReadOnly(True)
         self.debug_log_widget.setMaximumHeight(120)
         self.debug_log_widget.setStyleSheet("background-color: #222; color: #0f0; font-family: Consolas, monospace; font-size: 12px;")
         self.debug_log_widget.append("[INFO] UI inicializada. Esperando eventos...")
 
-        self.banner_label = QLabel("🟢 UltiBotInversiones UI cargada correctamente")
+        self.banner_label = QtWidgets.QLabel("🟢 UltiBotInversiones UI cargada correctamente")
         self.banner_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #00FF8C; padding: 8px; background: #1E1E1E; border-radius: 6px;")
 
         self.setMenuBar(self._create_menu_bar())
-        status_bar = QStatusBar(self)
+        status_bar = QtWidgets.QStatusBar(self)
         self.setStatusBar(status_bar)
         status_bar.showMessage("Listo")
 
-        self._main_vbox = QVBoxLayout()
+        self._main_vbox = QtWidgets.QVBoxLayout()
         self._main_vbox.setContentsMargins(0, 0, 0, 0)
         self._main_vbox.setSpacing(0)
         
         # No añadir el banner y el log directamente al layout principal
         # se manejarán dentro del widget central si es necesario.
 
-        self._central_content_widget = QWidget()
+        self._central_content_widget = QtWidgets.QWidget()
         # El layout principal ahora solo contiene el widget de contenido central
-        main_layout = QHBoxLayout()
+        main_layout = QtWidgets.QHBoxLayout()
         main_layout.setContentsMargins(0,0,0,0)
         main_layout.setSpacing(0)
         self._setup_central_widget(parent_widget=self._central_content_widget)
         main_layout.addWidget(self._central_content_widget)
 
-        central_widget = QWidget()
+        central_widget = QtWidgets.QWidget()
         central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
 
@@ -100,28 +86,28 @@ class MainWindow(QMainWindow, BaseMainWindow):
         if current_statusbar:
             current_statusbar.showMessage("Ventana principal desplegada correctamente.")
 
-    def add_thread(self, thread: QThread):
+    def add_thread(self, thread: QtCore.QThread):
         """Añade un hilo a la lista de hilos activos para su seguimiento."""
         self.active_threads.append(thread)
         thread.finished.connect(lambda: self.remove_thread(thread))
 
-    def remove_thread(self, thread: QThread):
+    def remove_thread(self, thread: QtCore.QThread):
         """Elimina un hilo de la lista de hilos activos."""
         if thread in self.active_threads:
             self.active_threads.remove(thread)
 
-    def _create_menu_bar(self) -> QMenuBar:
+    def _create_menu_bar(self) -> QtWidgets.QMenuBar:
         """Crea y devuelve la barra de menú principal."""
-        menu_bar = QMenuBar(self)
+        menu_bar = QtWidgets.QMenuBar(self)
         view_menu = menu_bar.addMenu("&View")
         if view_menu:
             theme_menu = view_menu.addMenu("Switch &Theme")
             if theme_menu:
-                dark_theme_action = QAction("Dark Theme", self)
+                dark_theme_action = QtGui.QAction("Dark Theme", self)
                 dark_theme_action.triggered.connect(lambda: self._apply_theme_selection("dark"))
                 theme_menu.addAction(dark_theme_action)
                 
-                light_theme_action = QAction("Light Theme", self)
+                light_theme_action = QtGui.QAction("Light Theme", self)
                 light_theme_action.triggered.connect(lambda: self._apply_theme_selection("light"))
                 theme_menu.addAction(light_theme_action)
         
@@ -136,9 +122,9 @@ class MainWindow(QMainWindow, BaseMainWindow):
         # self.debug_log_widget.append(msg) # Desactivado temporalmente
         logger.info(msg)
 
-    def _setup_central_widget(self, parent_widget: QWidget): # Firma corregida
+    def _setup_central_widget(self, parent_widget: QtWidgets.QWidget): # Firma corregida
         """Configura el widget central con navegación y vistas."""
-        main_layout = QHBoxLayout(parent_widget)
+        main_layout = QtWidgets.QHBoxLayout(parent_widget)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
@@ -147,7 +133,7 @@ class MainWindow(QMainWindow, BaseMainWindow):
         self.sidebar.navigation_requested.connect(self._switch_view)
         main_layout.addWidget(self.sidebar)
 
-        self.stacked_widget = QStackedWidget()
+        self.stacked_widget = QtWidgets.QStackedWidget()
         main_layout.addWidget(self.stacked_widget)
 
         self.dashboard_view = DashboardView(
@@ -195,7 +181,7 @@ class MainWindow(QMainWindow, BaseMainWindow):
         
         self._fetch_strategies_async()
 
-        dashboard_button = self.sidebar.findChild(QPushButton, "navButton_dashboard")
+        dashboard_button = self.sidebar.findChild(QtWidgets.QPushButton, "navButton_dashboard")
         if dashboard_button:
             dashboard_button.setChecked(True)
         self.stacked_widget.setCurrentIndex(self.view_map["dashboard"])
@@ -208,7 +194,7 @@ class MainWindow(QMainWindow, BaseMainWindow):
         # El ApiWorker se encargará de emitir la señal strategies_updated del servicio
         # ya que el servicio y la vista están conectados. No necesitamos conectar aquí.
         worker = ApiWorker(api_client=self.api_client, coroutine_factory=coro_factory)
-        thread = QThread()
+        thread = QtCore.QThread()
         worker.moveToThread(thread)
 
         # Conectar señales del worker para manejar el resultado
@@ -255,4 +241,3 @@ class MainWindow(QMainWindow, BaseMainWindow):
         """Maneja el evento de cierre de la ventana."""
         self.cleanup()
         super().closeEvent(event)
-

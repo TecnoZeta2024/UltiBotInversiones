@@ -36,6 +36,7 @@ python-dotenv = "1.0.1"
 protobuf = ">=4.21.0,<4.22.0"
 numpy = "1.26.4"
 python-dateutil = "2.9.0"
+aiosqlite = "^0.21.0"
 
 
 [tool.poetry.group.dev.dependencies]

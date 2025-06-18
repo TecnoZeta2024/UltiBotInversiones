@@ -4,12 +4,15 @@ import os # Importar os
 from typing import Optional # Importar Optional
 from uuid import UUID # Add this import
 
-# Cargar variables de entorno desde .env al inicio, permitiendo la sobreescritura
-load_dotenv(override=True)
+# Cargar variables de entorno condicionalmente para soportar un entorno de prueba
+if os.getenv("TESTING") == "True":
+    load_dotenv(dotenv_path=".env.test", override=True)
+else:
+    load_dotenv(override=True)
 
 class AppSettings(BaseSettings):
-    # No es necesario especificar env_file aquí si ya se cargó con load_dotenv()
-    # Pero lo mantenemos para compatibilidad o si se desea un comportamiento específico de pydantic-settings
+    # La carga del archivo .env se gestiona ahora con load_dotenv,
+    # pero mantenemos la configuración del modelo para otras funcionalidades de pydantic.
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     # Supabase
