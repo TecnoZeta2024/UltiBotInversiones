@@ -1,12 +1,13 @@
 import logging
-import asyncio # Importar asyncio
+import asyncio
 import os
 import asyncpg
 from functools import lru_cache
 from typing import Optional
 import httpx
+from sqlalchemy.ext.asyncio import AsyncSession # Importar AsyncSession
 
-from fastapi import Request
+from fastapi import Request, Depends # Importar Depends
 from ultibot_backend.services.order_execution_service import PaperOrderExecutionService
 from ultibot_backend.adapters.binance_adapter import BinanceAdapter
 from ultibot_backend.adapters.mobula_adapter import MobulaAdapter
@@ -26,11 +27,17 @@ from ultibot_backend.services.unified_order_execution_service import UnifiedOrde
 
 logger = logging.getLogger(__name__)
 
+# Nueva función para obtener la sesión de la base de datos
+# Esta función será sobrescrita en los tests para inyectar la sesión de la fixture
+async def get_db_session() -> AsyncSession:
+    # En un entorno de producción, esto debería obtener una sesión del pool
+    # Para los tests, será sobrescrita por la fixture db_session
+    raise NotImplementedError("get_db_session debe ser implementado o sobrescrito")
 
 class DependencyContainer:
     def __init__(self):
         self.http_client: Optional[httpx.AsyncClient] = None
-        self.persistence_service: Optional[PersistenceService] = None
+        # self.persistence_service: Optional[PersistenceService] = None # Eliminado
         self.ai_orchestrator_service: Optional[AIOrchestratorService] = None
         self.binance_adapter: Optional[BinanceAdapter] = None
         self.credential_service: Optional[CredentialService] = None
@@ -52,27 +59,18 @@ class DependencyContainer:
         self.http_client = httpx.AsyncClient(timeout=30.0)
 
         # Level 0: No service dependencies
-        database_url = os.environ["DATABASE_URL"]
-        if database_url.startswith("sqlite+aiosqlite"):
-            from sqlalchemy.ext.asyncio import create_async_engine
-            engine = create_async_engine(database_url)
-            # No hay un pool directo como asyncpg, la sesión se maneja por fixture en tests
-            # Para el servicio de persistencia, pasamos el motor para que pueda crear sesiones
-            self.persistence_service = PersistenceService(engine=engine)
-        else:
-            # Asumir PostgreSQL para otras URLs
-            db_pool = await asyncpg.create_pool(database_url)
-            self.persistence_service = PersistenceService(pool=db_pool) # Mantener compatibilidad si usa pool
-        
+        # La inicialización de persistence_service se moverá a get_persistence_service
         self.binance_adapter = BinanceAdapter()
         self.paper_order_execution_service = PaperOrderExecutionService()
 
         # Level 1: Depend on Level 0
+        # persistence_service se inyectará directamente en los servicios que lo necesiten
+        # a través de get_persistence_service
         self.credential_service = CredentialService(
-            persistence_service=self.persistence_service,
+            persistence_service=await get_persistence_service(Request), # Esto es un placeholder, se inyectará en runtime
             binance_adapter=self.binance_adapter
         )
-        self.trading_report_service = TradingReportService(self.persistence_service)
+        self.trading_report_service = TradingReportService(await get_persistence_service(Request)) # Placeholder
         self.order_execution_service = OrderExecutionService(
             binance_adapter=self.binance_adapter
         )
@@ -84,12 +82,12 @@ class DependencyContainer:
         )
         self.notification_service = NotificationService(
             credential_service=self.credential_service,
-            persistence_service=self.persistence_service
+            persistence_service=await get_persistence_service(Request) # Placeholder
         )
         self.market_data_service = MarketDataService(
             credential_service=self.credential_service,
             binance_adapter=self.binance_adapter,
-            persistence_service=self.persistence_service
+            persistence_service=await get_persistence_service(Request) # Placeholder
         )
         self.unified_order_execution_service = UnifiedOrderExecutionService(
             real_execution_service=self.order_execution_service,
@@ -101,13 +99,13 @@ class DependencyContainer:
             market_data_service=self.market_data_service
         )
         self.portfolio_service = PortfolioService(
-            persistence_service=self.persistence_service,
+            persistence_service=await get_persistence_service(Request), # Placeholder
             market_data_service=self.market_data_service
         )
 
         # Level 4: Depend on previous levels
         self.config_service = ConfigurationService(
-            persistence_service=self.persistence_service
+            persistence_service=await get_persistence_service(Request) # Placeholder
         )
         self.config_service.set_credential_service(self.credential_service)
         self.config_service.set_portfolio_service(self.portfolio_service)
@@ -115,19 +113,19 @@ class DependencyContainer:
 
         # Level 5: Depend on previous levels
         self.strategy_service = StrategyService(
-            persistence_service=self.persistence_service,
+            persistence_service=await get_persistence_service(Request), # Placeholder
             configuration_service=self.config_service
         )
 
         # Level 6: Depend on previous levels (including StrategyService)
         self.performance_service = PerformanceService(
-            persistence_service=self.persistence_service,
+            persistence_service=await get_persistence_service(Request), # Placeholder
             strategy_service=self.strategy_service
         )
 
         # Level 7: The main engine, depends on almost everything
         self.trading_engine_service = TradingEngineService(
-            persistence_service=self.persistence_service,
+            persistence_service=await get_persistence_service(Request), # Placeholder
             market_data_service=self.market_data_service,
             unified_order_execution_service=self.unified_order_execution_service,
             credential_service=self.credential_service,
@@ -143,8 +141,12 @@ class DependencyContainer:
         logger.info("Shutting down dependency container...")
         if self.http_client:
             await self.http_client.aclose()
-        if self.persistence_service and self.persistence_service.pool:
-            await self.persistence_service.pool.close()
+        # La gestión del pool/engine de la BD se hará a través de get_db_session o lifespan
+        # if self.persistence_service:
+        #     if self.persistence_service._pool:
+        #         await self.persistence_service._pool.close()
+        #     elif self.persistence_service._engine:
+        #         await self.persistence_service._engine.dispose()
         if self.binance_adapter:
             await self.binance_adapter.close()
         logger.info("Dependency container shut down.")
@@ -184,10 +186,10 @@ def get_container(request: Request) -> DependencyContainer:
         return _global_container
 
 
-async def get_persistence_service(request: Request) -> PersistenceService:
-    container = get_container(request)
-    assert container.persistence_service is not None, "PersistenceService not initialized"
-    return container.persistence_service
+async def get_persistence_service(
+    db_session: AsyncSession = Depends(get_db_session) # Inyectar la sesión de la BD
+) -> PersistenceService:
+    return PersistenceService(session=db_session)
 
 
 async def get_credential_service(request: Request) -> CredentialService:

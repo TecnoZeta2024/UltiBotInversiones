@@ -6,6 +6,7 @@ This module defines the Pydantic models for trading opportunities and trades.
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
+from decimal import Decimal # Importar Decimal
 
 from pydantic import BaseModel, Field
 try:
@@ -22,7 +23,9 @@ class OpportunityStatus(str, Enum):
     UNDER_AI_ANALYSIS = "under_ai_analysis"
     ANALYSIS_COMPLETE = "analysis_complete"
     REJECTED_BY_AI = "rejected_by_ai"
+    REJECTED_BY_SYSTEM = "rejected_by_system"
     REJECTED_BY_USER = "rejected_by_user"
+    UNDER_EVALUATION = "under_evaluation"
     PENDING_USER_CONFIRMATION_REAL = "pending_user_confirmation_real"
     CONVERTED_TO_TRADE_PAPER = "converted_to_trade_paper"
     CONVERTED_TO_TRADE_REAL = "converted_to_trade_real"
@@ -43,6 +46,7 @@ class SourceType(str, Enum):
     AI_SUGGESTION_PROACTIVE = "ai_suggestion_proactive"
     MANUAL_ENTRY = "manual_entry"
     USER_DEFINED_ALERT = "user_defined_alert"
+    UNKNOWN = "unknown"
 
 
 class Direction(str, Enum):
@@ -73,17 +77,17 @@ class InitialSignal(BaseModel):
         None, 
         description="Direction of the trading signal"
     )
-    entry_price_target: Optional[float] = Field(
+    entry_price_target: Optional[Decimal] = Field(
         None, 
         gt=0, 
         description="Target entry price"
     )
-    stop_loss_target: Optional[float] = Field(
+    stop_loss_target: Optional[Decimal] = Field(
         None, 
         gt=0, 
         description="Target stop loss price"
     )
-    take_profit_target: Optional[Union[float, List[float]]] = Field(
+    take_profit_target: Optional[Union[Decimal, List[Decimal]]] = Field(
         None, 
         description="Target take profit price(s)"
     )
@@ -106,6 +110,19 @@ class InitialSignal(BaseModel):
         description="Confidence from signal source"
     )
 
+    @field_validator('take_profit_target')
+    @classmethod
+    def validate_take_profit_target(cls, v: Optional[Union[Decimal, List[Decimal]]]) -> Optional[Union[Decimal, List[Decimal]]]:
+        """Validate take profit target format."""
+        if v is None:
+            return v
+        if isinstance(v, (int, float, Decimal)):
+            return [Decimal(str(v))]
+        elif isinstance(v, list):
+            return [Decimal(str(x)) for x in v if isinstance(x, (int, float, Decimal))]
+        else:
+            raise ValueError("Take profit target must be a number or list of numbers")
+
 
 class DataVerification(BaseModel):
     """Data verification results from AI analysis."""
@@ -127,13 +144,13 @@ class DataVerification(BaseModel):
 class RecommendedTradeParams(BaseModel):
     """Recommended trade parameters from AI analysis."""
     
-    entry_price: Optional[float] = Field(None, gt=0, description="Recommended entry price")
-    stop_loss_price: Optional[float] = Field(None, gt=0, description="Recommended stop loss price")
-    take_profit_levels: Optional[List[float]] = Field(
+    entry_price: Optional[Decimal] = Field(None, gt=0, description="Recommended entry price")
+    stop_loss_price: Optional[Decimal] = Field(None, gt=0, description="Recommended stop loss price")
+    take_profit_levels: Optional[List[Decimal]] = Field(
         None, 
         description="Recommended take profit levels"
     )
-    trade_size_percentage: Optional[float] = Field(
+    trade_size_percentage: Optional[Decimal] = Field(
         None, 
         gt=0, 
         le=1, 
@@ -343,18 +360,6 @@ class Opportunity(BaseModel):
             datetime: lambda v: v.isoformat() if v else None
         }
 
-    @field_validator('take_profit_target', check_fields=False)
-    def validate_take_profit_target(cls, v):
-        """Validate take profit target format."""
-        if v is None:
-            return v
-        if isinstance(v, (int, float)):
-            return [float(v)]
-        elif isinstance(v, list):
-            return [float(x) for x in v if isinstance(x, (int, float))]
-        else:
-            raise ValueError("Take profit target must be a number or list of numbers")
-    
     def is_ai_analysis_required(self) -> bool:
         """Check if AI analysis is required for this opportunity."""
         return self.status in [
@@ -368,9 +373,9 @@ class Opportunity(BaseModel):
     
     def get_effective_confidence(self) -> Optional[float]:
         """Get effective confidence from AI analysis or source."""
-        if self.ai_analysis:
+        if self.ai_analysis and self.ai_analysis.calculated_confidence is not None:
             return self.ai_analysis.calculated_confidence
-        elif self.initial_signal.confidence_source:
+        elif self.initial_signal and self.initial_signal.confidence_source is not None:
             return self.initial_signal.confidence_source
         return None
     

@@ -10,8 +10,8 @@ from ultibot_backend.adapters.persistence_service import SupabasePersistenceServ
 from ultibot_backend.services.strategy_service import StrategyService
 from ultibot_backend.api.v1.models.performance_models import StrategyPerformanceData, OperatingMode
 from shared.data_types import Trade
-from ultibot_backend.core.domain_models.trade_models import PositionStatus, TradeOrderDetails, OrderCategory
-from ultibot_backend.core.domain_models.trading_strategy_models import TradingStrategyConfig, BaseStrategyType, ScalpingParameters, DayTradingParameters
+from ultibot_backend.core.domain_models.trade_models import PositionStatus, TradeOrderDetails, OrderCategory, OrderType, OrderStatus
+from ultibot_backend.core.domain_models.trading_strategy_models import TradingStrategyConfig, BaseStrategyType, ScalpingParameters, DayTradingParameters, Timeframe
 from uuid import UUID
 from ultibot_backend.app_config import settings
 from decimal import Decimal # Necesario para TradeOrderDetails
@@ -19,7 +19,10 @@ from decimal import Decimal # Necesario para TradeOrderDetails
 # Mock del servicio de persistencia para integración
 @pytest.fixture
 def mock_persistence_service_integration():
-    return AsyncMock(spec=SupabasePersistenceService)
+    mock = AsyncMock(spec=SupabasePersistenceService)
+    # Configurar el método get_all_trades_for_user para que sea un AsyncMock
+    mock.get_all_trades_for_user = AsyncMock(return_value=[])
+    return mock
 
 # Mock del servicio de estrategia para integración
 @pytest.fixture
@@ -29,6 +32,8 @@ def mock_strategy_service_integration():
     return service
 
 
+from ultibot_backend.dependencies import get_persistence_service
+
 @pytest.mark.asyncio
 async def test_get_strategies_performance_endpoint_no_data(client, mock_persistence_service_integration):
     """
@@ -37,10 +42,13 @@ async def test_get_strategies_performance_endpoint_no_data(client, mock_persiste
     # Configurar el mock de persistencia para que no devuelva trades
     mock_persistence_service_integration.get_all_trades_for_user.return_value = []
     
-    # PerformanceService usará el mock_persistence_service_integration.
-    # No necesitamos mockear PerformanceService directamente si sus dependencias están mockeadas.
+    # Sobrescribir la dependencia del servicio de persistencia para este test específico
+    app.dependency_overrides[get_persistence_service] = lambda: mock_persistence_service_integration
 
-    response = await client.get("/api/v1/performance/strategies")
+    response = client.get("/api/v1/performance/strategies")
+    
+    # Limpiar la sobrescritura de dependencias después del test
+    app.dependency_overrides.clear()
     
     assert response.status_code == 200
     assert response.json() == []
@@ -64,13 +72,23 @@ async def test_get_strategies_performance_endpoint_with_data(client, mock_persis
         entryOrder=TradeOrderDetails(
             orderId_internal=uuid4(),
             orderCategory=OrderCategory.ENTRY,
-            type="LIMIT",
-            status="FILLED",
+            type=OrderType.LIMIT.value,
+            status=OrderStatus.FILLED.value,
             requestedQuantity=float(Decimal("0.002")),
             executedQuantity=float(Decimal("0.002")),
             executedPrice=float(Decimal("50000.0")),
             timestamp=datetime.now(timezone.utc),
             requestedPrice=float(Decimal("50000.0")),
+            orderId_exchange=str(uuid4()),
+            clientOrderId_exchange=str(uuid4()),
+            cumulativeQuoteQty=float(Decimal("0.002")) * float(Decimal("50000.0")),
+            commissions=[],
+            commission=0.0,
+            commissionAsset="USDT",
+            submittedAt=datetime.now(timezone.utc),
+            fillTimestamp=datetime.now(timezone.utc),
+            rawResponse={},
+            ocoOrderListId=None
         ),
         positionStatus=PositionStatus.CLOSED.value,
         strategyId=strategy_id,
@@ -81,6 +99,7 @@ async def test_get_strategies_performance_endpoint_with_data(client, mock_persis
         opportunityId=None, aiAnalysisConfidence=None, closingReason="Test",
         ocoOrderListId=None, takeProfitPrice=None, trailingStopActivationPrice=None,
         trailingStopCallbackRate=None, currentStopPrice_tsl=None,
+        riskRewardAdjustments=[]
     )
     mock_persistence_service_integration.get_all_trades_for_user.return_value = [closed_trade]
 
@@ -89,7 +108,12 @@ async def test_get_strategies_performance_endpoint_with_data(client, mock_persis
         user_id=str(settings.FIXED_USER_ID), # user_id en TradingStrategyConfig es str
         config_name="Integration Test Strategy",
         base_strategy_type=BaseStrategyType.SCALPING,
-        parameters=ScalpingParameters(profit_target_percentage=0.01, stop_loss_percentage=0.005),
+        parameters=ScalpingParameters(
+            profit_target_percentage=0.01,
+            stop_loss_percentage=0.005,
+            max_holding_time_seconds=3600, # Default value
+            leverage=1 # Default value
+        ),
         is_active_paper_mode=True,
         is_active_real_mode=False,
         description="Strategy for integration test",
@@ -99,7 +123,7 @@ async def test_get_strategies_performance_endpoint_with_data(client, mock_persis
     )
     mock_strategy_service_integration.get_strategy_config.return_value = strategy_config
 
-    response = await client.get("/api/v1/performance/strategies?mode=paper")
+    response = client.get("/api/v1/performance/strategies?mode=paper")
     
     assert response.status_code == 200
     data = response.json()
@@ -134,13 +158,23 @@ async def test_get_strategies_performance_endpoint_filter_real_mode(client, mock
         entryOrder=TradeOrderDetails(
             orderId_internal=uuid4(),
             orderCategory=OrderCategory.ENTRY,
-            type="LIMIT",
-            status="FILLED",
+            type=OrderType.LIMIT.value,
+            status=OrderStatus.FILLED.value,
             requestedQuantity=float(Decimal("0.1")),
             executedQuantity=float(Decimal("0.1")),
             executedPrice=float(Decimal("2000.0")),
             timestamp=datetime.now(timezone.utc),
             requestedPrice=float(Decimal("2000.0")),
+            orderId_exchange=str(uuid4()),
+            clientOrderId_exchange=str(uuid4()),
+            cumulativeQuoteQty=float(Decimal("0.1")) * float(Decimal("2000.0")),
+            commissions=[],
+            commission=0.0,
+            commissionAsset="USDT",
+            submittedAt=datetime.now(timezone.utc),
+            fillTimestamp=datetime.now(timezone.utc),
+            rawResponse={},
+            ocoOrderListId=None
         ),
         positionStatus=PositionStatus.CLOSED.value,
         strategyId=strategy_id_real,
@@ -151,6 +185,7 @@ async def test_get_strategies_performance_endpoint_filter_real_mode(client, mock
         opportunityId=None, aiAnalysisConfidence=None, closingReason="Real Test",
         ocoOrderListId=None, takeProfitPrice=None, trailingStopActivationPrice=None,
         trailingStopCallbackRate=None, currentStopPrice_tsl=None,
+        riskRewardAdjustments=[]
     )
     # Mock para que solo devuelva el trade real cuando se filtra por 'real'
     mock_persistence_service_integration.get_all_trades_for_user.return_value = [real_trade]
@@ -160,7 +195,16 @@ async def test_get_strategies_performance_endpoint_filter_real_mode(client, mock
         user_id=str(settings.FIXED_USER_ID), # user_id en TradingStrategyConfig es str
         config_name="Real Mode Strategy",
         base_strategy_type=BaseStrategyType.DAY_TRADING,
-        parameters=DayTradingParameters(entry_timeframes=["1h"]), # DayTradingParameters requiere entry_timeframes
+        parameters=DayTradingParameters(
+            entry_timeframes=[Timeframe.ONE_HOUR],
+            rsi_period=14, # Default value
+            rsi_overbought=70, # Default value
+            rsi_oversold=30, # Default value
+            macd_fast_period=12, # Default value
+            macd_slow_period=26, # Default value
+            macd_signal_period=9, # Default value
+            exit_timeframes=[Timeframe.FOUR_HOURS] # Default value
+        ),
         is_active_paper_mode=False, # No activo en paper
         is_active_real_mode=True,   # Activo en real
         description="Strategy for real mode integration test",
@@ -170,7 +214,7 @@ async def test_get_strategies_performance_endpoint_filter_real_mode(client, mock
     )
     mock_strategy_service_integration.get_strategy_config.return_value = strategy_config_real
 
-    response = await client.get("/api/v1/performance/strategies?mode=real")
+    response = client.get("/api/v1/performance/strategies?mode=real")
     
     assert response.status_code == 200
     data = response.json()
@@ -199,37 +243,135 @@ async def test_get_strategies_performance_endpoint_multiple_strategies(client, m
     trade_id_2 = uuid4()
     trade_id_3 = uuid4()
 
-    common_trade_params_integration = {
-        "user_id": settings.FIXED_USER_ID, # user_id en Trade es UUID
-        "entryOrder": TradeOrderDetails(
+    # Definir los parámetros comunes directamente en la creación de Trade
+    trade1_strat1_paper = Trade(
+        id=trade_id_1,
+        user_id=settings.FIXED_USER_ID,
+        mode="paper",
+        symbol="BTCUSDT",
+        side="BUY",
+        strategyId=strategy_id_1,
+        pnl_usd=50.0,
+        entryOrder=TradeOrderDetails(
             orderId_internal=uuid4(),
             orderCategory=OrderCategory.ENTRY,
-            type="MARKET",
-            status="FILLED",
+            type=OrderType.MARKET.value,
+            status=OrderStatus.FILLED.value,
             requestedQuantity=float(Decimal("1.0")),
             executedQuantity=float(Decimal("1.0")),
             executedPrice=float(Decimal("1.0")),
             timestamp=datetime.now(timezone.utc),
             requestedPrice=float(Decimal("1.0")),
+            orderId_exchange=str(uuid4()),
+            clientOrderId_exchange=str(uuid4()),
+            cumulativeQuoteQty=float(Decimal("1.0")) * float(Decimal("1.0")),
+            commissions=[],
+            commission=0.0,
+            commissionAsset="USDT",
+            submittedAt=datetime.now(timezone.utc),
+            fillTimestamp=datetime.now(timezone.utc),
+            rawResponse={},
+            ocoOrderListId=None
         ),
-        "positionStatus": PositionStatus.CLOSED.value,
-        "opened_at": datetime.now(timezone.utc), "closed_at": datetime.now(timezone.utc),
-        "pnl_percentage": 0.1, "opportunityId": None, "aiAnalysisConfidence": None,
-        "closingReason": "Test", "ocoOrderListId": None, "takeProfitPrice": None,
-        "trailingStopActivationPrice": None, "trailingStopCallbackRate": None, "currentStopPrice_tsl": None,
-    }
-
-    trade1_strat1_paper = Trade(
-        id=trade_id_1, mode="paper", symbol="BTCUSDT", side="BUY",
-        strategyId=strategy_id_1, pnl_usd=50.0, **common_trade_params_integration
+        positionStatus=PositionStatus.CLOSED.value,
+        opened_at=datetime.now(timezone.utc), 
+        closed_at=datetime.now(timezone.utc),
+        pnl_percentage=0.1, 
+        opportunityId=None, 
+        aiAnalysisConfidence=None,
+        closingReason="Test", 
+        ocoOrderListId=None, 
+        takeProfitPrice=None,
+        trailingStopActivationPrice=None, 
+        trailingStopCallbackRate=None, 
+        currentStopPrice_tsl=None,
+        riskRewardAdjustments=[]
     )
     trade2_strat1_paper = Trade(
-        id=trade_id_2, mode="paper", symbol="ETHUSDT", side="SELL",
-        strategyId=strategy_id_1, pnl_usd=-10.0, **common_trade_params_integration
+        id=trade_id_2,
+        user_id=settings.FIXED_USER_ID,
+        mode="paper",
+        symbol="ETHUSDT",
+        side="SELL",
+        strategyId=strategy_id_1,
+        pnl_usd=-10.0,
+        entryOrder=TradeOrderDetails(
+            orderId_internal=uuid4(),
+            orderCategory=OrderCategory.ENTRY,
+            type=OrderType.MARKET.value,
+            status=OrderStatus.FILLED.value,
+            requestedQuantity=float(Decimal("1.0")),
+            executedQuantity=float(Decimal("1.0")),
+            executedPrice=float(Decimal("1.0")),
+            timestamp=datetime.now(timezone.utc),
+            requestedPrice=float(Decimal("1.0")),
+            orderId_exchange=str(uuid4()),
+            clientOrderId_exchange=str(uuid4()),
+            cumulativeQuoteQty=float(Decimal("1.0")) * float(Decimal("1.0")),
+            commissions=[],
+            commission=0.0,
+            commissionAsset="USDT",
+            submittedAt=datetime.now(timezone.utc),
+            fillTimestamp=datetime.now(timezone.utc),
+            rawResponse={},
+            ocoOrderListId=None
+        ),
+        positionStatus=PositionStatus.CLOSED.value,
+        opened_at=datetime.now(timezone.utc), 
+        closed_at=datetime.now(timezone.utc),
+        pnl_percentage=0.1, 
+        opportunityId=None, 
+        aiAnalysisConfidence=None,
+        closingReason="Test", 
+        ocoOrderListId=None, 
+        takeProfitPrice=None,
+        trailingStopActivationPrice=None, 
+        trailingStopCallbackRate=None, 
+        currentStopPrice_tsl=None,
+        riskRewardAdjustments=[]
     )
     trade3_strat2_real = Trade(
-        id=trade_id_3, mode="real", symbol="ADAUSDT", side="BUY",
-        strategyId=strategy_id_2, pnl_usd=75.0, **common_trade_params_integration
+        id=trade_id_3,
+        user_id=settings.FIXED_USER_ID,
+        mode="real",
+        symbol="ADAUSDT",
+        side="BUY",
+        strategyId=strategy_id_2,
+        pnl_usd=75.0,
+        entryOrder=TradeOrderDetails(
+            orderId_internal=uuid4(),
+            orderCategory=OrderCategory.ENTRY,
+            type=OrderType.MARKET.value,
+            status=OrderStatus.FILLED.value,
+            requestedQuantity=float(Decimal("1.0")),
+            executedQuantity=float(Decimal("1.0")),
+            executedPrice=float(Decimal("1.0")),
+            timestamp=datetime.now(timezone.utc),
+            requestedPrice=float(Decimal("1.0")),
+            orderId_exchange=str(uuid4()),
+            clientOrderId_exchange=str(uuid4()),
+            cumulativeQuoteQty=float(Decimal("1.0")) * float(Decimal("1.0")),
+            commissions=[],
+            commission=0.0,
+            commissionAsset="USDT",
+            submittedAt=datetime.now(timezone.utc),
+            fillTimestamp=datetime.now(timezone.utc),
+            rawResponse={},
+            ocoOrderListId=None
+        ),
+        positionStatus=PositionStatus.CLOSED.value,
+        opened_at=datetime.now(timezone.utc), 
+        closed_at=datetime.now(timezone.utc),
+        pnl_percentage=0.1, 
+        opportunityId=None, 
+        aiAnalysisConfidence=None,
+        closingReason="Test", 
+        ocoOrderListId=None, 
+        takeProfitPrice=None,
+        trailingStopActivationPrice=None, 
+        trailingStopCallbackRate=None, 
+        currentStopPrice_tsl=None,
+        riskRewardAdjustments=[]
     )
     
     mock_persistence_service_integration.get_all_trades_for_user.return_value = [
@@ -238,7 +380,12 @@ async def test_get_strategies_performance_endpoint_multiple_strategies(client, m
 
     config_strat1 = TradingStrategyConfig(
         id=str(strategy_id_1), user_id=str(settings.FIXED_USER_ID), config_name="Multi Strat Paper",
-        base_strategy_type=BaseStrategyType.SCALPING, parameters=ScalpingParameters(profit_target_percentage=0.01, stop_loss_percentage=0.005),
+        base_strategy_type=BaseStrategyType.SCALPING, parameters=ScalpingParameters(
+            profit_target_percentage=0.01,
+            stop_loss_percentage=0.005,
+            max_holding_time_seconds=3600, # Default value
+            leverage=1 # Default value
+        ),
         is_active_paper_mode=True, is_active_real_mode=False, description="Paper multi test", version=1,
         applicability_rules=None, ai_analysis_profile_id=None, risk_parameters_override=None, parent_config_id=None,
         performance_metrics=None, market_condition_filters=None, activation_schedule=None,
@@ -246,7 +393,16 @@ async def test_get_strategies_performance_endpoint_multiple_strategies(client, m
     )
     config_strat2 = TradingStrategyConfig(
         id=str(strategy_id_2), user_id=str(settings.FIXED_USER_ID), config_name="Multi Strat Real",
-        base_strategy_type=BaseStrategyType.DAY_TRADING, parameters=DayTradingParameters(entry_timeframes=["1h"]),
+        base_strategy_type=BaseStrategyType.DAY_TRADING, parameters=DayTradingParameters(
+            entry_timeframes=[Timeframe.ONE_HOUR],
+            rsi_period=14, # Default value
+            rsi_overbought=70, # Default value
+            rsi_oversold=30, # Default value
+            macd_fast_period=12, # Default value
+            macd_slow_period=26, # Default value
+            macd_signal_period=9, # Default value
+            exit_timeframes=[Timeframe.FOUR_HOURS] # Default value
+        ),
         is_active_paper_mode=False, is_active_real_mode=True, description="Real multi test", version=1,
         applicability_rules=None, ai_analysis_profile_id=None, risk_parameters_override=None, parent_config_id=None,
         performance_metrics=None, market_condition_filters=None, activation_schedule=None,
@@ -262,7 +418,7 @@ async def test_get_strategies_performance_endpoint_multiple_strategies(client, m
     mock_strategy_service_integration.get_strategy_config.side_effect = side_effect_get_strategy_config
     
     # Test sin filtro de modo (debería devolver ambas)
-    response_all = await client.get("/api/v1/performance/strategies")
+    response_all = client.get("/api/v1/performance/strategies")
     assert response_all.status_code == 200
     data_all = response_all.json()
     assert len(data_all) == 2
@@ -303,13 +459,23 @@ async def test_get_strategies_performance_endpoint_strategy_not_found(client, mo
         entryOrder=TradeOrderDetails(
             orderId_internal=uuid4(),
             orderCategory=OrderCategory.ENTRY,
-            type="LIMIT",
-            status="FILLED",
+            type=OrderType.LIMIT.value,
+            status=OrderStatus.FILLED.value,
             requestedQuantity=float(Decimal("3.0")),
             executedQuantity=float(Decimal("3.0")),
             executedPrice=float(Decimal("10.0")),
             timestamp=datetime.now(timezone.utc),
             requestedPrice=float(Decimal("10.0")),
+            orderId_exchange=str(uuid4()),
+            clientOrderId_exchange=str(uuid4()),
+            cumulativeQuoteQty=float(Decimal("3.0")) * float(Decimal("10.0")),
+            commissions=[],
+            commission=0.0,
+            commissionAsset="USDT",
+            submittedAt=datetime.now(timezone.utc),
+            fillTimestamp=datetime.now(timezone.utc),
+            rawResponse={},
+            ocoOrderListId=None
         ),
         positionStatus=PositionStatus.CLOSED.value,
         strategyId=unknown_strategy_id, # Este ID no tendrá una config asociada
@@ -320,13 +486,14 @@ async def test_get_strategies_performance_endpoint_strategy_not_found(client, mo
         opportunityId=None, aiAnalysisConfidence=None, closingReason="Test Unknown",
         ocoOrderListId=None, takeProfitPrice=None, trailingStopActivationPrice=None,
         trailingStopCallbackRate=None, currentStopPrice_tsl=None,
+        riskRewardAdjustments=[]
     )
     mock_persistence_service_integration.get_all_trades_for_user.return_value = [trade_with_unknown_strategy]
     
     # Simular que get_strategy_config devuelve None para este ID
     mock_strategy_service_integration.get_strategy_config.return_value = None
 
-    response = await client.get("/api/v1/performance/strategies?mode=paper")
+    response = client.get("/api/v1/performance/strategies?mode=paper")
     
     assert response.status_code == 200
     data = response.json()
@@ -350,7 +517,7 @@ async def test_get_strategies_performance_endpoint_invalid_mode_parameter(client
     Test GET /api/v1/performance/strategies with an invalid 'mode' query parameter.
     FastAPI should return a 422 Unprocessable Entity error.
     """
-    response = await client.get("/api/v1/performance/strategies?mode=invalid_mode")
+    response = client.get("/api/v1/performance/strategies?mode=invalid_mode")
     
     assert response.status_code == 422 # Unprocessable Entity
     data = response.json()
@@ -373,34 +540,92 @@ async def test_get_strategies_performance_endpoint_no_mode_filter(client, mock_p
     trade_paper_id = uuid4()
     trade_real_id = uuid4()
 
-    common_trade_params_no_filter = {
-        "user_id": settings.FIXED_USER_ID, # user_id en Trade es UUID
-        "entryOrder": TradeOrderDetails(
+    # Definir los parámetros comunes directamente en la creación de Trade
+    paper_trade = Trade(
+        id=trade_paper_id,
+        user_id=settings.FIXED_USER_ID,
+        mode="paper",
+        symbol="XRPUSDT",
+        side="BUY",
+        strategyId=strategy_id_paper,
+        pnl_usd=60.0,
+        entryOrder=TradeOrderDetails(
             orderId_internal=uuid4(),
-            # "symbol": "NOFILTER", # Este campo no existe en TradeOrderDetails, se elimina
             orderCategory=OrderCategory.ENTRY,
-            type="MARKET",
-            status="FILLED",
+            type=OrderType.MARKET.value,
+            status=OrderStatus.FILLED.value,
             requestedQuantity=float(Decimal("1.0")),
             executedQuantity=float(Decimal("1.0")),
             executedPrice=float(Decimal("1.0")),
             timestamp=datetime.now(timezone.utc),
             requestedPrice=float(Decimal("1.0")),
+            orderId_exchange=str(uuid4()),
+            clientOrderId_exchange=str(uuid4()),
+            cumulativeQuoteQty=float(Decimal("1.0")) * float(Decimal("1.0")),
+            commissions=[],
+            commission=0.0,
+            commissionAsset="USDT",
+            submittedAt=datetime.now(timezone.utc),
+            fillTimestamp=datetime.now(timezone.utc),
+            rawResponse={},
+            ocoOrderListId=None
         ),
-        "positionStatus": PositionStatus.CLOSED.value,
-        "opened_at": datetime.now(timezone.utc), "closed_at": datetime.now(timezone.utc),
-        "pnl_percentage": 0.1, "opportunityId": None, "aiAnalysisConfidence": None,
-        "closingReason": "Test No Filter", "ocoOrderListId": None, "takeProfitPrice": None,
-        "trailingStopActivationPrice": None, "trailingStopCallbackRate": None, "currentStopPrice_tsl": None,
-    }
-
-    paper_trade = Trade(
-        id=trade_paper_id, mode="paper", symbol="XRPUSDT", side="BUY",
-        strategyId=strategy_id_paper, pnl_usd=60.0, **common_trade_params_no_filter
+        positionStatus=PositionStatus.CLOSED.value,
+        opened_at=datetime.now(timezone.utc), 
+        closed_at=datetime.now(timezone.utc),
+        pnl_percentage=0.1, 
+        opportunityId=None, 
+        aiAnalysisConfidence=None,
+        closingReason="Test No Filter", 
+        ocoOrderListId=None, 
+        takeProfitPrice=None,
+        trailingStopActivationPrice=None, 
+        trailingStopCallbackRate=None, 
+        currentStopPrice_tsl=None,
+        riskRewardAdjustments=[]
     )
     real_trade = Trade(
-        id=trade_real_id, mode="real", symbol="DOTUSDT", side="SELL",
-        strategyId=strategy_id_real, pnl_usd=90.0, **common_trade_params_no_filter
+        id=trade_real_id,
+        user_id=settings.FIXED_USER_ID,
+        mode="real",
+        symbol="DOTUSDT",
+        side="SELL",
+        strategyId=strategy_id_real,
+        pnl_usd=90.0,
+        entryOrder=TradeOrderDetails(
+            orderId_internal=uuid4(),
+            orderCategory=OrderCategory.ENTRY,
+            type=OrderType.MARKET.value,
+            status=OrderStatus.FILLED.value,
+            requestedQuantity=float(Decimal("1.0")),
+            executedQuantity=float(Decimal("1.0")),
+            executedPrice=float(Decimal("1.0")),
+            timestamp=datetime.now(timezone.utc),
+            requestedPrice=float(Decimal("1.0")),
+            orderId_exchange=str(uuid4()),
+            clientOrderId_exchange=str(uuid4()),
+            cumulativeQuoteQty=float(Decimal("1.0")) * float(Decimal("1.0")),
+            commissions=[],
+            commission=0.0,
+            commissionAsset="USDT",
+            submittedAt=datetime.now(timezone.utc),
+            fillTimestamp=datetime.now(timezone.utc),
+            rawResponse={},
+            ocoOrderListId=None
+        ),
+        positionStatus=PositionStatus.CLOSED.value,
+        opened_at=datetime.now(timezone.utc), 
+        closed_at=datetime.now(timezone.utc),
+        pnl_percentage=0.1, 
+        opportunityId=None, 
+        aiAnalysisConfidence=None,
+        closingReason="Test No Filter", 
+        ocoOrderListId=None, 
+        takeProfitPrice=None,
+        trailingStopActivationPrice=None, 
+        trailingStopCallbackRate=None, 
+        currentStopPrice_tsl=None,
+        riskRewardAdjustments=[]
     )
     
     # Mock para devolver ambos trades cuando no hay filtro de modo
@@ -408,7 +633,12 @@ async def test_get_strategies_performance_endpoint_no_mode_filter(client, mock_p
 
     config_paper = TradingStrategyConfig(
         id=str(strategy_id_paper), user_id=str(settings.FIXED_USER_ID), config_name="NoFilter Paper Strat",
-        base_strategy_type=BaseStrategyType.SCALPING, parameters=ScalpingParameters(profit_target_percentage=0.01, stop_loss_percentage=0.005),
+        base_strategy_type=BaseStrategyType.SCALPING, parameters=ScalpingParameters(
+            profit_target_percentage=0.01,
+            stop_loss_percentage=0.005,
+            max_holding_time_seconds=3600, # Default value
+            leverage=1 # Default value
+        ),
         is_active_paper_mode=True, is_active_real_mode=False, description="Paper no filter", version=1,
         applicability_rules=None, ai_analysis_profile_id=None, risk_parameters_override=None, parent_config_id=None,
         performance_metrics=None, market_condition_filters=None, activation_schedule=None,
@@ -416,7 +646,16 @@ async def test_get_strategies_performance_endpoint_no_mode_filter(client, mock_p
     )
     config_real = TradingStrategyConfig(
         id=str(strategy_id_real), user_id=str(settings.FIXED_USER_ID), config_name="NoFilter Real Strat",
-        base_strategy_type=BaseStrategyType.DAY_TRADING, parameters=DayTradingParameters(entry_timeframes=["1h"]),
+        base_strategy_type=BaseStrategyType.DAY_TRADING, parameters=DayTradingParameters(
+            entry_timeframes=[Timeframe.ONE_HOUR],
+            rsi_period=14, # Default value
+            rsi_overbought=70, # Default value
+            rsi_oversold=30, # Default value
+            macd_fast_period=12, # Default value
+            macd_slow_period=26, # Default value
+            macd_signal_period=9, # Default value
+            exit_timeframes=[Timeframe.FOUR_HOURS] # Default value
+        ),
         is_active_paper_mode=False, is_active_real_mode=True, description="Real no filter", version=1,
         applicability_rules=None, ai_analysis_profile_id=None, risk_parameters_override=None, parent_config_id=None,
         performance_metrics=None, market_condition_filters=None, activation_schedule=None,
@@ -431,7 +670,7 @@ async def test_get_strategies_performance_endpoint_no_mode_filter(client, mock_p
         return None
     mock_strategy_service_integration.get_strategy_config.side_effect = side_effect_get_strategy_config
     
-    response = await client.get("/api/v1/performance/strategies") # Sin parámetro 'mode'
+    response = client.get("/api/v1/performance/strategies") # Sin parámetro 'mode'
     
     assert response.status_code == 200
     data = response.json()

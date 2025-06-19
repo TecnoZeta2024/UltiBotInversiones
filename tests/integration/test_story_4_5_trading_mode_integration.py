@@ -20,9 +20,7 @@ class TestTradingModeAPIIntegration:
     
     def setup_method(self):
         """Set up test fixtures."""
-        import httpx
-        self.http_client = httpx.AsyncClient()
-        self.api_client = UltiBotAPIClient(base_url="http://test-backend:8000", client=self.http_client)
+        self.api_client = UltiBotAPIClient(base_url="http://test-backend:8000")
         self.user_id = uuid4()
         reset_trading_mode_manager()
     
@@ -260,9 +258,7 @@ class TestEndToEndTradingModeFlow:
         """Set up test fixtures."""
         reset_trading_mode_manager()
         self.mode_manager = get_trading_mode_manager()
-        import httpx
-        self.http_client = httpx.AsyncClient()
-        self.api_client = UltiBotAPIClient(base_url="http://test-backend:8000", client=self.http_client)
+        self.api_client = UltiBotAPIClient(base_url="http://test-backend:8000")
         self.user_id = uuid4()
     
     @pytest.mark.asyncio
@@ -362,7 +358,3 @@ class TestEndToEndTradingModeFlow:
             
             assert order_result["trading_mode"] == "real"
             assert order_result["status"] == "FILLED"
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
-

@@ -2,6 +2,7 @@ from __future__ import annotations
 import logging
 from typing import Optional, Dict, Any, TYPE_CHECKING
 from uuid import UUID, uuid4
+from datetime import datetime, timezone
 
 from ultibot_backend.core.domain_models.user_configuration_models import (
     UserConfiguration,
@@ -53,9 +54,10 @@ class ConfigurationService:
         else:
             logger.warning("NotificationService already set in ConfigService, ignoring attempt to reset.")
 
-    async def _load_config_from_db(self) -> UserConfiguration:
+    async def _load_config_from_db(self, user_id: Optional[str] = None) -> UserConfiguration:
+        target_user_id = user_id if user_id else str(self._user_id)
         try:
-            config_data = await self.persistence_service.get_user_configuration()
+            config_data = await self.persistence_service.get_user_configuration(user_id=target_user_id)
             # Si config_data existe y su 'id' no es None, intentar cargarla.
             if config_data and config_data.get('id') is not None:
                 try:
@@ -68,7 +70,9 @@ class ConfigurationService:
                             daily_loss_limit_absolute=None,
                             daily_profit_target_absolute=None,
                             asset_specific_stop_loss=None,
-                            auto_pause_trading_conditions=None
+                            auto_pause_trading_conditions=None,
+                            daily_capital_risked_usd=0.0,
+                            last_daily_reset=datetime.now(timezone.utc)
                         )
                     # Asegurar que real_trades_executed_count no sea None después de cargar
                     elif user_config.real_trading_settings.real_trades_executed_count is None: # 'elif' para evitar reasignar si ya se instanció arriba
@@ -94,27 +98,32 @@ class ConfigurationService:
             # Esto evita que la aplicación se bloquee, pero la configuración no estará persistida.
             return self.get_default_configuration()
 
-    async def get_user_configuration(self) -> UserConfiguration:
+    async def get_user_configuration(self, user_id: Optional[str] = None) -> UserConfiguration:
+        # Si se proporciona un user_id específico, siempre cargar desde la DB para asegurar la frescura
+        if user_id:
+            return await self._load_config_from_db(user_id)
+        
+        # Si no se proporciona user_id, usar la configuración en caché si existe
         if self._user_configuration:
             return self._user_configuration
         
-        self._user_configuration = await self._load_config_from_db()
+        # Si no hay user_id y no hay caché, cargar desde la DB usando el user_id por defecto
+        self._user_configuration = await self._load_config_from_db(str(self._user_id))
         return self._user_configuration
     
     def get_cached_user_configuration(self) -> Optional[UserConfiguration]:
         return self._user_configuration
 
-    async def reload_user_configuration(self) -> UserConfiguration:
-        self._user_configuration = await self._load_config_from_db()
+    async def reload_user_configuration(self, user_id: Optional[str] = None) -> UserConfiguration:
+        self._user_configuration = await self._load_config_from_db(user_id)
         return self._user_configuration
 
     async def save_user_configuration(self, config: UserConfiguration):
-        if config.user_id != self._user_id:
+        if str(config.user_id) != str(self._user_id):
             raise ConfigurationError("Intentando guardar una configuración para un ID de usuario incorrecto.")
         
         try:
-            config_dict = config.model_dump(mode='json', by_alias=True, exclude_none=True)
-            await self.persistence_service.upsert_user_configuration(config_dict)
+            await self.persistence_service.upsert_user_configuration(config)
             logger.info("Configuración guardada exitosamente.")
             self._user_configuration = config
         except Exception as e:
@@ -153,7 +162,9 @@ class ConfigurationService:
                 daily_loss_limit_absolute=None,
                 daily_profit_target_absolute=None,
                 asset_specific_stop_loss=None,
-                auto_pause_trading_conditions=None
+                auto_pause_trading_conditions=None,
+                daily_capital_risked_usd=0.0,
+                last_daily_reset=datetime.now(timezone.utc)
             )
         )
 

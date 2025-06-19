@@ -7,6 +7,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID, uuid4
+from decimal import Decimal # Importar Decimal
 
 from pydantic import BaseModel, Field, validator, ConfigDict
 
@@ -95,13 +96,13 @@ class TradeOrderDetails(BaseModel):
     orderCategory: OrderCategory = Field(..., description="Categoría de la orden (ej. 'entry', 'take_profit', 'stop_loss').")
     type: str = Field(..., description="Tipo de orden (ej. 'market', 'limit', 'stop_loss_limit', 'take_profit_limit').")
     status: str = Field(..., description="Estado de la orden (ej. 'filled', 'partial_fill', 'new', 'canceled', 'rejected').")
-    requestedPrice: Optional[float] = Field(None, description="Precio solicitado en la orden (para órdenes limitadas).")
-    requestedQuantity: float = Field(..., description="Cantidad solicitada en la orden.")
-    executedQuantity: float = Field(..., description="Cantidad ejecutada de la orden.")
-    executedPrice: float = Field(..., description="Precio promedio de ejecución de la orden.")
-    cumulativeQuoteQty: Optional[float] = Field(None, description="Cantidad total de la moneda de cotización ejecutada.")
+    requestedPrice: Optional[Decimal] = Field(None, description="Precio solicitado en la orden (para órdenes limitadas).")
+    requestedQuantity: Decimal = Field(..., description="Cantidad solicitada en la orden.")
+    executedQuantity: Decimal = Field(..., description="Cantidad ejecutada de la orden.")
+    executedPrice: Decimal = Field(..., description="Precio promedio de ejecución de la orden.")
+    cumulativeQuoteQty: Optional[Decimal] = Field(None, description="Cantidad total de la moneda de cotización ejecutada.")
     commissions: Optional[List[Dict[str, Any]]] = Field(None, description="Lista de comisiones pagadas por la orden.")
-    commission: Optional[float] = Field(None, description="Comisión pagada por la orden (campo legado, preferir 'commissions').")
+    commission: Optional[Decimal] = Field(None, description="Comisión pagada por la orden (campo legado, preferir 'commissions').")
     commissionAsset: Optional[str] = Field(None, description="Activo en el que se pagó la comisión (campo legado, preferir 'commissions').")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Marca de tiempo de la ejecución/actualización de la orden.")
     submittedAt: Optional[datetime] = Field(None, description="Marca de tiempo de cuando la orden fue enviada al exchange.")
@@ -195,15 +196,15 @@ class Trade(BaseModel):
     opportunityId: Optional[UUID] = Field(None, description="ID de la oportunidad de trading que originó este trade.")
     aiAnalysisConfidence: Optional[float] = Field(None, description="Confianza de la IA en la oportunidad (si aplica).")
     
-    pnl_usd: Optional[float] = Field(None, description="Ganancia o pérdida en USD (para posiciones cerradas).")
-    pnl_percentage: Optional[float] = Field(None, description="Ganancia o pérdida en porcentaje (para posiciones cerradas).")
+    pnl_usd: Optional[Decimal] = Field(None, description="Ganancia o pérdida en USD (para posiciones cerradas).")
+    pnl_percentage: Optional[Decimal] = Field(None, description="Ganancia o pérdida en porcentaje (para posiciones cerradas).")
     closingReason: Optional[str] = Field(None, description="Razón del cierre de la posición (ej. 'TP_HIT', 'SL_HIT', 'MANUAL_CLOSE', 'OCO_TRIGGERED').")
     ocoOrderListId: Optional[str] = Field(None, description="ID de la lista de órdenes OCO asociada a este trade (si aplica).")
 
-    takeProfitPrice: Optional[float] = Field(None, description="Precio objetivo para Take Profit.")
-    trailingStopActivationPrice: Optional[float] = Field(None, description="Precio al que se activa el Trailing Stop.")
-    trailingStopCallbackRate: Optional[float] = Field(None, description="Porcentaje de retroceso para el Trailing Stop (ej. 0.01 para 1%).")
-    currentStopPrice_tsl: Optional[float] = Field(None, description="Precio actual del Trailing Stop Loss.")
+    takeProfitPrice: Optional[Decimal] = Field(None, description="Precio objetivo para Take Profit.")
+    trailingStopActivationPrice: Optional[Decimal] = Field(None, description="Precio al que se activa el Trailing Stop.")
+    trailingStopCallbackRate: Optional[Decimal] = Field(None, description="Porcentaje de retroceso para el Trailing Stop (ej. 0.01 para 1%).")
+    currentStopPrice_tsl: Optional[Decimal] = Field(None, description="Precio actual del Trailing Stop Loss.")
     
     riskRewardAdjustments: List[Dict[str, Any]] = Field(default_factory=list, description="Historial de ajustes de TSL/TP.")
 

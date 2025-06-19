@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import HTTPException
 from pydantic import ValidationError
 
+from shared.utils import custom_dumps
 from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 from ultibot_backend.core.domain_models.user_configuration_models import (
     UserConfiguration,
@@ -189,19 +190,19 @@ class ConfigurationService:
             if field_value is None:
                 return None
             if isinstance(field_value, list):
-                return json.dumps([
+                return custom_dumps([
                     item.dict() if hasattr(item, 'dict') else item 
                     for item in field_value
                 ])
             elif isinstance(field_value, dict):
-                return json.dumps({
+                return custom_dumps({
                     k: v.dict() if hasattr(v, 'dict') else v 
                     for k, v in field_value.items()
                 })
             elif hasattr(field_value, 'dict'):
-                return json.dumps(field_value.dict())
+                return custom_dumps(field_value.dict())
             else:
-                return json.dumps(field_value)
+                return custom_dumps(field_value)
         
         return {
             "id": config.id,
@@ -212,7 +213,7 @@ class ConfigurationService:
             "default_paper_trading_capital": config.default_paper_trading_capital,
             "paper_trading_active": config.paper_trading_active,
             "watchlists": to_json(config.watchlists),
-            "favorite_pairs": json.dumps(config.favorite_pairs) if config.favorite_pairs else None,
+            "favorite_pairs": custom_dumps(config.favorite_pairs) if config.favorite_pairs else None,
             "risk_profile": config.risk_profile,
             "risk_profile_settings": to_json(config.risk_profile_settings),
             "real_trading_settings": to_json(config.real_trading_settings),
@@ -377,4 +378,3 @@ class ConfigurationService:
             await self.persistence_service.connection.rollback()
             logger.error(f"Database error saving user configuration: {e}")
             raise
-

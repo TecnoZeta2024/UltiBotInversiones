@@ -101,7 +101,8 @@ app = FastAPI(
     title="UltiBot Backend",
     description="El backend para la plataforma de trading algorítmico UltiBotInversiones.",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    debug=os.environ.get("TESTING") == "True"
 )
 
 @app.middleware("http")

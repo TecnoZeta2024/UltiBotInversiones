@@ -19,19 +19,36 @@ class APIError(Exception):
 
 class UltiBotAPIClient:
     """Cliente para interactuar con la API del backend de UltiBot."""
+    _instance = None
+    _client = None
 
-    def __init__(self, base_url: str, client: httpx.AsyncClient):
-        self._base_url = base_url
-        self._client = client
-        logger.debug(f"API base URL set to: {self._base_url}")
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(UltiBotAPIClient, cls).__new__(cls)
+        return cls._instance
+
+    def __init__(self, base_url: str):
+        if self._client is None:
+            self._base_url = base_url
+            self._client = httpx.AsyncClient(base_url=self._base_url, timeout=30.0)
+            logger.debug(f"APIClient singleton inicializado con base URL: {self._base_url}")
+
+    async def close(self):
+        """Cierra el cliente httpx."""
+        if self._client:
+            await self._client.aclose()
+            self._client = None
+            logger.info("APIClient httpx client closed.")
 
     async def _make_request(self, method: str, endpoint: str, **kwargs) -> Any:
+        if not self._client:
+            raise RuntimeError("HTTP client is not initialized or has been closed.")
         url = f"{self._base_url}{endpoint}"
         try:
             logger.debug(f"APIClient: _make_request invocado para {method} {endpoint}")
-            response = await self._client.request(method, url, **kwargs)
+            response = await self._client.request(method, endpoint, **kwargs)
             
-            logger.info(f"HTTP Request: {method} {url} \"HTTP/{response.http_version} {response.status_code} {response.reason_phrase}\"")
+            logger.info(f"HTTP Request: {method} {self._base_url}{endpoint} \"HTTP/{response.http_version} {response.status_code} {response.reason_phrase}\"")
 
             response.raise_for_status()
             logger.debug(f"Response content: {response.text}")  # Log del contenido de la respuesta

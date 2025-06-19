@@ -9,6 +9,7 @@ from typing import Optional, List, Dict, Any
 from uuid import UUID, uuid4
 from enum import Enum
 from pydantic import BaseModel, Field, ConfigDict
+from decimal import Decimal
 
 # Importar modelos de dominio para mantener una única fuente de verdad
 from ultibot_backend.core.domain_models.trade_models import (
@@ -134,23 +135,23 @@ class BinanceConnectionStatus(BaseModel):
 
 class AssetBalance(BaseModel):
     asset: str = Field(..., description="Símbolo del activo (ej. 'USDT', 'BTC').")
-    free: float = Field(..., description="Cantidad disponible para trading.")
-    locked: float = Field(..., description="Cantidad bloqueada en órdenes.")
-    total: float = Field(..., description="Cantidad total (free + locked).")
+    free: Decimal = Field(..., description="Cantidad disponible para trading.")
+    locked: Decimal = Field(..., description="Cantidad bloqueada en órdenes.")
+    total: Decimal = Field(..., description="Cantidad total (free + locked).")
 
 class PortfolioAsset(BaseModel):
     symbol: str = Field(..., description="Símbolo del activo (ej. 'BTC', 'ETH').")
-    quantity: float = Field(..., description="Cantidad del activo poseído.")
-    entry_price: Optional[float] = Field(None, description="Precio promedio de entrada del activo.")
-    current_price: Optional[float] = Field(None, description="Precio actual de mercado del activo.")
-    current_value_usd: Optional[float] = Field(None, description="Valor actual del activo en USD.")
-    unrealized_pnl_usd: Optional[float] = Field(None, description="Ganancia/Pérdida no realizada en USD.")
-    unrealized_pnl_percentage: Optional[float] = Field(None, description="Ganancia/Pérdida no realizada en porcentaje.")
+    quantity: Decimal = Field(..., description="Cantidad del activo poseído.")
+    entry_price: Optional[Decimal] = Field(None, description="Precio promedio de entrada del activo.")
+    current_price: Optional[Decimal] = Field(None, description="Precio actual de mercado del activo.")
+    current_value_usd: Optional[Decimal] = Field(None, description="Valor actual del activo en USD.")
+    unrealized_pnl_usd: Optional[Decimal] = Field(None, description="Ganancia/Pérdida no realizada en USD.")
+    unrealized_pnl_percentage: Optional[Decimal] = Field(None, description="Ganancia/Pérdida no realizada en porcentaje.")
 
 class PortfolioSummary(BaseModel):
-    available_balance_usdt: float = Field(..., description="Saldo disponible en USDT.")
-    total_assets_value_usd: float = Field(..., description="Valor total de los activos poseídos en USD.")
-    total_portfolio_value_usd: float = Field(..., description="Valor total del portafolio (saldo + valor de activos) en USD.")
+    available_balance_usdt: Decimal = Field(..., description="Saldo disponible en USDT.")
+    total_assets_value_usd: Decimal = Field(..., description="Valor total de los activos poseídos en USD.")
+    total_portfolio_value_usd: Decimal = Field(..., description="Valor total del portafolio (saldo + valor de activos) en USD.")
     assets: List[PortfolioAsset] = Field(default_factory=list, description="Lista de activos poseídos.")
     error_message: Optional[str] = Field(None, description="Mensaje de error si hubo un problema al obtener el resumen.")
 

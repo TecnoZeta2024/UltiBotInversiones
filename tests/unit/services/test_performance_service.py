@@ -47,7 +47,10 @@ USER_ID = uuid4()
 
 @pytest.fixture
 def mock_persistence_service():
-    return AsyncMock(spec=SupabasePersistenceService)
+    mock = AsyncMock(spec=SupabasePersistenceService)
+    # Configurar el método get_all_trades_for_user para que sea un AsyncMock
+    mock.get_all_trades_for_user = AsyncMock(return_value=[])
+    return mock
 
 @pytest.fixture
 def mock_strategy_service():

@@ -67,37 +67,46 @@ async def _main_async(app: QtWidgets.QApplication):
     """Lógica asíncrona principal de la aplicación de UI."""
     logger.info("Initializing or finding application window...")
 
-    # Buscar una instancia existente de MainWindow entre los widgets de nivel superior
+    # Buscar una instancia existente de MainWindow
     main_window = next((w for w in app.topLevelWidgets() if isinstance(w, MainWindow)), None)
 
     if not main_window:
         logger.info("No existing MainWindow found. Creating a new one.")
         load_stylesheet(app)
-        
-        async with httpx.AsyncClient(timeout=30.0) as http_client:
-            api_client = UltiBotAPIClient(base_url="http://127.0.0.1:8000", client=http_client)
-            
-            try:
-                logger.info("Fetching initial user configuration...")
-                user_config = await api_client.get_user_configuration()
-                user_id = UUID(user_config['id'])
-                logger.info(f"Configuration received for user ID: {user_id}")
-                
-                main_window = MainWindow(user_id=user_id, api_client=api_client)
-                main_window.show()
-                logger.info("Main window created and shown.")
 
-            except APIError as e:
-                logger.critical(f"Failed to fetch initial configuration: {e}. Cannot start application.")
-                return
-            except Exception as e:
-                logger.critical(f"An unexpected error occurred during initialization: {e}", exc_info=True)
-                return
+        # Instanciar el cliente API singleton
+        api_client = UltiBotAPIClient(base_url="http://127.0.0.1:8000")
+
+        try:
+            logger.info("Fetching initial user configuration...")
+            user_config = await api_client.get_user_configuration()
+            user_id = UUID(user_config['id'])
+            logger.info(f"Configuration received for user ID: {user_id}")
+            
+            main_window = MainWindow(user_id=user_id, api_client=api_client)
+            main_window.show()
+            logger.info("Main window created and shown.")
+
+        except APIError as e:
+            logger.critical(f"Failed to fetch initial configuration: {e}. Cannot start application.")
+            await api_client.close() # Asegurarse de cerrar el cliente en caso de error
+            return
+        except Exception as e:
+            logger.critical(f"An unexpected error occurred during initialization: {e}", exc_info=True)
+            await api_client.close() # Asegurarse de cerrar el cliente en caso de error
+            return
     else:
         logger.info("Existing MainWindow found. Activating it.")
         main_window.show()
         main_window.activateWindow()
-        main_window.raise_() # Traer al frente
+        main_window.raise_()
+
+async def cleanup_resources():
+    """Cierra los recursos de la aplicación de forma segura."""
+    logger.info("Cleaning up resources...")
+    api_client = UltiBotAPIClient(base_url="http://127.0.0.1:8000")
+    await api_client.close()
+    logger.info("Cleanup complete.")
 
 def main():
     """Punto de entrada principal para la aplicación de UI."""
@@ -118,6 +127,9 @@ def main():
         loop = qasync.QEventLoop(app)
         asyncio.set_event_loop(loop)
 
+        # Conectar la limpieza de recursos a la señal de cierre de la aplicación
+        app.aboutToQuit.connect(lambda: asyncio.run(cleanup_resources()))
+
         # Crear y ejecutar la tarea principal
         async_task = loop.create_task(_main_async(app))
 
@@ -129,6 +141,8 @@ def main():
     except Exception as e:
         logger.critical(f"Excepción no controlada en main: {e}", exc_info=True)
     finally:
+        # La limpieza ahora se maneja a través de la señal aboutToQuit
+        logger.info("Iniciando cierre de la aplicación.")
         # Asegurarse de que el bucle se cierre correctamente
         if 'loop' in locals() and loop.is_running():
             loop.close()

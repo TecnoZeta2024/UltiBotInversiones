@@ -7,6 +7,7 @@ including AI strategy configurations for integration with Gemini analysis.
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
+from decimal import Decimal # Importar Decimal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -141,14 +142,14 @@ class RealTradingSettings(BaseModel):
         gt=0, 
         description="Maximum concurrent operations"
     )
-    daily_loss_limit_absolute: Optional[float] = Field(
+    daily_loss_limit_absolute: Optional[Decimal] = Field(
         None, 
-        gt=0, 
+        gt=Decimal(0), 
         description="Daily loss limit in quote currency"
     )
-    daily_profit_target_absolute: Optional[float] = Field(
+    daily_profit_target_absolute: Optional[Decimal] = Field(
         None, 
-        gt=0, 
+        gt=Decimal(0), 
         description="Daily profit target in quote currency"
     )
     asset_specific_stop_loss: Optional[Dict[str, Dict[str, float]]] = Field(
@@ -159,8 +160,8 @@ class RealTradingSettings(BaseModel):
         None, 
         description="Auto pause conditions"
     )
-    daily_capital_risked_usd: Optional[float] = Field(
-        0.0, 
+    daily_capital_risked_usd: Optional[Decimal] = Field( # Cambiado a Decimal
+        Decimal("0.0"), # Inicializado como Decimal
         ge=0, 
         description="Total capital risked in USD for the current day"
     )
@@ -286,8 +287,8 @@ class CloudSyncPreferences(BaseModel):
 class PaperTradingAsset(BaseModel):
     """Represents a single asset holding in paper trading for persistence."""
     asset: str = Field(..., description="The asset symbol (e.g., 'BTC')")
-    quantity: float = Field(..., description="The quantity of the asset held")
-    entry_price: float = Field(..., description="The average entry price for this holding")
+    quantity: Decimal = Field(..., description="The quantity of the asset held")
+    entry_price: Decimal = Field(..., description="The average entry price for this holding")
 
 
 class UserConfiguration(BaseModel):
@@ -311,9 +312,9 @@ class UserConfiguration(BaseModel):
     )
     
     # --- Trading Preferences ---
-    default_paper_trading_capital: Optional[float] = Field(
+    default_paper_trading_capital: Optional[Decimal] = Field(
         None, 
-        gt=0, 
+        gt=Decimal(0), 
         description="Default capital for paper trading"
     )
     paper_trading_active: Optional[bool] = Field(

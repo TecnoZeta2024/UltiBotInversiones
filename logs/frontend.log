@@ -1,0 +1,169 @@
+2025-06-19 07:02:26,427 - asyncio - DEBUG - Using proactor: _IocpProactor
+2025-06-19 07:02:26,428 - qasync._windows._EventPoller - DEBUG - Starting (proactor: <_IocpProactor overlapped#=0 result#=0>)...
+2025-06-19 07:02:26,429 - qasync._windows._EventWorker - DEBUG - Thread started
+2025-06-19 07:02:26,431 - __main__ - INFO - Initializing or finding application window...
+2025-06-19 07:02:26,431 - __main__ - INFO - No existing MainWindow found. Creating a new one.
+2025-06-19 07:02:26,432 - __main__ - INFO - Stylesheet loaded successfully.
+2025-06-19 07:02:26,637 - ultibot_ui.services.api_client - DEBUG - APIClient singleton inicializado con base URL: http://127.0.0.1:8000
+2025-06-19 07:02:26,637 - __main__ - INFO - Fetching initial user configuration...
+2025-06-19 07:02:26,637 - ultibot_ui.services.api_client - INFO - Obteniendo configuración de usuario.
+2025-06-19 07:02:26,637 - ultibot_ui.services.api_client - DEBUG - APIClient: _make_request invocado para GET /api/v1/config
+2025-06-19 07:02:26,666 - httpcore.connection - DEBUG - connect_tcp.started host='127.0.0.1' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-19 07:02:26,666 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001D93C45B1D0>
+2025-06-19 07:02:26,668 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-19 07:02:26,668 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-19 07:02:26,668 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-19 07:02:26,668 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-19 07:02:26,668 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-19 07:02:26,674 - qasync._windows._EventWorker - DEBUG - Got events from poll: [(<_OverlappedFuture pending cb=[_ProactorReadPipeTransport._loop_reading()]>, <function IocpProactor.recv_into.<locals>.finish_recv at 0x000001D93CB23600>, 127, 0, <_overlapped.Overlapped object at 0x000001D93C33F0F0>)]
+2025-06-19 07:02:26,674 - qasync._QEventLoop - DEBUG - Invoking event callback <function IocpProactor.recv_into.<locals>.finish_recv at 0x000001D93CB23600>
+2025-06-19 07:02:26,674 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Thu, 19 Jun 2025 11:02:25 GMT'), (b'server', b'uvicorn'), (b'content-length', b'1080'), (b'content-type', b'application/json')])
+2025-06-19 07:02:26,674 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/config "HTTP/1.1 200 OK"
+2025-06-19 07:02:26,674 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/config "HTTP/1.1 200 OK"
+2025-06-19 07:02:26,674 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-19 07:02:26,674 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-19 07:02:26,674 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-19 07:02:26,674 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-19 07:02:26,674 - ultibot_ui.services.api_client - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/config "HTTP/HTTP/1.1 200 OK"
+2025-06-19 07:02:26,674 - ultibot_ui.services.api_client - DEBUG - Response content: {"id":"52303b66-8936-4586-8fe3-6af14c5345cf","user_id":"00000000-0000-0000-0000-000000000001","telegram_chat_id":null,"notification_preferences":[],"enable_telegram_notifications":false,"default_paper_trading_capital":"10000.0","paper_trading_active":true,"paper_trading_assets":null,"watchlists":[],"favorite_pairs":["BTCUSDT","ETHUSDT","BNBUSDT"],"risk_profile":"moderate","risk_profile_settings":null,"real_trading_settings":{"real_trading_mode_active":false,"real_trades_executed_count":0,"max_concurrent_operations":null,"daily_loss_limit_absolute":null,"daily_profit_target_absolute":null,"asset_specific_stop_loss":null,"auto_pause_trading_conditions":null,"daily_capital_risked_usd":"0.0","last_daily_reset":"2025-06-19T11:02:26.674070Z"},"ai_strategy_configurations":[],"ai_analysis_confidence_thresholds":{"paper_trading":0.7,"real_trading":0.8},"mcp_server_preferences":[],"selected_theme":"dark","dashboard_layout_profiles":null,"active_dashboard_layout_profile_id":null,"dashboard_layout_config":null,"cloud_sync_preferences":null,"created_at":null,"updated_at":null}
+2025-06-19 07:02:26,674 - __main__ - INFO - Configuration received for user ID: 52303b66-8936-4586-8fe3-6af14c5345cf
+2025-06-19 07:02:26,727 - ultibot_ui.services.trading_mode_state - INFO - TradingModeStateManager initialized with mode: paper
+2025-06-19 07:02:26,727 - ultibot_ui.services.trading_mode_state - INFO - Created global trading mode state manager
+2025-06-19 07:02:27,014 - ultibot_ui.widgets.portfolio_widget - INFO - Timer de actualización del portafolio iniciado.
+2025-06-19 07:02:27,017 - ultibot_ui.widgets.chart_widget - INFO - Solicitando datos para BTCUSDT - 1h usando ApiWorker
+2025-06-19 07:02:27,018 - ultibot_ui.workers - DEBUG - ApiWorker initialized with api_client: <ultibot_ui.services.api_client.UltiBotAPIClient object at 0x000001D93C09AE50>, coroutine_factory: set
+2025-06-19 07:02:27,032 - ultibot_ui.windows.dashboard_view - INFO - DashboardView: _initialize_async_components INVOCADO
+2025-06-19 07:02:27,032 - ultibot_ui.workers - DEBUG - ApiWorker initialized with api_client: <ultibot_ui.services.api_client.UltiBotAPIClient object at 0x000001D93C09AE50>, coroutine_factory: set
+2025-06-19 07:02:27,043 - ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: __init__ called.
+2025-06-19 07:02:27,043 - ultibot_ui.views.opportunities_view - DEBUG - OpportunitiesView initialized.
+2025-06-19 07:02:27,043 - ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: _load_initial_data called.
+2025-06-19 07:02:27,065 - ultibot_ui.workers - DEBUG - ApiWorker initialized with api_client: <ultibot_ui.services.api_client.UltiBotAPIClient object at 0x000001D93C09AE50>, coroutine_factory: set
+2025-06-19 07:02:27,067 - ultibot_ui.workers - DEBUG - ApiWorker initialized with api_client: <ultibot_ui.services.api_client.UltiBotAPIClient object at 0x000001D93C09AE50>, coroutine_factory: set
+2025-06-19 07:02:27,073 - ultibot_ui.windows.history_view - INFO - HistoryView inicializada para usuario 52303b66-8936-4586-8fe3-6af14c5345cf
+2025-06-19 07:02:27,082 - ultibot_ui.workers - DEBUG - ApiWorker initialized with api_client: <ultibot_ui.services.api_client.UltiBotAPIClient object at 0x000001D93C09AE50>, coroutine_factory: set
+2025-06-19 07:02:27,082 - ultibot_ui.windows.main_window - INFO - Central widget y vistas configuradas.
+2025-06-19 07:02:27,104 - ultibot_ui.windows.main_window - INFO - MainWindow inicializada y visible.
+2025-06-19 07:02:27,216 - __main__ - INFO - Main window created and shown.
+2025-06-19 07:02:27,260 - ultibot_ui.views.opportunities_view - INFO - Fetching Gemini IA opportunities.
+2025-06-19 07:02:27,263 - ultibot_ui.views.opportunities_view - DEBUG - Creating ApiWorker.
+2025-06-19 07:02:27,263 - ultibot_ui.workers - DEBUG - ApiWorker initialized with api_client: <ultibot_ui.services.api_client.UltiBotAPIClient object at 0x000001D93C09AE50>, coroutine_factory: set
+2025-06-19 07:02:27,266 - ultibot_ui.views.portfolio_view - INFO - PortfolioView: Fetching portfolio snapshot.
+2025-06-19 07:02:27,266 - ultibot_ui.workers - DEBUG - ApiWorker initialized with api_client: <ultibot_ui.services.api_client.UltiBotAPIClient object at 0x000001D93C09AE50>, coroutine_factory: set
+2025-06-19 07:02:27,266 - ultibot_ui.windows.settings_view - INFO - SettingsView: Iniciando carga de datos iniciales (_load_initial_data).
+2025-06-19 07:02:27,266 - ultibot_ui.windows.settings_view - INFO - SettingsView: Solicitando configuración de usuario general.
+2025-06-19 07:02:27,266 - ultibot_ui.workers - DEBUG - ApiWorker initialized with api_client: <ultibot_ui.services.api_client.UltiBotAPIClient object at 0x000001D93C09AE50>, coroutine_factory: set
+2025-06-19 07:02:27,266 - ultibot_ui.windows.settings_view - INFO - SettingsView: Solicitando estado de operativa real.
+2025-06-19 07:02:27,266 - ultibot_ui.workers - DEBUG - ApiWorker initialized with api_client: <ultibot_ui.services.api_client.UltiBotAPIClient object at 0x000001D93C09AE50>, coroutine_factory: set
+2025-06-19 07:02:31,684 - qasync._windows._EventWorker - DEBUG - Got events from poll: [(<_OverlappedFuture pending cb=[_ProactorReadPipeTransport._loop_reading()]>, <function IocpProactor.recv_into.<locals>.finish_recv at 0x000001D93CC059E0>, 0, 0, <_overlapped.Overlapped object at 0x000001D93C33F0F0>)]
+2025-06-19 07:02:31,684 - qasync._QEventLoop - DEBUG - Invoking event callback <function IocpProactor.recv_into.<locals>.finish_recv at 0x000001D93CC059E0>
+2025-06-19 07:02:32,039 - ultibot_ui.workers - DEBUG - ApiWorker initialized with api_client: <ultibot_ui.services.api_client.UltiBotAPIClient object at 0x000001D93C09AE50>, coroutine_factory: set
+2025-06-19 07:02:40,733 - ultibot_ui.workers - DEBUG - ApiWorker initialized with api_client: <ultibot_ui.services.api_client.UltiBotAPIClient object at 0x000001D93C09AE50>, coroutine_factory: set
+2025-06-19 07:02:42,020 - ultibot_ui.widgets.portfolio_widget - INFO - Actualizando datos del portafolio para modo: paper
+2025-06-19 07:02:42,020 - ultibot_ui.workers - DEBUG - ApiWorker initialized with api_client: <ultibot_ui.services.api_client.UltiBotAPIClient object at 0x000001D93C09AE50>, coroutine_factory: set
+2025-06-19 07:02:42,023 - ultibot_ui.workers - DEBUG - ApiWorker: run method started.
+2025-06-19 07:02:42,024 - asyncio - DEBUG - Using selector: SelectSelector
+2025-06-19 07:02:42,025 - ultibot_ui.workers - DEBUG - ApiWorker: Creating coroutine from factory.
+2025-06-19 07:02:42,025 - ultibot_ui.workers - DEBUG - ApiWorker: Coroutine created: <coroutine object PortfolioWidget._start_update_worker.<locals>.fetch_data_coroutine at 0x000001D93C406D40>. Running in event loop.
+2025-06-19 07:02:42,025 - ultibot_ui.widgets.portfolio_widget - DEBUG - PortfolioWidget: Iniciando fetch_data_coroutine para modo paper.
+2025-06-19 07:02:42,026 - ultibot_ui.services.api_client - INFO - Obteniendo snapshot del portafolio para 52303b66-8936-4586-8fe3-6af14c5345cf, modo: paper
+2025-06-19 07:02:42,026 - ultibot_ui.services.api_client - DEBUG - APIClient: _make_request invocado para GET /api/v1/portfolio/snapshot/52303b66-8936-4586-8fe3-6af14c5345cf
+2025-06-19 07:02:42,026 - httpcore.connection - DEBUG - close.started
+2025-06-19 07:02:42,028 - ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: paper, filtros: {'trading_mode': 'paper', 'limit': 100, 'offset': 0, 'status': 'open'}
+2025-06-19 07:02:42,028 - ultibot_ui.services.api_client - DEBUG - APIClient: _make_request invocado para GET /api/v1/trades
+2025-06-19 07:02:42,031 - httpcore.connection - DEBUG - close.failed exception=AssertionError()
+2025-06-19 07:02:42,031 - httpcore.connection - DEBUG - connect_tcp.started host='127.0.0.1' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-19 07:02:42,042 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001D93CC11110>
+2025-06-19 07:02:42,044 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-19 07:02:42,045 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-19 07:02:42,045 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-19 07:02:42,045 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-19 07:02:42,045 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-19 07:02:42,053 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 500, b'Internal Server Error', [(b'date', b'Thu, 19 Jun 2025 11:02:41 GMT'), (b'server', b'uvicorn'), (b'content-length', b'65'), (b'content-type', b'application/json')])
+2025-06-19 07:02:42,054 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open "HTTP/1.1 500 Internal Server Error"
+2025-06-19 07:02:42,054 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open "HTTP/1.1 500 Internal Server Error"
+2025-06-19 07:02:42,054 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-19 07:02:42,055 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-19 07:02:42,055 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-19 07:02:42,055 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-19 07:02:42,056 - ultibot_ui.services.api_client - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/trades "HTTP/HTTP/1.1 500 Internal Server Error"
+2025-06-19 07:02:42,056 - ultibot_ui.services.api_client - ERROR - Error HTTP 500 para GET http://127.0.0.1:8000/api/v1/trades: {"detail":"Ocurrió un error interno inesperado en el servidor."}
+2025-06-19 07:02:42,056 - ultibot_ui.workers - DEBUG - ApiWorker: Coroutine finished. Result: {'portfolio_snapshot': AssertionError(), 'open_trades': APIError('Ocurrió un error interno inesperado en el servidor.'), 'trading_mode': 'paper'}
+2025-06-19 07:02:42,057 - ultibot_ui.workers - DEBUG - ApiWorker: result_ready signal emitted.
+2025-06-19 07:02:42,057 - ultibot_ui.widgets.portfolio_widget - INFO - DATOS COMPLETOS RECIBIDOS EN HANDLER: {'portfolio_snapshot': AssertionError(), 'open_trades': APIError('Ocurrió un error interno inesperado en el servidor.'), 'trading_mode': 'paper'}
+2025-06-19 07:02:42,057 - ultibot_ui.workers - DEBUG - ApiWorker: Closing event loop.
+2025-06-19 07:02:42,057 - ultibot_ui.widgets.portfolio_widget - ERROR - Error al obtener snapshot de portafolio: 
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 78, in get_portfolio_snapshot
+    return await self._make_request("GET", endpoint, params=params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 49, in _make_request
+    response = await self._client.request(method, endpoint, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_client.py", line 1585, in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_client.py", line 1674, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_client.py", line 1702, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_client.py", line 1739, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_client.py", line 1776, in _send_single_request
+    response = await transport.handle_async_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_transports\default.py", line 377, in handle_async_request
+    resp = await self._pool.handle_async_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpcore\_async\connection_pool.py", line 256, in handle_async_request
+    raise exc from None
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpcore\_async\connection_pool.py", line 229, in handle_async_request
+    await self._close_connections(closing)
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpcore\_async\connection_pool.py", line 345, in _close_connections
+    await connection.aclose()
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpcore\_async\connection.py", line 173, in aclose
+    await self._connection.aclose()
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpcore\_async\http11.py", line 258, in aclose
+    await self._network_stream.aclose()
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpcore\_backends\anyio.py", line 53, in aclose
+    await self._stream.aclose()
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1316, in aclose
+    self._transport.abort()
+  File "C:\Program Files\Python311\Lib\asyncio\proactor_events.py", line 423, in abort
+    self._force_close(None)
+  File "C:\Program Files\Python311\Lib\asyncio\proactor_events.py", line 152, in _force_close
+    self._loop.call_soon(self._call_connection_lost, exc)
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\qasync\__init__.py", line 481, in call_soon
+    return self.call_later(0, callback, *args, context=context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\qasync\__init__.py", line 471, in call_later
+    return self._add_callback(
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\qasync\__init__.py", line 477, in _add_callback
+    return self._timer.add_callback(handle, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\qasync\__init__.py", line 257, in add_callback
+    assert timerid not in self.__callbacks
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
+2025-06-19 07:02:42,058 - ultibot_ui.workers - DEBUG - ApiWorker: run method finished.
+2025-06-19 07:02:42,061 - ultibot_ui.widgets.portfolio_widget - ERROR - Error al obtener trades abiertos: Error de API (500): Ocurrió un error interno inesperado en el servidor.
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 53, in _make_request
+    response.raise_for_status()
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'http://127.0.0.1:8000/api/v1/trades?trading_mode=paper&limit=100&offset=0&status=open'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 83, in get_trades
+    return await self._make_request("GET", "/api/v1/trades", params=params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 58, in _make_request
+    raise APIError(
+ultibot_ui.services.api_client.APIError: Error de API (500): Ocurrió un error interno inesperado en el servidor.

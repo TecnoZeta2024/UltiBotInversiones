@@ -2,10 +2,12 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4, UUID
 from datetime import datetime
+from decimal import Decimal
 
 from ultibot_backend.services.market_data_service import MarketDataService
 from ultibot_backend.services.credential_service import CredentialService, CredentialError
 from ultibot_backend.adapters.binance_adapter import BinanceAdapter, BinanceAPIError
+from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 from shared.data_types import APICredential, ServiceName, BinanceConnectionStatus, AssetBalance
 
 @pytest.fixture
@@ -22,11 +24,16 @@ def mock_binance_adapter():
     return adapter
 
 @pytest.fixture
-def market_data_service(mock_credential_service, mock_binance_adapter, mock_persistence_service_integration):
+def mock_persistence_service():
+    """Provides a mocked instance of SupabasePersistenceService."""
+    return AsyncMock(spec=SupabasePersistenceService)
+
+@pytest.fixture
+def market_data_service(mock_credential_service, mock_binance_adapter, mock_persistence_service):
     return MarketDataService(
         credential_service=mock_credential_service,
         binance_adapter=mock_binance_adapter,
-        persistence_service=mock_persistence_service_integration
+        persistence_service=mock_persistence_service
     )
 
 @pytest.fixture
@@ -68,7 +75,7 @@ async def test_get_binance_connection_status_success(market_data_service: Market
     assert status_result.last_verified_at == sample_binance_credential.last_verified_at
     assert status_result.account_permissions == sample_binance_credential.permissions
     mock_credential_service.get_credential.assert_called_once_with(
-        user_id=sample_user_id, service_name=ServiceName.BINANCE_SPOT, credential_label="default"
+        service_name=ServiceName.BINANCE_SPOT, credential_label="default"
     )
     mock_credential_service.verify_credential.assert_called_once_with(sample_binance_credential)
 
@@ -122,14 +129,14 @@ async def test_get_binance_connection_status_binance_api_error(market_data_servi
 @pytest.mark.asyncio
 async def test_get_binance_spot_balances_success(market_data_service: MarketDataService, mock_credential_service, mock_binance_adapter, sample_binance_credential):
     mock_credential_service.get_credential.return_value = sample_binance_credential
-    expected_balances = [AssetBalance(asset="BTC", free=1.0, locked=0.0, total=1.0)]
+    expected_balances = [AssetBalance(asset="BTC", free=Decimal("1.0"), locked=Decimal("0.0"), total=Decimal("1.0"))]
     mock_binance_adapter.get_spot_balances.return_value = expected_balances
 
     balances = await market_data_service.get_binance_spot_balances()
 
     assert balances == expected_balances
     mock_credential_service.get_credential.assert_called_once_with(
-        user_id=sample_user_id, service_name=ServiceName.BINANCE_SPOT, credential_label="default"
+        service_name=ServiceName.BINANCE_SPOT, credential_label="default"
     )
     mock_binance_adapter.get_spot_balances.assert_called_once_with(
         sample_binance_credential.encrypted_api_key, # Que es la clave desencriptada

@@ -226,3 +226,21 @@ class StrategyService:
             except ValidationError as e:
                 logger.warning(f"Failed to validate parameters for {strategy_type}: {e}")
         return parameters_data
+
+    async def is_strategy_applicable_to_symbol(self, strategy_id: str, user_id: str, symbol: str) -> bool:
+        """
+        Checks if a strategy is applicable to a given symbol based on its configuration.
+        """
+        strategy = await self.get_strategy_config(strategy_id, user_id)
+        if not strategy:
+            return False
+
+        # If allowed_symbols is not empty, the symbol must be in the list.
+        if strategy.allowed_symbols and symbol not in strategy.allowed_symbols:
+            return False
+
+        # If excluded_symbols is not empty, the symbol must not be in the list.
+        if strategy.excluded_symbols and symbol in strategy.excluded_symbols:
+            return False
+
+        return True

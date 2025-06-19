@@ -1,6 +1,7 @@
 import logging
 from typing import Optional, Literal
 from uuid import UUID
+from decimal import Decimal
 
 from shared.data_types import TradeOrderDetails
 from ultibot_backend.services.order_execution_service import OrderExecutionService, PaperOrderExecutionService
@@ -31,7 +32,7 @@ class UnifiedOrderExecutionService:
         user_id: UUID,
         symbol: str,
         side: str,  # 'BUY' or 'SELL'
-        quantity: float,
+        quantity: Decimal,
         trading_mode: TradingMode,
         api_key: Optional[str] = None,
         api_secret: Optional[str] = None,
@@ -99,6 +100,48 @@ class UnifiedOrderExecutionService:
             logger.error(f"Unexpected error executing {trading_mode} order: {e}", exc_info=True)
             raise OrderExecutionError(f"Unexpected error executing {trading_mode} order: {e}") from e
 
+    async def create_oco_order(
+        self,
+        user_id: UUID,
+        symbol: str,
+        side: str,
+        quantity: Decimal,
+        price: Decimal,
+        stop_price: Decimal,
+        limit_price: Decimal, # Corregido: stop_limit_price a limit_price
+        trading_mode: TradingMode,
+        api_key: Optional[str] = None,
+        api_secret: Optional[str] = None,
+    ) -> TradeOrderDetails: # Corregido: tipo de retorno de dict a TradeOrderDetails
+        # Asegurar que limit_price se pasa correctamente a los servicios subyacentes
+        logger.info(f"Creating {trading_mode} OCO order for {symbol} {side} {quantity} for user {user_id}")
+        if trading_mode == "real":
+            if not api_key or not api_secret:
+                raise ConfigurationError("API key and secret are required for real trading mode")
+            return await self.real_execution_service.create_oco_order(
+                user_id=user_id,
+                symbol=symbol,
+                side=side,
+                quantity=quantity,
+                price=price,
+                stop_price=stop_price,
+                limit_price=limit_price,
+                api_key=api_key,
+                api_secret=api_secret,
+            )
+        elif trading_mode == "paper":
+            return await self.paper_execution_service.create_oco_order(
+                user_id=user_id,
+                symbol=symbol,
+                side=side,
+                quantity=quantity,
+                price=price,
+                stop_price=stop_price,
+                limit_price=limit_price,
+            )
+        else:
+            raise OrderExecutionError(f"Invalid trading mode: {trading_mode}")
+
     async def get_virtual_balances(self) -> dict:
         """
         Get virtual balances from paper trading service.
@@ -108,7 +151,7 @@ class UnifiedOrderExecutionService:
         """
         return self.paper_execution_service.get_virtual_balances()
 
-    def reset_virtual_balances(self, initial_capital: float):
+    def reset_virtual_balances(self, initial_capital: Decimal):
         """
         Reset virtual balances for paper trading.
         
@@ -144,8 +187,8 @@ class UnifiedOrderExecutionService:
         order_details: TradeOrderDetails,
         user_id: UUID,
         trading_mode: TradingMode,
-        symbol: str, # Añadido para consistencia con execute_market_order
-        side: str, # Añadido para consistencia con execute_market_order
+        symbol: str,
+        side: str,
         api_key: Optional[str] = None,
         api_secret: Optional[str] = None,
     ) -> TradeOrderDetails:
@@ -170,22 +213,22 @@ class UnifiedOrderExecutionService:
             ConfigurationError: If required parameters are missing for real trading.
         """
         logger.info(
-            f"UnifiedOrderExecutionService: Attempting to execute {order_details.type.value} order "
-            f"ID {order_details.order_id_internal} for {symbol} {side} "
+            f"UnifiedOrderExecutionService: Attempting to execute {order_details.type} order " # Corregido: .value eliminado
+            f"ID {order_details.orderId_internal} for {symbol} {side} " # Corregido: order_id_internal a orderId_internal
             f"in {trading_mode} mode for user {user_id}."
         )
 
-        if order_details.type == "market": # Comparar con el valor del Enum si es necesario, o string
+        if order_details.type == "market":
             # Delegar a execute_market_order
             return await self.execute_market_order(
                 user_id=user_id,
-                symbol=symbol, # Usar el símbolo pasado
-                side=side, # Usar el lado pasado
-                quantity=order_details.requested_quantity,
+                symbol=symbol,
+                side=side,
+                quantity=order_details.requestedQuantity, # Corregido: requested_quantity a requestedQuantity
                 trading_mode=trading_mode,
                 api_key=api_key,
                 api_secret=api_secret,
-                oco_order_list_id=order_details.oco_group_id_exchange # Pasar OCO ID si existe
+                oco_order_list_id=order_details.ocoOrderListId # Corregido: oco_group_id_exchange a ocoOrderListId
             )
         # TODO: Añadir manejo para otros tipos de órdenes (LIMIT, STOP_LOSS, etc.)
         # elif order_details.type == OrderType.LIMIT:
@@ -195,4 +238,3 @@ class UnifiedOrderExecutionService:
             error_msg = f"Order type '{order_details.type}' not yet supported by UnifiedOrderExecutionService."
             logger.error(error_msg)
             raise OrderExecutionError(error_msg)
-

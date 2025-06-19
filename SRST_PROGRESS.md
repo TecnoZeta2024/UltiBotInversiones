@@ -1,12 +1,12 @@
-# SRST Progress Tracker - 2025-06-18 16:53:37
+# SRST Progress Tracker - 2025-06-19 06:50:18
 
 ## Sesión Actual
-**Nuevos tickets generados:** 0
-**Total de tickets (incluyendo resueltos):** 43
+**Nuevos tickets generados:** 14
+**Total de tickets (incluyendo resueltos):** 63
 
 ## Tickets por Prioridad
 
-### 🚨 CRITICAL (41 tickets)
+### 🚨 CRITICAL (42 tickets)
 - [x] **SRST-036:** ImportError en `tests/unit/services/test_config_service.py::TestConfigService::test_get_user_configuration_loads_from_db` (Test: tests/unit/services/test_config_service.py::TestConfigService::test_get_user_configuration_loads_from_db) - ⏱️ 20min [P:CRITICAL] ✅ RESUELTO
 - [x] **SRST-037:** ImportError en `tests/unit/services/test_config_service.py::TestConfigService::test_get_user_configuration_returns_default_if_not_found` (Test: tests/unit/services/test_config_service.py::TestConfigService::test_get_user_configuration_returns_default_if_not_found) - ⏱️ 20min [P:CRITICAL] ✅ RESUELTO
 - [x] **SRST-038:** ImportError en `tests/unit/services/test_config_service.py::TestConfigService::test_save_user_configuration` (Test: tests/unit/services/test_config_service.py::TestConfigService::test_save_user_configuration) - ⏱️ 20min [P:CRITICAL] ✅ RESUELTO
@@ -48,11 +48,31 @@
 - [x] **SRST-3089:** ModuleNotFoundError en `tests/unit/services/test_credential_service.py` (Test: tests/unit/services/test_credential_service.py::test_verify_credential_telegram_success) - ⏱️ 20min [P:CRITICAL] ✅ RESUELTO
 - [x] **SRST-3118:** ModuleNotFoundError en `tests/integration/test_story_5_4_complete_flow.py` (Test: tests/integration/test_story_5_4_complete_flow.py::TestTradeCreationWithStrategyAssociation::test_trade_strategy_id_association) - ⏱️ 20min [P:CRITICAL] ✅ RESUELTO
 - [x] **SRST-3119:** ModuleNotFoundError en `tests/ui/unit/test_main_ui.py` (Test: tests/ui/unit/test_main_ui.py::test_start_application_success) - ⏱️ 20min [P:CRITICAL] ✅ RESUELTO
+- [x] **SRST-CRITICAL-003:** AssertionError en `tests/unit/test_autonomous_strategies.py::TestStrategyServiceIntegration::test_strategy_logging_for_autonomous_decisions` (Test: tests/unit/test_autonomous_strategies.py::TestStrategyServiceIntegration::test_strategy_logging_for_autonomous_decisions) - ⏱️ 20min [P:CRITICAL] ✅ RESUELTO
 
 ### 🔥 HIGH ({len(high_lines)} tickets)
 - [x] **SRST-3189:** AttributeError en `tests/integration/api/v1/test_config_endpoints.py` (Test: tests/integration/api/v1/test_config_endpoints.py::test_get_user_config_initial) - ⏱️ 20min [P:HIGH] ✅ RESUELTO
+- [x] **SRST-3373:** AttributeError en `tests/integration/api/v1/test_real_trading_flow.py` (Test: tests/integration/api/v1/test_real_trading_flow.py::test_complete_real_trading_flow_with_capital_management) - ⏱️ 20min [P:HIGH] ✅ RESUELTO - Se corrigió la lógica de validación de capital para ser predictiva y se robusteció el manejo de `Decimal` para evitar `InvalidOperation`. El test fue ajustado para reflejar la nueva lógica.
+- [x] **SRST-3450:** AttributeError en `tests/integration/test_story_5_4_complete_flow.py` (Test: tests/integration/test_story_5_4_complete_flow.py::TestCompleteOpportunityProcessingFlow::test_single_strategy_paper_trade_execution_flow) - ⏱️ 20min [P:HIGH] ✅ RESUELTO - Corregida cadena de errores (TypeError, AttributeError, lógica de negocio) que culminó en la ejecución exitosa del test.
+- [x] **SRST-3451:** AttributeError en `tests/integration/test_story_5_4_complete_flow.py` (Test: tests/integration/test_story_5_4_complete_flow.py::TestCompleteOpportunityProcessingFlow::test_multiple_strategies_with_ai_integration_flow) - ⏱️ 20min [P:HIGH] ✅ RESUELTO - Solución: Se añadió `SourceType.UNKNOWN` al Enum y se implementó código defensivo en `TradingEngine` para manejar `source_type` como `str` o `Enum`, corrigiendo el `AttributeError` y `TypeError` subsiguientes.
+- [x] **SRST-3685:** TypeError en `tests/integration/test_story_5_4_complete_flow.py` (Test: tests/integration/test_story_5_4_complete_flow.py::TestTradeCreationWithStrategyAssociation::test_trade_side_determination) - ⏱️ 20min [P:HIGH] ✅ RESUELTO - Fix aplicado: Se añadieron los parámetros faltantes (user_configuration, mock_current_price, mock_portfolio_snapshot) a las llamadas create_trade_from_decision en el test.
+- [x] **SRST-3686:** AttributeError en `tests/unit/services/test_ai_orchestrator_service.py` (Test: tests/integration/test_story_5_4_complete_flow.py::TestTradeCreationWithStrategyAssociation::test_trade_side_determination) - ⏱️ 20min [P:HIGH] ✅ RESUELTO - Fix aplicado: Se corrigió el test para hacer patch del método correcto (analyze_opportunity_with_strategy_context_async) en lugar del inexistente (_mock_gemini_analysis).
 
 ### 📋 MEDIUM ({len(medium_lines)} tickets)
+- [ ] **SRST-3731:** RuntimeError en `logs/frontend.log` (Test: Runtime Log Error: [MainThread] - portfolio_service.py:99 - Error ine...) - ⏱️ 30min [P:MEDIUM]
+- [ ] **SRST-3732:** RuntimeError en `logs/frontend.log` (Test: Runtime Log Error: [MainThread] - trading_engine_service.py:190 - Lím...) - ⏱️ 30min [P:MEDIUM]
+- [ ] **SRST-3733:** RuntimeError en `logs/frontend.log` (Test: Runtime Log Error: [MainThread] - config_service.py:96 - Error crític...) - ⏱️ 30min [P:MEDIUM]
+- [ ] **SRST-3734:** RuntimeError en `logs/frontend.log` (Test: Runtime Log Error: [MainThread] - strategy_service.py:89 - Error list...) - ⏱️ 30min [P:MEDIUM]
+- [ ] **SRST-3735:** RuntimeError en `logs/frontend.log` (Test: Runtime Log Error: [MainThread] - configuration_service.py:116 - Erro...) - ⏱️ 30min [P:MEDIUM]
+- [ ] **SRST-3736:** RuntimeError en `logs/frontend.log` (Test: Runtime Log Error: [MainThread] - credential_service.py:224 - Error d...) - ⏱️ 30min [P:MEDIUM]
+- [ ] **SRST-3737:** RuntimeError en `logs/frontend.log` (Test: Runtime Log Error: [MainThread] - market_data_service.py:69 - Fallo e...) - ⏱️ 30min [P:MEDIUM]
+- [ ] **SRST-3738:** RuntimeError en `logs/frontend.log` (Test: Runtime Log Error: [MainThread] - market_data_service.py:77 - Error a...) - ⏱️ 30min [P:MEDIUM]
+- [ ] **SRST-3739:** RuntimeError en `logs/frontend.log` (Test: Runtime Log Error: [MainThread] - market_data_service.py:81 - Error d...) - ⏱️ 30min [P:MEDIUM]
+- [ ] **SRST-3740:** RuntimeError en `logs/frontend.log` (Test: Runtime Log Error: [MainThread] - market_data_service.py:121 - Error ...) - ⏱️ 30min [P:MEDIUM]
+- [ ] **SRST-3741:** RuntimeError en `logs/frontend.log` (Test: Runtime Log Error: [MainThread] - trading_report_service.py:75 - Erro...) - ⏱️ 30min [P:MEDIUM]
+- [ ] **SRST-3742:** RuntimeError en `logs/frontend.log` (Test: Runtime Log Error: [MainThread] - trading_report_service.py:186 - Err...) - ⏱️ 30min [P:MEDIUM]
+- [ ] **SRST-3743:** RuntimeError en `logs/frontend.log` (Test: Runtime Log Error: Intento de orden real sin credenciales....) - ⏱️ 30min [P:MEDIUM]
+- [ ] **SRST-3744:** RuntimeError en `logs/frontend.log` (Test: Runtime Log Error: Error notifying subscriber about mode change: Test...) - ⏱️ 30min [P:MEDIUM]
 - [x] **SRST-3371:** ERROR durante la ejecución de tests. en `tests/ui/unit/test_main_ui.py` (Test: tests/ui/unit/test_main_ui.py) - ⏱️ 20min [P:MEDIUM] ✅ RESUELTO
 
 ### 📝 LOW ({len(low_lines)} tickets)

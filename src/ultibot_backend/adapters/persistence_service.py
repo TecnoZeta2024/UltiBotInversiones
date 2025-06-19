@@ -1,9 +1,18 @@
-from sqlalchemy.ext.asyncio import AsyncSession, AsyncEngine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.sql import text
+from sqlalchemy.ext.asyncio import AsyncSession, AsyncEngine, async_sessionmaker
+from sqlalchemy.sql import text, select, update # Importar update
+from sqlalchemy.dialects import postgresql
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 from typing_extensions import LiteralString
+from datetime import datetime, timezone # Importar datetime y timezone
+from uuid import UUID
+import json
+from pydantic import BaseModel # Añadir esta importación para la función auxiliar
+
 from ..core.ports.persistence_service import IPersistenceService
+from ..core.domain_models.trade_models import Trade, PositionStatus # Importar Trade Pydantic model
+from ..core.domain_models.user_configuration_models import UserConfiguration, NotificationPreference, RiskProfile, AIStrategyConfiguration, MCPServerPreference, DashboardLayoutProfile, CloudSyncPreferences # Importar UserConfiguration Pydantic model y sus sub-modelos
+from ..core.domain_models.opportunity_models import OpportunityStatus, Opportunity, InitialSignal, AIAnalysis, SourceType # Importar OpportunityStatus, Opportunity, InitialSignal, AIAnalysis, SourceType
+from ..core.domain_models.orm_models import TradeORM, UserConfigurationORM, PortfolioSnapshotORM, OpportunityORM # Importar modelos ORM y OpportunityORM
 import asyncpg # Importar asyncpg para el tipo Pool
 
 class SupabasePersistenceService(IPersistenceService):
@@ -21,9 +30,21 @@ class SupabasePersistenceService(IPersistenceService):
             raise ValueError("SupabasePersistenceService must be initialized with either a session, an engine, or a pool.")
 
         if self._engine:
-            self._async_session_factory = sessionmaker(bind=self._engine, class_=AsyncSession, expire_on_commit=False)
+            self._async_session_factory = async_sessionmaker(self._engine, expire_on_commit=False)
         else:
             self._async_session_factory = None # Se usará la sesión inyectada directamente
+
+    def _pydantic_to_json_string(self, obj: Any) -> Optional[str]:
+        if obj is None:
+            return None
+        if isinstance(obj, BaseModel):
+            return obj.model_dump_json()
+        if isinstance(obj, list) and all(isinstance(item, BaseModel) for item in obj):
+            return json.dumps([item.model_dump() for item in obj])
+        # Para otros tipos que ya son serializables a JSON (ej. List[str], Dict[str, Any])
+        if isinstance(obj, (list, dict)):
+            return json.dumps(obj)
+        return str(obj) # Fallback para tipos simples si es necesario
 
     async def _get_session(self) -> AsyncSession:
         if self._session:
@@ -110,8 +131,23 @@ class SupabasePersistenceService(IPersistenceService):
             record = result.fetchone()
             return dict(record._mapping) if record else None
 
-    async def upsert_trade(self, trade_data: Dict[str, Any]) -> None:
-        await self.upsert("trades", trade_data, on_conflict=["id"])
+    async def upsert_trade(self, trade: Trade) -> None:
+        async with await self._get_session() as session:
+            trade_orm = TradeORM(
+                id=trade.id,
+                user_id=trade.user_id,
+                data=trade.model_dump_json(), # Convertir Pydantic a JSON string
+                position_status=trade.positionStatus,
+                mode=trade.mode,
+                symbol=trade.symbol,
+                created_at=trade.created_at,
+                updated_at=trade.updated_at,
+                closed_at=trade.closed_at
+            )
+            # Usar merge para upsert: inserta si no existe, actualiza si existe
+            session.add(trade_orm)
+            await session.commit()
+            await session.refresh(trade_orm) # Refrescar para obtener cualquier valor generado por la BD
 
     async def execute_raw_sql(self, query: LiteralString, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         async with await self._get_session() as session:
@@ -119,5 +155,139 @@ class SupabasePersistenceService(IPersistenceService):
             records = result.fetchall()
             return [dict(record._mapping) for record in records]
 
-    async def upsert_user_configuration(self, user_config_data: Dict[str, Any]) -> None:
-        await self.upsert("user_configurations", user_config_data, on_conflict=["id"])
+    async def upsert_user_configuration(self, user_config: UserConfiguration) -> None:
+        async with await self._get_session() as session:
+            user_config_orm = UserConfigurationORM(
+                id=user_config.id,
+                user_id=user_config.user_id,
+                telegram_chat_id=user_config.telegram_chat_id,
+                notification_preferences=self._pydantic_to_json_string(user_config.notification_preferences),
+                enable_telegram_notifications=user_config.enable_telegram_notifications,
+                default_paper_trading_capital=user_config.default_paper_trading_capital,
+                paper_trading_active=user_config.paper_trading_active,
+                paper_trading_assets=self._pydantic_to_json_string(user_config.paper_trading_assets),
+                watchlists=self._pydantic_to_json_string(user_config.watchlists),
+                favorite_pairs=self._pydantic_to_json_string(user_config.favorite_pairs),
+                risk_profile=self._pydantic_to_json_string(user_config.risk_profile),
+                risk_profile_settings=self._pydantic_to_json_string(user_config.risk_profile_settings),
+                real_trading_settings=self._pydantic_to_json_string(user_config.real_trading_settings),
+                ai_strategy_configurations=self._pydantic_to_json_string(user_config.ai_strategy_configurations),
+                ai_analysis_confidence_thresholds=self._pydantic_to_json_string(user_config.ai_analysis_confidence_thresholds),
+                mcp_server_preferences=self._pydantic_to_json_string(user_config.mcp_server_preferences),
+                selected_theme=user_config.selected_theme,
+                dashboard_layout_profiles=self._pydantic_to_json_string(user_config.dashboard_layout_profiles),
+                active_dashboard_layout_profile_id=user_config.active_dashboard_layout_profile_id,
+                dashboard_layout_config=self._pydantic_to_json_string(user_config.dashboard_layout_config),
+                cloud_sync_preferences=self._pydantic_to_json_string(user_config.cloud_sync_preferences),
+                created_at=user_config.created_at,
+                updated_at=user_config.updated_at
+            )
+            session.add(user_config_orm)
+            await session.commit()
+            await session.refresh(user_config_orm)
+
+    async def update_opportunity_status(self, opportunity_id: UUID, new_status: OpportunityStatus, status_reason: str) -> None:
+        async with await self._get_session() as session:
+            stmt = (
+                update(OpportunityORM)
+                .where(OpportunityORM.id == opportunity_id)
+                .values(
+                    status=new_status.value,
+                    status_reason_code=status_reason, # Usar status_reason como reason_code
+                    status_reason_text=status_reason, # Usar status_reason como reason_text
+                    updated_at=datetime.now(timezone.utc)
+                )
+            )
+            await session.execute(stmt)
+            await session.commit()
+
+    async def get_opportunity_by_id(self, opportunity_id: UUID) -> Optional[Opportunity]:
+        async with await self._get_session() as session:
+            result = await session.execute(
+                select(OpportunityORM).where(OpportunityORM.id == opportunity_id)
+            )
+            opportunity_orm = result.scalars().first()
+            if opportunity_orm:
+                # Deserializar los campos JSON a sus modelos Pydantic correspondientes
+                initial_signal_obj = InitialSignal.model_validate_json(cast(str, opportunity_orm.initial_signal)) if opportunity_orm.initial_signal else None
+                ai_analysis_obj = AIAnalysis.model_validate_json(cast(str, opportunity_orm.ai_analysis)) if opportunity_orm.ai_analysis else None
+                
+                # Mapear los campos de OpportunityORM a Opportunity
+                full_opportunity_data = {
+                    "id": opportunity_orm.id,
+                    "user_id": opportunity_orm.user_id,
+                    "symbol": opportunity_orm.symbol,
+                    "detected_at": opportunity_orm.detected_at,
+                    "source_type": SourceType(opportunity_orm.source_type), # Convertir a enum
+                    "source_name": opportunity_orm.source_name,
+                    "source_data": json.loads(cast(str, opportunity_orm.source_data)) if opportunity_orm.source_data is not None else None, # source_data es un JSON string
+                    "initial_signal": initial_signal_obj,
+                    "system_calculated_priority_score": opportunity_orm.system_calculated_priority_score,
+                    "last_priority_calculation_at": opportunity_orm.last_priority_calculation_at,
+                    "status": OpportunityStatus(opportunity_orm.status), # Convertir a enum
+                    "status_reason_code": opportunity_orm.status_reason_code,
+                    "status_reason_text": opportunity_orm.status_reason_text,
+                    "ai_analysis": ai_analysis_obj,
+                    "investigation_details": json.loads(cast(str, opportunity_orm.investigation_details)) if opportunity_orm.investigation_details is not None else None,
+                    "user_feedback": json.loads(cast(str, opportunity_orm.user_feedback)) if opportunity_orm.user_feedback is not None else None,
+                    "linked_trade_ids": json.loads(cast(str, opportunity_orm.linked_trade_ids)) if opportunity_orm.linked_trade_ids is not None else None,
+                    "expires_at": opportunity_orm.expires_at,
+                    "expiration_logic": json.loads(cast(str, opportunity_orm.expiration_logic)) if opportunity_orm.expiration_logic is not None else None,
+                    "post_trade_feedback": json.loads(cast(str, opportunity_orm.post_trade_feedback)) if opportunity_orm.post_trade_feedback is not None else None,
+                    "post_facto_simulation_results": json.loads(cast(str, opportunity_orm.post_facto_simulation_results)) if opportunity_orm.post_facto_simulation_results is not None else None,
+                    "created_at": opportunity_orm.created_at,
+                    "updated_at": opportunity_orm.updated_at,
+                    "strategy_id": opportunity_orm.strategy_id
+                }
+                return Opportunity.model_validate(full_opportunity_data)
+            return None
+
+    async def get_closed_trades(self, user_id: UUID, symbol: Optional[str] = None,
+                                start_date: Optional[datetime] = None, end_date: Optional[datetime] = None,
+                                mode: Optional[str] = None) -> List[Trade]:
+        async with await self._get_session() as session:
+            query = select(TradeORM).where(
+                TradeORM.user_id == user_id,
+                TradeORM.position_status == PositionStatus.CLOSED.value # Usar el valor del enum
+            )
+
+            if symbol:
+                query = query.where(TradeORM.symbol == symbol)
+            if mode:
+                query = query.where(TradeORM.mode == mode)
+            if start_date:
+                query = query.where(TradeORM.closed_at >= start_date)
+            if end_date:
+                query = query.where(TradeORM.closed_at <= end_date)
+
+            result = await session.execute(query)
+            trade_orms = result.scalars().all()
+            
+            # Convertir TradeORM a Trade Pydantic model
+            trades = []
+            for trade_orm in trade_orms:
+                try:
+                    # Deserializar el JSON 'data'
+                    trade_data_from_json = json.loads(cast(str, trade_orm.data))
+
+                    # Combinar con los campos directamente de TradeORM
+                    full_trade_data = {
+                        "id": trade_orm.id,
+                        "user_id": trade_orm.user_id,
+                        "positionStatus": PositionStatus(trade_orm.position_status),
+                        "mode": trade_orm.mode,
+                        "symbol": trade_orm.symbol,
+                        "created_at": trade_orm.created_at,
+                        "updated_at": trade_orm.updated_at,
+                        "closed_at": trade_orm.closed_at,
+                        **trade_data_from_json # Añadir el resto de los datos del JSON
+                    }
+                    
+                    # Validar y crear el modelo Pydantic
+                    trade_pydantic = Trade.model_validate(full_trade_data)
+                    
+                    trades.append(trade_pydantic)
+                except Exception as e:
+                    print(f"Error al validar Trade Pydantic desde ORM: {e}")
+                    # Opcional: loggear el trade_orm.data para depuración
+            return trades

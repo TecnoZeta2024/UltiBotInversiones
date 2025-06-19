@@ -57,17 +57,16 @@ class TradingReportService:
             # (ver persistence_service.get_closed_trades)
             
             # Realizar la consulta a la base de datos
-            trade_records = await self.persistence_service.get_closed_trades(
-                filters, start_date, end_date, limit, offset
+            # persistence_service.get_closed_trades ya devuelve List[Trade]
+            trades = await self.persistence_service.get_closed_trades(
+                user_id=user_id, # user_id ya es UUID, no convertir a str
+                mode=mode,
+                symbol=symbol,
+                start_date=start_date,
+                end_date=end_date
+                # Limit y offset no son soportados directamente por get_closed_trades en persistence_service
+                # Si se necesita paginación, se debe implementar en persistence_service o manejar aquí.
             )
-            
-            # Si los registros ya son objetos Trade, no es necesaria la conversión.
-            # Esto ocurre cuando los datos vienen de un mock en los tests.
-            if trade_records and isinstance(trade_records[0], Trade):
-                trades = trade_records
-            else:
-                # Convertir los registros (dicts) a objetos Trade
-                trades = [Trade(**record) for record in trade_records]
             
             logger.info(f"Obtenidos {len(trades)} trades cerrados para usuario {user_id} en modo {mode}")
             return trades

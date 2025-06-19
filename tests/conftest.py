@@ -5,6 +5,9 @@ import logging
 import sys
 import os
 from cryptography.fernet import Fernet
+from decimal import Decimal
+import tempfile
+from pathlib import Path
 from typing import AsyncGenerator, Optional, Any, Dict, List, Tuple
 from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
@@ -13,6 +16,8 @@ from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import text
+from ultibot_backend.core.domain_models.base import Base # Importar Base
+from ultibot_backend.core.domain_models import orm_models # Importar para asegurar que los modelos ORM se registren con Base.metadata
 
 # Configurar logging
 logger = logging.getLogger(__name__)
@@ -31,21 +36,26 @@ def set_test_environment():
     valid_key = Fernet.generate_key()
     os.environ['CREDENTIAL_ENCRYPTION_KEY'] = valid_key.decode('utf-8')
     
-    # Usar una base de datos SQLite en memoria para los tests
-    database_url = "sqlite+aiosqlite:///:memory:"
-    os.environ['DATABASE_URL'] = database_url
+    # Usar una base de datos SQLite en un archivo temporal para los tests
+    # Esto asegura que la base de datos persista durante toda la sesión de tests
+    with tempfile.NamedTemporaryFile(suffix=".sqlite", delete=False) as tmp:
+        temp_db_path = Path(tmp.name)
+    os.environ['DATABASE_URL'] = f"sqlite+aiosqlite:///{temp_db_path}"
     
-    logger.info(f"Entorno de prueba configurado. DATABASE_URL: {database_url}")
+    logger.info(f"Entorno de prueba configurado. DATABASE_URL: {os.environ['DATABASE_URL']}")
     
     # Añadir 'src' al sys.path para asegurar que los módulos de la aplicación sean importables.
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
     
     yield
     
-    # Limpieza después de que todos los tests hayan terminado (opcional)
+    # Limpieza después de que todos los tests hayan terminado
     del os.environ['TESTING']
     del os.environ['CREDENTIAL_ENCRYPTION_KEY']
     del os.environ['DATABASE_URL']
+    # Eliminar el archivo de base de datos temporal
+    if temp_db_path.exists():
+        temp_db_path.unlink()
 
 # --- Importaciones de la Aplicación (Después de la Configuración) ---
 from ultibot_backend.main import app as fastapi_app
@@ -53,7 +63,8 @@ from ultibot_backend.dependencies import (
     get_persistence_service, get_strategy_service, get_performance_service,
     get_config_service, get_credential_service, get_market_data_service,
     get_portfolio_service, get_notification_service, get_trading_engine_service,
-    get_ai_orchestrator_service, get_unified_order_execution_service
+    get_ai_orchestrator_service, get_unified_order_execution_service,
+    get_db_session # Importar get_db_session
 )
 from ultibot_backend.services.performance_service import PerformanceService
 from ultibot_backend.services.strategy_service import StrategyService
@@ -79,53 +90,32 @@ async def db_engine() -> AsyncGenerator[Any, None]:
     """Crea un motor de BD SQLite en memoria para toda la sesión."""
     engine = create_async_engine(os.environ['DATABASE_URL'])
     async with engine.begin() as conn:
-        # Crear tablas
-        await conn.execute(text("""
-            CREATE TABLE user_configurations (
-                id TEXT PRIMARY KEY, user_id TEXT NOT NULL UNIQUE, telegram_chat_id TEXT,
-                notification_preferences TEXT, enable_telegram_notifications BOOLEAN,
-                default_paper_trading_capital REAL, paper_trading_active BOOLEAN,
-                paper_trading_assets TEXT, watchlists TEXT, favorite_pairs TEXT,
-                risk_profile TEXT, risk_profile_settings TEXT, real_trading_settings TEXT,
-                ai_strategy_configurations TEXT, ai_analysis_confidence_thresholds TEXT,
-                mcp_server_preferences TEXT, selected_theme TEXT, dashboard_layout_profiles TEXT,
-                active_dashboard_layout_profile_id TEXT, dashboard_layout_config TEXT,
-                cloud_sync_preferences TEXT, created_at TEXT, updated_at TEXT
-            );
-        """))
-        await conn.execute(text("""
-            CREATE TABLE trades (
-                id TEXT PRIMARY KEY, user_id TEXT NOT NULL, data TEXT NOT NULL,
-                position_status TEXT, mode TEXT, symbol TEXT, created_at TEXT,
-                updated_at TEXT, closed_at TEXT
-            );
-        """))
-        await conn.execute(text("""
-            CREATE TABLE portfolio_snapshots (
-                id TEXT PRIMARY KEY, user_id TEXT NOT NULL, timestamp TEXT NOT NULL,
-                data TEXT NOT NULL
-            );
-        """))
+        # Crear tablas usando Base.metadata.create_all
+        await conn.run_sync(Base.metadata.create_all)
     yield engine
     await engine.dispose()
 
 @pytest_asyncio.fixture
 async def db_session(db_engine: Any) -> AsyncGenerator[AsyncSession, None]:
-    """Proporciona una sesión de BD transaccional para cada test."""
+    """
+    Proporciona una sesión de BD transaccional para cada test.
+    Asegura que cada test opere en su propia transacción aislada que puede ser revertida.
+    """
     async with db_engine.connect() as connection:
-        async with connection.begin() as transaction:
-            async_session = AsyncSession(bind=connection)
+        async_session = AsyncSession(bind=connection, expire_on_commit=False)
+        try:
             yield async_session
-            await transaction.rollback()
+            await async_session.commit() # Commit los cambios para que sean visibles
+        finally:
+            # Limpiar la tabla 'trades' después de cada test para aislamiento
+            await async_session.execute(text("DELETE FROM trades;"))
+            await async_session.commit() # Commit la limpieza
             await async_session.close()
 
-@pytest_asyncio.fixture
-async def persistence_service_fixture(db_session: AsyncSession) -> SupabasePersistenceService:
-    """
-    Proporciona una instancia de SupabasePersistenceService que utiliza la sesión
-    de base de datos de prueba.
-    """
-    return SupabasePersistenceService(session=db_session)
+# Eliminada persistence_service_fixture ya que get_persistence_service ahora usa get_db_session
+# @pytest_asyncio.fixture
+# async def persistence_service_fixture(db_session: AsyncSession) -> SupabasePersistenceService:
+#     return SupabasePersistenceService(session=db_session)
 
 
 @pytest.fixture(scope="session")
@@ -145,11 +135,13 @@ def mock_strategy_service_integration():
     service.get_ai_configuration_for_strategy = AsyncMock()
     service.get_effective_confidence_thresholds_for_strategy = AsyncMock()
     service.get_active_strategies = AsyncMock()
+    # Añadir mock para get_strategy_config para evitar AttributeErrors en tests
+    service.get_strategy_config = AsyncMock(return_value=None)
     return service
 
 @pytest_asyncio.fixture
 async def client(
-    persistence_service_fixture,
+    db_session: AsyncSession, # Inyectar la sesión de la BD de la fixture
     mock_strategy_service_integration,
     configuration_service_fixture,
     credential_service_fixture,
@@ -164,16 +156,9 @@ async def client(
     Proporciona un TestClient para interactuar con la aplicación, con todas las
     dependencias inyectadas.
     """
-    # PerformanceService depende de Persistence y Strategy
-    mocked_performance_service = PerformanceService(
-        persistence_service=persistence_service_fixture,
-        strategy_service=mock_strategy_service_integration
-    )
-
     dependency_overrides = {
-        get_persistence_service: lambda: persistence_service_fixture,
+        get_db_session: lambda: db_session, # Sobrescribir get_db_session con la sesión de la fixture
         get_strategy_service: lambda: mock_strategy_service_integration,
-        get_performance_service: lambda: mocked_performance_service,
         get_config_service: lambda: configuration_service_fixture,
         get_credential_service: lambda: credential_service_fixture,
         get_market_data_service: lambda: market_data_service_fixture,
@@ -222,20 +207,23 @@ def mock_binance_adapter_fixture():
     return mock
 
 @pytest_asyncio.fixture
-async def credential_service_fixture(persistence_service_fixture, mock_binance_adapter_fixture):
+async def credential_service_fixture(mock_binance_adapter_fixture, db_session: AsyncSession):
     """Fixture para CredentialService con dependencias reales."""
+    # Ahora CredentialService depende de get_persistence_service, que a su vez usa get_db_session
+    persistence_service = SupabasePersistenceService(session=db_session)
     service = CredentialService(
-        persistence_service=persistence_service_fixture,
+        persistence_service=persistence_service,
         binance_adapter=mock_binance_adapter_fixture
     )
     return service
 
 @pytest_asyncio.fixture
-async def mock_notification_service_fixture(credential_service_fixture, persistence_service_fixture):
+async def mock_notification_service_fixture(credential_service_fixture, db_session: AsyncSession):
     """Mock para NotificationService."""
     # Para simplificar, usamos un AsyncMock completo.
     # Si se necesita comportamiento específico, se puede instanciar NotificationService
     # con sus dependencias mockeadas (credential_service_fixture, persistence_service_fixture).
+    persistence_service = SupabasePersistenceService(session=db_session)
     mock = AsyncMock(spec=NotificationService)
     # Ejemplo de configuración de un método mockeado:
     # async def send_notification_mock(*args, **kwargs): return True
@@ -244,27 +232,18 @@ async def mock_notification_service_fixture(credential_service_fixture, persiste
 
 @pytest_asyncio.fixture
 async def configuration_service_fixture(
-    persistence_service_fixture,
     credential_service_fixture,
-    portfolio_service_fixture, # Añadido
-    mock_notification_service_fixture
+    mock_notification_service_fixture,
+    db_session: AsyncSession
 ):
-    """Fixture para ConfigurationService con dependencias."""
-    service = ConfigurationService(persistence_service=persistence_service_fixture)
+    """Fixture para ConfigurationService con dependencias mínimas."""
+    persistence_service = SupabasePersistenceService(session=db_session)
+    service = ConfigurationService(persistence_service=persistence_service)
     service.set_credential_service(credential_service_fixture)
-    service.set_portfolio_service(portfolio_service_fixture) # Añadido
+    # El portfolio_service se inyectará en tiempo de ejecución o se mockeará donde sea necesario,
+    # para evitar dependencias circulares en las fixtures.
+    # service.set_portfolio_service(portfolio_service_fixture) 
     service.set_notification_service(mock_notification_service_fixture)
-
-    # Es crucial cargar la configuración para que esté disponible en los tests.
-    # Esto simula lo que haría la aplicación al inicio.
-    try:
-        await service.get_user_configuration()
-    except Exception as e:
-        # Esto puede ocurrir si los mocks no están completamente configurados para _load_config_from_db
-        # Por ejemplo, si get_user_configuration en el mock de persistencia no devuelve lo esperado.
-        print(f"Advertencia: Error al cargar la configuración inicial en fixture: {e}")
-        # Intentar establecer una configuración por defecto en memoria si la carga falla
-        # service._user_configuration = service.get_default_configuration() # Esto es una medida de contingencia
     return service
 
 # Para la v1.0, se puede asumir un user_id fijo como en el backend
@@ -276,23 +255,25 @@ FIXED_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
 async def market_data_service_fixture(
     credential_service_fixture,
     mock_binance_adapter_fixture,
-    persistence_service_fixture
+    db_session: AsyncSession
 ):
     """Fixture para MarketDataService con dependencias reales."""
+    persistence_service = SupabasePersistenceService(session=db_session)
     service = MarketDataService(
         credential_service=credential_service_fixture,
         binance_adapter=mock_binance_adapter_fixture,
-        persistence_service=persistence_service_fixture
+        persistence_service=persistence_service
     )
     yield service
     await service.close() # Asegurar que se cierre el servicio y sus websockets si los tuviera
 
 @pytest_asyncio.fixture
-async def portfolio_service_fixture(market_data_service_fixture, persistence_service_fixture):
+async def portfolio_service_fixture(market_data_service_fixture, db_session: AsyncSession):
     """Fixture para PortfolioService con dependencias."""
+    persistence_service = SupabasePersistenceService(session=db_session)
     service = PortfolioService(
         market_data_service=market_data_service_fixture,
-        persistence_service=persistence_service_fixture
+        persistence_service=persistence_service
     )
     # Inicializar el portafolio para el usuario fijo de test
     await service.initialize_portfolio(FIXED_USER_ID)
@@ -306,7 +287,7 @@ def real_order_execution_service_fixture(mock_binance_adapter_fixture):
 @pytest.fixture
 def paper_order_execution_service_fixture():
     """Fixture para PaperOrderExecutionService."""
-    return PaperOrderExecutionService(initial_capital=10000.0)
+    return PaperOrderExecutionService(initial_capital=Decimal("10000.0"))
 
 @pytest.fixture
 def unified_order_execution_service_fixture(
@@ -320,7 +301,7 @@ def unified_order_execution_service_fixture(
         user_id: UUID,
         symbol: str,
         side: str,
-        quantity: float,
+        quantity: Decimal,
         trading_mode: str,
         api_key: Optional[str] = None,
         api_secret: Optional[str] = None,
@@ -334,13 +315,13 @@ def unified_order_execution_service_fixture(
             orderCategory=OrderCategory.ENTRY,
             type='market',
             status=OrderStatus.FILLED.value, # Asegurar que el estado sea 'filled'
-            requestedPrice=30000.0,
+            requestedPrice=Decimal("30000.0"),
             requestedQuantity=quantity,
             executedQuantity=quantity,
-            executedPrice=30000.0,
-            cumulativeQuoteQty=quantity * 30000.0,
+            executedPrice=Decimal("30000.0"),
+            cumulativeQuoteQty=quantity * Decimal("30000.0"),
             commissions=[],
-            commission=0.0,
+            commission=Decimal("0.0"),
             commissionAsset="USDT",
             submittedAt=datetime.now(timezone.utc),
             fillTimestamp=datetime.now(timezone.utc),
@@ -369,7 +350,6 @@ async def ai_orchestrator_fixture(market_data_service_fixture):
 
 @pytest_asyncio.fixture
 async def trading_engine_fixture(
-    persistence_service_fixture, # Usar la fixture real de persistencia
     market_data_service_fixture,
     unified_order_execution_service_fixture,
     credential_service_fixture,
@@ -377,11 +357,13 @@ async def trading_engine_fixture(
     mock_strategy_service_integration, # Usar el mock existente para StrategyService
     configuration_service_fixture,
     portfolio_service_fixture,
-    ai_orchestrator_fixture
+    ai_orchestrator_fixture,
+    db_session: AsyncSession # Añadir db_session para inicializar PersistenceService
 ):
     """Fixture completa para TradingEngine con todas las dependencias."""
+    persistence_service = SupabasePersistenceService(session=db_session)
     engine = TradingEngine(
-        persistence_service=persistence_service_fixture, # Usar la fixture real de persistencia
+        persistence_service=persistence_service, # Usar la fixture real de persistencia
         market_data_service=market_data_service_fixture,
         unified_order_execution_service=unified_order_execution_service_fixture,
         credential_service=credential_service_fixture,

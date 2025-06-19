@@ -145,13 +145,52 @@ class SRSTTriage:
                     return "TimeoutExpired: No se encontraron logs para analizar."
                 
                 print("✅ Logs leídos. Analizando su contenido.")
-                return self._remove_ansi_codes(log_content)
+                # En lugar de retornar el contenido, lo parseamos directamente
+                self.tickets.extend(self.parse_log_output(log_content))
+                return "" # Retornamos vacío porque ya hemos procesado los tickets
             except Exception as log_e:
                 print(f"❌ Error al leer los archivos de log: {log_e}")
                 return f"TimeoutExpired: Ocurrió un error al leer los logs: {log_e}"
         except Exception as e:
             print(f"❌ Ocurrió un error inesperado al ejecutar pytest: {e}")
             return ""
+
+    def parse_log_output(self, log_content: str) -> List[ErrorTicket]:
+        """Parsea el contenido de los archivos de log para encontrar errores."""
+        tickets: List[ErrorTicket] = []
+        # Regex para encontrar errores críticos en los logs
+        log_error_pattern = re.compile(r"^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2},\d{3}\s-\s.*?-(?:\s*CRITICAL|\s*ERROR)\s*-\s*(.*)", re.MULTILINE)
+        
+        for match in log_error_pattern.finditer(log_content):
+            error_message = match.group(1).strip()
+            
+            # Simplificamos la creación del ticket desde el log
+            error_type = "RuntimeError"
+            file_path = "logs/backend.log" # Asumimos que el error crítico viene del backend
+            if "frontend.log" in log_content:
+                 file_path = "logs/frontend.log"
+
+            category, _ = self.classify_error(error_message)
+            priority = self.determine_priority(file_path, category)
+            module = self.extract_module_name(file_path)
+
+            ticket = ErrorTicket(
+                id=f"SRST-LOG-{len(tickets)}",
+                category=category,
+                priority=priority,
+                error_type=error_type,
+                file_path=file_path,
+                line_number=0,
+                error_message=error_message,
+                test_scope=f"Runtime Log Error: {error_message[:50]}...",
+                module=module,
+                dependencies=[],
+                estimated_time=30 # Mayor tiempo por ser error de runtime
+            )
+            tickets.append(ticket)
+            
+        print(f"🔎 Encontrados {len(tickets)} errores potenciales en los logs.")
+        return tickets
 
     def classify_error(self, error_type: str) -> Tuple[ErrorCategory, str]:
         """Clasifica un error en una categoría SRST."""
@@ -428,7 +467,26 @@ poetry run pytest -k "{ticket.test_scope}" -v
             match = scope_pattern.search(line)
             if match:
                 resolved_scopes.add(match.group(1).strip())
-        
+
+        # --- ANÁLISIS DE LOGS (NUEVO PASO OBLIGATORIO) ---
+        print("📖 Analizando logs de aplicación en busca de errores de runtime...")
+        log_content = ""
+        try:
+            backend_log = self.base_path / "logs" / "backend.log"
+            frontend_log = self.base_path / "logs" / "frontend.log"
+            if backend_log.exists():
+                log_content += f"--- Contenido de backend.log ---\n{backend_log.read_text(encoding='utf-8', errors='replace')}\n"
+            if frontend_log.exists():
+                log_content += f"--- Contenido de frontend.log ---\n{frontend_log.read_text(encoding='utf-8', errors='replace')}\n"
+            
+            if log_content:
+                self.tickets.extend(self.parse_log_output(log_content))
+            else:
+                print("✅ No se encontraron archivos de log o están vacíos.")
+        except Exception as log_e:
+            print(f"❌ Error al leer los archivos de log: {log_e}")
+        # --- FIN DE ANÁLISIS DE LOGS ---
+
         try:
             # Primero intenta obtener errores de runtime (execution_mode=True)
             output = self.run_pytest_collect(execution_mode=True)
@@ -447,16 +505,24 @@ poetry run pytest -k "{ticket.test_scope}" -v
             return
         
         print("🔍 Analizando salida de pytest...")
+        # Los tickets de log ya fueron añadidos si hubo timeout
         all_potential_tickets = self.parse_pytest_output(output)
         
         print(f"🔎 Encontrados {len(all_potential_tickets)} errores potenciales en la salida de pytest.")
         
-        self.tickets = [
+        # Añadir solo los nuevos tickets de pytest
+        new_pytest_tickets = [
             ticket for ticket in all_potential_tickets 
             if ticket.test_scope not in resolved_scopes
         ]
         
-        print(f"✨ {len(all_potential_tickets) - len(self.tickets)} errores ya resueltos fueron ignorados.")
+        self.tickets.extend(new_pytest_tickets)
+        
+        # Filtrar duplicados si es necesario (aunque es poco probable)
+        unique_tickets = {t.test_scope: t for t in self.tickets}
+        self.tickets = list(unique_tickets.values())
+        
+        print(f"✨ {len(all_potential_tickets) - len(new_pytest_tickets)} errores de pytest ya resueltos fueron ignorados.")
 
         if not self.tickets:
             print("🎉 ¡No hay nuevos errores que requieran tickets! El triage ha finalizado.")

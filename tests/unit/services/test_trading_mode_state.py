@@ -88,7 +88,7 @@ class TestTradingModeStateManager:
     def test_set_trading_mode_invalid(self):
         """Test setting invalid trading mode raises error."""
         with pytest.raises(ValueError, match="Invalid trading mode"):
-            self.manager.set_trading_mode("invalid")
+            self.manager.set_trading_mode("invalid")  # type: ignore
     
     def test_set_same_mode_no_signal(self):
         """Test that setting same mode doesn't emit signal."""
@@ -186,6 +186,9 @@ class TestTradingModeStateManager:
         
         # Manager should still work normally
         assert self.manager.current_mode == "real"
+        
+        # Clean up the failing subscriber
+        self.manager.unsubscribe(failing_callback)
     
     def test_save_load_config(self):
         """Test configuration save and load."""
@@ -246,4 +249,3 @@ class TestGlobalStateManager:
         # Get again and verify state persisted
         same_manager = get_trading_mode_manager()
         assert same_manager.current_mode == "real"
-
