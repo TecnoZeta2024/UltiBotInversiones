@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Instala curl, dependencias de sistema para pytest-qt y otras utilidades, luego Poetry
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl ca-certificates libglib2.0-0 libgl1-mesa-glx libegl1-mesa libfontconfig1 libxkbcommon0 libdbus-1-3 && \
+    apt-get install -y --no-install-recommends curl ca-certificates libglib2.0-0 libgl1-mesa-glx libegl1-mesa libfontconfig1 libxkbcommon0 libdbus-1-3 iputils-ping netcat-traditional && \
     rm -rf /var/lib/apt/lists/* && \
     pip install poetry && \
     poetry config virtualenvs.create false
@@ -26,6 +26,11 @@ RUN poetry install --no-root --no-interaction \
 # Copia todo el código fuente
 COPY src /app/src
 COPY tests /app/tests
+COPY docker/wait-for-it.sh /app/wait-for-it.sh
+
+# Convierte el script a formato de línea LF y da permisos de ejecución
+RUN sed -i 's/\r$//' /app/wait-for-it.sh && \
+    chmod +x /app/wait-for-it.sh
 
 # Copia el certificado de Supabase
 COPY supabase /app/supabase
@@ -43,5 +48,5 @@ ENV PYTHONPATH=/app/src \
 # are provided when running the container in production/staging.
 
 # Comando para ejecutar la aplicación FastAPI
-# Con el nuevo PYTHONPATH, se llama directamente al módulo
-CMD ["uvicorn", "ultibot_backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Primero espera a que la base de datos esté disponible, luego inicia el servidor
+CMD ["/app/wait-for-it.sh", "-t", "60", "db:5432", "--", "uvicorn", "ultibot_backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

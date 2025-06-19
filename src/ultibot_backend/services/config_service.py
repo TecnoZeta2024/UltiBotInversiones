@@ -58,44 +58,30 @@ class ConfigurationService:
         target_user_id = user_id if user_id else str(self._user_id)
         try:
             config_data = await self.persistence_service.get_user_configuration(user_id=target_user_id)
-            # Si config_data existe y su 'id' no es None, intentar cargarla.
-            if config_data and config_data.get('id') is not None:
+            
+            if config_data:
                 try:
+                    # Si hay datos, intentar validarlos y cargarlos.
+                    # El validador en el modelo Pydantic se encargará de los campos JSON.
                     user_config = UserConfiguration(**config_data)
-                    if user_config.real_trading_settings is None:
-                        user_config.real_trading_settings = RealTradingSettings(
-                            real_trading_mode_active=False,
-                            real_trades_executed_count=0,
-                            max_concurrent_operations=None,
-                            daily_loss_limit_absolute=None,
-                            daily_profit_target_absolute=None,
-                            asset_specific_stop_loss=None,
-                            auto_pause_trading_conditions=None,
-                            daily_capital_risked_usd=0.0,
-                            last_daily_reset=datetime.now(timezone.utc)
-                        )
-                    # Asegurar que real_trades_executed_count no sea None después de cargar
-                    elif user_config.real_trading_settings.real_trades_executed_count is None: # 'elif' para evitar reasignar si ya se instanció arriba
-                        user_config.real_trading_settings.real_trades_executed_count = 0
+                    logger.info(f"Configuración de usuario cargada exitosamente para el user_id: {target_user_id}")
                     return user_config
-                except Exception as e_load: # Capturar error de validación si id es None a pesar del check (poco probable aquí)
-                    logger.error(f"Error al validar configuración existente (id: {config_data.get('id')}): {e_load}", exc_info=True)
-                    # Caer al flujo de creación de configuración por defecto
-            
-            # Si no hay config_data, o si config_data tiene id=None, o si falló la validación anterior
-            if config_data and config_data.get('id') is None:
-                logger.warning("Se encontró configuración con id=None. Creando y guardando una configuración por defecto.")
-            else: # config_data es None o falló la validación
-                logger.info("No se encontró configuración o la existente es inválida. Creando y guardando configuración por defecto.")
-            
+                except Exception as e_load:
+                    # Si la validación falla, es un problema serio. Loguear y caer a default.
+                    logger.error(f"Error al validar la configuración existente para el user_id {target_user_id}: {e_load}", exc_info=True)
+                    logger.warning("Se utilizará una configuración por defecto en memoria debido a un error de validación.")
+                    return self.get_default_configuration()
+
+            # Si no se encontró config_data en la BD, crear y guardar una por defecto.
+            logger.info(f"No se encontró configuración para el user_id {target_user_id}. Creando y guardando configuración por defecto.")
             default_config = self.get_default_configuration()
             await self.save_user_configuration(default_config)
             return default_config
 
-        except Exception as e: # Captura errores de get_user_configuration o save_user_configuration
-            logger.error(f"Error crítico en _load_config_from_db: {e}", exc_info=True)
+        except Exception as e:
+            logger.error(f"Error crítico irrecuperable en _load_config_from_db para el user_id {target_user_id}: {e}", exc_info=True)
             # Como último recurso, devolver una configuración por defecto en memoria si todo falla.
-            # Esto evita que la aplicación se bloquee, pero la configuración no estará persistida.
+            logger.warning("Se utilizará una configuración por defecto en memoria debido a un error crítico.")
             return self.get_default_configuration()
 
     async def get_user_configuration(self, user_id: Optional[str] = None) -> UserConfiguration:

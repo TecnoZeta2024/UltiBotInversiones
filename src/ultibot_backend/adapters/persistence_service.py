@@ -4,7 +4,7 @@ from sqlalchemy.dialects import postgresql
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 from typing_extensions import LiteralString
 from datetime import datetime, timezone # Importar datetime y timezone
-from uuid import UUID
+from uuid import UUID, uuid4
 import json
 from pydantic import BaseModel # Añadir esta importación para la función auxiliar
 
@@ -46,12 +46,24 @@ class SupabasePersistenceService(IPersistenceService):
             return json.dumps(obj)
         return str(obj) # Fallback para tipos simples si es necesario
 
-    async def _get_session(self) -> AsyncSession:
+    async def _get_session(self):
+        """Get a session context manager."""
         if self._session:
-            return self._session
+            # Return the existing session wrapped in a simple context manager
+            class SessionWrapper:
+                def __init__(self, session):
+                    self.session = session
+                
+                async def __aenter__(self):
+                    return self.session
+                
+                async def __aexit__(self, exc_type, exc_val, exc_tb):
+                    # Don't close the session if it's injected (like in tests)
+                    pass
+            
+            return SessionWrapper(self._session)
         elif self._async_session_factory:
-            # Cuando se usa un engine, creamos una sesión a partir de él
-            # La gestión de la conexión y transacción se hará en el contexto de la llamada
+            # Return a proper session context manager from the factory
             return self._async_session_factory()
         else:
             raise RuntimeError("No session or engine/pool provided to create a session.")
@@ -157,8 +169,11 @@ class SupabasePersistenceService(IPersistenceService):
 
     async def upsert_user_configuration(self, user_config: UserConfiguration) -> None:
         async with await self._get_session() as session:
+            # Generar un nuevo ID si no existe
+            config_id = user_config.id if user_config.id is not None else str(uuid4())
+
             user_config_orm = UserConfigurationORM(
-                id=user_config.id,
+                id=config_id,
                 user_id=user_config.user_id,
                 telegram_chat_id=user_config.telegram_chat_id,
                 notification_preferences=self._pydantic_to_json_string(user_config.notification_preferences),
@@ -182,9 +197,8 @@ class SupabasePersistenceService(IPersistenceService):
                 created_at=user_config.created_at,
                 updated_at=user_config.updated_at
             )
-            session.add(user_config_orm)
+            await session.merge(user_config_orm)
             await session.commit()
-            await session.refresh(user_config_orm)
 
     async def update_opportunity_status(self, opportunity_id: UUID, new_status: OpportunityStatus, status_reason: str) -> None:
         async with await self._get_session() as session:
@@ -289,5 +303,60 @@ class SupabasePersistenceService(IPersistenceService):
                     trades.append(trade_pydantic)
                 except Exception as e:
                     print(f"Error al validar Trade Pydantic desde ORM: {e}")
-                    # Opcional: loggear el trade_orm.data para depuración
+            # Opcional: loggear el trade_orm.data para depuración
+            return trades
+
+    async def get_trades_with_filters(
+        self,
+        user_id: str,
+        trading_mode: str,
+        status: Optional[str] = None,
+        limit: int = 100,
+        offset: int = 0,
+        symbol: Optional[str] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+    ) -> List[Trade]:
+        """
+        Recupera trades con filtros dinámicos.
+        """
+        async with await self._get_session() as session:
+            query = select(TradeORM).where(
+                TradeORM.user_id == UUID(user_id),
+                TradeORM.mode == trading_mode
+            )
+
+            if status:
+                query = query.where(TradeORM.position_status == status)
+            if symbol:
+                query = query.where(TradeORM.symbol == symbol)
+            if start_date:
+                query = query.where(TradeORM.created_at >= start_date)
+            if end_date:
+                query = query.where(TradeORM.created_at <= end_date)
+
+            query = query.order_by(TradeORM.created_at.desc()).limit(limit).offset(offset)
+
+            result = await session.execute(query)
+            trade_orms = result.scalars().all()
+
+            trades = []
+            for trade_orm_instance in trade_orms:
+                try:
+                    trade_data = json.loads(trade_orm_instance.data)
+                    # Asegurarse de que los campos del ORM sobreescriben los del JSON si hay conflicto
+                    trade_data.update({
+                        "id": str(trade_orm_instance.id),
+                        "user_id": str(trade_orm_instance.user_id),
+                        "positionStatus": trade_orm_instance.position_status,
+                        "mode": trade_orm_instance.mode,
+                        "symbol": trade_orm_instance.symbol,
+                        "created_at": trade_orm_instance.created_at.isoformat(),
+                        "updated_at": trade_orm_instance.updated_at.isoformat(),
+                        "closed_at": trade_orm_instance.closed_at.isoformat() if trade_orm_instance.closed_at else None,
+                    })
+                    trades.append(Trade.model_validate(trade_data))
+                except Exception as e:
+                    # Log del error, idealmente con un logger real
+                    print(f"Error procesando trade desde la BD: {e}")
             return trades

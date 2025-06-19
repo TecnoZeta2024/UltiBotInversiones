@@ -58,7 +58,7 @@ def compile_create_column_sqlite(element, compiler, **kw):
 class UserConfigurationORM(Base):
     __tablename__ = 'user_configurations'
 
-    id = Column(GUID(), primary_key=True, default=PythonUUID)
+    id = Column(String, primary_key=True)
     user_id = Column(String, unique=True, nullable=False)
     telegram_chat_id = Column(String, nullable=True)
     notification_preferences = Column(Text, nullable=True) # JSON string

@@ -2,6 +2,7 @@ import logging
 from typing import List, Optional, Dict, Set, Callable, Any
 from uuid import UUID
 from fastapi import Depends
+from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 
 from shared.data_types import AssetBalance, ServiceName, BinanceConnectionStatus, MarketData
 from ultibot_backend.adapters.binance_adapter import BinanceAdapter
@@ -21,11 +22,11 @@ class MarketDataService:
     def __init__(self, 
                  credential_service: CredentialService, 
                  binance_adapter: BinanceAdapter,
-                 persistence_service: SupabasePersistenceService
+                 session_factory: async_sessionmaker[AsyncSession]
                  ):
         self.credential_service = credential_service
         self.binance_adapter = binance_adapter
-        self.persistence_service = persistence_service
+        self.session_factory = session_factory
         self._active_websocket_tasks: Dict[str, asyncio.Task] = {}
         self._closed = False
         self._invalid_symbols_cache: Set[str] = set()
@@ -279,8 +280,10 @@ class MarketDataService:
                 ))
 
             if market_data_to_save:
-                await self.persistence_service.save_market_data(market_data_to_save)
-                logger.info(f"{len(market_data_to_save)} registros de velas para {symbol}-{interval} guardados en la base de datos.")
+                async with self.session_factory() as session:
+                    persistence_service = SupabasePersistenceService(session)
+                    await persistence_service.save_market_data(market_data_to_save)
+                    logger.info(f"{len(market_data_to_save)} registros de velas para {symbol}-{interval} guardados en la base de datos.")
 
             logger.info(f"Datos de velas para {symbol}-{interval} obtenidos y procesados.")
             return processed_data
@@ -313,4 +316,3 @@ class MarketDataService:
         
         await self.binance_adapter.close()
         logger.info("MarketDataService: Cierre completado.")
-

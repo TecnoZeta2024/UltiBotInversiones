@@ -620,6 +620,20 @@ class TradingEngine:
         
         user_id_str = str(opportunity.user_id)
 
+        # Validar el tipo de estrategia. Si es desconocido, recomendar investigación.
+        if strategy.base_strategy_type not in [member.value for member in BaseStrategyType]:
+            logger.warning(f"Unknown strategy type '{strategy.base_strategy_type}' for strategy {strategy.id}. Recommending investigation.")
+            return TradingDecision(
+                decision="investigate",
+                confidence=0.0, # Baja confianza para tipo desconocido
+                reasoning=f"Strategy type '{strategy.base_strategy_type}' is unknown. Requires manual investigation.",
+                opportunity_id=str(opportunity.id),
+                strategy_id=str(strategy.id),
+                mode=mode,
+                ai_analysis_used=False,
+                warnings=["UNKNOWN_STRATEGY_TYPE"]
+            )
+
         # 1. AI-Driven Path
         if strategy.ai_analysis_profile_id and self.ai_orchestrator:
             ai_config = None

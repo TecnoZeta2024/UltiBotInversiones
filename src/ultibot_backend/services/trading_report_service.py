@@ -2,6 +2,7 @@ import logging
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime, timedelta
 from uuid import UUID
+from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 
 from shared.data_types import Trade, PerformanceMetrics
 from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
@@ -13,8 +14,8 @@ class TradingReportService:
     """
     Servicio para generar informes y métricas de rendimiento de trading.
     """
-    def __init__(self, persistence_service: SupabasePersistenceService):
-        self.persistence_service = persistence_service
+    def __init__(self, session_factory: async_sessionmaker[AsyncSession]):
+        self.session_factory = session_factory
 
     async def get_closed_trades(
         self, 
@@ -42,34 +43,36 @@ class TradingReportService:
             Lista de objetos Trade cerrados que cumplen con los filtros
         """
         try:
-            # Construir los filtros para la consulta
-            filters = {
-                "user_id": str(user_id),
-                "mode": mode,
-                "positionStatus": "closed"
-            }
-            
-            # Añadir filtros opcionales si están presentes
-            if symbol:
-                filters["symbol"] = symbol
-            
-            # Las fechas se filtrarán directamente en la consulta SQL 
-            # (ver persistence_service.get_closed_trades)
-            
-            # Realizar la consulta a la base de datos
-            # persistence_service.get_closed_trades ya devuelve List[Trade]
-            trades = await self.persistence_service.get_closed_trades(
-                user_id=user_id, # user_id ya es UUID, no convertir a str
-                mode=mode,
-                symbol=symbol,
-                start_date=start_date,
-                end_date=end_date
-                # Limit y offset no son soportados directamente por get_closed_trades en persistence_service
-                # Si se necesita paginación, se debe implementar en persistence_service o manejar aquí.
-            )
-            
-            logger.info(f"Obtenidos {len(trades)} trades cerrados para usuario {user_id} en modo {mode}")
-            return trades
+            async with self.session_factory() as session:
+                persistence_service = SupabasePersistenceService(session)
+                # Construir los filtros para la consulta
+                filters = {
+                    "user_id": str(user_id),
+                    "mode": mode,
+                    "positionStatus": "closed"
+                }
+                
+                # Añadir filtros opcionales si están presentes
+                if symbol:
+                    filters["symbol"] = symbol
+                
+                # Las fechas se filtrarán directamente en la consulta SQL 
+                # (ver persistence_service.get_closed_trades)
+                
+                # Realizar la consulta a la base de datos
+                # persistence_service.get_closed_trades ya devuelve List[Trade]
+                trades = await persistence_service.get_closed_trades(
+                    user_id=user_id, # user_id ya es UUID, no convertir a str
+                    mode=mode,
+                    symbol=symbol,
+                    start_date=start_date,
+                    end_date=end_date
+                    # Limit y offset no son soportados directamente por get_closed_trades en persistence_service
+                    # Si se necesita paginación, se debe implementar en persistence_service o manejar aquí.
+                )
+                
+                logger.info(f"Obtenidos {len(trades)} trades cerrados para usuario {user_id} en modo {mode}")
+                return trades
             
         except Exception as e:
             logger.error(f"Error al obtener trades cerrados para usuario {user_id}: {e}", exc_info=True)

@@ -16,43 +16,23 @@ from uuid import UUID
 from ultibot_backend.app_config import settings
 from decimal import Decimal # Necesario para TradeOrderDetails
 
-# Mock del servicio de persistencia para integración
-@pytest.fixture
-def mock_persistence_service_integration():
-    mock = AsyncMock(spec=SupabasePersistenceService)
-    # Configurar el método get_all_trades_for_user para que sea un AsyncMock
-    mock.get_all_trades_for_user = AsyncMock(return_value=[])
-    return mock
-
-# Mock del servicio de estrategia para integración
-@pytest.fixture
-def mock_strategy_service_integration():
-    service = AsyncMock(spec=StrategyService)
-    # Configurar un comportamiento por defecto si es necesario o en cada prueba
-    return service
-
-
-from ultibot_backend.dependencies import get_persistence_service
+from ultibot_backend.dependencies import get_performance_service
+# No necesitamos importar PerformanceService o SupabasePersistenceService aquí,
+# ya que la inyección se manejará a través de dependencies.py y conftest.py
 
 @pytest.mark.asyncio
-async def test_get_strategies_performance_endpoint_no_data(client, mock_persistence_service_integration):
+async def test_get_strategies_performance_endpoint_no_data(client, mock_persistence_service_integration, mock_strategy_service_integration):
     """
     Test GET /api/v1/performance/strategies when no performance data is available.
     """
     # Configurar el mock de persistencia para que no devuelva trades
-    mock_persistence_service_integration.get_all_trades_for_user.return_value = []
+    mock_persistence_service_integration.get_trades_with_filters.return_value = []
     
-    # Sobrescribir la dependencia del servicio de persistencia para este test específico
-    app.dependency_overrides[get_persistence_service] = lambda: mock_persistence_service_integration
-
     response = client.get("/api/v1/performance/strategies")
-    
-    # Limpiar la sobrescritura de dependencias después del test
-    app.dependency_overrides.clear()
     
     assert response.status_code == 200
     assert response.json() == []
-    mock_persistence_service_integration.get_all_trades_for_user.assert_called_once_with(user_id=settings.FIXED_USER_ID, mode=None)
+    mock_persistence_service_integration.get_trades_with_filters.assert_called_once_with(user_id=str(settings.FIXED_USER_ID), trading_mode="", status=PositionStatus.CLOSED.value)
 
 
 @pytest.mark.asyncio
@@ -101,7 +81,7 @@ async def test_get_strategies_performance_endpoint_with_data(client, mock_persis
         trailingStopCallbackRate=None, currentStopPrice_tsl=None,
         riskRewardAdjustments=[]
     )
-    mock_persistence_service_integration.get_all_trades_for_user.return_value = [closed_trade]
+    mock_persistence_service_integration.get_trades_with_filters.return_value = [closed_trade]
 
     strategy_config = TradingStrategyConfig(
         id=str(strategy_id),
@@ -137,7 +117,7 @@ async def test_get_strategies_performance_endpoint_with_data(client, mock_persis
     assert perf_data["totalPnl"] == 100.0
     assert perf_data["win_rate"] == 100.0
 
-    mock_persistence_service_integration.get_all_trades_for_user.assert_called_once_with(user_id=settings.FIXED_USER_ID, mode="paper")
+    mock_persistence_service_integration.get_trades_with_filters.assert_called_once_with(user_id=str(settings.FIXED_USER_ID), trading_mode="paper", status=PositionStatus.CLOSED.value)
     mock_strategy_service_integration.get_strategy_config.assert_called_once_with(str(strategy_id), str(settings.FIXED_USER_ID))
 
 
@@ -188,7 +168,7 @@ async def test_get_strategies_performance_endpoint_filter_real_mode(client, mock
         riskRewardAdjustments=[]
     )
     # Mock para que solo devuelva el trade real cuando se filtra por 'real'
-    mock_persistence_service_integration.get_all_trades_for_user.return_value = [real_trade]
+    mock_persistence_service_integration.get_trades_with_filters.return_value = [real_trade]
 
     strategy_config_real = TradingStrategyConfig(
         id=str(strategy_id_real),
@@ -228,7 +208,7 @@ async def test_get_strategies_performance_endpoint_filter_real_mode(client, mock
     assert perf_data["totalPnl"] == 250.0
     assert perf_data["win_rate"] == 100.0
 
-    mock_persistence_service_integration.get_all_trades_for_user.assert_called_once_with(user_id=settings.FIXED_USER_ID, mode="real")
+    mock_persistence_service_integration.get_trades_with_filters.assert_called_once_with(user_id=str(settings.FIXED_USER_ID), trading_mode="real", status=PositionStatus.CLOSED.value)
     mock_strategy_service_integration.get_strategy_config.assert_called_once_with(str(strategy_id_real), str(settings.FIXED_USER_ID))
 
 
@@ -374,7 +354,7 @@ async def test_get_strategies_performance_endpoint_multiple_strategies(client, m
         riskRewardAdjustments=[]
     )
     
-    mock_persistence_service_integration.get_all_trades_for_user.return_value = [
+    mock_persistence_service_integration.get_trades_with_filters.return_value = [
         trade1_strat1_paper, trade2_strat1_paper, trade3_strat2_real
     ]
 
@@ -417,11 +397,11 @@ async def test_get_strategies_performance_endpoint_multiple_strategies(client, m
         return None
     mock_strategy_service_integration.get_strategy_config.side_effect = side_effect_get_strategy_config
     
-    # Test sin filtro de modo (debería devolver ambas)
-    response_all = client.get("/api/v1/performance/strategies")
-    assert response_all.status_code == 200
-    data_all = response_all.json()
-    assert len(data_all) == 2
+    response = client.get("/api/v1/performance/strategies") # Sin parámetro 'mode'
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 2 # Debería devolver datos para ambas estrategias/modos
 
     perf_strat1 = next(p for p in data_all if p["strategyId"] == str(strategy_id_1))
     perf_strat2 = next(p for p in data_all if p["strategyId"] == str(strategy_id_2))
@@ -438,7 +418,7 @@ async def test_get_strategies_performance_endpoint_multiple_strategies(client, m
     assert perf_strat2["totalPnl"] == 75.0
     assert perf_strat2["win_rate"] == 100.0
     
-    mock_persistence_service_integration.get_all_trades_for_user.assert_called_with(user_id=settings.FIXED_USER_ID, mode=None)
+    mock_persistence_service_integration.get_trades_with_filters.assert_called_with(user_id=str(settings.FIXED_USER_ID), trading_mode="", status=PositionStatus.CLOSED.value)
     assert mock_strategy_service_integration.get_strategy_config.call_count == 2 # Una vez por cada estrategia
 
 
@@ -488,7 +468,7 @@ async def test_get_strategies_performance_endpoint_strategy_not_found(client, mo
         trailingStopCallbackRate=None, currentStopPrice_tsl=None,
         riskRewardAdjustments=[]
     )
-    mock_persistence_service_integration.get_all_trades_for_user.return_value = [trade_with_unknown_strategy]
+    mock_persistence_service_integration.get_trades_with_filters.return_value = [trade_with_unknown_strategy]
     
     # Simular que get_strategy_config devuelve None para este ID
     mock_strategy_service_integration.get_strategy_config.return_value = None
@@ -507,7 +487,7 @@ async def test_get_strategies_performance_endpoint_strategy_not_found(client, mo
     assert perf_data["totalPnl"] == 30.0
     assert perf_data["win_rate"] == 100.0
 
-    mock_persistence_service_integration.get_all_trades_for_user.assert_called_once_with(user_id=settings.FIXED_USER_ID, mode="paper")
+    mock_persistence_service_integration.get_trades_with_filters.assert_called_once_with(user_id=str(settings.FIXED_USER_ID), trading_mode="paper", status=PositionStatus.CLOSED.value)
     mock_strategy_service_integration.get_strategy_config.assert_called_once_with(str(unknown_strategy_id), str(settings.FIXED_USER_ID))
 
 
@@ -590,8 +570,6 @@ async def test_get_strategies_performance_endpoint_no_mode_filter(client, mock_p
         mode="real",
         symbol="DOTUSDT",
         side="SELL",
-        strategyId=strategy_id_real,
-        pnl_usd=90.0,
         entryOrder=TradeOrderDetails(
             orderId_internal=uuid4(),
             orderCategory=OrderCategory.ENTRY,
@@ -629,7 +607,7 @@ async def test_get_strategies_performance_endpoint_no_mode_filter(client, mock_p
     )
     
     # Mock para devolver ambos trades cuando no hay filtro de modo
-    mock_persistence_service_integration.get_all_trades_for_user.return_value = [paper_trade, real_trade]
+    mock_persistence_service_integration.get_trades_with_filters.return_value = [paper_trade, real_trade]
 
     config_paper = TradingStrategyConfig(
         id=str(strategy_id_paper), user_id=str(settings.FIXED_USER_ID), config_name="NoFilter Paper Strat",
@@ -687,6 +665,6 @@ async def test_get_strategies_performance_endpoint_no_mode_filter(client, mock_p
     assert perf_real["mode"] == "real"
     assert perf_real["totalPnl"] == 90.0
     
-    mock_persistence_service_integration.get_all_trades_for_user.assert_called_once_with(user_id=settings.FIXED_USER_ID, mode=None)
+    mock_persistence_service_integration.get_trades_with_filters.assert_called_once_with(user_id=str(settings.FIXED_USER_ID), trading_mode="", status=PositionStatus.CLOSED.value)
     # Se debe llamar a get_strategy_config para cada estrategia
     assert mock_strategy_service_integration.get_strategy_config.call_count == 2

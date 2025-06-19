@@ -8,13 +8,13 @@ import json
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Type
 
 from fastapi import HTTPException
 from pydantic import ValidationError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.utils import custom_dumps
-from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 from ultibot_backend.core.domain_models.user_configuration_models import (
     UserConfiguration,
     AIStrategyConfiguration,
@@ -27,13 +27,13 @@ logger = logging.getLogger(__name__)
 class ConfigurationService:
     """Service for managing user configuration settings."""
     
-    def __init__(self, persistence_service: SupabasePersistenceService):
-        """Initialize the configuration service with persistence service dependency.
+    def __init__(self, session_factory: Callable[..., AsyncSession]):
+        """Initialize the configuration service with a session factory.
         
         Args:
-            persistence_service: The persistence service for database operations.
+            session_factory: A callable that returns an AsyncSession.
         """
-        self.persistence_service = persistence_service
+        self.session_factory = session_factory
     
     async def get_user_configuration(self, user_id: str) -> Optional[UserConfiguration]:
         """Get user configuration by user ID.
@@ -48,11 +48,20 @@ class ConfigurationService:
             HTTPException: If database operation fails.
         """
         try:
-            db_record = await self._get_user_config_from_db(user_id)
-            if not db_record:
-                return None
-            
-            return self._db_format_to_user_config(db_record)
+            async with self.session_factory() as session:
+                query = """
+                SELECT * FROM user_configurations 
+                WHERE user_id = :user_id;
+                """
+                result = await session.execute(query, {"user_id": user_id})
+                db_record = result.fetchone()
+                
+                if not db_record:
+                    return None
+                
+                db_record_dict = dict(db_record) if hasattr(db_record, '_asdict') else db_record
+                
+                return self._db_format_to_user_config(db_record_dict)
             
         except Exception as e:
             logger.error(f"Error retrieving user configuration for {user_id}: {e}")
@@ -79,33 +88,67 @@ class ConfigurationService:
             HTTPException: If validation fails or database operation fails.
         """
         try:
-            # Prepare configuration data
-            config_data_copy = config_data.copy()
-            config_data_copy.update({
-                "user_id": user_id,
-                "updated_at": datetime.now(timezone.utc),
-            })
-            
-            # Check if configuration exists
-            existing_config = await self.get_user_configuration(user_id)
-            if existing_config:
-                # Update existing configuration
-                config_data_copy["id"] = existing_config.id
-                config_data_copy["created_at"] = existing_config.created_at
-            else:
-                # Create new configuration
-                config_data_copy["id"] = str(uuid.uuid4())
-                config_data_copy["created_at"] = datetime.now(timezone.utc)
-            
-            # Validate configuration
-            user_config = UserConfiguration(**config_data_copy)
-            
-            # Convert to database format and save
-            db_data = self._user_config_to_db_format(user_config)
-            await self._save_user_config_to_db(db_data)
-            
-            logger.info(f"Saved user configuration for user {user_id}")
-            return user_config
+            async with self.session_factory() as session:
+                config_data_copy = config_data.copy()
+                config_data_copy.update({
+                    "user_id": user_id,
+                    "updated_at": datetime.now(timezone.utc),
+                })
+                
+                existing_config = await self.get_user_configuration(user_id)
+                if existing_config:
+                    config_data_copy["id"] = existing_config.id
+                    config_data_copy["created_at"] = existing_config.created_at
+                else:
+                    config_data_copy["id"] = str(uuid.uuid4())
+                    config_data_copy["created_at"] = datetime.now(timezone.utc)
+                
+                user_config = UserConfiguration(**config_data_copy)
+                
+                db_data = self._user_config_to_db_format(user_config)
+                
+                query = """
+                INSERT INTO user_configurations (
+                    id, user_id, telegram_chat_id, notification_preferences, enable_telegram_notifications,
+                    default_paper_trading_capital, paper_trading_active, watchlists, favorite_pairs,
+                    risk_profile, risk_profile_settings, real_trading_settings, ai_strategy_configurations,
+                    ai_analysis_confidence_thresholds, mcp_server_preferences, selected_theme,
+                    dashboard_layout_profiles, active_dashboard_layout_profile_id, dashboard_layout_config,
+                    cloud_sync_preferences, created_at, updated_at
+                ) VALUES (
+                    :id, :user_id, :telegram_chat_id, :notification_preferences, :enable_telegram_notifications,
+                    :default_paper_trading_capital, :paper_trading_active, :watchlists, :favorite_pairs,
+                    :risk_profile, :risk_profile_settings, :real_trading_settings, :ai_strategy_configurations,
+                    :ai_analysis_confidence_thresholds, :mcp_server_preferences, :selected_theme,
+                    :dashboard_layout_profiles, :active_dashboard_layout_profile_id, :dashboard_layout_config,
+                    :cloud_sync_preferences, :created_at, :updated_at
+                )
+                ON CONFLICT (user_id) DO UPDATE SET
+                    telegram_chat_id = EXCLUDED.telegram_chat_id,
+                    notification_preferences = EXCLUDED.notification_preferences,
+                    enable_telegram_notifications = EXCLUDED.enable_telegram_notifications,
+                    default_paper_trading_capital = EXCLUDED.default_paper_trading_capital,
+                    paper_trading_active = EXCLUDED.paper_trading_active,
+                    watchlists = EXCLUDED.watchlists,
+                    favorite_pairs = EXCLUDED.favorite_pairs,
+                    risk_profile = EXCLUDED.risk_profile,
+                    risk_profile_settings = EXCLUDED.risk_profile_settings,
+                    real_trading_settings = EXCLUDED.real_trading_settings,
+                    ai_strategy_configurations = EXCLUDED.ai_strategy_configurations,
+                    ai_analysis_confidence_thresholds = EXCLUDED.ai_analysis_confidence_thresholds,
+                    mcp_server_preferences = EXCLUDED.mcp_server_preferences,
+                    selected_theme = EXCLUDED.selected_theme,
+                    dashboard_layout_profiles = EXCLUDED.dashboard_layout_profiles,
+                    active_dashboard_layout_profile_id = EXCLUDED.active_dashboard_layout_profile_id,
+                    dashboard_layout_config = EXCLUDED.dashboard_layout_config,
+                    cloud_sync_preferences = EXCLUDED.cloud_sync_preferences,
+                    updated_at = EXCLUDED.updated_at;
+                """
+                await session.execute(query, db_data)
+                await session.commit()
+                
+                logger.info(f"Saved user configuration for user {user_id}")
+                return user_config
             
         except ValidationError as e:
             logger.error(f"Validation error saving user configuration: {e}")
@@ -191,16 +234,16 @@ class ConfigurationService:
                 return None
             if isinstance(field_value, list):
                 return custom_dumps([
-                    item.dict() if hasattr(item, 'dict') else item 
+                    item.model_dump_json() if hasattr(item, 'model_dump_json') else item 
                     for item in field_value
                 ])
             elif isinstance(field_value, dict):
                 return custom_dumps({
-                    k: v.dict() if hasattr(v, 'dict') else v 
+                    k: v.model_dump_json() if hasattr(v, 'model_dump_json') else v 
                     for k, v in field_value.items()
                 })
-            elif hasattr(field_value, 'dict'):
-                return custom_dumps(field_value.dict())
+            elif hasattr(field_value, 'model_dump_json'):
+                return custom_dumps(field_value.model_dump_json())
             else:
                 return custom_dumps(field_value)
         
@@ -269,112 +312,3 @@ class ConfigurationService:
             created_at=db_record.get("created_at"),
             updated_at=db_record.get("updated_at"),
         )
-    
-    # Database interaction methods
-    
-    async def _get_user_config_from_db(self, user_id: str) -> Optional[Dict[str, Any]]:
-        """Get user configuration from database.
-        
-        Args:
-            user_id: The user ID.
-            
-        Returns:
-            Dictionary with user configuration data or None if not found.
-        """
-        await self.persistence_service._ensure_connection()
-        
-        query = """
-        SELECT * FROM user_configurations 
-        WHERE user_id = %s;
-        """
-        
-        try:
-            from psycopg.rows import dict_row
-            from psycopg.sql import SQL
-            
-            async with self.persistence_service.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(SQL(query), (user_id,))
-                record = await cur.fetchone()
-                return dict(record) if record else None
-        except Exception as e:
-            logger.error(f"Database error getting user configuration {user_id}: {e}")
-            raise
-    
-    async def _save_user_config_to_db(self, config_data: Dict[str, Any]) -> None:
-        """Save user configuration to database.
-        
-        Args:
-            config_data: Dictionary with configuration data in database format.
-        """
-        await self.persistence_service._ensure_connection()
-        
-        query = """
-        INSERT INTO user_configurations (
-            id, user_id, telegram_chat_id, notification_preferences, enable_telegram_notifications,
-            default_paper_trading_capital, paper_trading_active, watchlists, favorite_pairs,
-            risk_profile, risk_profile_settings, real_trading_settings, ai_strategy_configurations,
-            ai_analysis_confidence_thresholds, mcp_server_preferences, selected_theme,
-            dashboard_layout_profiles, active_dashboard_layout_profile_id, dashboard_layout_config,
-            cloud_sync_preferences, created_at, updated_at
-        ) VALUES (
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
-        )
-        ON CONFLICT (user_id) DO UPDATE SET
-            telegram_chat_id = EXCLUDED.telegram_chat_id,
-            notification_preferences = EXCLUDED.notification_preferences,
-            enable_telegram_notifications = EXCLUDED.enable_telegram_notifications,
-            default_paper_trading_capital = EXCLUDED.default_paper_trading_capital,
-            paper_trading_active = EXCLUDED.paper_trading_active,
-            watchlists = EXCLUDED.watchlists,
-            favorite_pairs = EXCLUDED.favorite_pairs,
-            risk_profile = EXCLUDED.risk_profile,
-            risk_profile_settings = EXCLUDED.risk_profile_settings,
-            real_trading_settings = EXCLUDED.real_trading_settings,
-            ai_strategy_configurations = EXCLUDED.ai_strategy_configurations,
-            ai_analysis_confidence_thresholds = EXCLUDED.ai_analysis_confidence_thresholds,
-            mcp_server_preferences = EXCLUDED.mcp_server_preferences,
-            selected_theme = EXCLUDED.selected_theme,
-            dashboard_layout_profiles = EXCLUDED.dashboard_layout_profiles,
-            active_dashboard_layout_profile_id = EXCLUDED.active_dashboard_layout_profile_id,
-            dashboard_layout_config = EXCLUDED.dashboard_layout_config,
-            cloud_sync_preferences = EXCLUDED.cloud_sync_preferences,
-            updated_at = EXCLUDED.updated_at;
-        """
-        
-        try:
-            from psycopg.rows import dict_row
-            from psycopg.sql import SQL
-            
-            async with self.persistence_service.connection.cursor(row_factory=dict_row) as cur:
-                await cur.execute(
-                    SQL(query),
-                    (
-                        config_data["id"],
-                        config_data["user_id"],
-                        config_data["telegram_chat_id"],
-                        config_data["notification_preferences"],
-                        config_data["enable_telegram_notifications"],
-                        config_data["default_paper_trading_capital"],
-                        config_data["paper_trading_active"],
-                        config_data["watchlists"],
-                        config_data["favorite_pairs"],
-                        config_data["risk_profile"],
-                        config_data["risk_profile_settings"],
-                        config_data["real_trading_settings"],
-                        config_data["ai_strategy_configurations"],
-                        config_data["ai_analysis_confidence_thresholds"],
-                        config_data["mcp_server_preferences"],
-                        config_data["selected_theme"],
-                        config_data["dashboard_layout_profiles"],
-                        config_data["active_dashboard_layout_profile_id"],
-                        config_data["dashboard_layout_config"],
-                        config_data["cloud_sync_preferences"],
-                        config_data["created_at"],
-                        config_data["updated_at"],
-                    )
-                )
-                await self.persistence_service.connection.commit()
-        except Exception as e:
-            await self.persistence_service.connection.rollback()
-            logger.error(f"Database error saving user configuration: {e}")
-            raise

@@ -2,7 +2,9 @@ import logging
 from typing import Dict, List, Optional
 from uuid import UUID
 from datetime import datetime
+from decimal import Decimal # Importar Decimal
 from fastapi import Depends
+from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 
 # Importar modelos de dominio y tipos de datos compartidos
 from shared.data_types import PortfolioSnapshot, PortfolioSummary, PortfolioAsset, AssetBalance, Trade
@@ -18,12 +20,12 @@ class PortfolioService:
     Servicio para gestionar y proporcionar el estado del portafolio (paper trading y real).
     """
     def __init__(self, 
-                 market_data_service: MarketDataService = Depends(MarketDataService), 
-                 persistence_service: SupabasePersistenceService = Depends(SupabasePersistenceService)
+                 market_data_service: MarketDataService, 
+                 session_factory: async_sessionmaker[AsyncSession]
                  ):
         self.market_data_service = market_data_service
-        self.persistence_service = persistence_service
-        self.paper_trading_balance: float = 0.0
+        self.session_factory = session_factory
+        self.paper_trading_balance: Decimal = Decimal("0.0") # Cambiar a Decimal
         self.paper_trading_assets: Dict[str, PortfolioAsset] = {} # Símbolo -> PortfolioAsset
         self.user_id: Optional[UUID] = None
 
@@ -33,31 +35,33 @@ class PortfolioService:
             return
 
         try:
-            config_data = await self.persistence_service.get_user_configuration(str(user_id))
-            if not config_data:
-                raise ConfigurationError(f"No se encontró configuración para el usuario {user_id}.")
+            async with self.session_factory() as session:
+                persistence_service = SupabasePersistenceService(session)
+                config_data = await persistence_service.get_user_configuration(str(user_id))
+                if not config_data:
+                    raise ConfigurationError(f"No se encontró configuración para el usuario {user_id}.")
 
-            if 'id' in config_data and isinstance(config_data['id'], UUID):
-                config_data['id'] = str(config_data['id'])
-            if 'user_id' in config_data and isinstance(config_data['user_id'], UUID):
-                config_data['user_id'] = str(config_data['user_id'])
+                if 'id' in config_data and isinstance(config_data['id'], UUID):
+                    config_data['id'] = str(config_data['id'])
+                if 'user_id' in config_data and isinstance(config_data['user_id'], UUID):
+                    config_data['user_id'] = str(config_data['user_id'])
 
-            user_config = UserConfiguration(**config_data)
-            
-            persistent_assets = [
-                PaperTradingAsset(
-                    asset=asset.symbol,
-                    quantity=asset.quantity,
-                    entry_price=asset.entry_price
+                user_config = UserConfiguration(**config_data)
+                
+                persistent_assets = [
+                    PaperTradingAsset(
+                        asset=asset.symbol,
+                        quantity=asset.quantity,
+                        entry_price=asset.entry_price
+                    )
+                    for asset in self.paper_trading_assets.values() if asset.entry_price is not None
+                ]
+                user_config.paper_trading_assets = persistent_assets
+                
+                await persistence_service.upsert_user_configuration(
+                    user_config.model_dump(mode='json', by_alias=True, exclude_none=True)
                 )
-                for asset in self.paper_trading_assets.values() if asset.entry_price is not None
-            ]
-            user_config.paper_trading_assets = persistent_assets
-            
-            await self.persistence_service.upsert_user_configuration(
-                user_config.model_dump(mode='json', by_alias=True, exclude_none=True)
-            )
-            logger.info(f"Activos de paper trading persistidos para el usuario {user_id}.")
+                logger.info(f"Activos de paper trading persistidos para el usuario {user_id}.")
         except Exception as e:
             logger.critical(f"Error inesperado al persistir activos de paper trading para {user_id}: {e}", exc_info=True)
             
@@ -65,39 +69,41 @@ class PortfolioService:
         self.user_id = user_id
         self.paper_trading_assets = {}
         try:
-            config_data = await self.persistence_service.get_user_configuration(str(user_id))
-            if config_data:
-                if 'id' in config_data and isinstance(config_data['id'], UUID):
-                    config_data['id'] = str(config_data['id'])
-                if 'user_id' in config_data and isinstance(config_data['user_id'], UUID):
-                    config_data['user_id'] = str(config_data['user_id'])
+            async with self.session_factory() as session:
+                persistence_service = SupabasePersistenceService(session)
+                config_data = await persistence_service.get_user_configuration(str(user_id))
+                if config_data:
+                    if 'id' in config_data and isinstance(config_data['id'], UUID):
+                        config_data['id'] = str(config_data['id'])
+                    if 'user_id' in config_data and isinstance(config_data['user_id'], UUID):
+                        config_data['user_id'] = str(config_data['user_id'])
+                    
+                    user_config = UserConfiguration(**config_data)
+                else:
+                    user_config = None
                 
-                user_config = UserConfiguration(**config_data)
-            else:
-                user_config = None
-            
-            if user_config:
-                self.paper_trading_balance = user_config.default_paper_trading_capital or 10000.0
-                if user_config.paper_trading_assets:
-                    for asset_data in user_config.paper_trading_assets:
-                        self.paper_trading_assets[asset_data.asset] = PortfolioAsset(
-                            symbol=asset_data.asset,
-                            quantity=asset_data.quantity,
-                            entry_price=asset_data.entry_price,
-                            current_price=None,
-                            current_value_usd=None,
-                            unrealized_pnl_usd=None,
-                            unrealized_pnl_percentage=None
-                        )
-                    logger.info(f"{len(self.paper_trading_assets)} activos de paper trading cargados para {user_id}.")
-            else:
-                self.paper_trading_balance = 10000.0
-                logger.info(f"No se encontró configuración para {user_id}. Usando valores por defecto.")
+                if user_config:
+                    self.paper_trading_balance = user_config.default_paper_trading_capital or Decimal("10000.0") # Usar Decimal
+                    if user_config.paper_trading_assets:
+                        for asset_data in user_config.paper_trading_assets:
+                            self.paper_trading_assets[asset_data.asset] = PortfolioAsset(
+                                symbol=asset_data.asset,
+                                quantity=asset_data.quantity,
+                                entry_price=asset_data.entry_price,
+                                current_price=None,
+                                current_value_usd=None,
+                                unrealized_pnl_usd=None,
+                                unrealized_pnl_percentage=None
+                            )
+                        logger.info(f"Cargados {len(self.paper_trading_assets)} activos de paper trading para {user_id}.")
+                else:
+                    self.paper_trading_balance = Decimal("10000.0") # Usar Decimal
+                    logger.info(f"No se encontró configuración para {user_id}. Usando valores por defecto.")
 
             logger.info(f"Portafolio de paper trading inicializado para {user_id} con capital: {self.paper_trading_balance}")
         except Exception as e:
             logger.critical(f"Error inesperado al inicializar el portafolio para {user_id}: {e}", exc_info=True)
-            self.paper_trading_balance = 10000.0
+            self.paper_trading_balance = Decimal("10000.0") # Usar Decimal
             raise UltiBotError(f"Error inesperado al inicializar el portafolio: {e}")
 
     async def get_portfolio_snapshot(self, user_id: UUID) -> PortfolioSnapshot:
@@ -115,8 +121,8 @@ class PortfolioService:
 
     async def _get_real_trading_summary(self, user_id: UUID) -> PortfolioSummary:
         real_assets: List[PortfolioAsset] = []
-        available_balance_usdt = 0.0
-        total_assets_value_usd = 0.0
+        available_balance_usdt = Decimal("0.0") # Cambiar a Decimal
+        total_assets_value_usd = Decimal("0.0") # Cambiar a Decimal
         market_data = {}
 
         try:
@@ -129,14 +135,14 @@ class PortfolioService:
 
             for balance in binance_balances:
                 if balance.asset == "USDT":
-                    available_balance_usdt = balance.free
+                    available_balance_usdt = Decimal(str(balance.free)) # Convertir a Decimal
                 elif balance.total > 0:
                     symbol_pair = f"{balance.asset.upper()}USDT"
                     price_info = market_data.get(symbol_pair)
                     
                     if price_info and "lastPrice" in price_info:
-                        current_price = price_info["lastPrice"]
-                        current_value = balance.total * current_price
+                        current_price = Decimal(str(price_info["lastPrice"])) # Convertir a Decimal
+                        current_value = Decimal(str(balance.total)) * current_price # Operar con Decimal
                         total_assets_value_usd += current_value
                         real_assets.append(PortfolioAsset(symbol=balance.asset, quantity=balance.total, entry_price=None, current_price=current_price, current_value_usd=current_value, unrealized_pnl_usd=None, unrealized_pnl_percentage=None))
                     else:
@@ -152,13 +158,13 @@ class PortfolioService:
             )
         except UltiBotError as e:
             logger.error(f"Error al obtener resumen de portafolio real para {user_id}: {e}")
-            return PortfolioSummary(available_balance_usdt=0.0, total_assets_value_usd=0.0, total_portfolio_value_usd=0.0, assets=[], error_message=str(e))
+            return PortfolioSummary(available_balance_usdt=Decimal("0.0"), total_assets_value_usd=Decimal("0.0"), total_portfolio_value_usd=Decimal("0.0"), assets=[], error_message=str(e)) # Usar Decimal
         except Exception as e:
             logger.critical(f"Error inesperado al obtener resumen de portafolio real para {user_id}: {e}", exc_info=True)
-            return PortfolioSummary(available_balance_usdt=0.0, total_assets_value_usd=0.0, total_portfolio_value_usd=0.0, assets=[], error_message="Error inesperado.")
+            return PortfolioSummary(available_balance_usdt=Decimal("0.0"), total_assets_value_usd=Decimal("0.0"), total_portfolio_value_usd=Decimal("0.0"), assets=[], error_message="Error inesperado.") # Usar Decimal
 
     async def _get_paper_trading_summary(self) -> PortfolioSummary:
-        total_assets_value_usd = 0.0
+        total_assets_value_usd = Decimal("0.0") # Cambiar a Decimal
         paper_assets: List[PortfolioAsset] = []
 
         if self.paper_trading_assets:
@@ -170,19 +176,19 @@ class PortfolioService:
                     symbol_pair = f"{symbol}USDT"
                     price_info = market_data.get(symbol_pair)
                     if price_info and "lastPrice" in price_info:
-                        current_price = price_info["lastPrice"]
+                        current_price = Decimal(str(price_info["lastPrice"])) # Convertir a Decimal
                         current_value = asset.quantity * current_price
                         total_assets_value_usd += current_value
                         asset.current_price = current_price
                         asset.current_value_usd = current_value
-                        if asset.entry_price and asset.quantity > 0 and asset.entry_price > 0:
+                        if asset.entry_price and asset.quantity > Decimal("0") and asset.entry_price > Decimal("0"): # Comparar con Decimal
                             pnl_usd = (current_price - asset.entry_price) * asset.quantity
                             asset.unrealized_pnl_usd = pnl_usd
                             denominator = asset.entry_price * asset.quantity
-                            if denominator > 0:
-                                asset.unrealized_pnl_percentage = (pnl_usd / denominator) * 100
+                            if denominator > Decimal("0"): # Comparar con Decimal
+                                asset.unrealized_pnl_percentage = (pnl_usd / denominator) * Decimal("100") # Operar con Decimal
                             else:
-                                asset.unrealized_pnl_percentage = 0.0
+                                asset.unrealized_pnl_percentage = Decimal("0.0") # Usar Decimal
                     else:
                         logger.warning(f"No se pudo obtener precio para {symbol_pair} en paper trading.")
                     paper_assets.append(asset)
@@ -195,35 +201,38 @@ class PortfolioService:
             error_message=None
         )
 
-    async def update_paper_trading_balance(self, user_id: UUID, amount: float):
+    async def update_paper_trading_balance(self, user_id: UUID, amount: Decimal): # Cambiar a Decimal
         if self.user_id is None or self.user_id != user_id:
             await self.initialize_portfolio(user_id)
 
         self.paper_trading_balance += amount
         try:
-            config_data = await self.persistence_service.get_user_configuration(str(user_id))
-            if config_data:
-                if 'id' in config_data and isinstance(config_data['id'], UUID):
-                    config_data['id'] = str(config_data['id'])
-                if 'user_id' in config_data and isinstance(config_data['user_id'], UUID):
-                    config_data['user_id'] = str(config_data['user_id'])
-                user_config = UserConfiguration(**config_data)
-            else:
-                user_config = None
-
-            if user_config:
-                user_config.default_paper_trading_capital = self.paper_trading_balance
-                await self.persistence_service.upsert_user_configuration(user_config.model_dump(mode='json', by_alias=True, exclude_none=True))
-            else:
-                raise ConfigurationError(f"No se encontró config para {user_id}.")
+            async with self.session_factory() as session:
+                persistence_service = SupabasePersistenceService(session)
+                config_data = await persistence_service.get_user_configuration(str(user_id))
+                if not config_data: # Simplificar la lógica si no hay config
+                    user_config = UserConfiguration(
+                        id=UUID("00000000-0000-0000-0000-000000000001"), # ID por defecto
+                        user_id=user_id,
+                        default_paper_trading_capital=self.paper_trading_balance
+                    )
+                    await persistence_service.upsert_user_configuration(user_config.model_dump(mode='json', by_alias=True, exclude_none=True))
+                else:
+                    if 'id' in config_data and isinstance(config_data['id'], UUID):
+                        config_data['id'] = str(config_data['id'])
+                    if 'user_id' in config_data and isinstance(config_data['user_id'], UUID):
+                        config_data['user_id'] = str(config_data['user_id'])
+                    user_config = UserConfiguration(**config_data)
+                    user_config.default_paper_trading_capital = self.paper_trading_balance
+                    await persistence_service.upsert_user_configuration(user_config.model_dump(mode='json', by_alias=True, exclude_none=True))
         except Exception as e:
             raise UltiBotError(f"Error al actualizar saldo de paper trading: {e}")
 
     async def update_paper_portfolio_after_entry(self, trade: Trade):
         user_id = trade.user_id
         symbol = trade.symbol
-        quantity = trade.entryOrder.executedQuantity
-        executed_price = trade.entryOrder.executedPrice
+        quantity = trade.entryOrder.executedQuantity # Esto ya es Decimal
+        executed_price = trade.entryOrder.executedPrice # Esto ya es Decimal
         side = trade.side
 
         if self.user_id is None or self.user_id != user_id:
@@ -236,7 +245,7 @@ class PortfolioService:
             existing_asset = self.paper_trading_assets[symbol]
             if side == 'BUY':
                 total_quantity = existing_asset.quantity + quantity
-                if existing_asset.entry_price is not None and existing_asset.quantity > 0:
+                if existing_asset.entry_price is not None and existing_asset.quantity > Decimal("0"): # Comparar con Decimal
                     new_entry_price = ((existing_asset.entry_price * existing_asset.quantity) + (executed_price * quantity)) / total_quantity
                 else:
                     new_entry_price = executed_price
@@ -262,8 +271,8 @@ class PortfolioService:
     async def update_paper_portfolio_after_exit(self, trade: Trade):
         user_id = trade.user_id
         symbol = trade.symbol
-        quantity = trade.entryOrder.executedQuantity
-        pnl_usd = trade.pnl_usd
+        quantity = trade.entryOrder.executedQuantity # Esto ya es Decimal
+        pnl_usd = trade.pnl_usd # Esto ya es Decimal
         side = trade.side
 
         if self.user_id is None or self.user_id != user_id:
@@ -290,10 +299,10 @@ class PortfolioService:
         await self._persist_paper_trading_assets(user_id)
         logger.info(f"Portafolio de paper (salida) actualizado para {user_id}. Balance: {self.paper_trading_balance}")
 
-    async def get_real_usdt_balance(self, user_id: UUID) -> float:
+    async def get_real_usdt_balance(self, user_id: UUID) -> Decimal: # Cambiar tipo de retorno a Decimal
         try:
             binance_balances: List[AssetBalance] = await self.market_data_service.get_binance_spot_balances()
-            usdt_balance = next((b.free for b in binance_balances if b.asset == "USDT"), 0.0)
+            usdt_balance = next((b.free for b in binance_balances if b.asset == "USDT"), Decimal("0.0")) # Usar Decimal
             return usdt_balance
         except ExternalAPIError as e:
             raise PortfolioError(f"No se pudo obtener el saldo de USDT de Binance: {e}") from e

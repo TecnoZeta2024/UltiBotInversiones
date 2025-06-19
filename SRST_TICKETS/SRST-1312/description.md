@@ -1,9 +1,9 @@
-# SRST-3734: RuntimeError en unknown
+# SRST-1312: RuntimeError en unknown
 
 ## Error Específico
 **Tipo:** `RuntimeError`
 **Archivo:** `logs/frontend.log:0`
-**Mensaje:** `[MainThread] - strategy_service.py:89 - Error listing strategies for user 8a58e3fe-4ad6-42c6-a95b-c8c14b011ac3: Mock object has no attribute 'list_strategy_configs_by_user'`
+**Mensaje:** `[MainThread] - strategy_service.py:89 - Error listing strategies for user bb694b36-579b-4f66-9361-853200e72644: Mock object has no attribute 'list_strategy_configs_by_user'`
 **Categoría:** `7_BUSINESS_LOGIC_ERRORS`
 **Prioridad:** `MEDIUM`
 

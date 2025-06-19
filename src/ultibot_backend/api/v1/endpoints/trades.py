@@ -51,24 +51,19 @@ async def get_user_trades(
     """
     Get trades for the fixed user filtered by trading mode and other criteria.
     """
-    user_id = settings.FIXED_USER_ID
+    user_id_str = str(settings.FIXED_USER_ID) # Convertir UUID a str
     try:
-        filters: dict[str, Any] = {"user_id": user_id}
-        
-        if trading_mode != "both":
-            filters["mode"] = trading_mode
-        
-        if status_filter:
-            filters["positionStatus"] = status_filter
-        if symbol_filter:
-            filters["symbol"] = symbol_filter
-        if date_from:
-            filters["created_at_gte"] = date_from
-        if date_to:
-            filters["created_at_lte"] = date_to
+        # Convertir date a datetime para la persistencia
+        start_datetime = datetime.combine(date_from, datetime.min.time()) if date_from else None
+        end_datetime = datetime.combine(date_to, datetime.max.time()) if date_to else None
             
         trades_data = await persistence_service.get_trades_with_filters(
-            filters=filters,
+            user_id=user_id_str,
+            trading_mode=trading_mode,
+            status=status_filter,
+            symbol=symbol_filter,
+            start_date=start_datetime,
+            end_date=end_datetime,
             limit=limit,
             offset=offset
         )

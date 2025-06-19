@@ -7,9 +7,10 @@ including AI strategy configurations for integration with Gemini analysis.
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
-from decimal import Decimal # Importar Decimal
+from decimal import Decimal
+import json
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ValidationInfo
 
 
 class NotificationChannel(str, Enum):
@@ -160,8 +161,8 @@ class RealTradingSettings(BaseModel):
         None, 
         description="Auto pause conditions"
     )
-    daily_capital_risked_usd: Optional[Decimal] = Field( # Cambiado a Decimal
-        Decimal("0.0"), # Inicializado como Decimal
+    daily_capital_risked_usd: Optional[Decimal] = Field(
+        Decimal("0.0"),
         ge=0, 
         description="Total capital risked in USD for the current day"
     )
@@ -189,11 +190,10 @@ class ConfidenceThresholds(BaseModel):
 
     @field_validator('real_trading')
     @classmethod
-    def real_trading_should_be_higher_than_paper(cls, v, info):
+    def real_trading_should_be_higher_than_paper(cls, v: float, info: ValidationInfo) -> float:
         """Validate that real trading threshold is higher than paper trading."""
-        values = info.data
-        if v is not None and 'paper_trading' in values and values['paper_trading'] is not None:
-            if v <= values['paper_trading']:
+        if v is not None and 'paper_trading' in info.data and info.data['paper_trading'] is not None:
+            if v <= info.data['paper_trading']:
                 raise ValueError('Real trading confidence threshold should be higher than paper trading')
         return v
 
@@ -397,45 +397,38 @@ class UserConfiguration(BaseModel):
         
         use_enum_values = True
         validate_assignment = True
-        extra = "forbid"  # Prevent extra fields
+        extra = "forbid"
         json_encoders = {
             datetime: lambda v: v.isoformat() if v else None
         }
 
-    @field_validator('ai_strategy_configurations')
+    @field_validator(
+        'notification_preferences', 'paper_trading_assets', 'watchlists', 
+        'favorite_pairs', 'risk_profile_settings', 'real_trading_settings', 
+        'ai_strategy_configurations', 'ai_analysis_confidence_thresholds', 
+        'mcp_server_preferences', 'dashboard_layout_profiles', 
+        'dashboard_layout_config', 'cloud_sync_preferences', 
+        mode='before'
+    )
     @classmethod
-    def validate_unique_ai_config_ids(cls, v):
-        """Validate that AI configuration IDs are unique."""
-        if v is None:
-            return v
-        
-        ids = [config.id for config in v]
-        if len(ids) != len(set(ids)):
-            raise ValueError('AI strategy configuration IDs must be unique')
+    def parse_json_fields(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                raise ValueError("Invalid JSON string")
         return v
 
-    @field_validator('watchlists')
+    @field_validator('ai_strategy_configurations', 'watchlists', 'mcp_server_preferences', mode='after')
     @classmethod
-    def validate_unique_watchlist_ids(cls, v):
-        """Validate that watchlist IDs are unique."""
-        if v is None:
+    def validate_unique_ids(cls, v: List[Any], info: ValidationInfo) -> List[Any]:
+        """Validate that IDs are unique within lists of objects."""
+        if not v:
             return v
         
-        ids = [wl.id for wl in v]
+        ids = [item.id for item in v]
         if len(ids) != len(set(ids)):
-            raise ValueError('Watchlist IDs must be unique')
-        return v
-
-    @field_validator('mcp_server_preferences')
-    @classmethod
-    def validate_unique_mcp_ids(cls, v):
-        """Validate that MCP server IDs are unique."""
-        if v is None:
-            return v
-        
-        ids = [mcp.id for mcp in v]
-        if len(ids) != len(set(ids)):
-            raise ValueError('MCP server IDs must be unique')
+            raise ValueError(f'{info.field_name} IDs must be unique')
         return v
 
     def get_ai_configuration_by_id(self, config_id: str) -> Optional[AIStrategyConfiguration]:

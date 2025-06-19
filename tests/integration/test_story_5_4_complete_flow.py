@@ -759,6 +759,9 @@ class TestTradeCreationWithStrategyAssociation:
         trading_engine,
         btc_opportunity,
         scalping_strategy_btc,
+        user_configuration,
+        mock_current_price,
+        mock_portfolio_snapshot,
     ):
         """Test that created trades have correct strategy_id association."""
         from ultibot_backend.services.trading_engine_service import TradingDecision
@@ -777,7 +780,12 @@ class TestTradeCreationWithStrategyAssociation:
             mock_datetime.now.return_value = datetime.now(timezone.utc)
             
             trade = await trading_engine.create_trade_from_decision(
-                decision, btc_opportunity, scalping_strategy_btc
+                decision,
+                btc_opportunity,
+                scalping_strategy_btc,
+                user_configuration,
+                mock_current_price,
+                mock_portfolio_snapshot,
             )
             
             # Verify strategy association (AC5)

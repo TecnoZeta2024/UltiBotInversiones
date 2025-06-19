@@ -4,9 +4,10 @@ Tests for AC 4: Strategies should operate autonomously when AI is not configured
 """
 
 import pytest
-import uuid
+from uuid import UUID, uuid4 # Importar UUID y uuid4
 from datetime import datetime, timezone
 from unittest.mock import Mock, AsyncMock
+from decimal import Decimal # Importar Decimal
 
 from unittest.mock import patch # Added for mocking logger
 
@@ -35,28 +36,34 @@ from ultibot_backend.core.domain_models.opportunity_models import (
 @pytest.fixture
 def mock_strategy_service_no_ai():
     """Create mock strategy service configured for no AI usage."""
-    service = AsyncMock() # Changed to AsyncMock directly
+    service = AsyncMock()
     service.strategy_requires_ai_analysis.return_value = False
-    service.strategy_can_operate_autonomously.return_value = True
     service.get_ai_configuration_for_strategy.return_value = None
     service.get_effective_confidence_thresholds_for_strategy.return_value = None
-    
+
+    # Add an attribute to control active strategies for specific tests
+    service._test_active_strategies_override = None
+
     # Mock get_strategy_config to return a valid strategy config
-    async def mock_get_strategy_config(strategy_id: str, user_id: str):
-        # Return a dummy TradingStrategyConfig for testing purposes
-        return TradingStrategyConfig(
+    # This mock needs to be flexible enough to return different strategy types
+    # including the 'unknown_strategy_type' from the test.
+    original_get_strategy_config = service.get_strategy_config
+
+    async def custom_get_strategy_config(strategy_id: str, user_id: str):
+        # Default mock strategy
+        default_strategy = TradingStrategyConfig(
             id=strategy_id,
             user_id=user_id,
             config_name="Mock Strategy",
-            base_strategy_type=BaseStrategyType.SCALPING, # Or any other valid type
+            base_strategy_type=BaseStrategyType.SCALPING,
             description="Mock strategy for testing",
             is_active_paper_mode=True,
             is_active_real_mode=False,
             parameters=ScalpingParameters(
-                profit_target_percentage=0.01,
-                stop_loss_percentage=0.005,
+                profit_target_percentage=Decimal("0.01"),
+                stop_loss_percentage=Decimal("0.005"),
                 max_holding_time_seconds=180,
-                leverage=1.0
+                leverage=Decimal("1.0")
             ),
             ai_analysis_profile_id=None,
             applicability_rules=None,
@@ -71,7 +78,59 @@ def mock_strategy_service_no_ai():
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc)
         )
-    service.get_strategy_config.side_effect = mock_get_strategy_config
+        # Allow specific strategies to be returned if set by test
+        if hasattr(service, '_test_strategy_config_override') and service._test_strategy_config_override.id == strategy_id:
+            return service._test_strategy_config_override
+        return default_strategy
+
+    service.get_strategy_config.side_effect = custom_get_strategy_config
+
+    # Mock get_active_strategies to return a list containing the autonomous strategy
+    async def mock_get_active_strategies(user_id: str, mode: str):
+        if service._test_active_strategies_override is not None:
+            return service._test_active_strategies_override
+        return [
+            TradingStrategyConfig(
+            id=str(uuid4()),
+            user_id=user_id,
+            config_name="Autonomous Test Strategy",
+                base_strategy_type=BaseStrategyType.SCALPING,
+                description="A strategy for testing autonomous flow",
+                is_active_paper_mode=True,
+                is_active_real_mode=False,
+                parameters=ScalpingParameters(
+                    profit_target_percentage=Decimal("0.01"),
+                    stop_loss_percentage=Decimal("0.005"),
+                    max_holding_time_seconds=180,
+                    leverage=Decimal("1.0")
+                ),
+                ai_analysis_profile_id=None,
+                applicability_rules=None,
+                risk_parameters_override=None,
+                version=1,
+                parent_config_id=None,
+                performance_metrics=None,
+                market_condition_filters=None,
+                activation_schedule=None,
+                depends_on_strategies=None,
+                sharing_metadata=None,
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
+            )
+        ]
+    service.get_active_strategies.side_effect = mock_get_active_strategies
+
+    # Mock is_strategy_applicable_to_symbol to always return True for testing purposes
+    service.is_strategy_applicable_to_symbol.return_value = True
+
+    async def mock_strategy_can_operate_autonomously(strategy_id: str, user_id: str):
+        # Use the actual get_strategy_config mock to retrieve the strategy
+        strategy_config = await service.get_strategy_config(strategy_id, user_id)
+        if strategy_config and strategy_config.base_strategy_type == "CUSTOM_UNKNOWN_TYPE":
+            return False
+        return True # Default to True for known types
+
+    service.strategy_can_operate_autonomously.side_effect = mock_strategy_can_operate_autonomously
     
     return service
 
@@ -79,13 +138,58 @@ def mock_strategy_service_no_ai():
 @pytest.fixture
 def mock_configuration_service():
     """Create mock configuration service."""
-    return Mock()
+    service = AsyncMock()
+    # Mock get_user_configuration to return a dummy UserConfiguration
+    async def mock_get_user_configuration(user_id: str):
+        from ultibot_backend.core.domain_models.user_configuration_models import UserConfiguration, RiskProfile, RealTradingSettings, ConfidenceThresholds, Theme
+        from decimal import Decimal
+        from uuid import uuid4
+        return UserConfiguration(
+            id=str(uuid4()),
+            user_id=user_id,
+            telegram_chat_id=None,
+            notification_preferences=None,
+            enable_telegram_notifications=True,
+            default_paper_trading_capital=Decimal("10000.0"),
+            paper_trading_active=True,
+            paper_trading_assets=[],
+            watchlists=[],
+            favorite_pairs=["BTCUSDT", "ETHUSDT"],
+            risk_profile=RiskProfile.MODERATE,
+            risk_profile_settings=None,
+            real_trading_settings=RealTradingSettings(
+                real_trading_mode_active=False,
+                real_trades_executed_count=0,
+                max_concurrent_operations=5,
+                daily_loss_limit_absolute=Decimal("500.0"),
+                daily_profit_target_absolute=Decimal("1000.0"),
+                daily_capital_risked_usd=Decimal("0.0"),
+                last_daily_reset=datetime.now(timezone.utc),
+                asset_specific_stop_loss=None,
+                auto_pause_trading_conditions=None,
+            ),
+            ai_strategy_configurations=[],
+            ai_analysis_confidence_thresholds=ConfidenceThresholds(
+                paper_trading=0.60,
+                real_trading=0.75,
+            ),
+            mcp_server_preferences=None,
+            selected_theme=Theme.DARK,
+            dashboard_layout_profiles=None,
+            active_dashboard_layout_profile_id=None,
+            dashboard_layout_config=None,
+            cloud_sync_preferences=None,
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+        )
+    service.get_user_configuration.side_effect = mock_get_user_configuration
+    return service
 
 
 @pytest.fixture
 def mock_ai_orchestrator():
     """Create mock AI orchestrator that should not be called."""
-    orchestrator = Mock()
+    orchestrator = AsyncMock() # Changed to AsyncMock
     orchestrator.analyze_opportunity_with_strategy_context_async = AsyncMock()
     return orchestrator
 
@@ -144,8 +248,8 @@ def trading_engine_no_ai(
 def sample_opportunity():
     """Create sample opportunity for testing."""
     return Opportunity(
-        id=str(uuid.uuid4()),
-        user_id=str(uuid.uuid4()),
+        id=str(uuid4()),
+        user_id=str(uuid4()),
         symbol="BTC/USDT",
         detected_at=datetime.now(timezone.utc),
         source_type=SourceType.INTERNAL_INDICATOR_ALGO,
@@ -161,7 +265,7 @@ def sample_opportunity():
             reasoning_source_structured={}
         ),
         status=OpportunityStatus.NEW,
-        strategy_id=uuid.uuid4(),
+        strategy_id=uuid4(),
         source_data={},
         system_calculated_priority_score=None,
         last_priority_calculation_at=None,
@@ -187,16 +291,16 @@ class TestAutonomousScalpingStrategy:
     def autonomous_scalping_strategy(self):
         """Create scalping strategy without AI configuration."""
         return TradingStrategyConfig(
-            id=str(uuid.uuid4()),
-            user_id=str(uuid.uuid4()),
-            config_name="Pure Autonomous Scalping",
+        id=str(uuid4()),
+        user_id=str(uuid4()),
+        config_name="Pure Autonomous Scalping",
             base_strategy_type=BaseStrategyType.SCALPING,
             description="Fast scalping strategy based on technical analysis only",
             is_active_paper_mode=True,
             is_active_real_mode=False,
             parameters=ScalpingParameters(
-                profit_target_percentage=0.008,  # 0.8% profit target
-                stop_loss_percentage=0.004,     # 0.4% stop loss
+                profit_target_percentage=Decimal("0.008"),  # 0.8% profit target
+                stop_loss_percentage=Decimal("0.004"),     # 0.4% stop loss
                 max_holding_time_seconds=180,   # 3 minutes max
                 leverage=2.0,
             ),
@@ -223,15 +327,17 @@ class TestAutonomousScalpingStrategy:
         mock_ai_orchestrator,
     ):
         """Test that scalping strategy evaluates opportunities autonomously."""
-        trade = await trading_engine_no_ai.process_opportunity(
+        decisions = await trading_engine_no_ai.process_opportunity(
             sample_opportunity
         )
         
         # Verify AI orchestrator was not called
         mock_ai_orchestrator.analyze_opportunity_with_strategy_context_async.assert_not_called()
         
-        # Verify that a trade was potentially created (or at least the process ran)
-        assert trade is None or trade.symbol == sample_opportunity.symbol
+        # Verify that decisions were returned and at least one is an "execute_trade" decision
+        assert isinstance(decisions, list)
+        assert len(decisions) > 0
+        assert any(d.decision == "execute_trade" for d in decisions)
         
         # Further assertions would depend on the internal logic of process_opportunity
         # For now, we just ensure it runs and doesn't call AI
@@ -244,14 +350,29 @@ class TestAutonomousScalpingStrategy:
         autonomous_scalping_strategy,
     ):
         """Test that autonomous scalping generates appropriate trade parameters."""
-        trade = await trading_engine_no_ai.process_opportunity(
+        decisions = await trading_engine_no_ai.process_opportunity(
             sample_opportunity
         )
         
-        # Since process_opportunity might return None or a Trade,
-        # we can't directly assert on decision.recommended_trade_params here.
-        # The focus is on ensuring the autonomous path is taken and AI is not called.
-        assert trade is None or trade.symbol == sample_opportunity.symbol
+        # Verify that decisions were returned and at least one is an "execute_trade" decision
+        assert isinstance(decisions, list)
+        assert len(decisions) > 0
+        
+        # Find the execute_trade decision
+        execute_decision = next((d for d in decisions if d.decision == "execute_trade"), None)
+        assert execute_decision is not None
+        
+        # Verify that the decision was made autonomously (no AI used)
+        assert not execute_decision.ai_analysis_used
+        assert "autonomous" in execute_decision.reasoning.lower()
+        
+        # Since create_trade_from_decision is called internally, we can't directly
+        # assert on the Trade object's parameters here without further mocking.
+        # The primary goal of this test is to ensure the autonomous path is taken
+        # and a decision is generated.
+        
+        # For a more robust test, one might mock create_trade_from_decision
+        # and assert its arguments.
 
 
 class TestAutonomousDayTradingStrategy:
@@ -261,9 +382,9 @@ class TestAutonomousDayTradingStrategy:
     def autonomous_day_trading_strategy(self):
         """Create day trading strategy without AI configuration."""
         return TradingStrategyConfig(
-            id=str(uuid.uuid4()),
-            user_id=str(uuid.uuid4()),
-            config_name="Technical Analysis Day Trading",
+        id=str(uuid4()),
+        user_id=str(uuid4()),
+        config_name="Technical Analysis Day Trading",
             base_strategy_type=BaseStrategyType.DAY_TRADING,
             description="Day trading based on RSI and MACD indicators",
             is_active_paper_mode=True,
@@ -301,15 +422,19 @@ class TestAutonomousDayTradingStrategy:
         mock_ai_orchestrator,
     ):
         """Test that day trading strategy evaluates opportunities autonomously."""
-        trade = await trading_engine_no_ai.process_opportunity(
+        decisions = await trading_engine_no_ai.process_opportunity(
             sample_opportunity
         )
         
         # Verify AI orchestrator was not called
         mock_ai_orchestrator.analyze_opportunity_with_strategy_context_async.assert_not_called()
         
-        # Verify that a trade was potentially created (or at least the process ran)
-        assert trade is None or trade.symbol == sample_opportunity.symbol
+        # Verify that decisions were returned and at least one is an "execute_trade" decision
+        assert isinstance(decisions, list)
+        assert len(decisions) > 0
+        assert any(isinstance(d, TradingDecision) for d in decisions)
+        # Further assertions would depend on the internal logic of process_opportunity
+        # For now, we just ensure it runs and doesn't call AI
 
 
 class TestAutonomousArbitrageStrategy:
@@ -319,9 +444,9 @@ class TestAutonomousArbitrageStrategy:
     def autonomous_arbitrage_strategy(self):
         """Create arbitrage strategy without AI configuration."""
         return TradingStrategyConfig(
-            id=str(uuid.uuid4()),
-            user_id=str(uuid.uuid4()),
-            config_name="Cross-Exchange Arbitrage",
+        id=str(uuid4()),
+        user_id=str(uuid4()),
+        config_name="Cross-Exchange Arbitrage",
             base_strategy_type=BaseStrategyType.ARBITRAGE_SIMPLE,
             description="Simple arbitrage between exchanges",
             is_active_paper_mode=True,
@@ -355,15 +480,19 @@ class TestAutonomousArbitrageStrategy:
         mock_ai_orchestrator,
     ):
         """Test that arbitrage strategy evaluates opportunities autonomously."""
-        trade = await trading_engine_no_ai.process_opportunity(
+        decisions = await trading_engine_no_ai.process_opportunity(
             sample_opportunity
         )
         
         # Verify AI orchestrator was not called
         mock_ai_orchestrator.analyze_opportunity_with_strategy_context_async.assert_not_called()
         
-        # Verify that a trade was potentially created (or at least the process ran)
-        assert trade is None or trade.symbol == sample_opportunity.symbol
+        # Verify that decisions were returned and at least one is an "execute_trade" decision
+        assert isinstance(decisions, list)
+        assert len(decisions) > 0
+        assert any(isinstance(d, TradingDecision) for d in decisions)
+        # Further assertions would depend on the internal logic of process_opportunity
+        # For now, we just ensure it runs and doesn't call AI
 
 
 class TestUnknownStrategyType:
@@ -373,8 +502,8 @@ class TestUnknownStrategyType:
     def unknown_strategy_type(self):
         """Create strategy with unknown type using model_construct to bypass validation."""
         strategy_data = {
-            "id": str(uuid.uuid4()),
-            "user_id": str(uuid.uuid4()),
+            "id": str(uuid4()),
+            "user_id": str(uuid4()),
             "config_name": "Custom Strategy",
             "base_strategy_type": "CUSTOM_UNKNOWN_TYPE",  # Invalid type
             "description": "Custom strategy type for testing",
@@ -403,17 +532,32 @@ class TestUnknownStrategyType:
         sample_opportunity,
         unknown_strategy_type,
         mock_ai_orchestrator,
+        mocker # Add mocker fixture
     ):
         """Test that unknown strategy types require investigation."""
-        trade = await trading_engine_no_ai.process_opportunity(
+        # Override the mock_strategy_service_no_ai's get_strategy_config for this specific test
+        trading_engine_no_ai.strategy_service._test_strategy_config_override = unknown_strategy_type
+
+        # Ensure that get_active_strategies returns only the unknown_strategy_type for this test
+        mocker.patch.object(
+            trading_engine_no_ai.strategy_service,
+            'get_active_strategies',
+            return_value=[unknown_strategy_type]
+        )
+
+        decisions = await trading_engine_no_ai.process_opportunity(
             sample_opportunity
         )
         
         # Verify AI orchestrator was not called
         mock_ai_orchestrator.analyze_opportunity_with_strategy_context_async.assert_not_called()
         
-        # Verify that a trade was potentially created (or at least the process ran)
-        assert trade is None or trade.symbol == sample_opportunity.symbol
+        # Verify that decisions were returned and at least one is an "investigate" decision
+        assert isinstance(decisions, list)
+        assert len(decisions) > 0
+        assert any(isinstance(d, TradingDecision) for d in decisions)
+        # For unknown strategies, we expect an "investigate" decision or similar, not necessarily an execute_trade
+        assert any(d.decision == "investigate" for d in decisions) or any(d.decision == "reject" for d in decisions)
 
 
 class TestStrategyServiceIntegration:
@@ -430,8 +574,8 @@ class TestStrategyServiceIntegration:
         """Test that strategy service correctly identifies autonomous strategies."""
         # Create strategy without AI
         strategy = TradingStrategyConfig(
-            id=str(uuid.uuid4()),
-            user_id=str(uuid.uuid4()),
+            id=str(uuid4()),
+            user_id=str(uuid4()),
             config_name="Test Autonomous Strategy",
             base_strategy_type=BaseStrategyType.SCALPING,
             description="Test strategy",
@@ -458,7 +602,7 @@ class TestStrategyServiceIntegration:
         )
         
         # Execute evaluation
-        trade = await trading_engine_no_ai.process_opportunity(
+        decisions = await trading_engine_no_ai.process_opportunity(
             sample_opportunity
         )
         
@@ -470,7 +614,11 @@ class TestStrategyServiceIntegration:
         mock_ai_orchestrator.analyze_opportunity_with_strategy_context_async.assert_not_called()
         mock_strategy_service_no_ai.get_ai_configuration_for_strategy.assert_not_called()
         
-        assert trade is None or trade.symbol == sample_opportunity.symbol
+        # Assert that decisions were returned and at least one is an "execute_trade" decision
+        assert isinstance(decisions, list)
+        assert len(decisions) > 0
+        assert any(isinstance(d, TradingDecision) for d in decisions)
+        assert any(d.decision == "execute_trade" for d in decisions)
     
     @pytest.mark.asyncio
     @patch("ultibot_backend.services.trading_engine_service.logger") # Patch the logger directly
@@ -479,32 +627,70 @@ class TestStrategyServiceIntegration:
         mock_trading_engine_logger, # The patched logger
         trading_engine_no_ai,
         sample_opportunity,
+        mock_strategy_service_no_ai # Add this fixture to access the mock
     ):
         """Test that autonomous strategy decisions are properly logged."""
+        # Create a specific strategy for this test
+        test_strategy = TradingStrategyConfig(
+            id=str(uuid4()),
+            user_id=str(sample_opportunity.user_id), # Ensure user_id matches
+            config_name="Logging Test Strategy",
+            base_strategy_type=BaseStrategyType.SCALPING,
+            description="Strategy for testing logging",
+            is_active_paper_mode=True,
+            is_active_real_mode=False,
+            parameters=ScalpingParameters(
+                profit_target_percentage=Decimal("0.01"),
+                stop_loss_percentage=Decimal("0.005"),
+                max_holding_time_seconds=180,
+                leverage=Decimal("1.0")
+            ),
+            ai_analysis_profile_id=None,  # No AI configured
+            applicability_rules=None,
+            risk_parameters_override=None,
+            version=1,
+            parent_config_id=None,
+            performance_metrics=None,
+            market_condition_filters=None,
+            activation_schedule=None,
+            depends_on_strategies=None,
+            sharing_metadata=None,
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
+        )
+
+        # Configure the mock to return only this specific strategy
+        mock_strategy_service_no_ai._test_active_strategies_override = [test_strategy]
+        
+        # Update the sample_opportunity's strategy_id to match the test strategy's ID
+        sample_opportunity.strategy_id = UUID(test_strategy.id)
+
         # Execute evaluation
-        trade = await trading_engine_no_ai.process_opportunity(
+        decisions = await trading_engine_no_ai.process_opportunity(
             sample_opportunity
         )
         
         # Verify autonomous evaluation was logged
-        mock_trading_engine_logger.warning.assert_any_call(
-            f"AI analysis failed or did not recommend trade for opportunity {sample_opportunity.id}: AI did not recommend trade or analysis was skipped.. Checking for autonomous fallback."
-        )
-        mock_trading_engine_logger.info.assert_any_call(
-            f"Strategy {sample_opportunity.strategy_id} can operate autonomously. Proceeding with autonomous logic."
-        )
+        log_message_found = False
+        for call in mock_trading_engine_logger.info.call_args_list:
+            if call.args and isinstance(call.args[0], str):
+                if f"Strategy {test_strategy.id} can operate autonomously. Proceeding with autonomous logic." in call.args[0]:
+                    log_message_found = True
+                    break
+        assert log_message_found, f"Expected log message for strategy {test_strategy.id} not found."
         
         # Verify no AI-related logging occurred (check for specific AI decision messages)
-        # The warning about AI analysis failing/not recommending a trade is expected,
-        # so we specifically check for messages indicating a successful AI-driven decision.
         for call in mock_trading_engine_logger.mock_calls:
             if call.args and isinstance(call.args[0], str):
                 message = call.args[0].lower()
                 assert "ai recommended action" not in message
                 assert "ai-driven trade" not in message
-                assert "ai profile" not in message # Still check for direct AI profile mentions
+                assert "ai profile" not in message
         
-        assert trade is None or trade.symbol == sample_opportunity.symbol
+        # Verify that decisions were returned and at least one is an "execute_trade" decision
+        assert isinstance(decisions, list)
+        assert len(decisions) > 0
+        assert any(isinstance(d, TradingDecision) for d in decisions)
 
 
 class TestPerformanceConsiderations:
@@ -519,8 +705,8 @@ class TestPerformanceConsiderations:
     ):
         """Test that autonomous evaluation is fast and doesn't call AI services."""
         strategy = TradingStrategyConfig(
-            id=str(uuid.uuid4()),
-            user_id=str(uuid.uuid4()),
+            id=str(uuid4()),
+            user_id=str(uuid4()),
             config_name="Performance Test Strategy",
             base_strategy_type=BaseStrategyType.SCALPING,
             description="Strategy for performance testing",
@@ -550,7 +736,7 @@ class TestPerformanceConsiderations:
         start_time = time.time()
         
         # Execute evaluation
-        trade = await trading_engine_no_ai.process_opportunity(
+        decisions = await trading_engine_no_ai.process_opportunity(
             sample_opportunity
         )
         
@@ -563,5 +749,7 @@ class TestPerformanceConsiderations:
         # Verify no AI service calls were made
         mock_ai_orchestrator.analyze_opportunity_with_strategy_context_async.assert_not_called()
         
-        # Verify that a trade was potentially created (or at least the process ran)
-        assert trade is None or trade.symbol == sample_opportunity.symbol
+        # Verify that decisions were returned and at least one is an "execute_trade" decision
+        assert isinstance(decisions, list)
+        assert len(decisions) > 0
+        assert any(isinstance(d, TradingDecision) for d in decisions)

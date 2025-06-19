@@ -2,6 +2,7 @@ import logging
 import json
 from uuid import UUID
 from typing import Optional, Dict, Any, List
+from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 
 from shared.data_types import ServiceName, Notification, Trade, Opportunity, UserConfiguration
 from ultibot_backend.adapters.telegram_adapter import TelegramAdapter
@@ -14,9 +15,9 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 class NotificationService:
-    def __init__(self, credential_service: CredentialService, persistence_service: SupabasePersistenceService):
+    def __init__(self, credential_service: CredentialService, session_factory: async_sessionmaker[AsyncSession]):
         self.credential_service = credential_service
-        self.persistence_service = persistence_service
+        self.session_factory = session_factory
         self._telegram_adapter: Optional[TelegramAdapter] = None
         self._user_id: UUID = settings.FIXED_USER_ID
 
@@ -43,32 +44,38 @@ class NotificationService:
 
     async def save_notification(self, notification: Notification) -> Notification:
         try:
-            # Aseguramos que la notificación tenga el user_id correcto
-            notification.userId = self._user_id
-            saved_notification = await self.persistence_service.save_notification(notification)
-            logger.info(f"Notificación {notification.id} guardada en la base de datos.")
-            return saved_notification
+            async with self.session_factory() as session:
+                persistence_service = SupabasePersistenceService(session)
+                # Aseguramos que la notificación tenga el user_id correcto
+                notification.userId = self._user_id
+                saved_notification = await persistence_service.save_notification(notification)
+                logger.info(f"Notificación {notification.id} guardada en la base de datos.")
+                return saved_notification
         except Exception as e:
             logger.error(f"Error al guardar notificación {notification.id} en la base de datos: {e}", exc_info=True)
             raise NotificationError(f"Error al guardar notificación: {e}", code="NOTIFICATION_SAVE_FAILED")
 
     async def get_notification_history(self, limit: int = 50) -> List[Notification]:
         try:
-            history = await self.persistence_service.get_notification_history(limit)
-            logger.info("Historial de notificaciones recuperado.")
-            return history
+            async with self.session_factory() as session:
+                persistence_service = SupabasePersistenceService(session)
+                history = await persistence_service.get_notification_history(limit)
+                logger.info("Historial de notificaciones recuperado.")
+                return history
         except Exception as e:
             logger.error(f"Error al obtener historial de notificaciones: {e}", exc_info=True)
             raise NotificationError(f"Error al obtener historial de notificaciones: {e}", code="NOTIFICATION_HISTORY_FAILED")
 
     async def mark_notification_as_read(self, notification_id: UUID) -> Optional[Notification]:
         try:
-            updated_notification = await self.persistence_service.mark_notification_as_read(notification_id)
-            if updated_notification:
-                logger.info(f"Notificación {notification_id} marcada como leída.")
-            else:
-                logger.warning(f"No se encontró la notificación {notification_id} para marcar como leída.")
-            return updated_notification
+            async with self.session_factory() as session:
+                persistence_service = SupabasePersistenceService(session)
+                updated_notification = await persistence_service.mark_notification_as_read(notification_id)
+                if updated_notification:
+                    logger.info(f"Notificación {notification_id} marcada como leída.")
+                else:
+                    logger.warning(f"No se encontró la notificación {notification_id} para marcar como leída.")
+                return updated_notification
         except Exception as e:
             logger.error(f"Error al marcar notificación {notification_id} como leída: {e}", exc_info=True)
             raise NotificationError(f"Error al marcar notificación como leída: {e}", code="NOTIFICATION_MARK_READ_FAILED")
@@ -414,4 +421,3 @@ class NotificationService:
     async def close(self):
         if self._telegram_adapter:
             await self._telegram_adapter.close()
-

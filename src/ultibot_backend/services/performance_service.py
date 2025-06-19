@@ -5,6 +5,14 @@ from collections import defaultdict
 from enum import Enum
 from datetime import datetime
 
+from typing import List, Optional, Dict, Any, Callable
+from uuid import UUID
+from collections import defaultdict
+from enum import Enum
+from datetime import datetime
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 from ultibot_backend.services.strategy_service import StrategyService
 from ultibot_backend.api.v1.models.performance_models import (
@@ -20,11 +28,14 @@ logger = logging.getLogger(__name__)
 class PerformanceService:
     def __init__(
         self,
-        persistence_service: SupabasePersistenceService,
+        session_factory: Callable[..., AsyncSession],
         strategy_service: StrategyService,
+        persistence_service: Optional[SupabasePersistenceService] = None,
     ):
-        self.persistence_service = persistence_service
+        self.session_factory = session_factory
         self.strategy_service = strategy_service
+        self._persistence_service = persistence_service
+        logger.info(f"PerformanceService initialized. PersistenceService instance: {self._persistence_service}")
 
     async def get_trade_performance_metrics(
         self,
@@ -38,7 +49,16 @@ class PerformanceService:
         """
         logger.info(f"Fetching trade performance metrics for user {user_id}, mode: {trading_mode}")
         
-        all_trades: List[Trade] = await self.persistence_service.get_all_trades_for_user(user_id=user_id, mode=trading_mode)
+        # Siempre usar el persistence_service inyectado. Si no se inyecta, esto fallará en producción,
+        # lo cual es el comportamiento esperado para una dependencia requerida.
+        # En tests, se asegura que el mock sea inyectado.
+        if self._persistence_service is None:
+            raise RuntimeError("PersistenceService no ha sido inyectado en PerformanceService.")
+        
+        persistence_service = self._persistence_service
+        logger.info(f"Using injected persistence_service: {persistence_service}")
+        
+        all_trades: List[Trade] = await persistence_service.get_trades_with_filters(user_id=str(user_id), trading_mode=trading_mode, status=PositionStatus.CLOSED.value, start_date=start_date, end_date=end_date)
         
         if start_date:
             all_trades = [t for t in all_trades if t.created_at and t.created_at >= start_date]
@@ -108,8 +128,17 @@ class PerformanceService:
         """
         logger.info(f"Fetching performance data for user {user_id}, mode_filter: {mode_filter}")
 
-        all_user_trades: List[Trade] = await self.persistence_service.get_all_trades_for_user(
-            user_id=user_id, mode=mode_filter.value if mode_filter else None
+        # Siempre usar el persistence_service inyectado. Si no se inyecta, esto fallará en producción,
+        # lo cual es el comportamiento esperado para una dependencia requerida.
+        # En tests, se asegura que el mock sea inyectado.
+        if self._persistence_service is None:
+            raise RuntimeError("PersistenceService no ha sido inyectado en PerformanceService.")
+        
+        persistence_service = self._persistence_service
+        logger.info(f"Using injected persistence_service: {persistence_service}")
+        
+        all_user_trades: List[Trade] = await persistence_service.get_trades_with_filters(
+            user_id=str(user_id), trading_mode=mode_filter.value if mode_filter else "", status=PositionStatus.CLOSED.value
         )
 
         closed_trades = [
