@@ -21,18 +21,21 @@ class SupabasePersistenceService(IPersistenceService):
     Can be initialized with an AsyncSession (for tests) or an AsyncEngine/asyncpg.Pool (for app).
     """
 
-    def __init__(self, session: Optional[AsyncSession] = None, engine: Optional[AsyncEngine] = None, pool: Optional[asyncpg.Pool] = None):
+    def __init__(self, session: Optional[AsyncSession] = None, engine: Optional[AsyncEngine] = None, pool: Optional[asyncpg.Pool] = None, session_factory: Optional[async_sessionmaker[AsyncSession]] = None):
         self._session = session
         self._engine = engine
         self._pool = pool # Para compatibilidad con asyncpg si se usa directamente
+        self._async_session_factory = session_factory # Usar la factoría si se inyecta
 
-        if not (session or engine or pool):
-            raise ValueError("SupabasePersistenceService must be initialized with either a session, an engine, or a pool.")
+        if not (session or engine or pool or session_factory):
+            raise ValueError("SupabasePersistenceService must be initialized with either a session, an engine, a pool, or a session_factory.")
 
-        if self._engine:
+        # Si se proporciona un motor y no una factoría, crear una factoría
+        if self._engine and not self._async_session_factory:
             self._async_session_factory = async_sessionmaker(self._engine, expire_on_commit=False)
-        else:
-            self._async_session_factory = None # Se usará la sesión inyectada directamente
+        # Si se proporciona una sesión directa, la factoría no es necesaria para _get_session
+        elif self._session:
+            self._async_session_factory = None
 
     def _pydantic_to_json_string(self, obj: Any) -> Optional[str]:
         if obj is None:
@@ -46,27 +49,28 @@ class SupabasePersistenceService(IPersistenceService):
             return json.dumps(obj)
         return str(obj) # Fallback para tipos simples si es necesario
 
-    async def _get_session(self):
+    def _get_session(self):
         """Get a session context manager."""
-        if self._session:
-            # Return the existing session wrapped in a simple context manager
-            class SessionWrapper:
-                def __init__(self, session):
-                    self.session = session
-                
-                async def __aenter__(self):
-                    return self.session
-                
-                async def __aexit__(self, exc_type, exc_val, exc_tb):
-                    # Don't close the session if it's injected (like in tests)
-                    pass
-            
-            return SessionWrapper(self._session)
-        elif self._async_session_factory:
-            # Return a proper session context manager from the factory
+        if self._async_session_factory:
             return self._async_session_factory()
-        else:
-            raise RuntimeError("No session or engine/pool provided to create a session.")
+        
+        if self._session:
+            # This path should ideally only be used in tests where the session
+            # lifecycle is managed externally.
+            class MockSessionManager:
+                def __init__(self, session: AsyncSession):
+                    self._session = session
+
+                async def __aenter__(self) -> AsyncSession:
+                    return self._session
+
+                async def __aexit__(self, exc_type, exc_val, exc_tb):
+                    # In a test context, we don't close the session here.
+                    # It's managed by the test fixture.
+                    pass
+            return MockSessionManager(self._session)
+
+        raise RuntimeError("No async_session_factory or session provided.")
 
     async def initialize(self):
         pass
@@ -80,19 +84,19 @@ class SupabasePersistenceService(IPersistenceService):
             await self._pool.close()
 
     async def fetch_one(self, query: LiteralString, params: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
-        async with await self._get_session() as session:
+        async with self._get_session() as session:
             result = await session.execute(text(query), params)
             record = result.fetchone()
             return dict(record._mapping) if record else None
 
     async def fetch_all(self, query: LiteralString, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
-        async with await self._get_session() as session:
+        async with self._get_session() as session:
             result = await session.execute(text(query), params)
             records = result.fetchall()
             return [dict(record._mapping) for record in records]
 
     async def execute(self, query: LiteralString, params: Optional[Dict[str, Any]] = None) -> None:
-        async with await self._get_session() as session:
+        async with self._get_session() as session:
             await session.execute(text(query), params)
             await session.commit()
 
@@ -110,7 +114,7 @@ class SupabasePersistenceService(IPersistenceService):
             ON CONFLICT ({conflict_columns}) DO UPDATE
             SET {update_placeholders};
         """
-        async with await self._get_session() as session:
+        async with self._get_session() as session:
             await session.execute(text(query), data)
             await session.commit()
 
@@ -118,33 +122,33 @@ class SupabasePersistenceService(IPersistenceService):
         query = f"SELECT * FROM {table_name}"
         if condition:
             query += f" WHERE {condition}"
-        async with await self._get_session() as session:
+        async with self._get_session() as session:
             result = await session.execute(text(query), params)
             records = result.fetchall()
             return [dict(record._mapping) for record in records]
 
     async def get_one(self, table_name: str, condition: str, params: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
         query = f"SELECT * FROM {table_name} WHERE {condition} LIMIT 1"
-        async with await self._get_session() as session:
+        async with self._get_session() as session:
             result = await session.execute(text(query), params)
             record = result.fetchone()
             return dict(record._mapping) if record else None
 
     async def delete(self, table_name: str, condition: str, params: Optional[Dict[str, Any]] = None) -> None:
         query = f"DELETE FROM {table_name} WHERE {condition}"
-        async with await self._get_session() as session:
+        async with self._get_session() as session:
             await session.execute(text(query), params)
             await session.commit()
 
     async def get_user_configuration(self, user_id: str) -> Optional[Dict[str, Any]]:
         query = "SELECT * FROM user_configurations WHERE user_id = :user_id LIMIT 1"
-        async with await self._get_session() as session:
+        async with self._get_session() as session:
             result = await session.execute(text(query), {"user_id": user_id})
             record = result.fetchone()
             return dict(record._mapping) if record else None
 
     async def upsert_trade(self, trade: Trade) -> None:
-        async with await self._get_session() as session:
+        async with self._get_session() as session:
             trade_orm = TradeORM(
                 id=trade.id,
                 user_id=trade.user_id,
@@ -162,13 +166,13 @@ class SupabasePersistenceService(IPersistenceService):
             await session.refresh(trade_orm) # Refrescar para obtener cualquier valor generado por la BD
 
     async def execute_raw_sql(self, query: LiteralString, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
-        async with await self._get_session() as session:
+        async with self._get_session() as session:
             result = await session.execute(text(query), params)
             records = result.fetchall()
             return [dict(record._mapping) for record in records]
 
     async def upsert_user_configuration(self, user_config: UserConfiguration) -> None:
-        async with await self._get_session() as session:
+        async with self._get_session() as session:
             # Generar un nuevo ID si no existe
             config_id = user_config.id if user_config.id is not None else str(uuid4())
 
@@ -201,7 +205,7 @@ class SupabasePersistenceService(IPersistenceService):
             await session.commit()
 
     async def update_opportunity_status(self, opportunity_id: UUID, new_status: OpportunityStatus, status_reason: str) -> None:
-        async with await self._get_session() as session:
+        async with self._get_session() as session:
             stmt = (
                 update(OpportunityORM)
                 .where(OpportunityORM.id == opportunity_id)
@@ -216,15 +220,15 @@ class SupabasePersistenceService(IPersistenceService):
             await session.commit()
 
     async def get_opportunity_by_id(self, opportunity_id: UUID) -> Optional[Opportunity]:
-        async with await self._get_session() as session:
+        async with self._get_session() as session:
             result = await session.execute(
                 select(OpportunityORM).where(OpportunityORM.id == opportunity_id)
             )
             opportunity_orm = result.scalars().first()
             if opportunity_orm:
                 # Deserializar los campos JSON a sus modelos Pydantic correspondientes
-                initial_signal_obj = InitialSignal.model_validate_json(cast(str, opportunity_orm.initial_signal)) if opportunity_orm.initial_signal else None
-                ai_analysis_obj = AIAnalysis.model_validate_json(cast(str, opportunity_orm.ai_analysis)) if opportunity_orm.ai_analysis else None
+                initial_signal_obj = InitialSignal.model_validate_json(cast(str, opportunity_orm.initial_signal)) if opportunity_orm.initial_signal is not None else None
+                ai_analysis_obj = AIAnalysis.model_validate_json(cast(str, opportunity_orm.ai_analysis)) if opportunity_orm.ai_analysis is not None else None
                 
                 # Mapear los campos de OpportunityORM a Opportunity
                 full_opportunity_data = {
@@ -259,7 +263,7 @@ class SupabasePersistenceService(IPersistenceService):
     async def get_closed_trades(self, user_id: UUID, symbol: Optional[str] = None,
                                 start_date: Optional[datetime] = None, end_date: Optional[datetime] = None,
                                 mode: Optional[str] = None) -> List[Trade]:
-        async with await self._get_session() as session:
+        async with self._get_session() as session:
             query = select(TradeORM).where(
                 TradeORM.user_id == user_id,
                 TradeORM.position_status == PositionStatus.CLOSED.value # Usar el valor del enum
@@ -320,7 +324,7 @@ class SupabasePersistenceService(IPersistenceService):
         """
         Recupera trades con filtros dinámicos.
         """
-        async with await self._get_session() as session:
+        async with self._get_session() as session:
             query = select(TradeORM).where(
                 TradeORM.user_id == UUID(user_id),
                 TradeORM.mode == trading_mode
@@ -343,7 +347,7 @@ class SupabasePersistenceService(IPersistenceService):
             trades = []
             for trade_orm_instance in trade_orms:
                 try:
-                    trade_data = json.loads(trade_orm_instance.data)
+                    trade_data = json.loads(cast(str, trade_orm_instance.data))
                     # Asegurarse de que los campos del ORM sobreescriben los del JSON si hay conflicto
                     trade_data.update({
                         "id": str(trade_orm_instance.id),
@@ -353,7 +357,7 @@ class SupabasePersistenceService(IPersistenceService):
                         "symbol": trade_orm_instance.symbol,
                         "created_at": trade_orm_instance.created_at.isoformat(),
                         "updated_at": trade_orm_instance.updated_at.isoformat(),
-                        "closed_at": trade_orm_instance.closed_at.isoformat() if trade_orm_instance.closed_at else None,
+                        "closed_at": trade_orm_instance.closed_at.isoformat() if trade_orm_instance.closed_at is not None else None,
                     })
                     trades.append(Trade.model_validate(trade_data))
                 except Exception as e:

@@ -29,14 +29,14 @@ class CredentialService:
         logger.info(f"CredentialService __init__ intentando obtener encryption_key de ENV: {'Presente' if encryption_key_str else 'Ausente'}")
 
         if not encryption_key_str:
-            logger.critical("CREDENTIAL_ENCRYPTION_KEY no estรก configurada en las variables de entorno o estรก vacรญa.")
-            raise ValueError("CREDENTIAL_ENCRYPTION_KEY es requerida y no estรก configurada o estรก vacรญa.")
+            logger.critical("CREDENTIAL_ENCRYPTION_KEY no está configurada en las variables de entorno o está vacía.")
+            raise ValueError("CREDENTIAL_ENCRYPTION_KEY es requerida y no está configurada o está vacía.")
         
         logger.info(f"Pasando la siguiente clave (str) a Fernet: {encryption_key_str[:5]}... (truncada por seguridad)")
         try:
             self.fernet = Fernet(encryption_key_str.encode('utf-8'))
         except Exception as e:
-            logger.critical(f"Error al inicializar Fernet con la clave de encriptaciรณn: {e}", exc_info=True)
+            logger.critical(f"Error al inicializar Fernet con la clave de encriptación: {e}", exc_info=True)
             raise ValueError(f"Error al inicializar Fernet: {e}")
 
         self.session_factory = session_factory
@@ -53,15 +53,15 @@ class CredentialService:
             decrypted_data = self.fernet.decrypt(encrypted_data.encode('utf-8'))
             return decrypted_data.decode('utf-8')
         except InvalidToken:
-            print("Advertencia: Token de encriptaciรณn invรกlido. La desencriptaciรณn fallรณ.")
+            logger.warning("Advertencia: Token de encriptación inválido. La desencriptación falló.")
             return None
         except Exception as e:
-            print(f"Error inesperado durante la desencriptaciรณn: {e}")
+            logger.error(f"Error inesperado durante la desencriptación: {e}")
             return None
 
     async def add_credential(self, service_name: ServiceName, credential_label: str, api_key: str, api_secret: Optional[str] = None, other_details: Optional[Dict[str, Any]] = None) -> APICredential:
         async with self.session_factory() as session:
-            persistence_service = SupabasePersistenceService(session)
+            persistence_service = SupabasePersistenceService(session_factory=self.session_factory) # Usar session_factory
             encrypted_api_key = self.encrypt_data(api_key)
             encrypted_api_secret = self.encrypt_data(api_secret) if api_secret else None
             encrypted_other_details = self.encrypt_data(json.dumps(other_details)) if other_details else None
@@ -74,20 +74,36 @@ class CredentialService:
                 encrypted_api_secret=encrypted_api_secret,
                 encrypted_other_details=encrypted_other_details
             )
-            saved_credential = await persistence_service.save_credential(credential_data)
-            return saved_credential
+            # Usar upsert en lugar de save_credential
+            await persistence_service.upsert(
+                table_name="api_credentials",
+                data=credential_data.model_dump(mode='json'), # Convertir a dict para upsert
+                on_conflict=["user_id", "service_name", "credential_label"] # Asumiendo estas son las claves de conflicto
+            )
+            # Para devolver el objeto guardado, necesitamos recuperarlo de la BD o construirlo
+            # Por simplicidad, devolveremos el objeto que intentamos guardar.
+            return credential_data
 
     async def save_encrypted_credential(self, credential: APICredential) -> APICredential:
         async with self.session_factory() as session:
-            persistence_service = SupabasePersistenceService(session)
-            saved_credential = await persistence_service.save_credential(credential)
-            return saved_credential
+            persistence_service = SupabasePersistenceService(session_factory=self.session_factory) # Usar session_factory
+            # Usar upsert en lugar de save_credential
+            await persistence_service.upsert(
+                table_name="api_credentials",
+                data=credential.model_dump(mode='json'),
+                on_conflict=["user_id", "service_name", "credential_label"]
+            )
+            return credential
 
     async def get_credential(self, service_name: ServiceName, credential_label: str) -> Optional[APICredential]:
         async with self.session_factory() as session:
-            persistence_service = SupabasePersistenceService(session)
-            encrypted_credential = await persistence_service.get_credential_by_service_label(service_name, credential_label)
-            if encrypted_credential:
+            persistence_service = SupabasePersistenceService(session_factory=self.session_factory) # Usar session_factory
+            # Usar get_one en lugar de get_credential_by_service_label
+            condition = f"user_id = '{self.fixed_user_id}' AND service_name = '{service_name.value}' AND credential_label = '{credential_label}'"
+            encrypted_credential_data = await persistence_service.get_one(table_name="api_credentials", condition=condition)
+            
+            if encrypted_credential_data:
+                encrypted_credential = APICredential.model_validate(encrypted_credential_data) # Reconstruir Pydantic model
                 decrypted_api_key = self.decrypt_data(encrypted_credential.encrypted_api_key)
                 if decrypted_api_key is None:
                     raise CredentialError(f"API Key para {encrypted_credential.service_name} no pudo ser desencriptada.")
@@ -110,10 +126,14 @@ class CredentialService:
 
     async def update_credential(self, credential_id: UUID, api_key: Optional[str] = None, api_secret: Optional[str] = None, other_details: Optional[Dict[str, Any]] = None, status: Optional[str] = None) -> Optional[APICredential]:
         async with self.session_factory() as session:
-            persistence_service = SupabasePersistenceService(session)
-            existing_credential = await persistence_service.get_credential_by_id(credential_id)
-            if not existing_credential:
+            persistence_service = SupabasePersistenceService(session_factory=self.session_factory) # Usar session_factory
+            
+            condition = f"id = '{credential_id}'"
+            existing_credential_data = await persistence_service.get_one(table_name="api_credentials", condition=condition)
+            if not existing_credential_data:
                 return None
+            
+            existing_credential = APICredential.model_validate(existing_credential_data)
 
             update_data = existing_credential.model_dump()
 
@@ -130,19 +150,29 @@ class CredentialService:
 
             updated_credential_model = APICredential(**update_data)
             
-            saved_credential = await persistence_service.save_credential(updated_credential_model)
-            return saved_credential
+            # Usar upsert en lugar de save_credential
+            await persistence_service.upsert(
+                table_name="api_credentials",
+                data=updated_credential_model.model_dump(mode='json'),
+                on_conflict=["id"] # Conflicto por ID para actualizar
+            )
+            return updated_credential_model
 
     async def delete_credential(self, credential_id: UUID) -> bool:
         async with self.session_factory() as session:
-            persistence_service = SupabasePersistenceService(session)
-            return await persistence_service.delete_credential(credential_id)
+            persistence_service = SupabasePersistenceService(session_factory=self.session_factory) # Usar session_factory
+            condition = f"id = '{credential_id}'"
+            await persistence_service.delete(table_name="api_credentials", condition=condition)
+            return True # Asumimos éxito si no hay excepción
 
     async def get_decrypted_credential_by_id(self, credential_id: UUID) -> Optional[APICredential]:
         async with self.session_factory() as session:
-            persistence_service = SupabasePersistenceService(session)
-            encrypted_credential = await persistence_service.get_credential_by_id(credential_id)
-            if encrypted_credential:
+            persistence_service = SupabasePersistenceService(session_factory=self.session_factory) # Usar session_factory
+            condition = f"id = '{credential_id}'"
+            encrypted_credential_data = await persistence_service.get_one(table_name="api_credentials", condition=condition)
+            
+            if encrypted_credential_data:
+                encrypted_credential = APICredential.model_validate(encrypted_credential_data) # Reconstruir Pydantic model
                 decrypted_api_key = self.decrypt_data(encrypted_credential.encrypted_api_key)
                 if decrypted_api_key is None:
                     logger.error(f"API Key para la credencial ID {credential_id} no pudo ser desencriptada.")
@@ -166,13 +196,15 @@ class CredentialService:
 
     async def get_first_decrypted_credential_by_service(self, service_name: ServiceName) -> Optional[APICredential]:
         async with self.session_factory() as session:
-            persistence_service = SupabasePersistenceService(session)
-            encrypted_credentials = await persistence_service.get_credentials_by_service(service_name)
-            if not encrypted_credentials:
+            persistence_service = SupabasePersistenceService(session_factory=self.session_factory) # Usar session_factory
+            condition = f"user_id = '{self.fixed_user_id}' AND service_name = '{service_name.value}'"
+            encrypted_credentials_data = await persistence_service.get_all(table_name="api_credentials", condition=condition)
+            
+            if not encrypted_credentials_data:
                 logger.info(f"No se encontraron credenciales para el servicio {service_name.value} y usuario {self.fixed_user_id}.")
                 return None
 
-            encrypted_credential = encrypted_credentials[0]
+            encrypted_credential = APICredential.model_validate(encrypted_credentials_data[0]) # Reconstruir Pydantic model
             
             decrypted_api_key = self.decrypt_data(encrypted_credential.encrypted_api_key)
             if decrypted_api_key is None:
@@ -196,7 +228,7 @@ class CredentialService:
 
     async def verify_credential(self, credential: APICredential, notification_service: Optional[Any] = None) -> bool:
         async with self.session_factory() as session:
-            persistence_service = SupabasePersistenceService(session)
+            persistence_service = SupabasePersistenceService(session_factory=self.session_factory) # Usar session_factory
             is_valid = False
             
             try:
@@ -205,14 +237,38 @@ class CredentialService:
                         is_valid = await notification_service.send_test_telegram_notification()
                         if is_valid:
                             logger.info(f"Verificación de Telegram exitosa.")
-                            await persistence_service.update_credential_status(credential.id, "active", datetime.utcnow())
+                            # Usar upsert para actualizar el estado
+                            update_data = credential.model_dump(mode='json')
+                            update_data['status'] = "active"
+                            update_data['updated_at'] = datetime.utcnow().isoformat()
+                            await persistence_service.upsert(
+                                table_name="api_credentials",
+                                data=update_data,
+                                on_conflict=["id"]
+                            )
                         else:
                             logger.warning(f"Verificación de Telegram fallida.")
-                            await persistence_service.update_credential_status(credential.id, "verification_failed", datetime.utcnow())
+                            # Usar upsert para actualizar el estado
+                            update_data = credential.model_dump(mode='json')
+                            update_data['status'] = "verification_failed"
+                            update_data['updated_at'] = datetime.utcnow().isoformat()
+                            await persistence_service.upsert(
+                                table_name="api_credentials",
+                                data=update_data,
+                                on_conflict=["id"]
+                            )
                     else:
                         logger.warning(f"NotificationService no proporcionado para verificar Telegram. No se puede verificar.")
                         is_valid = False
-                        await persistence_service.update_credential_status(credential.id, "verification_failed", datetime.utcnow())
+                        # Usar upsert para actualizar el estado
+                        update_data = credential.model_dump(mode='json')
+                        update_data['status'] = "verification_failed"
+                        update_data['updated_at'] = datetime.utcnow().isoformat()
+                        await persistence_service.upsert(
+                            table_name="api_credentials",
+                            data=update_data,
+                            on_conflict=["id"]
+                        )
                 elif credential.service_name in [ServiceName.BINANCE_SPOT, ServiceName.BINANCE_FUTURES]:
                     decrypted_api_key = self.decrypt_data(credential.encrypted_api_key)
                     decrypted_api_secret = self.decrypt_data(credential.encrypted_api_secret) if credential.encrypted_api_secret else None
@@ -230,28 +286,77 @@ class CredentialService:
                             if account_info.get("canTrade"): permissions.append("SPOT_TRADING")
                             if account_info.get("canDeposit"): permissions.append("DEPOSIT")
                             if account_info.get("canWithdraw"): permissions.append("WITHDRAWAL")
-                            await persistence_service.update_credential_permissions(credential.id, permissions, datetime.utcnow())
-                            await persistence_service.update_credential_status(credential.id, "active", datetime.utcnow())
+                            
+                            # Usar upsert para actualizar permisos y estado
+                            update_data = credential.model_dump(mode='json')
+                            update_data['permissions'] = json.dumps(permissions) # Guardar como JSON string
+                            update_data['status'] = "active"
+                            update_data['updated_at'] = datetime.utcnow().isoformat()
+                            await persistence_service.upsert(
+                                table_name="api_credentials",
+                                data=update_data,
+                                on_conflict=["id"]
+                            )
                         else:
                             logger.warning(f"Verificación de Binance {credential.service_name} fallida: canTrade es False.")
-                            await persistence_service.update_credential_status(credential.id, "verification_failed", datetime.utcnow())
+                            # Usar upsert para actualizar el estado
+                            update_data = credential.model_dump(mode='json')
+                            update_data['status'] = "verification_failed"
+                            update_data['updated_at'] = datetime.utcnow().isoformat()
+                            await persistence_service.upsert(
+                                table_name="api_credentials",
+                                data=update_data,
+                                on_conflict=["id"]
+                            )
 
                     except BinanceAPIError as e:
                         logger.error(f"Error de Binance API durante la verificación: {str(e)}")
                         is_valid = False
-                        await persistence_service.update_credential_status(credential.id, "verification_failed", datetime.utcnow())
+                        # Usar upsert para actualizar el estado
+                        update_data = credential.model_dump(mode='json')
+                        update_data['status'] = "verification_failed"
+                        update_data['updated_at'] = datetime.utcnow().isoformat()
+                        await persistence_service.upsert(
+                            table_name="api_credentials",
+                            data=update_data,
+                            on_conflict=["id"]
+                        )
                 else:
                     logger.info(f"No hay lógica de verificación implementada para el servicio: {credential.service_name}. Asumiendo válido.")
                     is_valid = True
-                    await persistence_service.update_credential_status(credential.id, "active", datetime.utcnow())
+                    # Usar upsert para actualizar el estado
+                    update_data = credential.model_dump(mode='json')
+                    update_data['status'] = "active"
+                    update_data['updated_at'] = datetime.utcnow().isoformat()
+                    await persistence_service.upsert(
+                        table_name="api_credentials",
+                        data=update_data,
+                        on_conflict=["id"]
+                    )
 
             except CredentialError as e:
-                await persistence_service.update_credential_status(credential.id, "verification_failed", datetime.utcnow())
+                # Usar upsert para actualizar el estado
+                update_data = credential.model_dump(mode='json')
+                update_data['status'] = "verification_failed"
+                update_data['updated_at'] = datetime.utcnow().isoformat()
+                await persistence_service.upsert(
+                    table_name="api_credentials",
+                    data=update_data,
+                    on_conflict=["id"]
+                )
                 raise e
             except Exception as e:
                 logger.error(f"Error general durante la verificación de {credential.service_name}: {e}", exc_info=True)
                 is_valid = False
-                await persistence_service.update_credential_status(credential.id, "verification_failed", datetime.utcnow())
+                # Usar upsert para actualizar el estado
+                update_data = credential.model_dump(mode='json')
+                update_data['status'] = "verification_failed"
+                update_data['updated_at'] = datetime.utcnow().isoformat()
+                await persistence_service.upsert(
+                    table_name="api_credentials",
+                    data=update_data,
+                    on_conflict=["id"]
+                )
             
             return is_valid
 
@@ -278,20 +383,44 @@ class CredentialService:
                 )
             
             async with self.session_factory() as session:
-                persistence_service = SupabasePersistenceService(session)
-                await persistence_service.update_credential_status(binance_credential.id, "active", datetime.utcnow())
+                persistence_service = SupabasePersistenceService(session_factory=self.session_factory) # Usar session_factory
+                # Usar upsert para actualizar el estado
+                update_data = binance_credential.model_dump(mode='json')
+                update_data['status'] = "active"
+                update_data['updated_at'] = datetime.utcnow().isoformat()
+                await persistence_service.upsert(
+                    table_name="api_credentials",
+                    data=update_data,
+                    on_conflict=["id"]
+                )
             
             logger.info(f"API Key de Binance verificada exitosamente para el usuario {self.fixed_user_id}.")
             return True
         except BinanceAPIError as e:
             logger.error(f"Fallo en la verificación de la API Key de Binance para {self.fixed_user_id}: {str(e)}", exc_info=True)
             async with self.session_factory() as session:
-                persistence_service = SupabasePersistenceService(session)
-                await persistence_service.update_credential_status(binance_credential.id, "verification_failed", datetime.utcnow())
+                persistence_service = SupabasePersistenceService(session_factory=self.session_factory) # Usar session_factory
+                # Usar upsert para actualizar el estado
+                update_data = binance_credential.model_dump(mode='json')
+                update_data['status'] = "verification_failed"
+                update_data['updated_at'] = datetime.utcnow().isoformat()
+                await persistence_service.upsert(
+                    table_name="api_credentials",
+                    data=update_data,
+                    on_conflict=["id"]
+                )
             raise e
         except Exception as e:
             logger.error(f"Error inesperado durante la verificación de la API Key de Binance para {self.fixed_user_id}: {str(e)}", exc_info=True)
             async with self.session_factory() as session:
-                persistence_service = SupabasePersistenceService(session)
-                await persistence_service.update_credential_status(binance_credential.id, "verification_failed", datetime.utcnow())
+                persistence_service = SupabasePersistenceService(session_factory=self.session_factory) # Usar session_factory
+                # Usar upsert para actualizar el estado
+                update_data = binance_credential.model_dump(mode='json')
+                update_data['status'] = "verification_failed"
+                update_data['updated_at'] = datetime.utcnow().isoformat()
+                await persistence_service.upsert(
+                    table_name="api_credentials",
+                    data=update_data,
+                    on_conflict=["id"]
+                )
             raise BinanceAPIError(message="Error inesperado al verificar la API Key de Binance.", original_exception=e)

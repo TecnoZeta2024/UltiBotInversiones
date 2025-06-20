@@ -123,3 +123,20 @@ class IPersistenceService(ABC):
             user_config_data: A dictionary containing the user configuration data.
         """
         pass
+
+    @abstractmethod
+    async def get_trades_with_filters(
+        self,
+        user_id: str,
+        trading_mode: str,
+        status: Optional[str] = None,
+        limit: int = 100,
+        offset: int = 0,
+        symbol: Optional[str] = None,
+        start_date: Optional[Any] = None,
+        end_date: Optional[Any] = None,
+    ) -> List[Any]:
+        """
+        Retrieves trades with dynamic filters.
+        """
+        pass

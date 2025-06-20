@@ -1,26 +1,26 @@
-# SRST-1310: RuntimeError en unknown
+# SRST-1330: RuntimeError en unknown
 
 ## Error Específico
 **Tipo:** `RuntimeError`
 **Archivo:** `logs/frontend.log:0`
-**Mensaje:** `[MainThread] - trading_engine_service.py:190 - Límite de riesgo de capital diario excedido. Límite: 5000.00, Arriesgado: 4800.0, Nuevo Trade: 300.000`
+**Mensaje:** `Error notifying subscriber about mode change: Test error`
 **Categoría:** `7_BUSINESS_LOGIC_ERRORS`
 **Prioridad:** `MEDIUM`
 
 ## Contexto Mínimo
-- **Test Scope:** `Runtime Log Error: [MainThread] - trading_engine_service.py:190 - Lím...`
+- **Test Scope:** `Runtime Log Error: Error notifying subscriber about mode change: Test...`
 - **Archivo a tocar:** `logs/frontend.log`
 
 ## Plan de Fix Sugerido
 1. [ ] **Analizar:** Revisar el código en `logs/frontend.log` en la línea 0.
-2. [ ] **Contextualizar:** Entender por qué el test `Runtime Log Error: [MainThread] - trading_engine_service.py:190 - Lím...` causa este error.
+2. [ ] **Contextualizar:** Entender por qué el test `Runtime Log Error: Error notifying subscriber about mode change: Test...` causa este error.
 3. [ ] **Refactorizar:** Aplicar la corrección necesaria.
-4. [ ] **Validar:** Ejecutar `poetry run pytest Runtime Log Error: [MainThread] - trading_engine_service.py:190 - Lím...` para confirmar que el error ha desaparecido.
+4. [ ] **Validar:** Ejecutar `poetry run pytest Runtime Log Error: Error notifying subscriber about mode change: Test...` para confirmar que el error ha desaparecido.
 
 ## Validación Inmediata
 ```bash
 # Validar que el error específico desapareció
-poetry run pytest -k "Runtime Log Error: [MainThread] - trading_engine_service.py:190 - Lím..." -v
+poetry run pytest -k "Runtime Log Error: Error notifying subscriber about mode change: Test..." -v
 ```
 
 ## Criterio de Éxito

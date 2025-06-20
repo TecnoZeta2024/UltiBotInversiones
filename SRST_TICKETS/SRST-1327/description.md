@@ -1,4 +1,4 @@
-# SRST-1313: RuntimeError en unknown
+# SRST-1327: RuntimeError en unknown
 
 ## Error Específico
 **Tipo:** `RuntimeError`

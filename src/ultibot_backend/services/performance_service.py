@@ -1,19 +1,12 @@
 import logging
+import logging
 from typing import List, Optional, Dict, Any
 from uuid import UUID
 from collections import defaultdict
 from enum import Enum
 from datetime import datetime
 
-from typing import List, Optional, Dict, Any, Callable
-from uuid import UUID
-from collections import defaultdict
-from enum import Enum
-from datetime import datetime
-
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from ultibot_backend.core.ports.persistence_service import IPersistenceService
 from ultibot_backend.services.strategy_service import StrategyService
 from ultibot_backend.api.v1.models.performance_models import (
     StrategyPerformanceData,
@@ -28,11 +21,9 @@ logger = logging.getLogger(__name__)
 class PerformanceService:
     def __init__(
         self,
-        session_factory: Callable[..., AsyncSession],
         strategy_service: StrategyService,
-        persistence_service: Optional[SupabasePersistenceService] = None,
+        persistence_service: IPersistenceService,
     ):
-        self.session_factory = session_factory
         self.strategy_service = strategy_service
         self._persistence_service = persistence_service
         logger.info(f"PerformanceService initialized. PersistenceService instance: {self._persistence_service}")
@@ -109,15 +100,15 @@ class PerformanceService:
             winning_trades=winning_trades,
             losing_trades=losing_trades,
             win_rate=win_rate,
-            total_pnl=total_pnl,
-            avg_pnl_per_trade=avg_pnl_per_trade,
-            best_trade_pnl=best_trade.pnl_usd if best_trade and hasattr(best_trade, 'pnl_usd') and best_trade.pnl_usd is not None else 0.0,
-            worst_trade_pnl=worst_trade.pnl_usd if worst_trade and hasattr(worst_trade, 'pnl_usd') and worst_trade.pnl_usd is not None else 0.0,
+            total_pnl=float(total_pnl),
+            avg_pnl_per_trade=float(avg_pnl_per_trade),
+            best_trade_pnl=float(best_trade.pnl_usd) if best_trade and hasattr(best_trade, 'pnl_usd') and best_trade.pnl_usd is not None else 0.0,
+            worst_trade_pnl=float(worst_trade.pnl_usd) if worst_trade and hasattr(worst_trade, 'pnl_usd') and worst_trade.pnl_usd is not None else 0.0,
             best_trade_symbol=best_trade.symbol if best_trade and hasattr(best_trade, 'symbol') else None,
             worst_trade_symbol=worst_trade.symbol if worst_trade and hasattr(worst_trade, 'symbol') else None,
             period_start=start_date,
             period_end=end_date,
-            total_volume_traded=total_volume_traded,
+            total_volume_traded=float(total_volume_traded),
         )
 
     async def get_all_strategies_performance(
@@ -181,7 +172,7 @@ class PerformanceService:
                 strategyName=strategy_name,
                 mode=current_operating_mode,
                 totalOperations=total_operations,
-                totalPnl=total_pnl,
+                totalPnl=float(total_pnl),
                 win_rate=win_rate,
             )
             performance_data_list.append(performance_entry)

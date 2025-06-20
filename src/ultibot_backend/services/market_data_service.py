@@ -1,13 +1,13 @@
 import logging
+import logging
 from typing import List, Optional, Dict, Set, Callable, Any
 from uuid import UUID
 from fastapi import Depends
-from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 
 from shared.data_types import AssetBalance, ServiceName, BinanceConnectionStatus, MarketData
 from ultibot_backend.adapters.binance_adapter import BinanceAdapter
 from ultibot_backend.services.credential_service import CredentialService
-from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from ultibot_backend.core.ports.persistence_service import IPersistenceService
 from ultibot_backend.core.exceptions import BinanceAPIError, CredentialError, UltiBotError, ExternalAPIError, MarketDataError
 from ultibot_backend.app_config import settings
 from datetime import datetime, timezone
@@ -22,11 +22,11 @@ class MarketDataService:
     def __init__(self, 
                  credential_service: CredentialService, 
                  binance_adapter: BinanceAdapter,
-                 session_factory: async_sessionmaker[AsyncSession]
+                 persistence_service: IPersistenceService
                  ):
         self.credential_service = credential_service
         self.binance_adapter = binance_adapter
-        self.session_factory = session_factory
+        self._persistence_service = persistence_service
         self._active_websocket_tasks: Dict[str, asyncio.Task] = {}
         self._closed = False
         self._invalid_symbols_cache: Set[str] = set()
@@ -280,10 +280,8 @@ class MarketDataService:
                 ))
 
             if market_data_to_save:
-                async with self.session_factory() as session:
-                    persistence_service = SupabasePersistenceService(session)
-                    await persistence_service.save_market_data(market_data_to_save)
-                    logger.info(f"{len(market_data_to_save)} registros de velas para {symbol}-{interval} guardados en la base de datos.")
+                await self._persistence_service.upsert_all(market_data_to_save)
+                logger.info(f"{len(market_data_to_save)} registros de velas para {symbol}-{interval} guardados en la base de datos.")
 
             logger.info(f"Datos de velas para {symbol}-{interval} obtenidos y procesados.")
             return processed_data

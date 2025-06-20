@@ -2,7 +2,7 @@ import logging
 import asyncio
 import os
 from functools import lru_cache
-from typing import Optional, Callable
+from typing import Optional, Callable, Any, cast # Importar Any y cast
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.pool import NullPool
@@ -17,7 +17,7 @@ from ultibot_backend.adapters.binance_adapter import BinanceAdapter
 from ultibot_backend.adapters.mobula_adapter import MobulaAdapter
 from ultibot_backend.adapters.persistence_service import SupabasePersistenceService as PersistenceService
 from ultibot_backend.services.ai_orchestrator_service import AIOrchestrator as AIOrchestratorService
-from ultibot_backend.services.configuration_service import ConfigurationService
+from ultibot_backend.services.config_service import ConfigurationService
 from ultibot_backend.services.credential_service import CredentialService
 from ultibot_backend.services.market_data_service import MarketDataService
 from ultibot_backend.services.notification_service import NotificationService
@@ -79,7 +79,9 @@ async def initialize_database():
             logger.error(f"Failed to initialize database: {e}")
             raise
 
-async def get_db_session() -> AsyncSession:
+from typing import AsyncGenerator # Importar AsyncGenerator
+
+async def get_db_session() -> AsyncGenerator[AsyncSession, Any]:
     """
     Dependency that provides a database session, ensuring it's closed after use.
     """
@@ -121,7 +123,7 @@ class DependencyContainer:
         
         if _session_factory is None:
             raise RuntimeError("Database session factory not initialized before persistence service initialization.")
-        self.persistence_service = PersistenceService(session=_session_factory())
+        self.persistence_service = PersistenceService(session_factory=cast(async_sessionmaker[AsyncSession], _session_factory))
         
         self.http_client = httpx.AsyncClient(timeout=30.0)
 
@@ -136,10 +138,10 @@ class DependencyContainer:
             raise RuntimeError("Database session factory not initialized before service initialization.")
         
         self.credential_service = CredentialService(
-            session_factory=_session_factory,
+            session_factory=cast(async_sessionmaker[AsyncSession], _session_factory),
             binance_adapter=self.binance_adapter
         )
-        self.trading_report_service = TradingReportService(session_factory=_session_factory)
+        self.trading_report_service = TradingReportService(session_factory=cast(async_sessionmaker[AsyncSession], _session_factory))
 
         self.mobula_adapter = MobulaAdapter(
             credential_service=self.credential_service,
@@ -147,12 +149,12 @@ class DependencyContainer:
         )
         self.notification_service = NotificationService(
             credential_service=self.credential_service,
-            session_factory=_session_factory
+            persistence_service=self.persistence_service
         )
         self.market_data_service = MarketDataService(
             credential_service=self.credential_service,
             binance_adapter=self.binance_adapter,
-            session_factory=_session_factory
+            persistence_service=self.persistence_service
         )
         self.unified_order_execution_service = UnifiedOrderExecutionService(
             real_execution_service=self.order_execution_service,
@@ -163,12 +165,12 @@ class DependencyContainer:
             market_data_service=self.market_data_service
         )
         self.portfolio_service = PortfolioService(
-            session_factory=_session_factory,
+            persistence_service=self.persistence_service,
             market_data_service=self.market_data_service
         )
 
         self.config_service = ConfigurationService(
-            session_factory=_session_factory
+            session_factory=cast(async_sessionmaker[AsyncSession], _session_factory)
         )
 
         self.strategy_service = StrategyService(
@@ -177,7 +179,6 @@ class DependencyContainer:
         )
 
         self.performance_service = PerformanceService(
-            session_factory=_session_factory,
             strategy_service=self.strategy_service,
             persistence_service=self.persistence_service
         )
