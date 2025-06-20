@@ -1,4 +1,5 @@
 from typing import Optional, Dict, Any
+from decimal import Decimal # Importar Decimal
 
 class UltiBotError(Exception):
     """Excepción base para errores de UltiBotInversiones."""
@@ -81,7 +82,7 @@ class PortfolioError(UltiBotError):
 
 class InsufficientUSDTBalanceError(PortfolioError):
     """Excepción para cuando el saldo de USDT es insuficiente para una operación."""
-    def __init__(self, message: str = "Saldo de USDT insuficiente.", available_balance: Optional[float] = None, required_amount: Optional[float] = None, details: Optional[Dict[str, Any]] = None, original_exception: Optional[Exception] = None):
+    def __init__(self, message: str = "Saldo de USDT insuficiente.", available_balance: Optional[Decimal] = None, required_amount: Optional[Decimal] = None, details: Optional[Dict[str, Any]] = None, original_exception: Optional[Exception] = None):
         super().__init__(message, code="INSUFFICIENT_USDT_BALANCE", details={
             "available_balance": available_balance,
             "required_amount": required_amount,

@@ -99,7 +99,8 @@ class CredentialService:
         async with self.session_factory() as session:
             persistence_service = SupabasePersistenceService(session_factory=self.session_factory) # Usar session_factory
             # Usar get_one en lugar de get_credential_by_service_label
-            condition = f"user_id = '{self.fixed_user_id}' AND service_name = '{service_name.value}' AND credential_label = '{credential_label}'"
+            service_name_value = service_name.value if isinstance(service_name, ServiceName) else service_name
+            condition = f"user_id = '{self.fixed_user_id}' AND service_name = '{service_name_value}' AND credential_label = '{credential_label}'"
             encrypted_credential_data = await persistence_service.get_one(table_name="api_credentials", condition=condition)
             
             if encrypted_credential_data:

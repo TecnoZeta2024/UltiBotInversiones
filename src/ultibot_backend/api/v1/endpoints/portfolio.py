@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 import logging
 from datetime import datetime
+from decimal import Decimal # Importar Decimal
 from typing import Annotated, Optional, Literal
 from uuid import UUID
 
@@ -21,22 +22,23 @@ router = APIRouter()
 # Trading mode type alias for consistent validation
 TradingMode = Literal["paper", "real", "both"]
 
-@router.get("/snapshot", response_model=PortfolioSnapshot, status_code=status.HTTP_200_OK)
+@router.get("/snapshot/{user_id}", response_model=PortfolioSnapshot, status_code=status.HTTP_200_OK)
 async def get_portfolio_snapshot(
+    user_id: UUID,
     request: Request,
     portfolio_service: Annotated[PortfolioService, Depends(deps.get_portfolio_service)],
     trading_mode: Annotated[TradingMode, Query(description="Trading mode filter: 'paper', 'real', or 'both'")] = "both"
 ):
     """
-    Get portfolio snapshot for the fixed user and trading mode.
+    Get portfolio snapshot for a specific user and trading mode.
     
     Args:
+        user_id: The ID of the user
         trading_mode: Filter by trading mode ('paper', 'real', 'both')
         
     Returns:
         PortfolioSnapshot with data filtered by trading mode
     """
-    user_id = settings.FIXED_USER_ID
     try:
         if trading_mode == "both":
             snapshot = await portfolio_service.get_portfolio_snapshot(user_id)
@@ -45,9 +47,9 @@ async def get_portfolio_snapshot(
             await portfolio_service.initialize_portfolio(user_id)
             paper_summary = await portfolio_service._get_paper_trading_summary()
             empty_real = PortfolioSummary(
-                available_balance_usdt=0.0,
-                total_assets_value_usd=0.0,
-                total_portfolio_value_usd=0.0,
+                available_balance_usdt=Decimal('0.0'),
+                total_assets_value_usd=Decimal('0.0'),
+                total_portfolio_value_usd=Decimal('0.0'),
                 assets=[],
                 error_message="Real trading data not requested"
             )
@@ -58,9 +60,9 @@ async def get_portfolio_snapshot(
         elif trading_mode == "real":
             real_summary = await portfolio_service._get_real_trading_summary(user_id)
             empty_paper = PortfolioSummary(
-                available_balance_usdt=0.0,
-                total_assets_value_usd=0.0,
-                total_portfolio_value_usd=0.0,
+                available_balance_usdt=Decimal('0.0'),
+                total_assets_value_usd=Decimal('0.0'),
+                total_portfolio_value_usd=Decimal('0.0'),
                 assets=[],
                 error_message="Paper trading data not requested"
             )

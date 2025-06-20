@@ -3,6 +3,7 @@ import logging
 from typing import Optional, Dict, Any, TYPE_CHECKING
 from uuid import UUID, uuid4
 from datetime import datetime, timezone
+from decimal import Decimal # Importar Decimal
 
 from ultibot_backend.core.domain_models.user_configuration_models import (
     UserConfiguration,
@@ -63,7 +64,7 @@ class ConfigurationService:
                 try:
                     # Si hay datos, intentar validarlos y cargarlos.
                     # El validador en el modelo Pydantic se encargará de los campos JSON.
-                    user_config = UserConfiguration(**config_data)
+                    user_config = config_data
                     logger.info(f"Configuración de usuario cargada exitosamente para el user_id: {target_user_id}")
                     return user_config
                 except Exception as e_load:
@@ -130,7 +131,7 @@ class ConfigurationService:
             cloud_sync_preferences=None,
             selected_theme=Theme.DARK,
             enable_telegram_notifications=False,
-            default_paper_trading_capital=10000.0,
+            default_paper_trading_capital=Decimal("10000.0"),
             paper_trading_active=True,
             ai_analysis_confidence_thresholds=AIAnalysisConfidenceThresholds(
                 paper_trading=0.7,
@@ -149,7 +150,7 @@ class ConfigurationService:
                 daily_profit_target_absolute=None,
                 asset_specific_stop_loss=None,
                 auto_pause_trading_conditions=None,
-                daily_capital_risked_usd=0.0,
+                daily_capital_risked_usd=Decimal("0.0"),
                 last_daily_reset=datetime.now(timezone.utc)
             )
         )
@@ -160,7 +161,7 @@ class ConfigurationService:
             return False 
         return self._user_configuration.paper_trading_active is True
 
-    async def activate_real_trading_mode(self, min_usdt_balance: float = 10.0):
+    async def activate_real_trading_mode(self, min_usdt_balance: Decimal = Decimal("10.0")):
         if not self.credential_service or not self.portfolio_service:
             raise ConfigurationError("Services (Credential, Portfolio) not initialized in ConfigService.")
 
@@ -192,7 +193,7 @@ class ConfigurationService:
             raise e
 
         try:
-            usdt_balance = await self.portfolio_service.get_real_usdt_balance(self._user_id)
+            usdt_balance: Decimal = await self.portfolio_service.get_real_usdt_balance(self._user_id)
             if usdt_balance < min_usdt_balance:
                 error_message = f"Saldo de USDT insuficiente. Se requiere al menos {min_usdt_balance} USDT."
                 if self.notification_service:

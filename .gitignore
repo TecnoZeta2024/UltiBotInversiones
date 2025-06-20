@@ -30,3 +30,21 @@ docker-compose.override.yml
 
 # Poetry
 .venv/
+
+# SRST - Sistema de Resolución Segmentada de Tests
+SRST_TICKETS/
+SRST_PROGRESS.md
+
+# Reportes de Auditoría y Logs
+AUDIT_REPORT.md
+AUDIT_TASK_JULES.md
+logs/
+pytest_debug_output.txt
+pytestdebug.log
+
+# Bases de datos locales
+test_db.sqlite
+ultibot_local.db
+
+# Caché de Testing
+.pytest_cache/

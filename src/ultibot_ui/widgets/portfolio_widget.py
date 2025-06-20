@@ -300,13 +300,19 @@ class PortfolioWidget(QWidget):
     def _update_portfolio_ui(self, snapshot_dict: Dict[str, Any], mode: str):
         portfolio_mode_dict = snapshot_dict.get(f"{mode}_trading", {}) 
         currency = "USDT (Virtual)" if mode == "paper" else "USDT"
-        self.balance_label.setText(f"{portfolio_mode_dict.get('available_balance_usdt', 0.0):,.2f} {currency}")
-        self.total_assets_label.setText(f"{portfolio_mode_dict.get('total_assets_value_usd', 0.0):,.2f} USD")
-        self.portfolio_value_label.setText(f"{portfolio_mode_dict.get('total_portfolio_value_usd', 0.0):,.2f} USD")
+        # Asegurarse de que los valores son flotantes antes de formatear
+        available_balance = float(portfolio_mode_dict.get('available_balance_usdt', 0.0))
+        total_assets = float(portfolio_mode_dict.get('total_assets_value_usd', 0.0))
+        total_portfolio = float(portfolio_mode_dict.get('total_portfolio_value_usd', 0.0))
+        
+        self.balance_label.setText("{:,.2f} {}".format(available_balance, currency))
+        self.total_assets_label.setText("{:,.2f} USD".format(total_assets))
+        self.portfolio_value_label.setText("{:,.2f} USD".format(total_portfolio))
         self._populate_assets_table(portfolio_mode_dict.get('assets', []))
         other_mode = "real" if mode == "paper" else "paper"
         other_mode_dict = snapshot_dict.get(f"{other_mode}_trading", {})
-        self.comparison_info.setText(f"Portafolio {other_mode.title()}: {other_mode_dict.get('total_portfolio_value_usd', 0.0):,.2f} USD")
+        other_mode_value = float(other_mode_dict.get('total_portfolio_value_usd', 0.0))
+        self.comparison_info.setText("Portafolio {}: {:,.2f} USD".format(other_mode.title(), other_mode_value))
 
     def _update_open_trades_ui(self, trades: List[Dict[str, Any]]):
         self.trades_info_label.setVisible(not trades)
@@ -314,14 +320,14 @@ class PortfolioWidget(QWidget):
         for row, trade in enumerate(trades):
             self._set_item(self.open_trades_table, row, 0, str(trade.get('symbol')))
             self._set_item(self.open_trades_table, row, 1, str(trade.get('trade_type')))
-            self._set_item(self.open_trades_table, row, 2, f"{trade.get('quantity', 0):.6f}")
-            self._set_item(self.open_trades_table, row, 3, f"{trade.get('entry_price', 0):.4f}")
-            self._set_item(self.open_trades_table, row, 4, f"{trade.get('current_price', 0):.4f}")
-            self._set_item(self.open_trades_table, row, 5, f"{trade.get('take_profit_price', 0):.4f}")
-            self._set_item(self.open_trades_table, row, 6, f"{trade.get('stop_loss_price', 0):.4f}")
+            self._set_item(self.open_trades_table, row, 2, "{:.6f}".format(float(trade.get('quantity', 0))))
+            self._set_item(self.open_trades_table, row, 3, "{:.4f}".format(float(trade.get('entry_price', 0))))
+            self._set_item(self.open_trades_table, row, 4, "{:.4f}".format(float(trade.get('current_price', 0))))
+            self._set_item(self.open_trades_table, row, 5, "{:.4f}".format(float(trade.get('take_profit_price', 0))))
+            self._set_item(self.open_trades_table, row, 6, "{:.4f}".format(float(trade.get('stop_loss_price', 0))))
             self._set_item(self.open_trades_table, row, 7, str(trade.get('tsl_status')))
             
-            pnl = trade.get('pnl_percentage', 0) * 100
+            pnl = float(trade.get('pnl_percentage', 0)) * 100
             pnl_item = QTableWidgetItem(f"{pnl:.2f}%")
             pnl_item.setForeground(QColor('green') if pnl >= 0 else QColor('red'))
             self.open_trades_table.setItem(row, 8, pnl_item)
@@ -349,12 +355,12 @@ class PortfolioWidget(QWidget):
         self.assets_table.setRowCount(len(assets))
         for row, asset in enumerate(assets):
             self._set_item(self.assets_table, row, 0, str(asset.get('symbol')))
-            self._set_item(self.assets_table, row, 1, f"{asset.get('free', 0):.6f}")
-            self._set_item(self.assets_table, row, 2, f"{asset.get('avg_entry_price', 0):.4f}")
-            self._set_item(self.assets_table, row, 3, f"{asset.get('current_price', 0):.4f}")
-            self._set_item(self.assets_table, row, 4, f"{asset.get('usd_value', 0):.2f}")
+            self._set_item(self.assets_table, row, 1, "{:.6f}".format(float(asset.get('free', 0))))
+            self._set_item(self.assets_table, row, 2, "{:.4f}".format(float(asset.get('avg_entry_price', 0))))
+            self._set_item(self.assets_table, row, 3, "{:.4f}".format(float(asset.get('current_price', 0))))
+            self._set_item(self.assets_table, row, 4, "{:,.2f}".format(float(asset.get('usd_value', 0))))
             
-            pnl_percentage = asset.get('pnl_percentage', 0) * 100
+            pnl_percentage = float(asset.get('pnl_percentage', 0)) * 100
             pnl_item = QTableWidgetItem(f"{pnl_percentage:.2f}%")
             pnl_item.setForeground(QColor('green') if pnl_percentage >= 0 else QColor('red'))
             self.assets_table.setItem(row, 5, pnl_item)
@@ -368,4 +374,3 @@ class PortfolioWidget(QWidget):
                 thread.wait(5000)
         self.active_workers.clear()
         logger.info("PortfolioWidget: Limpieza completada.")
-

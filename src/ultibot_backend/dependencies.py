@@ -170,7 +170,7 @@ class DependencyContainer:
         )
 
         self.config_service = ConfigurationService(
-            session_factory=cast(async_sessionmaker[AsyncSession], _session_factory)
+            persistence_service=self.persistence_service
         )
 
         self.strategy_service = StrategyService(

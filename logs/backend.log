@@ -1,39 +1,110 @@
-2025-06-20 22:03:12,412 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
-2025-06-20 22:03:12,414 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
-2025-06-20 22:03:12,414 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
-2025-06-20 22:03:12,415 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:51130 - "GET /health HTTP/1.1" 200
-2025-06-20 22:03:42,440 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
-2025-06-20 22:03:42,443 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
-2025-06-20 22:03:42,444 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
-2025-06-20 22:03:42,444 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:51590 - "GET /health HTTP/1.1" 200
-2025-06-20 22:04:12,468 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
-2025-06-20 22:04:12,471 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
-2025-06-20 22:04:12,472 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
-2025-06-20 22:04:12,473 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:34006 - "GET /health HTTP/1.1" 200
-2025-06-20 22:04:42,496 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
-2025-06-20 22:04:42,498 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
-2025-06-20 22:04:42,499 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
-2025-06-20 22:04:42,500 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:58154 - "GET /health HTTP/1.1" 200
-2025-06-20 22:05:12,524 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
-2025-06-20 22:05:12,527 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
-2025-06-20 22:05:12,528 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
-2025-06-20 22:05:12,530 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:43844 - "GET /health HTTP/1.1" 200
-2025-06-20 22:05:42,557 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
-2025-06-20 22:05:42,558 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
-2025-06-20 22:05:42,559 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
-2025-06-20 22:05:42,560 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:46362 - "GET /health HTTP/1.1" 200
-2025-06-20 18:06:02,556 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
-2025-06-20 18:06:02,556 - ultibot_backend - INFO - [MainThread] - main.py:141 - Registrando routers de la API...
-2025-06-20 18:06:02,574 - ultibot_backend - INFO - [MainThread] - main.py:153 - Todos los routers han sido registrados.
-2025-06-20 18:06:02,699 - asyncio - DEBUG - [MainThread] - selector_events.py:54 - Using selector: SelectSelector
-2025-06-20 18:06:02,699 - asyncio - DEBUG - [MainThread] - selector_events.py:54 - Using selector: SelectSelector
-2025-06-20 18:06:02,699 - tests.conftest - INFO - [MainThread] - conftest.py:45 - Entorno de prueba configurado. DATABASE_URL: sqlite+aiosqlite:///C:\Users\zamor\AppData\Local\Temp\tmp14askclf\test_db.sqlite
-2025-06-20 18:06:02,704 - asyncio - DEBUG - [MainThread] - selector_events.py:54 - Using selector: SelectSelector
-2025-06-20 18:06:02,704 - asyncio - DEBUG - [MainThread] - selector_events.py:54 - Using selector: SelectSelector
-2025-06-20 18:06:02,713 - asyncio - DEBUG - [MainThread] - selector_events.py:54 - Using selector: SelectSelector
-2025-06-20 18:06:02,716 - asyncio - DEBUG - [MainThread] - selector_events.py:54 - Using selector: SelectSelector
-2025-06-20 18:06:02,718 - asyncio - DEBUG - [MainThread] - selector_events.py:54 - Using selector: SelectSelector
-2025-06-20 22:06:12,587 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
-2025-06-20 22:06:12,589 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
-2025-06-20 22:06:12,590 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
-2025-06-20 22:06:12,590 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:36588 - "GET /health HTTP/1.1" 200
+2025-06-20 23:06:06,909 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
+2025-06-20 23:06:06,911 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
+2025-06-20 23:06:06,912 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-20 23:06:06,913 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:41160 - "GET /health HTTP/1.1" 200
+2025-06-20 23:06:36,939 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
+2025-06-20 23:06:36,941 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
+2025-06-20 23:06:36,942 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-20 23:06:36,943 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:39818 - "GET /health HTTP/1.1" 200
+2025-06-20 23:07:06,967 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
+2025-06-20 23:07:06,969 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
+2025-06-20 23:07:06,969 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-20 23:07:06,970 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:38258 - "GET /health HTTP/1.1" 200
+2025-06-20 23:07:36,998 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
+2025-06-20 23:07:36,999 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
+2025-06-20 23:07:37,000 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-20 23:07:37,001 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:43690 - "GET /health HTTP/1.1" 200
+2025-06-20 23:08:07,027 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
+2025-06-20 23:08:07,028 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
+2025-06-20 23:08:07,029 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-20 23:08:07,030 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:55098 - "GET /health HTTP/1.1" 200
+2025-06-20 23:08:37,054 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
+2025-06-20 23:08:37,056 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
+2025-06-20 23:08:37,056 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-20 23:08:37,057 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:44314 - "GET /health HTTP/1.1" 200
+2025-06-20 23:09:07,081 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
+2025-06-20 23:09:07,083 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
+2025-06-20 23:09:07,084 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-20 23:09:07,085 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:43588 - "GET /health HTTP/1.1" 200
+2025-06-20 23:09:37,111 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
+2025-06-20 23:09:37,113 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
+2025-06-20 23:09:37,113 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-20 23:09:37,114 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:57788 - "GET /health HTTP/1.1" 200
+2025-06-20 23:10:07,139 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
+2025-06-20 23:10:07,140 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
+2025-06-20 23:10:07,141 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-20 23:10:07,142 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:54136 - "GET /health HTTP/1.1" 200
+2025-06-20 23:10:37,167 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
+2025-06-20 23:10:37,168 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
+2025-06-20 23:10:37,168 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-20 23:10:37,169 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:53144 - "GET /health HTTP/1.1" 200
+2025-06-20 23:11:07,195 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
+2025-06-20 23:11:07,196 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
+2025-06-20 23:11:07,197 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-20 23:11:07,198 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:48686 - "GET /health HTTP/1.1" 200
+2025-06-20 23:11:37,225 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
+2025-06-20 23:11:37,227 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
+2025-06-20 23:11:37,228 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-20 23:11:37,229 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:39836 - "GET /health HTTP/1.1" 200
+2025-06-20 23:12:07,257 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
+2025-06-20 23:12:07,258 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
+2025-06-20 23:12:07,259 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-20 23:12:07,260 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:40608 - "GET /health HTTP/1.1" 200
+2025-06-20 23:12:37,287 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
+2025-06-20 23:12:37,289 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
+2025-06-20 23:12:37,289 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-20 23:12:37,290 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:59364 - "GET /health HTTP/1.1" 200
+2025-06-20 23:13:07,315 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
+2025-06-20 23:13:07,316 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
+2025-06-20 23:13:07,317 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-20 23:13:07,318 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:39780 - "GET /health HTTP/1.1" 200
+2025-06-20 19:13:28,713 - ultibot_backend - INFO - [MainThread] - main.py:65 - Logging configurado exitosamente usando dictConfig.
+2025-06-20 19:13:28,714 - ultibot_backend - INFO - [MainThread] - main.py:141 - Registrando routers de la API...
+2025-06-20 19:13:28,734 - ultibot_backend - INFO - [MainThread] - main.py:153 - Todos los routers han sido registrados.
+2025-06-20 19:13:28,886 - asyncio - DEBUG - [MainThread] - selector_events.py:54 - Using selector: SelectSelector
+2025-06-20 19:13:28,886 - asyncio - DEBUG - [MainThread] - selector_events.py:54 - Using selector: SelectSelector
+2025-06-20 19:13:28,889 - tests.conftest - INFO - [MainThread] - conftest.py:45 - Entorno de prueba configurado. DATABASE_URL: sqlite+aiosqlite:///C:\Users\zamor\AppData\Local\Temp\tmpvzf9d3ix\test_db.sqlite
+2025-06-20 19:13:28,891 - asyncio - DEBUG - [MainThread] - selector_events.py:54 - Using selector: SelectSelector
+2025-06-20 19:13:28,893 - ultibot_backend.services.config_service - INFO - [MainThread] - config_service.py:68 - Configuración de usuario cargada exitosamente para el user_id: 00000000-0000-0000-0000-000000000001
+2025-06-20 19:13:28,895 - asyncio - DEBUG - [MainThread] - selector_events.py:54 - Using selector: SelectSelector
+2025-06-20 19:13:28,897 - ultibot_backend.services.config_service - INFO - [MainThread] - config_service.py:77 - No se encontró configuración para el user_id 00000000-0000-0000-0000-000000000001. Creando y guardando configuración por defecto.
+2025-06-20 19:13:28,898 - ultibot_backend.services.config_service - INFO - [MainThread] - config_service.py:114 - Configuración guardada exitosamente.
+2025-06-20 19:13:28,900 - asyncio - DEBUG - [MainThread] - selector_events.py:54 - Using selector: SelectSelector
+2025-06-20 19:13:28,902 - ultibot_backend.services.config_service - INFO - [MainThread] - config_service.py:114 - Configuración guardada exitosamente.
+2025-06-20 19:13:28,905 - asyncio - DEBUG - [MainThread] - selector_events.py:54 - Using selector: SelectSelector
+2025-06-20 19:13:28,909 - asyncio - DEBUG - [MainThread] - selector_events.py:54 - Using selector: SelectSelector
+2025-06-20 19:13:28,910 - ultibot_backend.services.config_service - INFO - [MainThread] - config_service.py:68 - Configuración de usuario cargada exitosamente para el user_id: 00000000-0000-0000-0000-000000000001
+2025-06-20 19:13:28,914 - asyncio - DEBUG - [MainThread] - selector_events.py:54 - Using selector: SelectSelector
+2025-06-20 19:13:28,915 - ultibot_backend.services.config_service - INFO - [MainThread] - config_service.py:68 - Configuración de usuario cargada exitosamente para el user_id: 00000000-0000-0000-0000-000000000001
+2025-06-20 23:13:37,347 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
+2025-06-20 23:13:37,348 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
+2025-06-20 23:13:37,349 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-20 23:13:37,350 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:47830 - "GET /health HTTP/1.1" 200
+2025-06-20 23:14:07,375 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
+2025-06-20 23:14:07,377 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
+2025-06-20 23:14:07,378 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-20 23:14:07,379 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:42242 - "GET /health HTTP/1.1" 200
+2025-06-20 23:14:37,402 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
+2025-06-20 23:14:37,404 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
+2025-06-20 23:14:37,405 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-20 23:14:37,406 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:54372 - "GET /health HTTP/1.1" 200
+2025-06-20 23:15:07,429 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
+2025-06-20 23:15:07,430 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
+2025-06-20 23:15:07,431 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-20 23:15:07,432 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:60070 - "GET /health HTTP/1.1" 200
+2025-06-20 23:15:37,456 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
+2025-06-20 23:15:37,458 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
+2025-06-20 23:15:37,459 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-20 23:15:37,459 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:38520 - "GET /health HTTP/1.1" 200
+2025-06-20 23:16:07,484 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
+2025-06-20 23:16:07,485 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
+2025-06-20 23:16:07,486 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-20 23:16:07,487 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:50238 - "GET /health HTTP/1.1" 200
+2025-06-20 23:16:37,511 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
+2025-06-20 23:16:37,512 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
+2025-06-20 23:16:37,514 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-20 23:16:37,515 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:57020 - "GET /health HTTP/1.1" 200
+2025-06-20 23:17:07,539 - ultibot_backend - INFO - [MainThread] - main.py:110 - Middleware: Solicitud entrante: GET /health
+2025-06-20 23:17:07,540 - ultibot_backend - DEBUG - [AnyIO worker thread] - main.py:159 - Health check solicitado.
+2025-06-20 23:17:07,541 - ultibot_backend - INFO - [MainThread] - main.py:112 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-20 23:17:07,542 - uvicorn.access - INFO - [MainThread] - httptools_impl.py:481 - 127.0.0.1:55716 - "GET /health HTTP/1.1" 200

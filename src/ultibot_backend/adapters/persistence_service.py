@@ -140,12 +140,56 @@ class SupabasePersistenceService(IPersistenceService):
             await session.execute(text(query), params)
             await session.commit()
 
-    async def get_user_configuration(self, user_id: str) -> Optional[Dict[str, Any]]:
-        query = "SELECT * FROM user_configurations WHERE user_id = :user_id LIMIT 1"
+    async def get_user_configuration(self, user_id: str) -> Optional[UserConfiguration]:
         async with self._get_session() as session:
-            result = await session.execute(text(query), {"user_id": user_id})
-            record = result.fetchone()
-            return dict(record._mapping) if record else None
+            result = await session.execute(
+                select(UserConfigurationORM).where(UserConfigurationORM.user_id == user_id)
+            )
+            user_config_orm = result.scalars().first()
+            if user_config_orm:
+                # Deserializar los campos JSON a sus modelos Pydantic correspondientes
+                notification_preferences_obj = json.loads(cast(str, user_config_orm.notification_preferences)) if user_config_orm.notification_preferences is not None else None
+                paper_trading_assets_obj = json.loads(cast(str, user_config_orm.paper_trading_assets)) if user_config_orm.paper_trading_assets is not None else None
+                watchlists_obj = json.loads(cast(str, user_config_orm.watchlists)) if user_config_orm.watchlists is not None else None
+                favorite_pairs_obj = json.loads(cast(str, user_config_orm.favorite_pairs)) if user_config_orm.favorite_pairs is not None else None
+                risk_profile_obj = RiskProfile(user_config_orm.risk_profile) if user_config_orm.risk_profile is not None else None
+                risk_profile_settings_obj = json.loads(cast(str, user_config_orm.risk_profile_settings)) if user_config_orm.risk_profile_settings is not None else None
+                real_trading_settings_obj = json.loads(cast(str, user_config_orm.real_trading_settings)) if user_config_orm.real_trading_settings is not None else None
+                ai_strategy_configurations_obj = json.loads(cast(str, user_config_orm.ai_strategy_configurations)) if user_config_orm.ai_strategy_configurations is not None else None
+                ai_analysis_confidence_thresholds_obj = json.loads(cast(str, user_config_orm.ai_analysis_confidence_thresholds)) if user_config_orm.ai_analysis_confidence_thresholds is not None else None
+                mcp_server_preferences_obj = json.loads(cast(str, user_config_orm.mcp_server_preferences)) if user_config_orm.mcp_server_preferences is not None else None
+                dashboard_layout_profiles_obj = json.loads(cast(str, user_config_orm.dashboard_layout_profiles)) if user_config_orm.dashboard_layout_profiles is not None else None
+                dashboard_layout_config_obj = json.loads(cast(str, user_config_orm.dashboard_layout_config)) if user_config_orm.dashboard_layout_config is not None else None
+                cloud_sync_preferences_obj = json.loads(cast(str, user_config_orm.cloud_sync_preferences)) if user_config_orm.cloud_sync_preferences is not None else None
+
+                # Mapear los campos de UserConfigurationORM a UserConfiguration
+                full_user_config_data = {
+                    "id": user_config_orm.id,
+                    "user_id": user_config_orm.user_id,
+                    "telegram_chat_id": user_config_orm.telegram_chat_id,
+                    "notification_preferences": notification_preferences_obj,
+                    "enable_telegram_notifications": user_config_orm.enable_telegram_notifications,
+                    "default_paper_trading_capital": user_config_orm.default_paper_trading_capital,
+                    "paper_trading_active": user_config_orm.paper_trading_active,
+                    "paper_trading_assets": paper_trading_assets_obj,
+                    "watchlists": watchlists_obj,
+                    "favorite_pairs": favorite_pairs_obj,
+                    "risk_profile": risk_profile_obj,
+                    "risk_profile_settings": risk_profile_settings_obj,
+                    "real_trading_settings": real_trading_settings_obj,
+                    "ai_strategy_configurations": ai_strategy_configurations_obj,
+                    "ai_analysis_confidence_thresholds": ai_analysis_confidence_thresholds_obj,
+                    "mcp_server_preferences": mcp_server_preferences_obj,
+                    "selected_theme": user_config_orm.selected_theme,
+                    "dashboard_layout_profiles": dashboard_layout_profiles_obj,
+                    "active_dashboard_layout_profile_id": user_config_orm.active_dashboard_layout_profile_id,
+                    "dashboard_layout_config": dashboard_layout_config_obj,
+                    "cloud_sync_preferences": cloud_sync_preferences_obj,
+                    "created_at": user_config_orm.created_at,
+                    "updated_at": user_config_orm.updated_at
+                }
+                return UserConfiguration.model_validate(full_user_config_data)
+            return None
 
     async def upsert_trade(self, trade: Trade) -> None:
         async with self._get_session() as session:
