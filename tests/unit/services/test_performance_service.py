@@ -8,19 +8,20 @@ from ultibot_backend.services.performance_service import PerformanceService
 from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 from ultibot_backend.services.strategy_service import StrategyService
 from ultibot_backend.api.v1.models.performance_models import OperatingMode, StrategyPerformanceData
-from shared.data_types import Trade # Asegúrate que Trade y PositionStatus estén aquí o importables
-from ultibot_backend.core.domain_models.trade_models import PositionStatus, TradeOrderDetails, OrderType, OrderStatus, OrderCategory
+from shared.data_types import Trade, TradeOrderDetails, OrderType, OrderStatus, OrderCategory, PositionStatus # Asegúrate que Trade y PositionStatus estén aquí o importables
 from ultibot_backend.core.domain_models.trading_strategy_models import TradingStrategyConfig, BaseStrategyType # Para mock de strategy_config
 
+
+from decimal import Decimal # Importar Decimal
 
 def create_mock_trade_order_details(
     order_id_internal: Optional[UUID] = None,
     order_category: OrderCategory = OrderCategory.ENTRY,
     order_type: OrderType = OrderType.MARKET,
     status: OrderStatus = OrderStatus.FILLED,
-    requested_quantity: float = 0.01,
-    executed_quantity: float = 0.01,
-    executed_price: float = 100.0,
+    requested_quantity: Decimal = Decimal("0.01"),
+    executed_quantity: Decimal = Decimal("0.01"),
+    executed_price: Decimal = Decimal("100.0"),
     timestamp: Optional[datetime] = None,
     **kwargs
 ) -> TradeOrderDetails:
@@ -68,6 +69,8 @@ def mock_strategy_service():
         is_active_paper_mode=True,
         is_active_real_mode=False,
         description="Descripción por defecto",
+        allowed_symbols=None, # Añadido para SRST-5011
+        excluded_symbols=None, # Añadido para SRST-5011
         applicability_rules=None,
         ai_analysis_profile_id=None,
         risk_parameters_override=None,
@@ -118,9 +121,9 @@ async def test_get_all_strategies_performance_no_closed_trades(performance_servi
         side="BUY",
         entryOrder=create_mock_trade_order_details(
             order_category=OrderCategory.ENTRY,
-            requested_quantity=0.01,
-            executed_quantity=0.01,
-            executed_price=50000.0,
+            requested_quantity=Decimal("0.01"),
+            executed_quantity=Decimal("0.01"),
+            executed_price=Decimal("50000.0"),
             timestamp=datetime.now(timezone.utc)
         ),
         exitOrders=[], # No exit orders for open trades
@@ -167,24 +170,24 @@ async def test_get_all_strategies_performance_with_closed_trades(
         side="BUY",
         entryOrder=create_mock_trade_order_details(
             order_category=OrderCategory.ENTRY,
-            requested_quantity=0.01,
-            executed_quantity=0.01,
-            executed_price=50000.0,
+            requested_quantity=Decimal("0.01"),
+            executed_quantity=Decimal("0.01"),
+            executed_price=Decimal("50000.0"),
             timestamp=datetime.now(timezone.utc)
         ),
         exitOrders=[
             create_mock_trade_order_details(
                 order_category=OrderCategory.TAKE_PROFIT,
-                requested_quantity=0.01,
-                executed_quantity=0.01,
-                executed_price=50100.0,
+                requested_quantity=Decimal("0.01"),
+                executed_quantity=Decimal("0.01"),
+                executed_price=Decimal("50100.0"),
                 timestamp=datetime.now(timezone.utc)
             )
         ],
         positionStatus=PositionStatus.CLOSED.value,
         strategyId=strategy1_id,
-        pnl_usd=10.0, 
-        pnl_percentage=0.01,
+        pnl_usd=Decimal("10.0"), 
+        pnl_percentage=Decimal("0.01"),
         opened_at=datetime.now(timezone.utc),
         closed_at=datetime.now(timezone.utc),
         # Opcionales a None
@@ -211,6 +214,8 @@ async def test_get_all_strategies_performance_with_closed_trades(
         is_active_paper_mode=True,
         is_active_real_mode=False,
         description="Test strategy description",
+        allowed_symbols=None, # Añadido para SRST-5011
+        excluded_symbols=None, # Añadido para SRST-5011
         applicability_rules=None,
         ai_analysis_profile_id=None,
         risk_parameters_override=None,
@@ -255,30 +260,30 @@ async def test_get_all_strategies_performance_multiple_trades_mixed_pnl(
         "user_id": USER_ID, "mode": "paper", 
         "entryOrder": create_mock_trade_order_details(
             order_category=OrderCategory.ENTRY,
-            requested_quantity=0.01,
-            executed_quantity=0.01,
-            executed_price=50000.0,
+            requested_quantity=Decimal("0.01"),
+            executed_quantity=Decimal("0.01"),
+            executed_price=Decimal("50000.0"),
             timestamp=datetime.now(timezone.utc)
         ),
         "exitOrders": [
             create_mock_trade_order_details(
                 order_category=OrderCategory.TAKE_PROFIT,
-                requested_quantity=0.01,
-                executed_quantity=0.01,
-                executed_price=50100.0,
+                requested_quantity=Decimal("0.01"),
+                executed_quantity=Decimal("0.01"),
+                executed_price=Decimal("50100.0"),
                 timestamp=datetime.now(timezone.utc)
             )
         ],
         "positionStatus": PositionStatus.CLOSED.value, "strategyId": strategy1_id,
         "opened_at": datetime.now(timezone.utc), "closed_at": datetime.now(timezone.utc),
-        "pnl_percentage": 0.0, "opportunityId": None, "aiAnalysisConfidence": None, 
+        "pnl_percentage": Decimal("0.0"), "opportunityId": None, "aiAnalysisConfidence": None, 
         "closingReason": None, "ocoOrderListId": None, "takeProfitPrice": None, 
         "trailingStopActivationPrice": None, "trailingStopCallbackRate": None, "currentStopPrice_tsl": None,
     }
 
-    trade1 = Trade(id=trade1_id, symbol="BTCUSDT", side="BUY", pnl_usd=20.0, **common_trade_params)
-    trade2 = Trade(id=trade2_id, symbol="ETHUSDT", side="SELL", pnl_usd=-5.0, **common_trade_params)
-    trade3 = Trade(id=trade3_id, symbol="ADAUSDT", side="BUY", pnl_usd=15.0, **common_trade_params)
+    trade1 = Trade(id=trade1_id, symbol="BTCUSDT", side="BUY", pnl_usd=Decimal("20.0"), **common_trade_params)
+    trade2 = Trade(id=trade2_id, symbol="ETHUSDT", side="SELL", pnl_usd=Decimal("-5.0"), **common_trade_params)
+    trade3 = Trade(id=trade3_id, symbol="ADAUSDT", side="BUY", pnl_usd=Decimal("15.0"), **common_trade_params)
     
     mock_persistence_service.get_all_trades_for_user.return_value = [trade1, trade2, trade3]
     
@@ -289,6 +294,8 @@ async def test_get_all_strategies_performance_multiple_trades_mixed_pnl(
             "stop_loss_percentage": 0.005 # Añadido para SRST-5011
         },
         is_active_paper_mode=True, is_active_real_mode=False, description="Scalping strategy",
+        allowed_symbols=None, # Añadido para SRST-5011
+        excluded_symbols=None, # Añadido para SRST-5011
         applicability_rules=None,
         ai_analysis_profile_id=None,
         risk_parameters_override=None,
@@ -330,29 +337,29 @@ async def test_get_all_strategies_performance_mode_filtering_real(
         "user_id": USER_ID, 
         "entryOrder": create_mock_trade_order_details(
             order_category=OrderCategory.ENTRY,
-            requested_quantity=0.01,
-            executed_quantity=0.01,
-            executed_price=50000.0,
+            requested_quantity=Decimal("0.01"),
+            executed_quantity=Decimal("0.01"),
+            executed_price=Decimal("50000.0"),
             timestamp=datetime.now(timezone.utc)
         ),
         "exitOrders": [
             create_mock_trade_order_details(
                 order_category=OrderCategory.TAKE_PROFIT,
-                requested_quantity=0.01,
-                executed_quantity=0.01,
-                executed_price=50100.0,
+                requested_quantity=Decimal("0.01"),
+                executed_quantity=Decimal("0.01"),
+                executed_price=Decimal("50100.0"),
                 timestamp=datetime.now(timezone.utc)
             )
         ],
         "positionStatus": PositionStatus.CLOSED.value, 
         "opened_at": datetime.now(timezone.utc), "closed_at": datetime.now(timezone.utc),
-        "pnl_percentage": 0.0, "opportunityId": None, "aiAnalysisConfidence": None, 
+        "pnl_percentage": Decimal("0.0"), "opportunityId": None, "aiAnalysisConfidence": None, 
         "closingReason": None, "ocoOrderListId": None, "takeProfitPrice": None, 
         "trailingStopActivationPrice": None, "trailingStopCallbackRate": None, "currentStopPrice_tsl": None,
     }
 
-    paper_trade = Trade(id=trade_paper_id, mode="paper", symbol="BTCUSDT", side="BUY", strategyId=strategy_paper_id, pnl_usd=10.0, **common_trade_params_filter_test)
-    real_trade = Trade(id=trade_real_id, mode="real", symbol="ETHUSDT", side="SELL", strategyId=strategy_real_id, pnl_usd=50.0, **common_trade_params_filter_test)
+    paper_trade = Trade(id=trade_paper_id, mode="paper", symbol="BTCUSDT", side="BUY", strategyId=strategy_paper_id, pnl_usd=Decimal("10.0"), **common_trade_params_filter_test)
+    real_trade = Trade(id=trade_real_id, mode="real", symbol="ETHUSDT", side="SELL", strategyId=strategy_real_id, pnl_usd=Decimal("50.0"), **common_trade_params_filter_test)
     
     mock_persistence_service.get_all_trades_for_user.return_value = [real_trade] 
     
@@ -363,6 +370,8 @@ async def test_get_all_strategies_performance_mode_filtering_real(
             "stop_loss_percentage": 0.005 # Añadido para SRST-5011
         },
         is_active_paper_mode=False, is_active_real_mode=True, description="Real trading strategy",
+        allowed_symbols=None, # Añadido para SRST-5011
+        excluded_symbols=None, # Añadido para SRST-5011
         applicability_rules=None,
         ai_analysis_profile_id=None,
         risk_parameters_override=None,
@@ -411,28 +420,28 @@ async def test_get_all_strategies_performance_unknown_strategy(
         "user_id": USER_ID, "mode": "paper", 
         "entryOrder": create_mock_trade_order_details(
             order_category=OrderCategory.ENTRY,
-            requested_quantity=0.01,
-            executed_quantity=0.01,
-            executed_price=50000.0,
+            requested_quantity=Decimal("0.01"),
+            executed_quantity=Decimal("0.01"),
+            executed_price=Decimal("50000.0"),
             timestamp=datetime.now(timezone.utc)
         ),
         "exitOrders": [
             create_mock_trade_order_details(
                 order_category=OrderCategory.TAKE_PROFIT,
-                requested_quantity=0.01,
-                executed_quantity=0.01,
-                executed_price=50100.0,
+                requested_quantity=Decimal("0.01"),
+                executed_quantity=Decimal("0.01"),
+                executed_price=Decimal("50100.0"),
                 timestamp=datetime.now(timezone.utc)
             )
         ],
         "positionStatus": PositionStatus.CLOSED.value, "strategyId": strategy_unknown_id,
         "opened_at": datetime.now(timezone.utc), "closed_at": datetime.now(timezone.utc),
-        "pnl_percentage": 0.0, "opportunityId": None, "aiAnalysisConfidence": None, 
+        "pnl_percentage": Decimal("0.0"), "opportunityId": None, "aiAnalysisConfidence": None, 
         "closingReason": None, "ocoOrderListId": None, "takeProfitPrice": None, 
         "trailingStopActivationPrice": None, "trailingStopCallbackRate": None, "currentStopPrice_tsl": None,
     }
     
-    trade = Trade(id=trade_id, symbol="BTCUSDT", side="BUY", pnl_usd=10.0, **common_trade_params_unknown_strat)
+    trade = Trade(id=trade_id, symbol="BTCUSDT", side="BUY", pnl_usd=Decimal("10.0"), **common_trade_params_unknown_strat)
     mock_persistence_service.get_all_trades_for_user.return_value = [trade]
     
     mock_strategy_service.get_strategy_config.return_value = None # Simula que no se encuentra la estrategia
@@ -460,34 +469,34 @@ async def test_get_all_strategies_performance_multiple_strategies_different_mode
         "user_id": USER_ID, 
         "entryOrder": create_mock_trade_order_details(
             order_category=OrderCategory.ENTRY,
-            requested_quantity=0.01,
-            executed_quantity=0.01,
-            executed_price=50000.0,
+            requested_quantity=Decimal("0.01"),
+            executed_quantity=Decimal("0.01"),
+            executed_price=Decimal("50000.0"),
             timestamp=datetime.now(timezone.utc)
         ),
         "exitOrders": [
             create_mock_trade_order_details(
                 order_category=OrderCategory.TAKE_PROFIT,
-                requested_quantity=0.01,
-                executed_quantity=0.01,
-                executed_price=50100.0,
+                requested_quantity=Decimal("0.01"),
+                executed_quantity=Decimal("0.01"),
+                executed_price=Decimal("50100.0"),
                 timestamp=datetime.now(timezone.utc)
             )
         ],
         "positionStatus": PositionStatus.CLOSED.value,
         "opened_at": datetime.now(timezone.utc), "closed_at": datetime.now(timezone.utc),
-        "pnl_percentage": 0.0, "opportunityId": None, "aiAnalysisConfidence": None,
+        "pnl_percentage": Decimal("0.0"), "opportunityId": None, "aiAnalysisConfidence": None,
         "closingReason": None, "ocoOrderListId": None, "takeProfitPrice": None,
         "trailingStopActivationPrice": None, "trailingStopCallbackRate": None, "currentStopPrice_tsl": None,
     }
 
     paper_trade = Trade(
         id=trade_paper_id, mode="paper", symbol="BTCUSDT", side="BUY",
-        strategyId=strategy_paper_id, pnl_usd=15.0, **common_trade_params_multi_strat
+        strategyId=strategy_paper_id, pnl_usd=Decimal("15.0"), **common_trade_params_multi_strat
     )
     real_trade = Trade(
         id=trade_real_id, mode="real", symbol="ETHUSDT", side="SELL",
-        strategyId=strategy_real_id, pnl_usd=25.0, **common_trade_params_multi_strat
+        strategyId=strategy_real_id, pnl_usd=Decimal("25.0"), **common_trade_params_multi_strat
     )
 
     # Cuando se llama sin filtro de modo, debe devolver todos los trades
@@ -500,6 +509,8 @@ async def test_get_all_strategies_performance_multiple_strategies_different_mode
             "stop_loss_percentage": 0.005 # Añadido para SRST-5011
         },
         is_active_paper_mode=True, is_active_real_mode=False, description="Paper trading strategy",
+        allowed_symbols=None, # Añadido para SRST-5011
+        excluded_symbols=None, # Añadido para SRST-5011
         version=1, applicability_rules=None, ai_analysis_profile_id=None, risk_parameters_override=None,
         parent_config_id=None, performance_metrics=None, market_condition_filters=None,
         activation_schedule=None, depends_on_strategies=None, sharing_metadata=None, created_at=None, updated_at=None
@@ -511,6 +522,8 @@ async def test_get_all_strategies_performance_multiple_strategies_different_mode
             "stop_loss_percentage": 0.005 # Añadido para SRST-5011
         },
         is_active_paper_mode=False, is_active_real_mode=True, description="Real trading strategy",
+        allowed_symbols=None, # Añadido para SRST-5011
+        excluded_symbols=None, # Añadido para SRST-5011
         version=1, applicability_rules=None, ai_analysis_profile_id=None, risk_parameters_override=None,
         parent_config_id=None, performance_metrics=None, market_condition_filters=None,
         activation_schedule=None, depends_on_strategies=None, sharing_metadata=None, created_at=None, updated_at=None
@@ -561,29 +574,29 @@ async def test_get_all_strategies_performance_breakeven_trades(
         "user_id": USER_ID, "mode": "paper", 
         "entryOrder": create_mock_trade_order_details(
             order_category=OrderCategory.ENTRY,
-            requested_quantity=0.01,
-            executed_quantity=0.01,
-            executed_price=50000.0,
+            requested_quantity=Decimal("0.01"),
+            executed_quantity=Decimal("0.01"),
+            executed_price=Decimal("50000.0"),
             timestamp=datetime.now(timezone.utc)
         ),
         "exitOrders": [
             create_mock_trade_order_details(
                 order_category=OrderCategory.TAKE_PROFIT,
-                requested_quantity=0.01,
-                executed_quantity=0.01,
-                executed_price=50100.0,
+                requested_quantity=Decimal("0.01"),
+                executed_quantity=Decimal("0.01"),
+                executed_price=Decimal("50100.0"),
                 timestamp=datetime.now(timezone.utc)
             )
         ],
         "positionStatus": PositionStatus.CLOSED.value, "strategyId": strategy_id,
         "opened_at": datetime.now(timezone.utc), "closed_at": datetime.now(timezone.utc),
-        "pnl_percentage": 0.0, "opportunityId": None, "aiAnalysisConfidence": None,
+        "pnl_percentage": Decimal("0.0"), "opportunityId": None, "aiAnalysisConfidence": None,
         "closingReason": "Break Even", "ocoOrderListId": None, "takeProfitPrice": None,
         "trailingStopActivationPrice": None, "trailingStopCallbackRate": None, "currentStopPrice_tsl": None,
     }
 
-    trade1 = Trade(id=trade1_id, symbol="XRPUSDT", side="BUY", pnl_usd=0.0, **common_trade_params_breakeven)
-    trade2 = Trade(id=trade2_id, symbol="LTCUSDT", side="SELL", pnl_usd=0.0, **common_trade_params_breakeven)
+    trade1 = Trade(id=trade1_id, symbol="XRPUSDT", side="BUY", pnl_usd=Decimal("0.0"), **common_trade_params_breakeven)
+    trade2 = Trade(id=trade2_id, symbol="LTCUSDT", side="SELL", pnl_usd=Decimal("0.0"), **common_trade_params_breakeven)
 
     mock_persistence_service.get_all_trades_for_user.return_value = [trade1, trade2]
 
@@ -594,6 +607,8 @@ async def test_get_all_strategies_performance_breakeven_trades(
             "stop_loss_percentage": 0.005 # Añadido para SRST-5011
         },
         is_active_paper_mode=True, is_active_real_mode=False, description="Grid strategy for breakeven",
+        allowed_symbols=None, # Añadido para SRST-5011
+        excluded_symbols=None, # Añadido para SRST-5011
         version=1, applicability_rules=None, ai_analysis_profile_id=None, risk_parameters_override=None,
         parent_config_id=None, performance_metrics=None, market_condition_filters=None,
         activation_schedule=None, depends_on_strategies=None, sharing_metadata=None, created_at=None, updated_at=None
@@ -630,24 +645,24 @@ async def test_get_all_strategies_performance_trade_with_none_strategy_id(
         side="BUY",
         entryOrder=create_mock_trade_order_details(
             order_category=OrderCategory.ENTRY,
-            requested_quantity=0.01,
-            executed_quantity=0.01,
-            executed_price=50000.0,
+            requested_quantity=Decimal("0.01"),
+            executed_quantity=Decimal("0.01"),
+            executed_price=Decimal("50000.0"),
             timestamp=datetime.now(timezone.utc)
         ),
         exitOrders=[
             create_mock_trade_order_details(
                 order_category=OrderCategory.MANUAL_CLOSE,
-                requested_quantity=0.01,
-                executed_quantity=0.01,
-                executed_price=50050.0,
+                requested_quantity=Decimal("0.01"),
+                executed_quantity=Decimal("0.01"),
+                executed_price=Decimal("50050.0"),
                 timestamp=datetime.now(timezone.utc)
             )
         ],
         positionStatus=PositionStatus.CLOSED.value,
         strategyId=None, # Explicitly None
-        pnl_usd=5.0,
-        pnl_percentage=0.02,
+        pnl_usd=Decimal("5.0"),
+        pnl_percentage=Decimal("0.02"),
         opened_at=datetime.now(timezone.utc),
         closed_at=datetime.now(timezone.utc),
         opportunityId=None, aiAnalysisConfidence=None, closingReason="Manual",
@@ -693,22 +708,22 @@ async def test_get_all_strategies_performance_win_rate_edge_cases(
             id=uuid4(), user_id=USER_ID, mode="paper", symbol=f"SYM{i}", side="BUY",
             entryOrder=create_mock_trade_order_details(
                 order_category=OrderCategory.ENTRY,
-                requested_quantity=0.01,
-                executed_quantity=0.01,
-                executed_price=50000.0,
+                requested_quantity=Decimal("0.01"),
+                executed_quantity=Decimal("0.01"),
+                executed_price=Decimal("50000.0"),
                 timestamp=datetime.now(timezone.utc)
             ),
             exitOrders=[
                 create_mock_trade_order_details(
                     order_category=OrderCategory.TAKE_PROFIT if pnl > 0 else OrderCategory.STOP_LOSS,
-                    requested_quantity=0.01,
-                    executed_quantity=0.01,
-                    executed_price=50000.0 + pnl, # Ajustar precio de salida para reflejar PnL
+                    requested_quantity=Decimal("0.01"),
+                    executed_quantity=Decimal("0.01"),
+                    executed_price=Decimal(str(50000.0 + pnl)), # Ajustar precio de salida para reflejar PnL
                     timestamp=datetime.now(timezone.utc)
                 )
             ],
             positionStatus=PositionStatus.CLOSED.value,
-            strategyId=strategy_id, pnl_usd=pnl, pnl_percentage=0.01 if pnl > 0 else (-0.01 if pnl < 0 else 0.0),
+            strategyId=strategy_id, pnl_usd=Decimal(str(pnl)), pnl_percentage=Decimal("0.01") if pnl > 0 else (Decimal("-0.01") if pnl < 0 else Decimal("0.0")),
             opened_at=datetime.now(timezone.utc), closed_at=datetime.now(timezone.utc),
             opportunityId=None, aiAnalysisConfidence=None, closingReason="Test",
             ocoOrderListId=None, takeProfitPrice=None, trailingStopActivationPrice=None,
@@ -725,6 +740,8 @@ async def test_get_all_strategies_performance_win_rate_edge_cases(
             "stop_loss_percentage": 0.005 # Añadido para SRST-5011
         },
         is_active_paper_mode=True, is_active_real_mode=False, description=description,
+        allowed_symbols=None, # Añadido para SRST-5011
+        excluded_symbols=None, # Añadido para SRST-5011
         version=1, applicability_rules=None, ai_analysis_profile_id=None, risk_parameters_override=None,
         parent_config_id=None, performance_metrics=None, market_condition_filters=None,
         activation_schedule=None, depends_on_strategies=None, sharing_metadata=None, created_at=None, updated_at=None

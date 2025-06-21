@@ -20,9 +20,9 @@ async def test_get_user_config_initial(client):
     assert response.status_code == 200
     config_data = response.json()
     assert config_data["user_id"] == str(FIXED_USER_ID)
-    assert config_data["selectedTheme"] == "dark"
-    assert config_data["defaultPaperTradingCapital"] == 10000.0
-    assert config_data["paperTradingActive"] is True # Verificar el nuevo campo
+    assert config_data["selected_theme"] == "dark"
+    assert config_data["default_paper_trading_capital"] == 10000.0
+    assert config_data["paper_trading_active"] is True
 
 @pytest.mark.asyncio
 async def test_patch_user_config_update_paper_trading(client):
@@ -42,17 +42,17 @@ async def test_patch_user_config_update_paper_trading(client):
     assert response.status_code == 200
     updated_config = response.json()
     assert updated_config["user_id"] == str(FIXED_USER_ID)
-    assert updated_config["paperTradingActive"] is False
-    assert updated_config["defaultPaperTradingCapital"] == 500.50
+    assert updated_config["paper_trading_active"] is False
+    assert updated_config["default_paper_trading_capital"] == 500.50
     # Verificar que otros campos por defecto no se hayan alterado
-    assert updated_config["selectedTheme"] == "dark"
+    assert updated_config["selected_theme"] == "dark"
 
     # Verificar que la configuración persista
     response_get = await client.get("/api/v1/config")
     assert response_get.status_code == 200
     persisted_config = response_get.json()
-    assert persisted_config["paperTradingActive"] is False
-    assert persisted_config["defaultPaperTradingCapital"] == 500.50
+    assert persisted_config["paper_trading_active"] is False
+    assert persisted_config["default_paper_trading_capital"] == 500.50
 
 @pytest.mark.asyncio
 async def test_patch_user_config_only_paper_trading_active(client):
@@ -68,9 +68,9 @@ async def test_patch_user_config_only_paper_trading_active(client):
     
     assert response.status_code == 200
     updated_config = response.json()
-    assert updated_config["paperTradingActive"] is False
-    assert updated_config["defaultPaperTradingCapital"] == 10000.0 # Debe permanecer igual
-    assert updated_config["selectedTheme"] == "dark" # Debe permanecer igual
+    assert updated_config["paper_trading_active"] is False
+    assert updated_config["default_paper_trading_capital"] == 10000.0 # Debe permanecer igual
+    assert updated_config["selected_theme"] == "dark" # Debe permanecer igual
 
 @pytest.mark.asyncio
 async def test_patch_user_config_only_capital(client):
@@ -86,9 +86,9 @@ async def test_patch_user_config_only_capital(client):
     
     assert response.status_code == 200
     updated_config = response.json()
-    assert updated_config["paperTradingActive"] is True # Debe permanecer igual
-    assert updated_config["defaultPaperTradingCapital"] == 25000.0
-    assert updated_config["selectedTheme"] == "dark" # Debe permanecer igual
+    assert updated_config["paper_trading_active"] is True # Debe permanecer igual
+    assert updated_config["default_paper_trading_capital"] == 25000.0
+    assert updated_config["selected_theme"] == "dark" # Debe permanecer igual
 
 @pytest.mark.asyncio
 async def test_patch_user_config_invalid_data(client):
@@ -101,4 +101,6 @@ async def test_patch_user_config_invalid_data(client):
     response = await client.patch("/api/v1/config", json=update_payload)
     
     assert response.status_code == 422 # Unprocessable Entity (error de validación de Pydantic)
-    assert "value is not a valid float" in response.json()["detail"][0]["msg"]
+    # El mensaje de error puede variar, pero debe indicar un problema de tipo.
+    # Pydantic v2 a menudo da mensajes más genéricos si el tipo base falla.
+    assert "Input should be a valid decimal" in response.json()["detail"][0]["msg"]

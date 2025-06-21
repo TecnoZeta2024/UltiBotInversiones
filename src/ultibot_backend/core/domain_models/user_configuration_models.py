@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, Union
 from decimal import Decimal
 import json
 
-from pydantic import BaseModel, Field, field_validator, ValidationInfo
+from pydantic import BaseModel, Field, field_validator, ValidationInfo, ConfigDict
 
 
 class NotificationChannel(str, Enum):
@@ -84,20 +84,20 @@ class Watchlist(BaseModel):
 class RiskProfileSettings(BaseModel):
     """Risk profile settings."""
     
-    daily_capital_risk_percentage: Optional[float] = Field(
-        None, 
+    daily_capital_risk_percentage: float = Field(
+        0.01, # Default to 1% daily risk
         gt=0, 
         le=1, 
         description="Maximum percentage of capital to risk daily"
     )
-    per_trade_capital_risk_percentage: Optional[float] = Field(
-        None, 
+    per_trade_capital_risk_percentage: float = Field(
+        0.005, # Default to 0.5% per trade risk
         gt=0, 
         le=1, 
         description="Maximum percentage of capital to risk per trade"
     )
-    max_drawdown_percentage: Optional[float] = Field(
-        None, 
+    max_drawdown_percentage: float = Field(
+        0.10, # Default to 10% max drawdown
         gt=0, 
         le=1, 
         description="Maximum drawdown before automatic pause"
@@ -190,7 +190,7 @@ class ConfidenceThresholds(BaseModel):
 
     @field_validator('real_trading')
     @classmethod
-    def real_trading_should_be_higher_than_paper(cls, v: float, info: ValidationInfo) -> float:
+    def real_trading_should_be_higher_than_paper(cls, v: Optional[float], info: ValidationInfo) -> Optional[float]:
         """Validate that real trading threshold is higher than paper trading."""
         if v is not None and 'paper_trading' in info.data and info.data['paper_trading'] is not None:
             if v <= info.data['paper_trading']:
@@ -340,7 +340,7 @@ class UserConfiguration(BaseModel):
         description="General risk profile"
     )
     risk_profile_settings: Optional[RiskProfileSettings] = Field(
-        None, 
+        None,
         description="Custom risk profile settings"
     )
     real_trading_settings: Optional[RealTradingSettings] = Field(
@@ -392,19 +392,25 @@ class UserConfiguration(BaseModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-    class Config:
-        """Pydantic model configuration."""
-        
-        use_enum_values = True
-        validate_assignment = True
-        extra = "forbid"
-        json_encoders = {
-            datetime: lambda v: v.isoformat() if v else None
-        }
+    @field_validator('risk_profile_settings', mode='before')
+    @classmethod
+    def set_default_risk_profile_settings(cls, v: Optional[RiskProfileSettings]) -> RiskProfileSettings:
+        if v is None:
+            return RiskProfileSettings(
+                daily_capital_risk_percentage=0.01,
+                per_trade_capital_risk_percentage=0.005,
+                max_drawdown_percentage=0.10
+            )
+        return v
 
+    model_config = ConfigDict(
+        use_enum_values=True,
+        validate_assignment=True,
+        extra="forbid"
+    )
     @field_validator(
         'notification_preferences', 'paper_trading_assets', 'watchlists',
-        'favorite_pairs', 'risk_profile_settings', 'real_trading_settings',
+        'favorite_pairs', 'real_trading_settings',
         'ai_strategy_configurations', 'ai_analysis_confidence_thresholds',
         'mcp_server_preferences', 'dashboard_layout_profiles',
         'dashboard_layout_config', 'cloud_sync_preferences',

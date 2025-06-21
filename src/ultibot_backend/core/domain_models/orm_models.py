@@ -1,12 +1,13 @@
-from sqlalchemy import Column, String, Boolean, Float, DateTime, Text
+from sqlalchemy import Column, String, Boolean, Float, DateTime, Text, Numeric
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.types import TypeDecorator, CHAR
 from sqlalchemy.sql import func
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.schema import CreateColumn
 from sqlalchemy.orm import relationship, Mapped, mapped_column
-from uuid import UUID as PythonUUID
+from uuid import UUID as PythonUUID, uuid4
 from datetime import datetime
+from decimal import Decimal
 from typing import Optional
 import json
 
@@ -17,17 +18,17 @@ class GUID(TypeDecorator):
     """Platform-independent GUID type.
 
     Uses PostgreSQL's UUID type, otherwise uses
-    CHAR(32), storing as stringified hex values.
+    TEXT for SQLite, storing as stringified UUID values.
     """
-    impl = CHAR
-
+    impl = String  # Use String/TEXT as base type
     cache_ok = True
 
     def load_dialect_impl(self, dialect):
         if dialect.name == 'postgresql':
             return dialect.type_descriptor(PG_UUID())
         else:
-            return dialect.type_descriptor(CHAR(32))
+            # For SQLite and other databases, use TEXT
+            return dialect.type_descriptor(Text())
 
     def process_bind_param(self, value, dialect):
         if value is None:
@@ -35,26 +36,22 @@ class GUID(TypeDecorator):
         elif dialect.name == 'postgresql':
             return str(value)
         else:
-            if not isinstance(value, PythonUUID):
-                return str(PythonUUID(value))
-            return value.hex
+            # For SQLite, always convert to string
+            if isinstance(value, PythonUUID):
+                return str(value)
+            elif isinstance(value, str):
+                return str(PythonUUID(value))  # Validate it's a valid UUID
+            else:
+                return str(value)
 
     def process_result_value(self, value, dialect):
         if value is None:
             return value
         else:
-            if not isinstance(value, PythonUUID):
-                return PythonUUID(value)
-            return value
-
-@compiles(CreateColumn, 'sqlite')
-def compile_create_column_sqlite(element, compiler, **kw):
-    """
-    Custom compilation for SQLite to handle UUID columns as TEXT.
-    """
-    if isinstance(element.element.type, GUID):
-        element.element.type = Text()
-    return compiler.visit_create_column(element, **kw)
+            if isinstance(value, PythonUUID):
+                return value
+            else:
+                return PythonUUID(str(value))
 
 class UserConfigurationORM(Base):
     __tablename__ = 'user_configurations'
@@ -64,7 +61,7 @@ class UserConfigurationORM(Base):
     telegram_chat_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     notification_preferences: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     enable_telegram_notifications: Mapped[bool] = mapped_column(Boolean, default=False)
-    default_paper_trading_capital: Mapped[float] = mapped_column(Float, default=10000.0)
+    default_paper_trading_capital: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=10000.0)
     paper_trading_active: Mapped[bool] = mapped_column(Boolean, default=False)
     paper_trading_assets: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     watchlists: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -89,7 +86,7 @@ class UserConfigurationORM(Base):
 class TradeORM(Base):
     __tablename__ = 'trades'
 
-    id: Mapped[PythonUUID] = mapped_column(GUID(), primary_key=True, default=PythonUUID)
+    id: Mapped[PythonUUID] = mapped_column(GUID(), primary_key=True, default=uuid4)
     user_id: Mapped[PythonUUID] = mapped_column(GUID(), nullable=False)
     data: Mapped[str] = mapped_column(Text, nullable=False)
     position_status: Mapped[str] = mapped_column(String, nullable=False)
@@ -105,7 +102,7 @@ class TradeORM(Base):
 class PortfolioSnapshotORM(Base):
     __tablename__ = 'portfolio_snapshots'
 
-    id: Mapped[PythonUUID] = mapped_column(GUID(), primary_key=True, default=PythonUUID)
+    id: Mapped[PythonUUID] = mapped_column(GUID(), primary_key=True, default=uuid4)
     user_id: Mapped[PythonUUID] = mapped_column(GUID(), nullable=False)
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=func.now())  # pylint: disable=not-callable
     data: Mapped[str] = mapped_column(Text, nullable=False)
@@ -116,7 +113,7 @@ class PortfolioSnapshotORM(Base):
 class OpportunityORM(Base):
     __tablename__ = 'opportunities'
 
-    id: Mapped[PythonUUID] = mapped_column(GUID(), primary_key=True, default=PythonUUID)
+    id: Mapped[PythonUUID] = mapped_column(GUID(), primary_key=True, default=uuid4)
     user_id: Mapped[PythonUUID] = mapped_column(GUID(), nullable=False)
     symbol: Mapped[str] = mapped_column(String, nullable=False)
     detected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -147,7 +144,7 @@ class OpportunityORM(Base):
 class StrategyConfigORM(Base):
     __tablename__ = 'strategy_configurations'
 
-    id: Mapped[PythonUUID] = mapped_column(GUID(), primary_key=True, default=PythonUUID)
+    id: Mapped[PythonUUID] = mapped_column(GUID(), primary_key=True, default=uuid4)
     user_id: Mapped[PythonUUID] = mapped_column(GUID(), nullable=False)
     data: Mapped[str] = mapped_column(Text, nullable=False)
     config_name: Mapped[str] = mapped_column(String, nullable=False)

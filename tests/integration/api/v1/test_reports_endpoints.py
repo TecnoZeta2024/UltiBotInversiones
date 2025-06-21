@@ -59,11 +59,12 @@ async def setup_trades(db_session): # db_session ahora es AsyncSession, no async
     # No es necesario un rollback explícito aquí, ya que la fixture db_session ya lo maneja.
 
 @pytest.mark.usefixtures("setup_trades")
+@pytest.mark.asyncio
 class TestPaperTradingHistoryEndpoint:
     """Pruebas para el endpoint GET /trades/history/paper."""
 
-    def test_get_paper_trading_history_success(self, client: TestClient):
-        response = client.get(f"/api/v1/trades/history/paper?user_id={FIXED_USER_ID}")
+    async def test_get_paper_trading_history_success(self, client: TestClient):
+        response = await client.get(f"/api/v1/trades/history/paper?user_id={FIXED_USER_ID}")
         if response.status_code != 200:
             print(f"Error Response: {response.status_code} - {response.text}")
         assert response.status_code == 200
@@ -72,20 +73,21 @@ class TestPaperTradingHistoryEndpoint:
         assert data["total_count"] == 3
         assert isinstance(data["trades"], list)
 
-    def test_get_paper_trading_history_with_symbol_filter(self, client: TestClient):
+    async def test_get_paper_trading_history_with_symbol_filter(self, client: TestClient):
         params = {"symbol": "BTCUSDT", "user_id": str(FIXED_USER_ID)}
-        response = client.get(f"/api/v1/trades/history/paper?{urlencode(params)}")
+        response = await client.get(f"/api/v1/trades/history/paper?{urlencode(params)}")
         assert response.status_code == 200
         data = response.json()
         assert len(data["trades"]) == 1
         assert data["trades"][0]["symbol"] == "BTCUSDT"
 
 @pytest.mark.usefixtures("setup_trades")
+@pytest.mark.asyncio
 class TestPaperTradingPerformanceEndpoint:
     """Pruebas para el endpoint GET /portfolio/paper/performance_summary."""
 
-    def test_get_paper_trading_performance_success(self, client: TestClient):
-        response = client.get(f"/api/v1/portfolio/paper/performance_summary?user_id={FIXED_USER_ID}")
+    async def test_get_paper_trading_performance_success(self, client: TestClient):
+        response = await client.get(f"/api/v1/portfolio/paper/performance_summary?user_id={FIXED_USER_ID}")
         assert response.status_code == 200
         data = response.json()
         expected_fields = ["total_trades", "winning_trades", "losing_trades", "win_rate", "total_pnl"]
@@ -96,10 +98,10 @@ class TestPaperTradingPerformanceEndpoint:
         assert data["losing_trades"] == 1
         assert data["total_pnl"] == pytest.approx(100.0)
 
-    def test_get_paper_trading_performance_no_trades(self, client: TestClient):
+    async def test_get_paper_trading_performance_no_trades(self, client: TestClient):
         start_date = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
         params = {"start_date": start_date, "user_id": str(FIXED_USER_ID)}
-        response = client.get(f"/api/v1/portfolio/paper/performance_summary?{urlencode(params)}")
+        response = await client.get(f"/api/v1/portfolio/paper/performance_summary?{urlencode(params)}")
         assert response.status_code == 200
         data = response.json()
         assert data["total_trades"] == 0

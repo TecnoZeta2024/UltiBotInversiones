@@ -6,6 +6,7 @@ Tests for the complete workflow: Strategy -> AI_Orchestrator -> Trading Decision
 import pytest
 import uuid
 from datetime import datetime, timezone, timedelta # Importar timedelta
+from decimal import Decimal
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
 
 from ultibot_backend.services.trading_engine_service import (
@@ -33,6 +34,7 @@ from ultibot_backend.core.domain_models.trading_strategy_models import (
 from ultibot_backend.core.domain_models.user_configuration_models import (
     AIStrategyConfiguration,
     ConfidenceThresholds,
+    UserConfiguration,
 )
 import logging # Importar logging
 from ultibot_backend.core.domain_models.opportunity_models import (
@@ -47,6 +49,7 @@ from ultibot_backend.core.domain_models.opportunity_models import (
     RecommendedTradeParams, # Importar RecommendedTradeParams
     DataVerification, # Importar DataVerification
 )
+from shared.data_types import PortfolioSnapshot
 
 logger = logging.getLogger(__name__) # Inicializar logger
 
@@ -95,9 +98,9 @@ def sample_opportunity():
         source_data={"indicator": "RSI", "value": 65},
         initial_signal=InitialSignal(
             direction_sought=Direction.BUY,
-            entry_price_target=30000.0,
-            stop_loss_target=29500.0,
-            take_profit_target=[30500.0, 31000.0],
+            entry_price_target=Decimal("30000.0"),
+            stop_loss_target=Decimal("29500.0"),
+            take_profit_target=[Decimal("30500.0"), Decimal("31000.0")],
             timeframe="5m",
             confidence_source=0.75,
             reasoning_source_text="Strong bullish momentum detected",
@@ -139,8 +142,9 @@ def scalping_strategy_with_ai():
             leverage=10.0,
         ),
         ai_analysis_profile_id="ai-profile-scalping-1",
+        allowed_symbols=["BTC/USDT"],
+        excluded_symbols=[],
         applicability_rules=ApplicabilityRules(
-            explicit_pairs=["BTC/USDT"],
             include_all_spot=False,
             dynamic_filter=DynamicFilter(
                 min_daily_volatility_percentage=0.001,
@@ -211,8 +215,9 @@ def scalping_strategy_without_ai():
             leverage=5.0,
         ),
         ai_analysis_profile_id=None,
+        allowed_symbols=["ETH/USDT"],
+        excluded_symbols=[],
         applicability_rules=ApplicabilityRules(
-            explicit_pairs=["ETH/USDT"],
             include_all_spot=True,
             dynamic_filter=DynamicFilter(
                 min_daily_volatility_percentage=0.0005,
@@ -315,10 +320,10 @@ class TestStrategyAITradingEngineIntegration:
             reasoning_ai="Strong bullish indicators with favorable risk/reward ratio",
             recommended_trade_strategy_type="SCALPING",
             recommended_trade_params=RecommendedTradeParams(
-                entry_price=30000.0,
-                stop_loss_price=29500.0,
-                take_profit_levels=[30500.0],
-                trade_size_percentage=0.05
+                entry_price=Decimal("30000.0"),
+                stop_loss_price=Decimal("29500.0"),
+                take_profit_levels=[Decimal("30500.0")],
+                trade_size_percentage=Decimal("0.05")
             ).model_dump(),
             data_verification=DataVerification(
                 mobula_check_status="verified",
@@ -607,10 +612,10 @@ class TestStrategyAITradingEngineIntegration:
             reasoning_ai="Moderate confidence trade opportunity",
             recommended_trade_strategy_type="SCALPING",
             recommended_trade_params=RecommendedTradeParams(
-                entry_price=30000.0,
-                stop_loss_price=29500.0,
-                take_profit_levels=[30500.0],
-                trade_size_percentage=0.01
+                entry_price=Decimal("30000.0"),
+                stop_loss_price=Decimal("29500.0"),
+                take_profit_levels=[Decimal("30500.0")],
+                trade_size_percentage=Decimal("0.01")
             ).model_dump(),
             data_verification=DataVerification(
                 mobula_check_status="verified",
@@ -712,8 +717,9 @@ class TestStrategyAITradingEngineIntegration:
                 exit_timeframes=[Timeframe.ONE_HOUR],
             ),
             ai_analysis_profile_id=None,
+            allowed_symbols=["ETH/USDT"],
+            excluded_symbols=[],
             applicability_rules=ApplicabilityRules(
-                explicit_pairs=["ETH/USDT"],
                 include_all_spot=False,
                 dynamic_filter=DynamicFilter(
                     min_daily_volatility_percentage=0.002,
@@ -805,8 +811,12 @@ class TestTradeCreationFromDecision:
         trading_engine_fixture: TradingEngine,
         sample_opportunity: Opportunity,
         scalping_strategy_with_ai: TradingStrategyConfig,
+        mock_user_config: UserConfiguration,
+        mock_portfolio_snapshot: PortfolioSnapshot,
     ):
         """Test creating a trade from an AI-influenced decision."""
+        from decimal import Decimal
+        
         # Create an AI-influenced decision
         decision = TradingDecision(
             decision="execute_trade",
@@ -818,8 +828,8 @@ class TestTradeCreationFromDecision:
             ai_analysis_profile_id="ai-profile-scalping-1",
             recommended_trade_params={
                 "entry_price": 30000.0,
-                "stop_loss": 29500.0,
-                "take_profit": [30500.0],
+                "stop_loss_target": 29500.0,
+                "take_profit_target": [30500.0],
             },
         )
 
@@ -833,10 +843,10 @@ class TestTradeCreationFromDecision:
             reasoning_ai="Strong bullish indicators with favorable risk/reward ratio",
             recommended_trade_strategy_type="SCALPING",
             recommended_trade_params=RecommendedTradeParams(
-                entry_price=30000.0,
-                stop_loss_price=29500.0,
-                take_profit_levels=[30500.0],
-                trade_size_percentage=0.05
+                entry_price=Decimal("30000.0"),
+                stop_loss_price=Decimal("29500.0"),
+                take_profit_levels=[Decimal("30500.0")],
+                trade_size_percentage=Decimal("0.05")
             ),
             data_verification=DataVerification(
                 mobula_check_status="verified",
@@ -847,11 +857,15 @@ class TestTradeCreationFromDecision:
             ai_warnings=[],
         )
 
-        # Create trade from decision
+        # Create trade from decision with all required parameters
+        current_price = Decimal("30000.0")
         trade = await trading_engine_fixture.create_trade_from_decision(
             decision,
             sample_opportunity,
             scalping_strategy_with_ai,
+            mock_user_config,
+            current_price,
+            mock_portfolio_snapshot,
         )
 
         # Verify trade creation based on the actual Trade model
@@ -867,8 +881,12 @@ class TestTradeCreationFromDecision:
         trading_engine_fixture: TradingEngine,
         sample_opportunity: Opportunity,
         scalping_strategy_without_ai: TradingStrategyConfig,
+        mock_user_config: UserConfiguration,
+        mock_portfolio_snapshot: PortfolioSnapshot,
     ):
         """Test creating a trade from an autonomous decision."""
+        from decimal import Decimal
+        
         # Create an autonomous decision
         decision = TradingDecision(
             decision="execute_trade",
@@ -879,11 +897,15 @@ class TestTradeCreationFromDecision:
             ai_analysis_used=False,
         )
 
-        # Create trade from decision
+        # Create trade from decision with all required parameters
+        current_price = Decimal("30000.0")
         trade = await trading_engine_fixture.create_trade_from_decision(
             decision,
             sample_opportunity,
             scalping_strategy_without_ai,
+            mock_user_config,
+            current_price,
+            mock_portfolio_snapshot,
         )
 
         # Verify trade creation based on the actual Trade model
@@ -898,8 +920,12 @@ class TestTradeCreationFromDecision:
         trading_engine_fixture: TradingEngine,
         sample_opportunity: Opportunity,
         scalping_strategy_with_ai: TradingStrategyConfig,
+        mock_user_config: UserConfiguration,
+        mock_portfolio_snapshot: PortfolioSnapshot,
     ):
         """Test that no trade is created for reject decisions."""
+        from decimal import Decimal
+        
         # Create a reject decision
         decision = TradingDecision(
             decision="reject_opportunity",
@@ -910,11 +936,15 @@ class TestTradeCreationFromDecision:
             ai_analysis_used=True,
         )
 
-        # Attempt to create trade from decision
+        # Attempt to create trade from decision with all required parameters
+        current_price = Decimal("30000.0")
         trade = await trading_engine_fixture.create_trade_from_decision(
             decision,
             sample_opportunity,
             scalping_strategy_with_ai,
+            mock_user_config,
+            current_price,
+            mock_portfolio_snapshot,
         )
 
         # Verify no trade was created

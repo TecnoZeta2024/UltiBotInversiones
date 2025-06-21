@@ -2,6 +2,7 @@ import logging
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime, timedelta
 from uuid import UUID
+from decimal import Decimal # Importar Decimal
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 
 from shared.data_types import Trade, PerformanceMetrics
@@ -111,38 +112,40 @@ class TradingReportService:
                     total_trades=0,
                     winning_trades=0,
                     losing_trades=0,
-                    win_rate=0.0,
-                    total_pnl=0.0,
-                    avg_pnl_per_trade=0.0,
-                    best_trade_pnl=0.0,
-                    worst_trade_pnl=0.0,
+                    win_rate=Decimal("0.0"), # CAMBIO: float a Decimal
+                    total_pnl=Decimal("0.0"), # CAMBIO: float a Decimal
+                    avg_pnl_per_trade=Decimal("0.0"), # CAMBIO: float a Decimal
+                    best_trade_pnl=Decimal("0.0"), # CAMBIO: float a Decimal
+                    worst_trade_pnl=Decimal("0.0"), # CAMBIO: float a Decimal
                     best_trade_symbol=None,
                     worst_trade_symbol=None,
                     period_start=start_date,
                     period_end=end_date,
-                    total_volume_traded=0.0
+                    total_volume_traded=Decimal("0.0") # CAMBIO: float a Decimal
                 )
                 
             # Calcular métricas
             total_trades = len(trades)
-            winning_trades = sum(1 for trade in trades if trade.pnl_usd is not None and trade.pnl_usd > 0)
-            losing_trades = sum(1 for trade in trades if trade.pnl_usd is not None and trade.pnl_usd < 0)
+            winning_trades = sum(1 for trade in trades if trade.pnl_usd is not None and trade.pnl_usd > Decimal("0.0")) # CAMBIO: float a Decimal
+            losing_trades = sum(1 for trade in trades if trade.pnl_usd is not None and trade.pnl_usd < Decimal("0.0")) # CAMBIO: float a Decimal
             
             # Win rate (excluye trades con PnL = 0)
-            non_zero_trades = sum(1 for trade in trades if trade.pnl_usd is not None and trade.pnl_usd != 0)
-            win_rate = (winning_trades / non_zero_trades) * 100 if non_zero_trades > 0 else 0.0
+            non_zero_trades = sum(1 for trade in trades if trade.pnl_usd is not None and trade.pnl_usd != Decimal("0.0")) # CAMBIO: float a Decimal
+            win_rate = (Decimal(winning_trades) / Decimal(non_zero_trades)) * Decimal("100.0") if non_zero_trades > 0 else Decimal("0.0") # CAMBIO: float a Decimal
             
             # PnL total
-            total_pnl = sum(trade.pnl_usd for trade in trades if trade.pnl_usd is not None)
+            total_pnl = Decimal("0.0")
+            if trades:
+                total_pnl = sum(trade.pnl_usd for trade in trades if trade.pnl_usd is not None)
             
             # PnL promedio por operación
-            avg_pnl_per_trade = total_pnl / total_trades if total_trades > 0 else 0.0
+            avg_pnl_per_trade = total_pnl / Decimal(total_trades) if total_trades > 0 else Decimal("0.0")
             
             # Mejor y peor trade
             trades_with_pnl = [(trade.pnl_usd, trade.symbol) for trade in trades if trade.pnl_usd is not None]
             
-            best_trade_pnl = 0.0
-            worst_trade_pnl = 0.0
+            best_trade_pnl = Decimal("0.0")
+            worst_trade_pnl = Decimal("0.0")
             best_trade_symbol = None
             worst_trade_symbol = None
             
@@ -156,11 +159,13 @@ class TradingReportService:
                 worst_trade_symbol = worst_trade[1]
             
             # Calcular volumen total operado (suma de todas las operaciones)
-            total_volume_traded = sum(
-                trade.entryOrder.executedQuantity * trade.entryOrder.executedPrice 
-                for trade in trades 
-                if trade.entryOrder and trade.entryOrder.executedQuantity and trade.entryOrder.executedPrice
-            )
+            total_volume_traded = Decimal("0.0")
+            if trades:
+                total_volume_traded = sum(
+                    trade.entryOrder.executedQuantity * trade.entryOrder.executedPrice 
+                    for trade in trades 
+                    if trade.entryOrder and trade.entryOrder.executedQuantity and trade.entryOrder.executedPrice
+                )
             
             # Determinar fechas de inicio y fin del periodo si no se proporcionaron
             if not start_date and trades:
@@ -174,7 +179,7 @@ class TradingReportService:
                 winning_trades=winning_trades,
                 losing_trades=losing_trades,
                 win_rate=win_rate,
-                total_pnl=total_pnl,
+                total_pnl=Decimal(total_pnl), # Asegurar que sea Decimal
                 avg_pnl_per_trade=avg_pnl_per_trade,
                 best_trade_pnl=best_trade_pnl,
                 worst_trade_pnl=worst_trade_pnl,
@@ -182,7 +187,7 @@ class TradingReportService:
                 worst_trade_symbol=worst_trade_symbol,
                 period_start=start_date,
                 period_end=end_date,
-                total_volume_traded=total_volume_traded
+                total_volume_traded=Decimal(total_volume_traded) # Asegurar que sea Decimal
             )
             
         except Exception as e:

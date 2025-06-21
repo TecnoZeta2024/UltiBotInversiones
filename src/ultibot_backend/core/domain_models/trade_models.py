@@ -81,7 +81,7 @@ class OrderCategory(str, Enum):
 class Commission(BaseModel):
     """Commission information for an order."""
     
-    amount: float = Field(..., description="Commission amount")
+    amount: Decimal = Field(..., description="Commission amount") # CAMBIO: float a Decimal
     asset: str = Field(..., description="Commission asset")
     timestamp: Optional[datetime] = Field(None, description="Commission timestamp")
 
@@ -115,13 +115,13 @@ class RiskRewardAdjustment(BaseModel):
     """Risk/reward adjustment record."""
     
     timestamp: datetime = Field(..., description="Adjustment timestamp")
-    new_stop_loss_price: Optional[float] = Field(None, description="New stop loss price")
-    new_take_profit_price: Optional[float] = Field(None, description="New take profit price")
-    updated_risk_quote_amount: Optional[float] = Field(
+    new_stop_loss_price: Optional[Decimal] = Field(None, description="New stop loss price") # CAMBIO: float a Decimal
+    new_take_profit_price: Optional[Decimal] = Field(None, description="New take profit price") # CAMBIO: float a Decimal
+    updated_risk_quote_amount: Optional[Decimal] = Field( # CAMBIO: float a Decimal
         None, 
         description="Updated risk amount in quote currency"
     )
-    updated_reward_to_risk_ratio: Optional[float] = Field(
+    updated_reward_to_risk_ratio: Optional[Decimal] = Field( # CAMBIO: float a Decimal
         None, 
         description="Updated reward to risk ratio"
     )
@@ -148,7 +148,7 @@ class AIInfluenceDetails(BaseModel):
     """Details about AI influence on a trade."""
     
     ai_analysis_profile_id: str = Field(..., description="AI analysis profile ID used")
-    ai_confidence: float = Field(..., ge=0, le=1, description="AI confidence level")
+    ai_confidence: Decimal = Field(..., ge=0, le=1, description="AI confidence level") # CAMBIO: float a Decimal
     ai_suggested_action: str = Field(..., description="AI suggested action")
     ai_reasoning_summary: str = Field(..., description="Summary of AI reasoning")
     ai_model_used: Optional[str] = Field(None, description="AI model used")
@@ -165,7 +165,7 @@ class AIInfluenceDetails(BaseModel):
         description="Reason for user override"
     )
     
-    ai_prediction_accuracy: Optional[float] = Field(
+    ai_prediction_accuracy: Optional[Decimal] = Field( # CAMBIO: float a Decimal
         None, 
         ge=0, 
         le=1, 
@@ -194,7 +194,7 @@ class Trade(BaseModel):
     
     strategyId: Optional[UUID] = Field(None, description="ID de la estrategia asociada a este trade.")
     opportunityId: Optional[UUID] = Field(None, description="ID de la oportunidad de trading que originó este trade.")
-    aiAnalysisConfidence: Optional[float] = Field(None, description="Confianza de la IA en la oportunidad (si aplica).")
+    aiAnalysisConfidence: Optional[Decimal] = Field(None, description="Confianza de la IA en la oportunidad (si aplica).") # CAMBIO: float a Decimal
     
     pnl_usd: Optional[Decimal] = Field(None, description="Ganancia o pérdida en USD (para posiciones cerradas).")
     pnl_percentage: Optional[Decimal] = Field(None, description="Ganancia o pérdida en porcentaje (para posiciones cerradas).")
@@ -216,5 +216,6 @@ class Trade(BaseModel):
     model_config = ConfigDict(
         use_enum_values=True,
         populate_by_name=True,
-        arbitrary_types_allowed=True
+        arbitrary_types_allowed=True,
+        from_attributes=True
     )

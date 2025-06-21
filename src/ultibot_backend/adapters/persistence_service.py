@@ -5,12 +5,13 @@ from typing import Any, Dict, List, Optional, Tuple, Union, cast
 from typing_extensions import LiteralString
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
+from decimal import Decimal
 import json
 from pydantic import BaseModel
 
 from ..core.ports.persistence_service import IPersistenceService
 from ..core.domain_models.trade_models import Trade, PositionStatus
-from ..core.domain_models.user_configuration_models import UserConfiguration, NotificationPreference, RiskProfile, AIStrategyConfiguration, MCPServerPreference, DashboardLayoutProfile, CloudSyncPreferences, ConfidenceThresholds
+from ..core.domain_models.user_configuration_models import UserConfiguration, NotificationPreference, RiskProfile, Theme, AIStrategyConfiguration, MCPServerPreference, DashboardLayoutProfile, CloudSyncPreferences, ConfidenceThresholds
 from ..core.domain_models.opportunity_models import OpportunityStatus, Opportunity, InitialSignal, AIAnalysis, SourceType
 from ..core.domain_models.trading_strategy_models import TradingStrategyConfig, BaseStrategyType
 from ..core.domain_models.orm_models import TradeORM, UserConfigurationORM, PortfolioSnapshotORM, OpportunityORM, StrategyConfigORM
@@ -228,18 +229,29 @@ class SupabasePersistenceService(IPersistenceService):
                 existing_config.telegram_chat_id = user_config.telegram_chat_id
                 existing_config.notification_preferences = self._pydantic_to_json_string(user_config.notification_preferences)
                 existing_config.enable_telegram_notifications = user_config.enable_telegram_notifications if user_config.enable_telegram_notifications is not None else False
-                existing_config.default_paper_trading_capital = float(user_config.default_paper_trading_capital) if user_config.default_paper_trading_capital is not None else 10000.0
+                existing_config.default_paper_trading_capital = user_config.default_paper_trading_capital if user_config.default_paper_trading_capital is not None else Decimal("10000.0")
                 existing_config.paper_trading_active = user_config.paper_trading_active if user_config.paper_trading_active is not None else False
                 existing_config.paper_trading_assets = self._pydantic_to_json_string(user_config.paper_trading_assets)
                 existing_config.watchlists = self._pydantic_to_json_string(user_config.watchlists)
                 existing_config.favorite_pairs = self._pydantic_to_json_string(user_config.favorite_pairs)
-                existing_config.risk_profile = user_config.risk_profile.value if user_config.risk_profile else None
+                
+                # Robust handling of enums
+                if user_config.risk_profile:
+                    existing_config.risk_profile = user_config.risk_profile.value if isinstance(user_config.risk_profile, RiskProfile) else user_config.risk_profile
+                else:
+                    existing_config.risk_profile = None
+
                 existing_config.risk_profile_settings = self._pydantic_to_json_string(user_config.risk_profile_settings)
                 existing_config.real_trading_settings = self._pydantic_to_json_string(user_config.real_trading_settings)
                 existing_config.ai_strategy_configurations = self._pydantic_to_json_string(user_config.ai_strategy_configurations)
                 existing_config.ai_analysis_confidence_thresholds = self._pydantic_to_json_string(user_config.ai_analysis_confidence_thresholds)
                 existing_config.mcp_server_preferences = self._pydantic_to_json_string(user_config.mcp_server_preferences)
-                existing_config.selected_theme = user_config.selected_theme.value if user_config.selected_theme else None
+
+                if user_config.selected_theme:
+                    existing_config.selected_theme = user_config.selected_theme.value if isinstance(user_config.selected_theme, Theme) else user_config.selected_theme
+                else:
+                    existing_config.selected_theme = None
+
                 existing_config.dashboard_layout_profiles = self._pydantic_to_json_string(user_config.dashboard_layout_profiles)
                 existing_config.active_dashboard_layout_profile_id = user_config.active_dashboard_layout_profile_id
                 existing_config.dashboard_layout_config = self._pydantic_to_json_string(user_config.dashboard_layout_config)
@@ -253,18 +265,22 @@ class SupabasePersistenceService(IPersistenceService):
                     telegram_chat_id=user_config.telegram_chat_id,
                     notification_preferences=self._pydantic_to_json_string(user_config.notification_preferences),
                     enable_telegram_notifications=user_config.enable_telegram_notifications,
-                    default_paper_trading_capital=float(user_config.default_paper_trading_capital) if user_config.default_paper_trading_capital is not None else None,
+                    default_paper_trading_capital=user_config.default_paper_trading_capital,
                     paper_trading_active=user_config.paper_trading_active,
                     paper_trading_assets=self._pydantic_to_json_string(user_config.paper_trading_assets),
                     watchlists=self._pydantic_to_json_string(user_config.watchlists),
                     favorite_pairs=self._pydantic_to_json_string(user_config.favorite_pairs),
-                    risk_profile=user_config.risk_profile.value if user_config.risk_profile else None,
+                    
+                    risk_profile=user_config.risk_profile.value if isinstance(user_config.risk_profile, RiskProfile) else user_config.risk_profile,
+                    
                     risk_profile_settings=self._pydantic_to_json_string(user_config.risk_profile_settings),
                     real_trading_settings=self._pydantic_to_json_string(user_config.real_trading_settings),
                     ai_strategy_configurations=self._pydantic_to_json_string(user_config.ai_strategy_configurations),
                     ai_analysis_confidence_thresholds=self._pydantic_to_json_string(user_config.ai_analysis_confidence_thresholds),
                     mcp_server_preferences=self._pydantic_to_json_string(user_config.mcp_server_preferences),
-                    selected_theme=user_config.selected_theme.value if user_config.selected_theme else None,
+
+                    selected_theme=user_config.selected_theme.value if isinstance(user_config.selected_theme, Theme) else user_config.selected_theme,
+
                     dashboard_layout_profiles=self._pydantic_to_json_string(user_config.dashboard_layout_profiles),
                     active_dashboard_layout_profile_id=user_config.active_dashboard_layout_profile_id,
                     dashboard_layout_config=self._pydantic_to_json_string(user_config.dashboard_layout_config),
@@ -423,7 +439,7 @@ class SupabasePersistenceService(IPersistenceService):
                 query = query.where(TradeORM.closed_at <= end_date)
 
             result = await session.execute(query)
-            trade_orms = result.scalars().all()
+            trade_orms = result.scalars().all() # REVERTIR CAMBIO: Quitar await
             
             trades = []
             for trade_orm in trade_orms:
@@ -481,7 +497,7 @@ class SupabasePersistenceService(IPersistenceService):
             query = query.order_by(TradeORM.created_at.desc()).limit(limit).offset(offset)
 
             result = await session.execute(query)
-            trade_orms = result.scalars().all()
+            trade_orms = result.scalars().all() # REVERTIR CAMBIO: Quitar await
 
             trades = []
             for trade_orm_instance in trade_orms:

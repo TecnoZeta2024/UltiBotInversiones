@@ -204,12 +204,11 @@ def scalping_strategy_btc(user_id):
             max_holding_time_seconds=1800,   # 30 minutes
             leverage=1.0,
         ),
+        allowed_symbols=["BTCUSDT"],
+        excluded_symbols=[],
         applicability_rules=ApplicabilityRules(
-            explicit_pairs=["BTCUSDT"],
             include_all_spot=False,
             dynamic_filter=None,
-            allowed_symbols=["BTCUSDT"],
-            excluded_symbols=[],
         ),
         ai_analysis_profile_id=None,  # No AI for this strategy
         risk_parameters_override=None,
@@ -246,12 +245,11 @@ def day_trading_strategy_multi(user_id):
             entry_timeframes=[Timeframe.ONE_HOUR, Timeframe.FOUR_HOURS],
             exit_timeframes=[Timeframe.FIFTEEN_MINUTES, Timeframe.ONE_HOUR],
         ),
+        allowed_symbols=["BTCUSDT", "ETHUSDT", "ADAUSDT"],
+        excluded_symbols=[],
         applicability_rules=ApplicabilityRules(
-            explicit_pairs=["BTCUSDT", "ETHUSDT", "ADAUSDT"],
             include_all_spot=False,
             dynamic_filter=None,
-            allowed_symbols=["BTCUSDT", "ETHUSDT", "ADAUSDT"],
-            excluded_symbols=[],
         ),
         ai_analysis_profile_id="ai_profile_1",  # Uses AI
         risk_parameters_override=None,
@@ -308,22 +306,22 @@ def user_configuration(user_id, ai_strategy_config):
             per_trade_capital_risk_percentage=0.01,  # 1%
             max_drawdown_percentage=0.15,  # 15%
         ),
-        real_trading_settings=RealTradingSettings(
-            real_trading_mode_active=True,
-            real_trades_executed_count=0,
-            max_concurrent_operations=5,
-            daily_loss_limit_absolute=Decimal("500.0"),
-            daily_profit_target_absolute=Decimal("1000.0"),
-            daily_capital_risked_usd=Decimal("0.0"),
-            last_daily_reset=datetime.now(timezone.utc),
-            asset_specific_stop_loss=None,
-            auto_pause_trading_conditions=None,
-        ),
-        aiStrategyConfigurations=[ai_strategy_config], # Corregido a camelCase
-        aiAnalysisConfidenceThresholds=ConfidenceThresholds( # Corregido a camelCase
-            paper_trading=0.60,
-            real_trading=0.75,
-        ),
+            real_trading_settings=RealTradingSettings(
+                real_trading_mode_active=True,
+                real_trades_executed_count=0,
+                max_concurrent_operations=5,
+                daily_loss_limit_absolute=Decimal("500.0"),
+                daily_profit_target_absolute=Decimal("1000.0"),
+                daily_capital_risked_usd=Decimal("0.0"),
+                last_daily_reset=datetime.now(timezone.utc),
+                asset_specific_stop_loss=None,
+                auto_pause_trading_conditions=None,
+            ),
+            ai_strategy_configurations=[ai_strategy_config],
+            ai_analysis_confidence_thresholds=ConfidenceThresholds(
+                paper_trading=0.60,
+                real_trading=0.75,
+            ),
         mcp_server_preferences=None,
         selected_theme=Theme.DARK,
         dashboard_layout_profiles=None,

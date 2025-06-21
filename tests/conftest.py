@@ -10,7 +10,7 @@ import tempfile
 from pathlib import Path
 from typing import AsyncGenerator, Optional, Any, Dict, List, Tuple
 from unittest.mock import AsyncMock, MagicMock, patch
-from fastapi.testclient import TestClient
+from httpx import AsyncClient
 from uuid import UUID, uuid4
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
@@ -18,10 +18,29 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import text
 from ultibot_backend.core.domain_models.base import Base # Importar Base
 from ultibot_backend.core.domain_models import orm_models # Importar para asegurar que los modelos ORM se registren con Base.metadata
+from ultibot_backend.core.domain_models.user_configuration_models import UserConfiguration # Importar UserConfiguration
 
 # Configurar logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+
+class MockUserConfigPersistence:
+    """
+    Mock en memoria para SupabasePersistenceService, enfocado en UserConfiguration.
+    """
+    def __init__(self):
+        self._user_configs: Dict[str, UserConfiguration] = {}
+
+    async def get_user_configuration(self, user_id: str) -> Optional[UserConfiguration]:
+        return self._user_configs.get(user_id)
+
+    async def upsert_user_configuration(self, config: UserConfiguration):
+        self._user_configs[str(config.user_id)] = config
+        return config
+
+    async def get_trades_with_filters(self, *args, **kwargs):
+        # Este método puede ser necesario para otros mocks o tests
+        return []
 
 # --- Configuración Inicial Obligatoria ---
 
@@ -114,6 +133,16 @@ async def db_session(db_engine: Any) -> AsyncGenerator[AsyncSession, None]:
         await transaction.rollback()
         await connection.close()
 
+@pytest_asyncio.fixture(autouse=True)
+async def clean_db_before_each_test(db_engine: Any):
+    """
+    Truncar la tabla user_configurations antes de cada test de integración
+    para asegurar un estado limpio.
+    """
+    async with db_engine.begin() as conn:
+        await conn.execute(text("DELETE FROM user_configurations;"))
+        await conn.commit()
+
 @pytest_asyncio.fixture
 async def persistence_service_fixture(db_session: AsyncSession) -> SupabasePersistenceService:
     """Fixture que proporciona una instancia del servicio de persistencia."""
@@ -131,9 +160,7 @@ def event_loop():
 @pytest.fixture
 def mock_persistence_service_integration():
     """Mock del servicio de persistencia para integración."""
-    mock = AsyncMock(spec=SupabasePersistenceService)
-    mock.get_trades_with_filters = AsyncMock(return_value=[])
-    return mock
+    return MockUserConfigPersistence()
 
 @pytest.fixture
 def mock_strategy_service_integration():
@@ -151,9 +178,9 @@ def mock_strategy_service_integration():
 async def client(
     mock_persistence_service_integration,
     mock_strategy_service_integration,
-) -> AsyncGenerator[TestClient, None]:
+) -> AsyncGenerator[AsyncClient, None]:
     """
-    Proporciona un TestClient que sobreescribe las dependencias a nivel de aplicación
+    Proporciona un AsyncClient que sobreescribe las dependencias a nivel de aplicación
     para asegurar que los mocks correctos sean inyectados.
     """
     fastapi_app.dependency_overrides[get_persistence_service] = lambda: mock_persistence_service_integration
@@ -166,7 +193,14 @@ async def client(
         )
     fastapi_app.dependency_overrides[get_performance_service] = override_get_performance_service
 
-    with TestClient(fastapi_app) as c:
+    # Sobreescribir get_config_service para asegurar una instancia limpia en cada test
+    def override_get_config_service():
+        # Crear una nueva instancia de ConfigurationService para cada test
+        # Esto evita problemas de caché entre tests
+        return ConfigurationService(persistence_service=mock_persistence_service_integration)
+    fastapi_app.dependency_overrides[get_config_service] = override_get_config_service
+
+    async with AsyncClient(app=fastapi_app, base_url="http://test") as c:
         yield c
 
     fastapi_app.dependency_overrides.clear()
@@ -288,4 +322,73 @@ async def trading_engine_fixture(
         configuration_service=configuration_service_fixture,
         portfolio_service=portfolio_service_fixture,
         ai_orchestrator=ai_orchestrator_fixture
+    )
+
+@pytest.fixture
+def mock_user_config():
+    """Mock user configuration for testing."""
+    from ultibot_backend.core.domain_models.user_configuration_models import (
+        UserConfiguration, RiskProfileSettings, RealTradingSettings, RiskProfile, Theme
+    )
+    from decimal import Decimal
+    
+    return UserConfiguration(
+        id="test-config-id",
+        user_id=str(FIXED_USER_ID),
+        telegram_chat_id="test-chat-id",
+        notification_preferences=[],
+        enable_telegram_notifications=True,
+        default_paper_trading_capital=Decimal("10000.0"),
+        paper_trading_active=True,
+        paper_trading_assets=[],
+        watchlists=[],
+        favorite_pairs=[],
+        risk_profile=RiskProfile.MODERATE,
+        risk_profile_settings=RiskProfileSettings(
+            per_trade_capital_risk_percentage=0.02,
+            daily_capital_risk_percentage=0.1,
+            max_drawdown_percentage=0.15
+        ),
+        real_trading_settings=RealTradingSettings(
+            real_trading_mode_active=False,
+            real_trades_executed_count=0,
+            max_concurrent_operations=3,
+            daily_loss_limit_absolute=None,
+            daily_profit_target_absolute=None,
+            asset_specific_stop_loss=None,
+            auto_pause_trading_conditions=None,
+            daily_capital_risked_usd=Decimal("0.0"),
+            last_daily_reset=None
+        ),
+        ai_strategy_configurations=[],
+        ai_analysis_confidence_thresholds=None,
+        mcp_server_preferences=[],
+        selected_theme=Theme.DARK,
+        dashboard_layout_profiles={},
+        active_dashboard_layout_profile_id=None,
+        dashboard_layout_config={},
+        cloud_sync_preferences=None
+    )
+
+@pytest.fixture 
+def mock_portfolio_snapshot():
+    """Mock portfolio snapshot for testing."""
+    from shared.data_types import PortfolioSnapshot, PortfolioSummary
+    from decimal import Decimal
+    
+    return PortfolioSnapshot(
+        paper_trading=PortfolioSummary(
+            available_balance_usdt=Decimal("9500.0"),
+            total_assets_value_usd=Decimal("500.0"),
+            total_portfolio_value_usd=Decimal("10000.0"),
+            assets=[],
+            error_message=None
+        ),
+        real_trading=PortfolioSummary(
+            available_balance_usdt=Decimal("4800.0"),
+            total_assets_value_usd=Decimal("200.0"),
+            total_portfolio_value_usd=Decimal("5000.0"),
+            assets=[],
+            error_message=None
+        )
     )

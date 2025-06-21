@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Optional, List, Dict, Any
 from uuid import UUID
+from decimal import Decimal # Importar Decimal
 from pydantic import BaseModel, Field
 
 # Es necesario importar todos los tipos anidados que UserConfiguration utiliza.
@@ -31,8 +32,8 @@ class UserConfigurationUpdate(BaseModel):
     telegram_chat_id: Optional[str] = Field(None, description="Telegram chat ID for notifications")
     notification_preferences: Optional[List[NotificationPreference]] = Field(None, description="List of notification preferences")
     enable_telegram_notifications: Optional[bool] = Field(None, description="Master switch for Telegram notifications")
-    default_paper_trading_capital: Optional[float] = Field(None, gt=0, description="Default capital for paper trading")
-    paper_trading_active: Optional[bool] = Field(None, description="Whether paper trading is active")
+    default_paper_trading_capital: Optional[Decimal] = Field(None, gt=Decimal(0), description="Default capital for paper trading", alias="defaultPaperTradingCapital")
+    paper_trading_active: Optional[bool] = Field(None, description="Whether paper trading is active", alias="paperTradingActive")
     
     watchlists: Optional[List[Watchlist]] = Field(None, description="List of trading pair watchlists")
     favorite_pairs: Optional[List[str]] = Field(None, description="List of favorite trading pairs")
@@ -58,8 +59,7 @@ class UserConfigurationUpdate(BaseModel):
     # ya que no deberían ser actualizables a través de este modelo PATCH.
 
     class Config:
-        extra = "forbid"  # Prevenir campos extra no definidos en este modelo
+        extra = "ignore"  # Ignorar campos extra no definidos en este modelo
         validate_assignment = True # Para que las validaciones se ejecuten al asignar valores
-        # Si se usan alias en el modelo UserConfiguration original, se podrían necesitar aquí también.
-        # populate_by_name = True # Si los campos en UserConfiguration usan alias
-        # arbitrary_types_allowed = True # Si se usan tipos complejos no Pydantic
+        populate_by_name = True # Permitir tanto alias como nombres de campo
+        arbitrary_types_allowed = True # Si se usan tipos complejos no Pydantic
