@@ -28,7 +28,7 @@ async def test_get_strategies_performance_endpoint_no_data(client, mock_persiste
     # Configurar el mock de persistencia para que no devuelva trades
     mock_persistence_service_integration.get_trades_with_filters.return_value = []
     
-    response = client.get("/api/v1/performance/strategies")
+    response = await client.get("/api/v1/performance/strategies")
     
     assert response.status_code == 200
     assert response.json() == []
@@ -104,7 +104,7 @@ async def test_get_strategies_performance_endpoint_with_data(client, mock_persis
     )
     mock_strategy_service_integration.get_strategy_config.return_value = strategy_config
 
-    response = client.get("/api/v1/performance/strategies?mode=paper")
+    response = await client.get("/api/v1/performance/strategies?mode=paper")
     
     assert response.status_code == 200
     data = response.json()
@@ -196,7 +196,7 @@ async def test_get_strategies_performance_endpoint_filter_real_mode(client, mock
     )
     mock_strategy_service_integration.get_strategy_config.return_value = strategy_config_real
 
-    response = client.get("/api/v1/performance/strategies?mode=real")
+    response = await client.get("/api/v1/performance/strategies?mode=real")
     
     assert response.status_code == 200
     data = response.json()
@@ -401,7 +401,7 @@ async def test_get_strategies_performance_endpoint_multiple_strategies(client, m
         return None
     mock_strategy_service_integration.get_strategy_config.side_effect = side_effect_get_strategy_config
     
-    response = client.get("/api/v1/performance/strategies") # Sin parámetro 'mode'
+    response = await client.get("/api/v1/performance/strategies") # Sin parámetro 'mode'
     
     assert response.status_code == 200
     data = response.json()
@@ -477,7 +477,7 @@ async def test_get_strategies_performance_endpoint_strategy_not_found(client, mo
     # Simular que get_strategy_config devuelve None para este ID
     mock_strategy_service_integration.get_strategy_config.return_value = None
 
-    response = client.get("/api/v1/performance/strategies?mode=paper")
+    response = await client.get("/api/v1/performance/strategies?mode=paper")
     
     assert response.status_code == 200
     data = response.json()
@@ -501,7 +501,7 @@ async def test_get_strategies_performance_endpoint_invalid_mode_parameter(client
     Test GET /api/v1/performance/strategies with an invalid 'mode' query parameter.
     FastAPI should return a 422 Unprocessable Entity error.
     """
-    response = client.get("/api/v1/performance/strategies?mode=invalid_mode")
+    response = await client.get("/api/v1/performance/strategies?mode=invalid_mode")
     
     assert response.status_code == 422 # Unprocessable Entity
     data = response.json()
@@ -656,7 +656,7 @@ async def test_get_strategies_performance_endpoint_no_mode_filter(client, mock_p
         return None
     mock_strategy_service_integration.get_strategy_config.side_effect = side_effect_get_strategy_config
     
-    response = client.get("/api/v1/performance/strategies") # Sin parámetro 'mode'
+    response = await client.get("/api/v1/performance/strategies") # Sin parámetro 'mode'
     
     assert response.status_code == 200
     data = response.json()
