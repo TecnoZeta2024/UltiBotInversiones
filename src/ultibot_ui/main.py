@@ -128,7 +128,12 @@ def main():
         asyncio.set_event_loop(loop)
 
         # Conectar la limpieza de recursos a la señal de cierre de la aplicación
-        app.aboutToQuit.connect(lambda: asyncio.run(cleanup_resources()))
+        def cleanup_slot():
+            """Slot para ejecutar la limpieza de recursos en el event loop existente."""
+            logger.info("aboutToQuit signal received, scheduling resource cleanup.")
+            loop.create_task(cleanup_resources())
+
+        app.aboutToQuit.connect(cleanup_slot)
 
         # Crear y ejecutar la tarea principal
         async_task = loop.create_task(_main_async(app))

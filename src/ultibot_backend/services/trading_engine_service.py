@@ -189,7 +189,7 @@ class TradingEngine:
             error_msg = f"Límite de riesgo de capital diario excedido. Límite: {daily_risk_limit_usd}, Arriesgado: {current_daily_risked}, Nuevo Trade: {potential_risk_usd}"
             logger.error(error_msg)
             await self._update_opportunity_status(opportunity, OpportunityStatus.ERROR_IN_PROCESSING, "daily_capital_limit_exceeded", error_msg)
-            raise HTTPException(status_code=400, detail=error_msg)
+            raise OrderExecutionError(error_msg)
         # --- Fin de la Lógica de Validación de Capital ---
         
         current_price_raw = await self.market_data_service.get_latest_price(opportunity.symbol)
@@ -261,12 +261,21 @@ class TradingEngine:
                 api_key=api_key,
                 api_secret=api_secret
             )
-            trade.entryOrder = executed_order
+            # Asegurar que executed_order sea un objeto TradeOrderDetails
+            if isinstance(executed_order, TradeOrderDetails):
+                trade.entryOrder = executed_order
+            else:
+                trade.entryOrder = TradeOrderDetails(**executed_order)
             trade.positionStatus = PositionStatus.OPEN.value
             logger.info(f"Successfully executed trade {trade.id} from confirmed opportunity.")
+            
+            # Usar trade.entryOrder para la notificación ya que executed_order podría ser un objeto
+            executed_qty = trade.entryOrder.executedQuantity if trade.entryOrder else "N/A"
+            executed_price = trade.entryOrder.executedPrice if trade.entryOrder else "N/A"
+            
             await self.notification_service.send_real_trade_status_notification(
                 user_config=user_config,
-                message=f"Trade {trade.symbol} ({trade.side}) ejecutado exitosamente. Cantidad: {executed_order.executedQuantity}, Precio: {executed_order.executedPrice}",
+                message=f"Trade {trade.symbol} ({trade.side}) ejecutado exitosamente. Cantidad: {executed_qty}, Precio: {executed_price}",
                 status_level="INFO",
                 symbol=trade.symbol,
                 trade_id=trade.id
@@ -296,7 +305,8 @@ class TradingEngine:
                         api_secret=api_secret,
                     )
                     if oco_order_result:
-                        trade.ocoOrderListId = oco_order_result.ocoOrderListId # Asignar el ID del grupo OCO
+                        # oco_order_result es un diccionario, no un objeto TradeOrderDetails
+                        trade.ocoOrderListId = oco_order_result.get("listClientOrderId") if isinstance(oco_order_result, dict) else str(oco_order_result)
                         logger.info(
                             f"Successfully created OCO order for trade {trade.id}. OCO List ID: {trade.ocoOrderListId}"
                         )
@@ -320,10 +330,11 @@ class TradingEngine:
                     user_config.real_trading_settings.daily_capital_risked_usd = Decimal("0.0")
 
                 trade_value_usd: Decimal
-                if executed_order and isinstance(executed_order.executedQuantity, Decimal) and isinstance(executed_order.executedPrice, Decimal):
-                    trade_value_usd = executed_order.executedQuantity * executed_order.executedPrice
+                # Usar trade.entryOrder que ya es un objeto TradeOrderDetails
+                if trade.entryOrder and isinstance(trade.entryOrder.executedQuantity, Decimal) and isinstance(trade.entryOrder.executedPrice, Decimal):
+                    trade_value_usd = trade.entryOrder.executedQuantity * trade.entryOrder.executedPrice
                 else:
-                    logger.error(f"Invalid executed_order details for trade {trade.id}. Quantity: {getattr(executed_order, 'executedQuantity', 'N/A')}, Price: {getattr(executed_order, 'executedPrice', 'N/A')}")
+                    logger.error(f"Invalid executed_order details for trade {trade.id}. Quantity: {getattr(trade.entryOrder, 'executedQuantity', 'N/A')}, Price: {getattr(trade.entryOrder, 'executedPrice', 'N/A')}")
                     trade_value_usd = Decimal("0.0") # Default to 0 to avoid further errors
 
                 current_risked = user_config.real_trading_settings.daily_capital_risked_usd or Decimal("0.0")
@@ -416,7 +427,7 @@ class TradingEngine:
                 strategyId=UUID(str(strategy.id)),
                 opportunityId=UUID(str(opportunity.id)),
                 aiAnalysisConfidence=(
-                    decision.confidence if decision.ai_analysis_used else None
+                    Decimal(str(decision.confidence)) if decision.ai_analysis_used else None
                 ),
                 pnl_usd=None,
                 pnl_percentage=None,

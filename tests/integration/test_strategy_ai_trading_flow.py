@@ -369,7 +369,7 @@ class TestStrategyAITradingEngineIntegration:
             assert decision is not None # Expect a trade object
             assert decision.symbol == sample_opportunity.symbol
             assert decision.side == ai_analysis_result.suggested_action.value.lower()
-            assert decision.aiAnalysisConfidence == ai_analysis_result.calculated_confidence
+            assert decision.aiAnalysisConfidence == Decimal(str(ai_analysis_result.calculated_confidence))
             assert decision.positionStatus == "open" # Assuming immediate execution in test
             # Further assertions on trade details can be added here
         else:
@@ -873,7 +873,7 @@ class TestTradeCreationFromDecision:
         assert trade.symbol == sample_opportunity.symbol
         assert trade.strategyId == uuid.UUID(scalping_strategy_with_ai.id)
         assert trade.opportunityId == uuid.UUID(sample_opportunity.id)
-        assert trade.aiAnalysisConfidence == 0.85
+        assert trade.aiAnalysisConfidence == Decimal("0.85")
 
     @pytest.mark.asyncio
     async def test_create_trade_from_autonomous_decision(

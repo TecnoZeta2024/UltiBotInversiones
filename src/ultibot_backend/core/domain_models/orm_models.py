@@ -12,6 +12,7 @@ from typing import Optional
 import json
 
 from .base import Base
+from . import api_credential_models # Importar para asegurar que APICredentialORM se registre
 
 # Custom type for UUID to handle both SQLite and PostgreSQL
 class GUID(TypeDecorator):
@@ -86,9 +87,10 @@ class UserConfigurationORM(Base):
 class TradeORM(Base):
     __tablename__ = 'trades'
 
-    id: Mapped[PythonUUID] = mapped_column(GUID(), primary_key=True, default=uuid4)
+    id: Mapped[str] = mapped_column(String, primary_key=True)
     user_id: Mapped[PythonUUID] = mapped_column(GUID(), nullable=False)
     data: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False, default='PENDING')
     position_status: Mapped[str] = mapped_column(String, nullable=False)
     mode: Mapped[str] = mapped_column(String, nullable=False)
     symbol: Mapped[str] = mapped_column(String, nullable=False)

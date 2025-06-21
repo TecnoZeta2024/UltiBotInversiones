@@ -1,3 +1,4 @@
+import logging # Importar logging
 from sqlalchemy.ext.asyncio import AsyncSession, AsyncEngine, async_sessionmaker
 from sqlalchemy.sql import text, select, update, delete
 from sqlalchemy.dialects import postgresql
@@ -8,6 +9,8 @@ from uuid import UUID, uuid4
 from decimal import Decimal
 import json
 from pydantic import BaseModel
+
+logger = logging.getLogger(__name__) # Configurar logger
 
 from ..core.ports.persistence_service import IPersistenceService
 from ..core.domain_models.trade_models import Trade, PositionStatus
@@ -93,7 +96,8 @@ class SupabasePersistenceService(IPersistenceService):
     async def execute(self, query: LiteralString, params: Optional[Dict[str, Any]] = None) -> None:
         async with self._get_session() as session:
             await session.execute(text(query), params)
-            await session.commit()
+            if self._async_session_factory: # Solo hacer commit si la sesión es gestionada por el servicio
+                await session.commit()
 
     async def upsert(self, table_name: str, data: Dict[str, Any], on_conflict: List[str]) -> None:
         columns = ", ".join(data.keys())
@@ -110,7 +114,8 @@ class SupabasePersistenceService(IPersistenceService):
         """
         async with self._get_session() as session:
             await session.execute(text(query), data)
-            await session.commit()
+            if self._async_session_factory: # Solo hacer commit si la sesión es gestionada por el servicio
+                await session.commit()
 
     async def get_all(self, table_name: str, condition: Optional[str] = None, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         query = f"SELECT * FROM {table_name}"
@@ -208,8 +213,12 @@ class SupabasePersistenceService(IPersistenceService):
                 closed_at=trade.closed_at
             )
             session.add(trade_orm)
-            await session.commit()
-            await session.refresh(trade_orm)
+            if self._async_session_factory: # Solo hacer commit si la sesión es gestionada por el servicio
+                await session.commit()
+                await session.refresh(trade_orm) # Refresh solo si se hizo commit
+            else:
+                # Si no hay commit, la instancia ya está en la sesión y no necesita refresh inmediato
+                pass 
 
     async def execute_raw_sql(self, query: LiteralString, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         async with self._get_session() as session:
@@ -290,7 +299,8 @@ class SupabasePersistenceService(IPersistenceService):
                 )
                 session.add(new_config_orm)
             
-            await session.commit()
+            if self._async_session_factory: # Solo hacer commit si la sesión es gestionada por el servicio
+                await session.commit()
 
     async def upsert_strategy_config(self, strategy_config: TradingStrategyConfig) -> None:
         async with self._get_session() as session:
@@ -306,7 +316,8 @@ class SupabasePersistenceService(IPersistenceService):
                 updated_at=strategy_config.updated_at
             )
             await session.merge(strategy_orm)
-            await session.commit()
+            if self._async_session_factory: # Solo hacer commit si la sesión es gestionada por el servicio
+                await session.commit()
 
     async def get_strategy_config_by_id(self, strategy_id: UUID, user_id: UUID) -> Optional[TradingStrategyConfig]:
         async with self._get_session() as session:
@@ -363,7 +374,8 @@ class SupabasePersistenceService(IPersistenceService):
                 StrategyConfigORM.user_id == user_id
             )
             result = await session.execute(stmt)
-            await session.commit()
+            if self._async_session_factory: # Solo hacer commit si la sesión es gestionada por el servicio
+                await session.commit()
             return result.rowcount > 0
 
     async def update_opportunity_status(self, opportunity_id: UUID, new_status: OpportunityStatus, status_reason: str) -> None:
@@ -379,7 +391,8 @@ class SupabasePersistenceService(IPersistenceService):
                 )
             )
             await session.execute(stmt)
-            await session.commit()
+            if self._async_session_factory: # Solo hacer commit si la sesión es gestionada por el servicio
+                await session.commit()
 
     async def get_opportunity_by_id(self, opportunity_id: UUID) -> Optional[Opportunity]:
         async with self._get_session() as session:
@@ -424,6 +437,7 @@ class SupabasePersistenceService(IPersistenceService):
                                 start_date: Optional[datetime] = None, end_date: Optional[datetime] = None,
                                 mode: Optional[str] = None) -> List[Trade]:
         async with self._get_session() as session:
+            logger.debug(f"get_closed_trades - user_id: {user_id}, mode: {mode}, symbol: {symbol}, start_date: {start_date}, end_date: {end_date}")
             query = select(TradeORM).where(
                 TradeORM.user_id == user_id,
                 TradeORM.position_status == PositionStatus.CLOSED.value
@@ -439,7 +453,7 @@ class SupabasePersistenceService(IPersistenceService):
                 query = query.where(TradeORM.closed_at <= end_date)
 
             result = await session.execute(query)
-            trade_orms = result.scalars().all() # REVERTIR CAMBIO: Quitar await
+            trade_orms = result.scalars().all()
             
             trades = []
             for trade_orm in trade_orms:
@@ -462,7 +476,8 @@ class SupabasePersistenceService(IPersistenceService):
                     
                     trades.append(trade_pydantic)
                 except Exception as e:
-                    print(f"Error al validar Trade Pydantic desde ORM: {e}")
+                    logger.error(f"Error al validar Trade Pydantic desde ORM: {e}")
+            logger.debug(f"get_closed_trades - Trades recuperados: {len(trades)}")
             return trades
 
     async def get_trades_with_filters(
@@ -480,6 +495,7 @@ class SupabasePersistenceService(IPersistenceService):
         Recupera trades con filtros dinámicos.
         """
         async with self._get_session() as session:
+            logger.debug(f"get_trades_with_filters - user_id: {user_id}, trading_mode: {trading_mode}, status: {status}, symbol: {symbol}, start_date: {start_date}, end_date: {end_date}, limit: {limit}, offset: {offset}")
             query = select(TradeORM).where(
                 TradeORM.user_id == UUID(user_id),
                 TradeORM.mode == trading_mode
@@ -497,7 +513,7 @@ class SupabasePersistenceService(IPersistenceService):
             query = query.order_by(TradeORM.created_at.desc()).limit(limit).offset(offset)
 
             result = await session.execute(query)
-            trade_orms = result.scalars().all() # REVERTIR CAMBIO: Quitar await
+            trade_orms = result.scalars().all()
 
             trades = []
             for trade_orm_instance in trade_orms:
@@ -515,5 +531,6 @@ class SupabasePersistenceService(IPersistenceService):
                     })
                     trades.append(Trade.model_validate(trade_data))
                 except Exception as e:
-                    print(f"Error procesando trade desde la BD: {e}")
+                    logger.error(f"Error procesando trade desde la BD: {e}")
+            logger.debug(f"get_trades_with_filters - Trades recuperados: {len(trades)}")
             return trades

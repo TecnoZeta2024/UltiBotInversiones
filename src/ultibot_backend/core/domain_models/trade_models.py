@@ -180,7 +180,7 @@ class Trade(BaseModel):
     """
     Representa una operación de trading completa (entrada y salida).
     """
-    id: UUID = Field(default_factory=uuid4)
+    id: Union[UUID, str] = Field(default_factory=uuid4)
     user_id: UUID
     
     mode: str = Field(..., description="Modo de trading: 'paper' o 'real'.")

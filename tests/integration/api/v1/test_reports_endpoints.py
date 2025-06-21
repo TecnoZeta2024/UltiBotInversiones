@@ -5,10 +5,12 @@ Pruebas de integración para los endpoints de reportes de trading.
 import pytest
 import pytest_asyncio
 import asyncpg
+import json # Importar json
 from uuid import UUID
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
-from fastapi.testclient import TestClient
+from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text # Importar text
 
 from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
@@ -17,54 +19,36 @@ from ultibot_backend.adapters.persistence_service import SupabasePersistenceServ
 FIXED_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
 
 @pytest_asyncio.fixture
-async def setup_trades(db_session): # db_session ahora es AsyncSession, no asyncpg.Connection
+async def setup_trades(db_session: AsyncSession, trade_factory):
     """
     Inserta un conjunto de trades de prueba en la base de datos transaccional
-    antes de cada test que use esta fixture. La transacción se revierte
-    automáticamente por la fixture db_session.
+    antes de cada test que use esta fixture, utilizando la trade_factory.
+    La transacción se revierte automáticamente por la fixture db_session.
     """
-    sample_trades = [
-        {
-            "id": "test-trade-1", "user_id": str(FIXED_USER_ID), "symbol": "BTCUSDT", "mode": "paper",
-            "position_status": "closed", "data": '{"pnl_usd": 150.0}',
-            "created_at": datetime.now(timezone.utc).isoformat(), "updated_at": datetime.now(timezone.utc).isoformat(),
-            "closed_at": datetime.now(timezone.utc).isoformat()
-        },
-        {
-            "id": "test-trade-2", "user_id": str(FIXED_USER_ID), "symbol": "ETHUSDT", "mode": "paper",
-            "position_status": "closed", "data": '{"pnl_usd": -75.0}',
-            "created_at": datetime.now(timezone.utc).isoformat(), "updated_at": datetime.now(timezone.utc).isoformat(),
-            "closed_at": datetime.now(timezone.utc).isoformat()
-        },
-        {
-            "id": "test-trade-3", "user_id": str(FIXED_USER_ID), "symbol": "ADAUSDT", "mode": "paper",
-            "position_status": "closed", "data": '{"pnl_usd": 25.0}',
-            "created_at": datetime.now(timezone.utc).isoformat(), "updated_at": datetime.now(timezone.utc).isoformat(),
-            "closed_at": datetime.now(timezone.utc).isoformat()
-        }
+    sample_trades_data = [
+        trade_factory(id="test-trade-1", symbol="BTCUSDT", data_dict={"pnl_usd": 150.0, "side": "buy"}),
+        trade_factory(id="test-trade-2", symbol="ETHUSDT", data_dict={"pnl_usd": -75.0, "side": "sell"}),
+        trade_factory(id="test-trade-3", symbol="ADAUSDT", data_dict={"pnl_usd": 25.0, "side": "buy"})
     ]
 
-    for trade in sample_trades:
-        # SQLAlchemy 2.0+ execute espera un objeto text() y un diccionario de parámetros
+    for trade_data in sample_trades_data:
         await db_session.execute(
             text("""
-            INSERT INTO trades (id, user_id, symbol, mode, position_status, data, created_at, updated_at, closed_at)
-            VALUES (:id, :user_id, :symbol, :mode, :position_status, :data, :created_at, :updated_at, :closed_at)
+            INSERT INTO trades (id, user_id, symbol, mode, status, position_status, data, created_at, updated_at, closed_at)
+            VALUES (:id, :user_id, :symbol, :mode, :status, :position_status, :data, :created_at, :updated_at, :closed_at)
             """),
-            trade # Pasar el diccionario completo como parámetros
+            trade_data
         )
-    # No es necesario un commit explícito aquí, ya que la transacción de db_session
-    # se maneja al final del test. Los datos serán visibles dentro de la misma sesión.
+    await db_session.commit()
     yield
-    # No es necesario un rollback explícito aquí, ya que la fixture db_session ya lo maneja.
 
 @pytest.mark.usefixtures("setup_trades")
 @pytest.mark.asyncio
 class TestPaperTradingHistoryEndpoint:
     """Pruebas para el endpoint GET /trades/history/paper."""
 
-    async def test_get_paper_trading_history_success(self, client: TestClient):
-        response = await client.get(f"/api/v1/trades/history/paper?user_id={FIXED_USER_ID}")
+    async def test_get_paper_trading_history_success(self, client_with_db: AsyncClient):
+        response = await client_with_db.get(f"/api/v1/trades/history/paper?user_id={FIXED_USER_ID}")
         if response.status_code != 200:
             print(f"Error Response: {response.status_code} - {response.text}")
         assert response.status_code == 200
@@ -73,9 +57,9 @@ class TestPaperTradingHistoryEndpoint:
         assert data["total_count"] == 3
         assert isinstance(data["trades"], list)
 
-    async def test_get_paper_trading_history_with_symbol_filter(self, client: TestClient):
+    async def test_get_paper_trading_history_with_symbol_filter(self, client_with_db: AsyncClient):
         params = {"symbol": "BTCUSDT", "user_id": str(FIXED_USER_ID)}
-        response = await client.get(f"/api/v1/trades/history/paper?{urlencode(params)}")
+        response = await client_with_db.get(f"/api/v1/trades/history/paper?{urlencode(params)}")
         assert response.status_code == 200
         data = response.json()
         assert len(data["trades"]) == 1
@@ -86,8 +70,8 @@ class TestPaperTradingHistoryEndpoint:
 class TestPaperTradingPerformanceEndpoint:
     """Pruebas para el endpoint GET /portfolio/paper/performance_summary."""
 
-    async def test_get_paper_trading_performance_success(self, client: TestClient):
-        response = await client.get(f"/api/v1/portfolio/paper/performance_summary?user_id={FIXED_USER_ID}")
+    async def test_get_paper_trading_performance_success(self, client_with_db: AsyncClient):
+        response = await client_with_db.get(f"/api/v1/portfolio/paper/performance_summary?user_id={FIXED_USER_ID}")
         assert response.status_code == 200
         data = response.json()
         expected_fields = ["total_trades", "winning_trades", "losing_trades", "win_rate", "total_pnl"]
@@ -96,13 +80,13 @@ class TestPaperTradingPerformanceEndpoint:
         assert data["total_trades"] == 3
         assert data["winning_trades"] == 2
         assert data["losing_trades"] == 1
-        assert data["total_pnl"] == pytest.approx(100.0)
+        assert float(data["total_pnl"]) == pytest.approx(100.0)
 
-    async def test_get_paper_trading_performance_no_trades(self, client: TestClient):
+    async def test_get_paper_trading_performance_no_trades(self, client_with_db: AsyncClient):
         start_date = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
         params = {"start_date": start_date, "user_id": str(FIXED_USER_ID)}
-        response = await client.get(f"/api/v1/portfolio/paper/performance_summary?{urlencode(params)}")
+        response = await client_with_db.get(f"/api/v1/portfolio/paper/performance_summary?{urlencode(params)}")
         assert response.status_code == 200
         data = response.json()
         assert data["total_trades"] == 0
-        assert data["total_pnl"] == 0.0
+        assert float(data["total_pnl"]) == 0.0

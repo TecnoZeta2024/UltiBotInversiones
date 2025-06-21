@@ -236,27 +236,32 @@ async def test_complete_real_trading_flow_with_capital_management():
     )
 
     # Configurar el mock_unified_order_execution_service para simular la creación de órdenes OCO
-    mock_unified_order_execution_service.create_oco_order.return_value = TradeOrderDetails(
-        orderId_internal=uuid4(),
-        orderId_exchange="oco_exchange_id_123",
-        clientOrderId_exchange="oco_client_id_123",
-        orderCategory=OrderCategory.OCO_ORDER,
-        type="oco", # OCO es un tipo de orden compuesto
-        status="new",
-        requestedPrice=current_price * Decimal("1.03"), # Precio del TP
-        requestedQuantity=executed_quantity,
-        executedQuantity=Decimal("0.0"), # No ejecutada aún
-        executedPrice=Decimal("0.0"),
-        cumulativeQuoteQty=Decimal("0.0"),
-        commissions=[],
-        commission=None,
-        commissionAsset=None,
-        timestamp=datetime.now(timezone.utc),
-        submittedAt=datetime.now(timezone.utc),
-        fillTimestamp=None,
-        rawResponse={"oco_list_id": "oco_list_123"},
-        ocoOrderListId="oco_list_123" # El ID del grupo OCO
-    )
+    # Retornar un diccionario con el formato esperado por el TradingEngine
+    mock_unified_order_execution_service.create_oco_order.return_value = {
+        "listClientOrderId": "oco_list_123",
+        "listOrderStatus": "EXECUTING",
+        "orderReports": [
+            {
+                "orderId": "tp_order_id_123",
+                "clientOrderId": "tp_client_id_123",
+                "side": "SELL",
+                "type": "LIMIT_MAKER",
+                "price": str(current_price * Decimal("1.03")),
+                "origQty": str(executed_quantity),
+                "status": "NEW"
+            },
+            {
+                "orderId": "sl_order_id_123", 
+                "clientOrderId": "sl_client_id_123",
+                "side": "SELL",
+                "type": "STOP_LOSS_LIMIT",
+                "price": str(current_price * Decimal("0.985")),
+                "stopPrice": str(current_price * Decimal("0.985")),
+                "origQty": str(executed_quantity),
+                "status": "NEW"
+            }
+        ]
+    }
 
     # 8. Ejecutar el flujo completo
     # La función a llamar es execute_trade_from_confirmed_opportunity
@@ -731,16 +736,40 @@ async def test_capital_management_daily_reset():
 
     # Lista para almacenar copias de la configuración en cada guardado
     saved_configs_copies = []
-    def save_config_side_effect(config_to_save):
+    async def save_config_side_effect(config_to_save):
         saved_configs_copies.append(copy.deepcopy(config_to_save))
-        return asyncio.sleep(0) # Simular operación async
+        # No es necesario un sleep o un return específico para el mock
+        # Si la función original es async, el mock ya es awaitable
+        pass 
 
     mock_config_service.save_user_configuration.side_effect = save_config_side_effect
 
-        # TODO: mock_unified_order_execution_service.create_oco_order.return_value = {
-        #     "listClientOrderId": "oco_reset_test",
-        #     "orderReports": []
-        # }
+    # Configurar el mock de create_oco_order para el test de reset
+    mock_unified_order_execution_service.create_oco_order.return_value = {
+        "listClientOrderId": "oco_reset_test",
+        "listOrderStatus": "EXECUTING",
+        "orderReports": [
+            {
+                "orderId": "tp_reset_order_id",
+                "clientOrderId": "tp_reset_client_id",
+                "side": "SELL",
+                "type": "LIMIT_MAKER",
+                "price": str(Decimal("0.50") * Decimal("1.025")),
+                "origQty": "200.0",
+                "status": "NEW"
+            },
+            {
+                "orderId": "sl_reset_order_id", 
+                "clientOrderId": "sl_reset_client_id",
+                "side": "SELL",
+                "type": "STOP_LOSS_LIMIT",
+                "price": str(Decimal("0.50") * Decimal("0.985")),
+                "stopPrice": str(Decimal("0.50") * Decimal("0.985")),
+                "origQty": "200.0",
+                "status": "NEW"
+            }
+        ]
+    }
 
     # Ejecutar el trade
     # Configurar el mock_strategy_service para que retorne una estrategia válida

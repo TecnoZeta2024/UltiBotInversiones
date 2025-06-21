@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  db_test:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ultibot_test_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5433:5432" # Usar un puerto diferente para evitar conflictos con otras instancias de PostgreSQL
+    volumes:
+      - db_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d ultibot_test_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db_test_data:

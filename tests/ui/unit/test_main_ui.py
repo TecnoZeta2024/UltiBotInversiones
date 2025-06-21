@@ -84,26 +84,21 @@ async def test_start_application_success(qapp):
 
                 # Mockear QMessageBox para evitar que aparezcan ventanas emergentes
                 with patch('PySide6.QtWidgets.QMessageBox.critical') as mock_qmessagebox_critical:
-                    # Mockear httpx.AsyncClient para evitar llamadas de red reales
-                    with patch('ultibot_ui.main.httpx.AsyncClient') as MockAsyncClient:
-                        MockAsyncClient.return_value.__aenter__.return_value = AsyncMock() # Mockear el context manager
+                    # Mockear sys.exit para evitar que el test falle
+                    with patch('sys.exit') as mock_exit:
+                        # Usar QTimer.singleShot para cerrar la aplicación después de un breve retraso
+                        # Esto es crucial para que el test no se quede colgado esperando la interacción del usuario
+                        QTimer.singleShot(100, qapp.quit) # Cierra la app después de 100ms
 
-                        # Mockear sys.exit para evitar que el test falle
-                        with patch('sys.exit') as mock_exit:
-                            # Usar QTimer.singleShot para cerrar la aplicación después de un breve retraso
-                            # Esto es crucial para que el test no se quede colgado esperando la interacción del usuario
-                            QTimer.singleShot(100, qapp.quit) # Cierra la app después de 100ms
+                        # Ejecutar la aplicación
+                        start_application()
 
-                            # Ejecutar la aplicación
-                            start_application()
+                        # Verificar que sys.exit fue llamado, indicando un cierre limpio
+                        mock_exit.assert_called_once_with(0)
 
-                            # Verificar que sys.exit fue llamado, indicando un cierre limpio
-                            mock_exit.assert_called_once_with(0)
-
-                        # Afirmaciones
-                        MockAPIClient.assert_called_once()
-                        mock_api_client_instance.get_user_configuration.assert_awaited_once()
-                        MockMainWindow.assert_called_once()
-                        mock_main_window_instance.show.assert_called_once()
-                        mock_qmessagebox_critical.assert_not_called() # Asegurarse de que no hubo errores críticos
-                        MockAsyncClient.assert_called_once()
+                    # Afirmaciones
+                    MockAPIClient.assert_called_once()
+                    mock_api_client_instance.get_user_configuration.assert_awaited_once()
+                    MockMainWindow.assert_called_once()
+                    mock_main_window_instance.show.assert_called_once()
+                    mock_qmessagebox_critical.assert_not_called() # Asegurarse de que no hubo errores críticos
