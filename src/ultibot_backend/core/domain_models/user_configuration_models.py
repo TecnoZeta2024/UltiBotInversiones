@@ -11,6 +11,7 @@ from decimal import Decimal
 import json
 
 from pydantic import BaseModel, Field, field_validator, ValidationInfo, ConfigDict
+from pydantic.alias_generators import to_camel
 
 
 class NotificationChannel(str, Enum):
@@ -300,29 +301,35 @@ class UserConfiguration(BaseModel):
     # --- Notification Preferences ---
     telegram_chat_id: Optional[str] = Field(
         None, 
+        alias="telegramChatId",
         description="Telegram chat ID for notifications"
     )
     notification_preferences: Optional[List[NotificationPreference]] = Field(
         None, 
+        alias="notificationPreferences",
         description="List of notification preferences"
     )
     enable_telegram_notifications: Optional[bool] = Field(
         True, 
+        alias="enableTelegramNotifications",
         description="Master switch for Telegram notifications"
     )
     
     # --- Trading Preferences ---
     default_paper_trading_capital: Optional[Decimal] = Field(
         None, 
+        alias="defaultPaperTradingCapital",
         gt=Decimal(0), 
         description="Default capital for paper trading"
     )
     paper_trading_active: Optional[bool] = Field(
         False, 
+        alias="paperTradingActive",
         description="Whether paper trading is active"
     )
     paper_trading_assets: Optional[List[PaperTradingAsset]] = Field(
         None,
+        alias="paperTradingAssets",
         description="List of asset holdings for paper trading."
     )
     
@@ -332,65 +339,77 @@ class UserConfiguration(BaseModel):
     )
     favorite_pairs: Optional[List[str]] = Field(
         None, 
+        alias="favoritePairs",
         description="List of favorite trading pairs"
     )
     
     risk_profile: Optional[RiskProfile] = Field(
         RiskProfile.MODERATE, 
+        alias="riskProfile",
         description="General risk profile"
     )
     risk_profile_settings: Optional[RiskProfileSettings] = Field(
         None,
+        alias="riskProfileSettings",
         description="Custom risk profile settings"
     )
     real_trading_settings: Optional[RealTradingSettings] = Field(
         None, 
+        alias="realTradingSettings",
         description="Real trading mode settings"
     )
     
     # --- AI and Analysis Preferences ---
     ai_strategy_configurations: Optional[List[AIStrategyConfiguration]] = Field(
         None, 
+        alias="aiStrategyConfigurations",
         description="List of AI strategy configurations for Gemini integration"
     )
     ai_analysis_confidence_thresholds: Optional[ConfidenceThresholds] = Field(
         None, 
+        alias="aiAnalysisConfidenceThresholds",
         description="Global AI confidence thresholds (fallback)"
     )
     
     mcp_server_preferences: Optional[List[MCPServerPreference]] = Field(
         None, 
+        alias="mcpServerPreferences",
         description="MCP server preferences"
     )
     
     # --- UI Preferences ---
     selected_theme: Optional[Theme] = Field(
         Theme.DARK, 
+        alias="selectedTheme",
         description="Selected UI theme"
     )
     
     dashboard_layout_profiles: Optional[Dict[str, DashboardLayoutProfile]] = Field(
         None, 
+        alias="dashboardLayoutProfiles",
         description="Dashboard layout profiles"
     )
     active_dashboard_layout_profile_id: Optional[str] = Field(
         None, 
+        alias="activeDashboardLayoutProfileId",
         description="Active dashboard layout profile ID"
     )
     dashboard_layout_config: Optional[Dict[str, Any]] = Field(
         None, 
+        alias="dashboardLayoutConfig",
         description="Current dashboard layout configuration"
     )
     
     # --- Persistence and Synchronization ---
     cloud_sync_preferences: Optional[CloudSyncPreferences] = Field(
         None, 
+        alias="cloudSyncPreferences",
         description="Cloud synchronization preferences"
     )
     
     # Timestamps
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
+    created_at: Optional[datetime] = Field(None, alias="createdAt")
+    updated_at: Optional[datetime] = Field(None, alias="updatedAt")
 
     @field_validator('risk_profile_settings', mode='before')
     @classmethod
@@ -404,9 +423,11 @@ class UserConfiguration(BaseModel):
         return v
 
     model_config = ConfigDict(
+        populate_by_name=True,
         use_enum_values=True,
         validate_assignment=True,
-        extra="forbid"
+        extra="forbid",
+        alias_generator=to_camel
     )
     @field_validator(
         'notification_preferences', 'paper_trading_assets', 'watchlists',
@@ -476,3 +497,113 @@ class UserConfiguration(BaseModel):
         
         # Acceder a través del alias si se usa, o directamente si Pydantic lo maneja
         return self.ai_analysis_confidence_thresholds
+
+
+class UserConfigurationUpdate(BaseModel):
+    """
+    Model for updating user configuration.
+    All fields are optional to allow for partial updates (PATCH).
+    """
+    telegram_chat_id: Optional[str] = Field(
+        None, 
+        alias="telegramChatId",
+        description="Telegram chat ID for notifications"
+    )
+    notification_preferences: Optional[List[NotificationPreference]] = Field(
+        None, 
+        alias="notificationPreferences",
+        description="List of notification preferences"
+    )
+    enable_telegram_notifications: Optional[bool] = Field(
+        None, 
+        alias="enableTelegramNotifications",
+        description="Master switch for Telegram notifications"
+    )
+    default_paper_trading_capital: Optional[Decimal] = Field(
+        None, 
+        alias="defaultPaperTradingCapital",
+        gt=Decimal(0), 
+        description="Default capital for paper trading"
+    )
+    paper_trading_active: Optional[bool] = Field(
+        None, 
+        alias="paperTradingActive",
+        description="Whether paper trading is active"
+    )
+    paper_trading_assets: Optional[List[PaperTradingAsset]] = Field(
+        None,
+        alias="paperTradingAssets",
+        description="List of asset holdings for paper trading."
+    )
+    watchlists: Optional[List[Watchlist]] = Field(
+        None, 
+        description="List of trading pair watchlists"
+    )
+    favorite_pairs: Optional[List[str]] = Field(
+        None, 
+        alias="favoritePairs",
+        description="List of favorite trading pairs"
+    )
+    risk_profile: Optional[RiskProfile] = Field(
+        None, 
+        alias="riskProfile",
+        description="General risk profile"
+    )
+    risk_profile_settings: Optional[RiskProfileSettings] = Field(
+        None,
+        alias="riskProfileSettings",
+        description="Custom risk profile settings"
+    )
+    real_trading_settings: Optional[RealTradingSettings] = Field(
+        None, 
+        alias="realTradingSettings",
+        description="Real trading mode settings"
+    )
+    ai_strategy_configurations: Optional[List[AIStrategyConfiguration]] = Field(
+        None, 
+        alias="aiStrategyConfigurations",
+        description="List of AI strategy configurations for Gemini integration"
+    )
+    ai_analysis_confidence_thresholds: Optional[ConfidenceThresholds] = Field(
+        None, 
+        alias="aiAnalysisConfidenceThresholds",
+        description="Global AI confidence thresholds (fallback)"
+    )
+    mcp_server_preferences: Optional[List[MCPServerPreference]] = Field(
+        None, 
+        alias="mcpServerPreferences",
+        description="MCP server preferences"
+    )
+    selected_theme: Optional[Theme] = Field(
+        None, 
+        alias="selectedTheme",
+        description="Selected UI theme"
+    )
+    dashboard_layout_profiles: Optional[Dict[str, DashboardLayoutProfile]] = Field(
+        None, 
+        alias="dashboardLayoutProfiles",
+        description="Dashboard layout profiles"
+    )
+    active_dashboard_layout_profile_id: Optional[str] = Field(
+        None, 
+        alias="activeDashboardLayoutProfileId",
+        description="Active dashboard layout profile ID"
+    )
+    dashboard_layout_config: Optional[Dict[str, Any]] = Field(
+        None, 
+        alias="dashboardLayoutConfig",
+        description="Current dashboard layout configuration"
+    )
+    cloud_sync_preferences: Optional[CloudSyncPreferences] = Field(
+        None, 
+        alias="cloudSyncPreferences",
+        description="Cloud synchronization preferences"
+    )
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        use_enum_values=True,
+        validate_assignment=True,
+        extra="forbid",
+        alias_generator=to_camel
+    )

@@ -9,7 +9,6 @@ from ultibot_backend.adapters.binance_adapter import BinanceAdapter
 from ultibot_backend.services.credential_service import CredentialService
 from ultibot_backend.core.ports.persistence_service import IPersistenceService
 from ultibot_backend.core.exceptions import BinanceAPIError, CredentialError, UltiBotError, ExternalAPIError, MarketDataError
-from ultibot_backend.app_config import settings
 from datetime import datetime, timezone
 import asyncio
 

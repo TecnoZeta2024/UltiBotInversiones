@@ -10,7 +10,7 @@ from ultibot_backend.api.v1.models.performance_models import (
 from shared.data_types import PerformanceMetrics
 from ultibot_backend.services.performance_service import PerformanceService
 from ultibot_backend.dependencies import get_performance_service
-from ultibot_backend.app_config import settings
+from ultibot_backend.app_config import get_app_settings
 
 router = APIRouter()
 
@@ -35,7 +35,8 @@ async def get_strategies_performance(
 
     - **mode**: Optionally filter by 'paper' or 'real' trading mode.
     """
-    user_id = settings.FIXED_USER_ID
+    app_settings = get_app_settings()
+    user_id = app_settings.FIXED_USER_ID
     try:
         performance_data = await performance_service.get_all_strategies_performance(
             user_id=user_id, mode_filter=mode
@@ -64,7 +65,8 @@ async def get_trades_performance(
     """
     Endpoint to fetch performance metrics for trades based on the specified mode and time frame.
     """
-    user_id = settings.FIXED_USER_ID
+    app_settings = get_app_settings()
+    user_id = app_settings.FIXED_USER_ID
     try:
         metrics = await performance_service.get_trade_performance_metrics(
             user_id=user_id,
@@ -78,4 +80,3 @@ async def get_trades_performance(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred while fetching trade performance metrics: {str(e)}"
         )
-

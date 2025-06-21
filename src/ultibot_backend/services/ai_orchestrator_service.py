@@ -29,7 +29,7 @@ from ultibot_backend.core.domain_models.user_configuration_models import (
     ConfidenceThresholds,
 )
 from ultibot_backend.services.market_data_service import MarketDataService
-from ultibot_backend.app_config import settings as app_settings
+from ultibot_backend.app_config import get_app_settings
 
 logger = logging.getLogger(__name__)
 
@@ -128,6 +128,7 @@ class AIOrchestrator:
         self.market_data_service = market_data_service
         self.model_name = "gemini-1.5-pro-latest"
         
+        app_settings = get_app_settings()
         gemini_api_key = app_settings.GEMINI_API_KEY
         if not gemini_api_key:
             raise ValueError("GEMINI_API_KEY no está configurada en las variables de entorno.")
@@ -330,4 +331,3 @@ You MUST respond ONLY with a valid JSON object that conforms to the schema provi
         if ai_result.data_verification:
             verification_summary = ", ".join([f"{k}={v}" for k, v in ai_result.data_verification.items()])
             logger.info(f"AI Data Verification {ai_result.analysis_id}: {verification_summary}")
-

@@ -183,14 +183,14 @@ class Trade(BaseModel):
     id: Union[UUID, str] = Field(default_factory=uuid4)
     user_id: UUID
     
-    mode: str = Field(..., description="Modo de trading: 'paper' o 'real'.")
+    mode: TradeMode = Field(..., description="Modo de trading: 'paper' o 'real'.")
     symbol: str = Field(..., description="Símbolo del par de trading (ej. 'BTCUSDT').")
-    side: str = Field(..., description="Dirección de la operación: 'BUY' o 'SELL'.")
+    side: TradeSide = Field(..., description="Dirección de la operación: 'BUY' o 'SELL'.")
     
     entryOrder: TradeOrderDetails = Field(..., description="Detalles de la orden de entrada.")
     exitOrders: List[TradeOrderDetails] = Field(default_factory=list, description="Lista de órdenes de salida (ej. TSL, TP).")
     
-    positionStatus: str = Field(..., description="Estado de la posición: 'open', 'closed', 'liquidated'.")
+    positionStatus: PositionStatus = Field(..., description="Estado de la posición: 'open', 'closed', 'liquidated'.")
     
     strategyId: Optional[UUID] = Field(None, description="ID de la estrategia asociada a este trade.")
     opportunityId: Optional[UUID] = Field(None, description="ID de la oportunidad de trading que originó este trade.")

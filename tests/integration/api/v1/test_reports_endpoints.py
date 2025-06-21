@@ -26,19 +26,19 @@ async def setup_trades(db_session: AsyncSession, trade_factory):
     La transacción se revierte automáticamente por la fixture db_session.
     """
     sample_trades_data = [
-        trade_factory(id="test-trade-1", symbol="BTCUSDT", data_dict={"pnl_usd": 150.0, "side": "buy"}),
-        trade_factory(id="test-trade-2", symbol="ETHUSDT", data_dict={"pnl_usd": -75.0, "side": "sell"}),
-        trade_factory(id="test-trade-3", symbol="ADAUSDT", data_dict={"pnl_usd": 25.0, "side": "buy"})
+        trade_factory(id="test-trade-1", symbol="BTCUSDT", pnl_usd=150.0, side="buy"),
+        trade_factory(id="test-trade-2", symbol="ETHUSDT", pnl_usd=-75.0, side="sell"),
+        trade_factory(id="test-trade-3", symbol="ADAUSDT", pnl_usd=25.0, side="buy")
     ]
 
     for trade_data in sample_trades_data:
-        await db_session.execute(
-            text("""
-            INSERT INTO trades (id, user_id, symbol, mode, status, position_status, data, created_at, updated_at, closed_at)
-            VALUES (:id, :user_id, :symbol, :mode, :status, :position_status, :data, :created_at, :updated_at, :closed_at)
-            """),
-            trade_data
-        )
+            await db_session.execute(
+                text("""
+                INSERT INTO trades (id, user_id, symbol, mode, position_status, data, created_at, updated_at, closed_at)
+                VALUES (:id, :user_id, :symbol, :mode, :position_status, :data, :created_at, :updated_at, :closed_at)
+"""),
+                trade_data
+            )
     await db_session.commit()
     yield
 

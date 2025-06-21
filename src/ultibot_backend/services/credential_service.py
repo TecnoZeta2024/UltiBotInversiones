@@ -12,7 +12,7 @@ from shared.data_types import APICredential, ServiceName
 from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 from ultibot_backend.adapters.binance_adapter import BinanceAdapter
 from ultibot_backend.core.exceptions import BinanceAPIError, CredentialError
-from ultibot_backend.app_config import settings
+from ultibot_backend.app_config import get_app_settings
 from datetime import datetime
 import logging
 
@@ -25,8 +25,9 @@ class CredentialService:
                  session_factory: async_sessionmaker[AsyncSession],
                  binance_adapter: BinanceAdapter
                  ):
-        encryption_key_str = os.getenv("CREDENTIAL_ENCRYPTION_KEY")
-        logger.info(f"CredentialService __init__ intentando obtener encryption_key de ENV: {'Presente' if encryption_key_str else 'Ausente'}")
+        app_settings = get_app_settings()
+        encryption_key_str = app_settings.CREDENTIAL_ENCRYPTION_KEY
+        logger.info(f"CredentialService __init__ intentando obtener encryption_key de AppSettings: {'Presente' if encryption_key_str else 'Ausente'}")
 
         if not encryption_key_str:
             logger.critical("CREDENTIAL_ENCRYPTION_KEY no está configurada en las variables de entorno o está vacía.")
@@ -41,7 +42,7 @@ class CredentialService:
 
         self.session_factory = session_factory
         self.binance_adapter = binance_adapter
-        self.fixed_user_id = settings.FIXED_USER_ID
+        self.fixed_user_id = app_settings.FIXED_USER_ID
 
     def encrypt_data(self, data: str) -> str:
         encoded_data = data.encode('utf-8')

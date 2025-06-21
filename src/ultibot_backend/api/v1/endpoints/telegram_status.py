@@ -7,7 +7,7 @@ from ultibot_backend.services.credential_service import CredentialService
 from ultibot_backend.services.notification_service import NotificationService
 from ultibot_backend.core.exceptions import CredentialError, TelegramNotificationError, NotificationError
 from ultibot_backend import dependencies as deps # Importar deps
-from ultibot_backend.app_config import settings # Importar settings
+from ultibot_backend.app_config import get_app_settings
 
 router = APIRouter()
 
@@ -114,4 +114,3 @@ async def verify_telegram_connection_manually(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error inesperado durante la verificación de Telegram: {e}"
         )
-

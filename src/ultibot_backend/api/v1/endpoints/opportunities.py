@@ -8,7 +8,7 @@ from ultibot_backend.adapters.persistence_service import SupabasePersistenceServ
 from ultibot_backend.services.config_service import ConfigurationService
 import logging
 from ultibot_backend import dependencies as deps
-from ultibot_backend.app_config import settings
+from ultibot_backend.app_config import get_app_settings
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,8 @@ async def get_real_trading_candidates(
     Devuelve una lista de oportunidades de muy alta confianza pendientes de confirmación
     para operativa real para el usuario fijo, si el modo de trading real está activo y hay cupos disponibles.
     """
-    user_id = settings.FIXED_USER_ID
+    app_settings = get_app_settings()
+    user_id = app_settings.FIXED_USER_ID
     user_config_dict = await config_service.get_user_configuration(str(user_id))
     if not user_config_dict:
         raise HTTPException(status_code=404, detail="User configuration not found")
@@ -35,33 +36,25 @@ async def get_real_trading_candidates(
     user_config = UserConfiguration(**config_data)
 
 
-    real_trading_settings = user_config.realTradingSettings
-    if real_trading_settings is None:
-        real_trading_settings = RealTradingSettings(
-            real_trading_mode_active=False,
-            real_trades_executed_count=0,
-            max_real_trades=5
-        )
-
-    # if not real_trading_settings.real_trading_mode_active:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_403_FORBIDDEN,
-    #         detail="El modo de trading real no está activo para este usuario."
-    #     )
-
-    closed_real_trades_count = await persistence_service.get_closed_trades_count(
-        is_real_trade=True
-    )
-
-    if closed_real_trades_count >= real_trading_settings.max_real_trades:
+    real_trading_settings = user_config.real_trading_settings
+    if not real_trading_settings or not real_trading_settings.real_trading_mode_active:
         raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"Se ha alcanzado el límite de {real_trading_settings.max_real_trades} operaciones reales."
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="El modo de trading real no está activo para este usuario."
         )
 
-    opportunities = await persistence_service.get_opportunities_by_status(
-        status=OpportunityStatus.PENDING_USER_CONFIRMATION_REAL
+    # La lógica de límite de trades ahora es manejada por el ConfigurationService.
+    # Esta validación aquí es redundante y puede ser eliminada.
+    
+    # Usar el método get_all con una condición para filtrar por estado
+    condition = "status = :status"
+    params = {"status": OpportunityStatus.PENDING_USER_CONFIRMATION_REAL.value}
+    opportunities_data = await persistence_service.get_all(
+        table_name="opportunities",
+        condition=condition,
+        params=params
     )
+    
+    opportunities = [Opportunity.model_validate(op) for op in opportunities_data]
 
     return opportunities
-

@@ -6,14 +6,15 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget, QTableWidgetItem,
     QHeaderView, QPushButton, QMessageBox, QFrame, QSplitter, QScrollArea, QGroupBox, QAbstractItemView, QApplication
 )
-from PySide6.QtCore import Qt, QThread, QTimer, Signal, QObject, QCoreApplication
+from PySide6.QtCore import Qt, QTimer, Signal, QObject
+import asyncio
 from PySide6.QtGui import QPainter, QFont, QColor
 from PySide6.QtCharts import QChart, QChartView, QPieSeries, QPieSlice
+from decimal import Decimal
 
 from shared.data_types import PortfolioSnapshot, PortfolioAsset
 from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
 from ultibot_ui.services.trading_mode_state import get_trading_mode_manager, TradingModeStateManager
-from ultibot_ui.workers import ApiWorker
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,6 @@ class PortfolioView(QWidget):
         super().__init__(parent)
         self.user_id = user_id
         self.api_client = api_client
-        self.active_threads: List[QThread] = []
         self.current_portfolio_data: Optional[PortfolioSnapshot] = None
 
         self.trading_mode_manager: TradingModeStateManager = get_trading_mode_manager()
@@ -56,7 +56,7 @@ class PortfolioView(QWidget):
         self.status_label.setObjectName("statusLabel")
         main_layout.addWidget(self.status_label)
 
-        content_splitter = QSplitter(Qt.Horizontal)
+        content_splitter = QSplitter(Qt.Orientation.Horizontal)
         main_layout.addWidget(content_splitter, 1)
 
         left_panel_widget = QWidget()
@@ -117,30 +117,27 @@ class PortfolioView(QWidget):
         self._fetch_portfolio_data()
 
     def _fetch_portfolio_data(self):
-        logger.info("PortfolioView: Fetching portfolio snapshot.")
+        """Ejecuta la obtención de datos del portafolio de forma asíncrona."""
+        logger.info("PortfolioView: Scheduling portfolio snapshot fetch.")
         self.status_label.setText(f"Loading portfolio data ({self.trading_mode_manager.current_mode.title()})...")
         self.refresh_button.setEnabled(False)
         self.assets_table.setRowCount(0)
 
-        worker = ApiWorker(
-            api_client=self.api_client,
-            coroutine_factory=lambda api_client: api_client.get_portfolio_snapshot(
+        # Crear la tarea directamente en el bucle de eventos de qasync
+        asyncio.create_task(self._get_portfolio_snapshot_async())
+
+    async def _get_portfolio_snapshot_async(self):
+        """Corrutina que realmente obtiene y maneja los datos del portafolio."""
+        try:
+            snapshot = await self.api_client.get_portfolio_snapshot(
                 user_id=self.user_id, trading_mode=self.trading_mode_manager.current_mode
             )
-        )
-        thread = QThread()
-        self.active_threads.append(thread)
-        worker.moveToThread(thread)
-
-        worker.result_ready.connect(self._handle_portfolio_result)
-        worker.error_occurred.connect(self._handle_portfolio_error)
-
-        thread.started.connect(worker.run)
-        worker.result_ready.connect(thread.quit)
-        worker.error_occurred.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(lambda t=thread: self.active_threads.remove(t) if t in self.active_threads else None)
-        thread.start()
+            self._handle_portfolio_result(snapshot)
+        except APIError as e:
+            self._handle_portfolio_error(str(e))
+        except Exception as e:
+            logger.critical(f"An unexpected error occurred during portfolio fetch: {e}", exc_info=True)
+            self._handle_portfolio_error(f"An unexpected error occurred: {e}")
 
     def _handle_portfolio_result(self, portfolio_snapshot: PortfolioSnapshot):
         logger.info("PortfolioView: Portfolio snapshot data received.")
@@ -193,9 +190,9 @@ class PortfolioView(QWidget):
             pnl_pct = asset.unrealized_pnl_percentage or 0.0
             pnl_item = QTableWidgetItem(f"{pnl_pct:,.2f}%")
             if pnl_pct > 0:
-                pnl_item.setForeground(QColor(Qt.green))
+                pnl_item.setForeground(QColor(Qt.GlobalColor.green))
             elif pnl_pct < 0:
-                pnl_item.setForeground(QColor(Qt.red))
+                pnl_item.setForeground(QColor(Qt.GlobalColor.red))
             self.assets_table.setItem(row, 5, pnl_item)
 
         if not assets_data and self.assets_table.rowCount() == 0:
@@ -207,7 +204,7 @@ class PortfolioView(QWidget):
 
     def _update_pie_chart(self, assets_data: List[PortfolioAsset]):
         series = QPieSeries()
-        total_portfolio_value = sum(asset.current_value_usd or 0.0 for asset in assets_data if (asset.current_value_usd or 0.0) > 0)
+        total_portfolio_value = sum(Decimal(asset.current_value_usd or 0.0) for asset in assets_data if (asset.current_value_usd or 0.0) > 0)
 
         if total_portfolio_value == 0:
             chart = QChart()
@@ -220,21 +217,21 @@ class PortfolioView(QWidget):
         others_value = 0.0
 
         for i, asset in enumerate(assets_data):
-            value = asset.current_value_usd or 0.0
+            value = Decimal(asset.current_value_usd or 0.0)
             if value <= 0: continue
 
             if i < limit:
                 percentage = (value / total_portfolio_value) * 100
                 slice_label = f"{asset.symbol or 'N/A'}\n({percentage:.1f}%)"
-                pie_slice = QPieSlice(slice_label, value)
+                pie_slice = QPieSlice(slice_label, float(value))
                 series.append(pie_slice)
             else:
-                others_value += value
+                others_value += float(value)
 
         if others_value > 0:
-            percentage = (others_value / total_portfolio_value) * 100
+            percentage = (Decimal(others_value) / total_portfolio_value) * 100
             slice_label = f"Others\n({percentage:.1f}%)"
-            series.append(slice_label, others_value)
+            series.append(slice_label, float(others_value))
 
         colors = ["#00FF8C", "#00C2FF", "#FFD700", "#FF6384", "#36A2EB", "#FF9F40"]
         for i, pie_slice in enumerate(series.slices()):
@@ -248,7 +245,7 @@ class PortfolioView(QWidget):
         legend = chart.legend()
         if legend:
             legend.setVisible(True)
-            legend.setAlignment(Qt.AlignBottom)
+            legend.setAlignment(Qt.AlignmentFlag.AlignBottom)
             legend.setFont(QFont("Arial", 10, QFont.Weight.Bold))
         chart.setBackgroundVisible(False)
         chart.setTitleFont(QFont("Arial", 14, QFont.Weight.Bold))
@@ -257,11 +254,7 @@ class PortfolioView(QWidget):
 
     def cleanup(self):
         logger.info("PortfolioView: Cleaning up...")
-        for thread in list(self.active_threads):
-            if thread.isRunning():
-                thread.quit()
-                thread.wait()
-        self.active_threads.clear()
+        # Ya no se usan hilos, se elimina la lógica de limpieza de hilos.
         if hasattr(self, 'trading_mode_manager'):
             try:
                 self.trading_mode_manager.trading_mode_changed.disconnect(self._on_trading_mode_changed)
@@ -271,37 +264,55 @@ class PortfolioView(QWidget):
 
 if __name__ == '__main__':
     import sys
+    import qasync
 
-    class MockApiWorker(QObject):
-        result_ready = Signal(object)
-        error_occurred = Signal(str)
-        def __init__(self, coroutine_factory, api_client):
-            super().__init__()
-            self.coro_factory = coroutine_factory
-            self.api_client = api_client
-        def run(self):
-            try:
-                mock_data = _mock_get_portfolio_snapshot("paper")
-                self.result_ready.emit(mock_data)
-            except Exception as e:
-                self.error_occurred.emit(f"Unexpected test error: {str(e)}")
+    # --- Mocking and Test Setup ---
+    class MockApiClient(UltiBotAPIClient):
+        async def get_portfolio_snapshot(self, user_id: UUID, trading_mode: str) -> PortfolioSnapshot:
+            print(f"Mock: Fetching portfolio for mode: {trading_mode}")
+            await asyncio.sleep(0.1) # Simular latencia de red
+            if trading_mode == "paper":
+                data = {
+                    "paper_trading": {
+                        "total_portfolio_value_usd": 12500.75,
+                        "available_balance_usdt": 5000.25,
+                        "assets": [{
+                            "symbol": "BTC",
+                            "quantity": 0.1,
+                            "entry_price": 55000.0,
+                            "current_price": 60000.0,
+                            "current_value_usd": 6000.0,
+                            "unrealized_pnl_percentage": 9.09
+                        }]
+                    },
+                    "real_trading": None
+                }
+                return PortfolioSnapshot.model_validate(data)
+            else:
+                data = {
+                    "paper_trading": None,
+                    "real_trading": {
+                        "total_portfolio_value_usd": 0,
+                        "available_balance_usdt": 0,
+                        "assets": []
+                    }
+                }
+                return PortfolioSnapshot.model_validate(data)
 
-    OriginalApiWorker = ApiWorker
-    ApiWorker = MockApiWorker
-
-    def _mock_get_portfolio_snapshot(mode: str):
-        return {
-            "paper_trading": { "total_portfolio_value_usd": 12500.75, "available_balance_usdt": 5000.25, "assets": [{"symbol": "BTC", "quantity": 0.1, "current_value_usd": 6000.0, "unrealized_pnl_percentage": 20.0}] },
-            "real_trading": { "total_portfolio_value_usd": 0, "available_balance_usdt": 0, "assets": [] }
-        }
-
+    # --- Application Execution ---
     app = QApplication(sys.argv)
+    loop = qasync.QEventLoop(app)
+    asyncio.set_event_loop(loop)
+
+    mock_api_client = MockApiClient(base_url="http://mock.server")
     
-    view = PortfolioView(user_id=UUID("00000000-0000-0000-0000-000000000000"), api_client=UltiBotAPIClient("http://localhost:8000"))
+    view = PortfolioView(
+        user_id=UUID("00000000-0000-0000-0000-000000000000"),
+        api_client=mock_api_client
+    )
     view.setWindowTitle("Portfolio View - Test")
     view.setGeometry(100, 100, 1000, 700)
     view.show()
 
-    ApiWorker = OriginalApiWorker
-    sys.exit(app.exec_())
-
+    with loop:
+        loop.run_forever()

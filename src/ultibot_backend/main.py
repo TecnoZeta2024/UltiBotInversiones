@@ -39,7 +39,7 @@ LOGGING_CONFIG = {
             "formatter": "default",
             "stream": "ext://sys.stdout",
         },
-        "file": {
+        "backend_file": {
             "class": "logging.handlers.RotatingFileHandler",
             "formatter": "default",
             "filename": os.path.join(LOGS_DIR, "backend.log"),
@@ -47,22 +47,29 @@ LOGGING_CONFIG = {
             "backupCount": 5,
             "encoding": "utf-8",
         },
+        "frontend_file_mirror": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "formatter": "default",
+            "filename": os.path.join(LOGS_DIR, "frontend.log"),
+            "maxBytes": 10485760,  # 10 MB
+            "backupCount": 5,
+            "encoding": "utf-8",
+        },
     },
     "loggers": {
-        "uvicorn": {"handlers": ["console", "file"], "level": "INFO"},
+        "uvicorn": {"handlers": ["console", "backend_file"], "level": "INFO"},
         "uvicorn.error": {"level": "INFO"},
-        "uvicorn.access": {"handlers": ["console", "file"], "level": "INFO"},
-        "ultibot_backend": {"handlers": ["console", "file"], "level": "DEBUG", "propagate": False},
+        "uvicorn.access": {"handlers": ["console", "backend_file"], "level": "INFO"},
+        "ultibot_backend": {"handlers": ["console", "backend_file", "frontend_file_mirror"], "level": "DEBUG", "propagate": False},
     },
     "root": {
         "level": "DEBUG",
-        "handlers": ["console", "file"],
+        "handlers": ["console", "backend_file"],
     },
 }
 
 dictConfig(LOGGING_CONFIG)
 logger = logging.getLogger("ultibot_backend")
-logger.info("Logging configurado exitosamente usando dictConfig.")
 # --- Fin de la Nueva Configuración de Logging ---
 
 
@@ -97,64 +104,74 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("No se encontró DependencyContainer en app.state durante el apagado.")
 
-app = FastAPI(
-    title="UltiBot Backend",
-    description="El backend para la plataforma de trading algorítmico UltiBotInversiones.",
-    version="1.0.0",
-    lifespan=lifespan,
-    debug=os.environ.get("TESTING") == "True"
-)
-
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    logger.info(f"Middleware: Solicitud entrante: {request.method} {request.url.path}")
-    response = await call_next(request)
-    logger.info(f"Middleware: Solicitud procesada: {request.method} {request.url.path} - Status: {response.status_code}")
-    return response
-
-@app.exception_handler(UltiBotError)
-async def ultibot_exception_handler(request: Request, exc: UltiBotError):
-    logger.error(f"Error de UltiBot: {exc.message} en {request.method} {request.url.path}", exc_info=True)
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"detail": exc.message},
+def create_app() -> FastAPI:
+    """
+    Factory para crear y configurar la instancia de la aplicación FastAPI.
+    """
+    logger.info("Creando nueva instancia de FastAPI...")
+    
+    app_instance = FastAPI(
+        title="UltiBot Backend",
+        description="El backend para la plataforma de trading algorítmico UltiBotInversiones.",
+        version="1.0.0",
+        lifespan=lifespan,
+        debug=os.environ.get("TESTING") == "True"
     )
 
-@app.exception_handler(Exception)
-async def unhandled_exception_handler(request: Request, exc: Exception):
-    logger.critical(f"Excepción no controlada en {request.method} {request.url.path}: {exc}", exc_info=True)
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Ocurrió un error interno inesperado en el servidor."},
+    @app_instance.middleware("http")
+    async def log_requests(request: Request, call_next):
+        logger.info(f"Middleware: Solicitud entrante: {request.method} {request.url.path}")
+        response = await call_next(request)
+        logger.info(f"Middleware: Solicitud procesada: {request.method} {request.url.path} - Status: {response.status_code}")
+        return response
+
+    @app_instance.exception_handler(UltiBotError)
+    async def ultibot_exception_handler(request: Request, exc: UltiBotError):
+        logger.error(f"Error de UltiBot: {exc.message} en {request.method} {request.url.path}", exc_info=True)
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.message},
+        )
+
+    @app_instance.exception_handler(Exception)
+    async def unhandled_exception_handler(request: Request, exc: Exception):
+        logger.critical(f"Excepción no controlada en {request.method} {request.url.path}: {exc}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Ocurrió un error interno inesperado en el servidor."},
+        )
+
+    app_instance.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+    # Registro explícito de cada router desde su módulo
+    api_prefix = "/api/v1"
+    logger.info("Registrando routers de la API...")
+    app_instance.include_router(config.router, prefix=api_prefix, tags=["configuration"])
+    app_instance.include_router(notifications.router, prefix=f"{api_prefix}/notifications", tags=["notifications"])
+    app_instance.include_router(reports.router, prefix=api_prefix, tags=["reports"])
+    app_instance.include_router(portfolio.router, prefix=f"{api_prefix}/portfolio", tags=["portfolio"])
+    app_instance.include_router(trades.router, prefix=f"{api_prefix}/trades", tags=["trades"])
+    app_instance.include_router(performance.router, prefix=f"{api_prefix}/performance", tags=["performance"])
+    app_instance.include_router(opportunities.router, prefix=f"{api_prefix}/opportunities", tags=["opportunities"])
+    app_instance.include_router(strategies.router, prefix=f"{api_prefix}/strategies", tags=["strategies"])
+    app_instance.include_router(trading.router, prefix=f"{api_prefix}/trading", tags=["trading"])
+    app_instance.include_router(market_data.router, prefix=f"{api_prefix}/market", tags=["market_data"])
+    logger.info("Todos los routers han sido registrados.")
 
-# Registro explícito de cada router desde su módulo
-api_prefix = "/api/v1"
-logger.info("Registrando routers de la API...")
-app.include_router(config.router, prefix=api_prefix, tags=["configuration"])
-app.include_router(notifications.router, prefix=f"{api_prefix}/notifications", tags=["notifications"])
-app.include_router(reports.router, prefix=api_prefix, tags=["reports"]) # reports.py ya no tiene rutas relativas
-app.include_router(portfolio.router, prefix=f"{api_prefix}/portfolio", tags=["portfolio"])
-app.include_router(trades.router, prefix=f"{api_prefix}/trades", tags=["trades"])
-app.include_router(performance.router, prefix=f"{api_prefix}/performance", tags=["performance"])
-app.include_router(opportunities.router, prefix=f"{api_prefix}/opportunities", tags=["opportunities"])
-app.include_router(strategies.router, prefix=f"{api_prefix}/strategies", tags=["strategies"])
-app.include_router(trading.router, prefix=f"{api_prefix}/trading", tags=["trading"])
-app.include_router(market_data.router, prefix=f"{api_prefix}/market", tags=["market_data"])
-# app.include_router(capital_management.router, prefix=f"{api_prefix}/capital-management", tags=["capital_management"])
-logger.info("Todos los routers han sido registrados.")
+    @app_instance.get("/health", tags=["health"])
+    def health_check():
+        """Endpoint de salud para verificar que la aplicación está en funcionamiento."""
+        logger.debug("Health check solicitado.")
+        return {"status": "ok"}
+        
+    return app_instance
 
-
-@app.get("/health", tags=["health"])
-def health_check():
-    """Endpoint de salud para verificar que la aplicación está en funcionamiento."""
-    logger.debug("Health check solicitado.")
-    return {"status": "ok"}
+# Crear la instancia global de la aplicación para la ejecución normal (no para tests)
+app = create_app()
+logger.info("Instancia global de la aplicación creada.")

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from uuid import UUID
 from typing import Annotated, Literal, Optional
 from pydantic import BaseModel, Field
+from decimal import Decimal
 
 from shared.data_types import ConfirmRealTradeRequest, OpportunityStatus, Opportunity, TradeOrderDetails
 from ultibot_backend.services.trading_engine_service import TradingEngine
@@ -9,7 +10,7 @@ from ultibot_backend.services.config_service import ConfigurationService
 from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 from ultibot_backend.services.unified_order_execution_service import UnifiedOrderExecutionService
 from ultibot_backend import dependencies as deps
-from ultibot_backend.app_config import settings
+from ultibot_backend.app_config import get_app_settings
 
 router = APIRouter()
 
@@ -24,7 +25,7 @@ async def confirm_real_opportunity(
     """
     Endpoint para que el usuario fijo confirme explícitamente una oportunidad de trading real.
     """
-    user_id = settings.FIXED_USER_ID
+    user_id = get_app_settings().FIXED_USER_ID
 
     if opportunity_id != request.opportunity_id:
         raise HTTPException(
@@ -58,23 +59,17 @@ async def confirm_real_opportunity(
         )
     
     user_config = await config_service.get_user_configuration(str(user_id))
-    if not user_config or not user_config.realTradingSettings:
+    if not user_config or not user_config.real_trading_settings:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="User configuration or real trading settings not found."
         )
 
-    real_trading_settings = user_config.realTradingSettings
+    real_trading_settings = user_config.real_trading_settings
     if not real_trading_settings.real_trading_mode_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Real trading mode is not active for this user."
-        )
-    
-    if real_trading_settings.real_trades_executed_count >= real_trading_settings.max_real_trades:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Maximum number of real trades reached for this user."
         )
 
     try:
@@ -97,7 +92,7 @@ class MarketOrderRequest(BaseModel):
     """Request model for market order execution."""
     symbol: str = Field(..., description="Trading symbol (e.g., 'BTCUSDT')")
     side: str = Field(..., description="Order side ('BUY' or 'SELL')")
-    quantity: float = Field(..., gt=0, description="Order quantity (must be positive)")
+    quantity: Decimal = Field(..., gt=0, description="Order quantity (must be positive)")
     trading_mode: TradingMode = Field(..., description="Trading mode ('paper' or 'real')")
     api_key: Optional[str] = Field(None, description="API key for real trading (required for real mode)")
     api_secret: Optional[str] = Field(None, description="API secret for real trading (required for real mode)")
@@ -110,7 +105,7 @@ async def execute_market_order(
     """
     Execute a market order in the specified trading mode for the fixed user.
     """
-    user_id = settings.FIXED_USER_ID
+    user_id = get_app_settings().FIXED_USER_ID
     try:
         if not unified_execution_service.validate_trading_mode(request.trading_mode):
             raise HTTPException(
@@ -145,7 +140,7 @@ async def get_paper_trading_balances(
     """
     Get current virtual balances for paper trading for the fixed user.
     """
-    user_id = settings.FIXED_USER_ID
+    user_id = get_app_settings().FIXED_USER_ID
     try:
         balances = await unified_execution_service.get_virtual_balances()
         return {
@@ -168,9 +163,9 @@ async def reset_paper_trading_balances(
     """
     Reset paper trading balances to initial capital for the fixed user.
     """
-    user_id = settings.FIXED_USER_ID
+    user_id = get_app_settings().FIXED_USER_ID
     try:
-        unified_execution_service.reset_virtual_balances(initial_capital=initial_capital)
+        unified_execution_service.reset_virtual_balances(initial_capital=Decimal(initial_capital))
         return {
             "user_id": user_id,
             "trading_mode": "paper",
@@ -206,4 +201,3 @@ async def get_supported_trading_modes(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve supported trading modes: {str(e)}"
         )
-

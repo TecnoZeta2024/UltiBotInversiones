@@ -12,8 +12,9 @@ from pydantic import BaseModel
 
 logger = logging.getLogger(__name__) # Configurar logger
 
+from shared.data_types import MarketData
 from ..core.ports.persistence_service import IPersistenceService
-from ..core.domain_models.trade_models import Trade, PositionStatus
+from ..core.domain_models.trade_models import Trade, PositionStatus, TradeMode # Importar TradeMode
 from ..core.domain_models.user_configuration_models import UserConfiguration, NotificationPreference, RiskProfile, Theme, AIStrategyConfiguration, MCPServerPreference, DashboardLayoutProfile, CloudSyncPreferences, ConfidenceThresholds
 from ..core.domain_models.opportunity_models import OpportunityStatus, Opportunity, InitialSignal, AIAnalysis, SourceType
 from ..core.domain_models.trading_strategy_models import TradingStrategyConfig, BaseStrategyType
@@ -117,6 +118,47 @@ class SupabasePersistenceService(IPersistenceService):
             if self._async_session_factory: # Solo hacer commit si la sesión es gestionada por el servicio
                 await session.commit()
 
+    async def upsert_all(self, items: List[BaseModel]) -> None:
+        if not items:
+            return
+
+        # Asumimos que todos los items son del mismo tipo y para la misma tabla.
+        # Esta es una implementación simplificada. Una real podría necesitar más lógica.
+        model_type = type(items[0])
+        table_name = model_type.__name__.lower() + "s" # Asunción simple
+        if model_type == MarketData:
+            table_name = "market_data"
+            on_conflict = ["symbol", "timestamp"]
+        else:
+            # Lógica de fallback o error si el tipo no es esperado
+            logger.error(f"Tipo de modelo no soportado para upsert_all: {model_type}")
+            return
+
+        data_list = [item.model_dump(mode='json') for item in items]
+
+        if not data_list:
+            return
+
+        first_item = data_list[0]
+        columns = ", ".join(f'"{key}"' for key in first_item.keys())
+        
+        conflict_columns = ", ".join(f'"{key}"' for key in on_conflict)
+        update_placeholders = ", ".join(f'"{col}" = EXCLUDED."{col}"' for col in first_item.keys() if col not in on_conflict)
+        
+        placeholders = ", ".join(f":{key}" for key in first_item.keys())
+
+        query = f"""
+            INSERT INTO {table_name} ({columns})
+            VALUES ({placeholders})
+            ON CONFLICT ({conflict_columns}) DO UPDATE
+            SET {update_placeholders};
+        """
+        
+        async with self._get_session() as session:
+            await session.execute(text(query), data_list)
+            if self._async_session_factory:
+                await session.commit()
+
     async def get_all(self, table_name: str, condition: Optional[str] = None, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         query = f"SELECT * FROM {table_name}"
         if condition:
@@ -205,8 +247,8 @@ class SupabasePersistenceService(IPersistenceService):
                 id=trade.id,
                 user_id=trade.user_id,
                 data=trade.model_dump_json(),
-                position_status=trade.positionStatus,
-                mode=trade.mode,
+                position_status=trade.positionStatus, # No usar .value
+                mode=trade.mode, # No usar .value
                 symbol=trade.symbol,
                 created_at=trade.created_at,
                 updated_at=trade.updated_at,
@@ -433,7 +475,7 @@ class SupabasePersistenceService(IPersistenceService):
                 return Opportunity.model_validate(full_opportunity_data)
             return None
 
-    async def get_closed_trades(self, user_id: UUID, symbol: Optional[str] = None,
+    async def get_closed_trades(self, user_id: str, symbol: Optional[str] = None,
                                 start_date: Optional[datetime] = None, end_date: Optional[datetime] = None,
                                 mode: Optional[str] = None) -> List[Trade]:
         async with self._get_session() as session:
@@ -459,12 +501,22 @@ class SupabasePersistenceService(IPersistenceService):
             for trade_orm in trade_orms:
                 try:
                     trade_data_from_json = json.loads(cast(str, trade_orm.data))
+                    logger.debug(f"get_closed_trades - trade_orm.data: {trade_orm.data}") # Debugging
+                    logger.debug(f"get_closed_trades - trade_data_from_json: {trade_data_from_json}") # Debugging
+
+                    # Asegurar que pnl_usd se convierta a Decimal si viene como float o str del JSON
+                    if "pnl_usd" in trade_data_from_json and not isinstance(trade_data_from_json["pnl_usd"], Decimal):
+                        try:
+                            trade_data_from_json["pnl_usd"] = Decimal(str(trade_data_from_json["pnl_usd"]))
+                        except Exception:
+                            logger.warning(f"No se pudo convertir pnl_usd a Decimal: {trade_data_from_json['pnl_usd']}")
+                            trade_data_from_json["pnl_usd"] = None # O manejar como error
 
                     full_trade_data = {
                         "id": trade_orm.id,
                         "user_id": trade_orm.user_id,
-                        "positionStatus": PositionStatus(trade_orm.position_status),
-                        "mode": trade_orm.mode,
+                        "positionStatus": trade_orm.position_status, # Mantener como str
+                        "mode": trade_orm.mode, # Mantener como str
                         "symbol": trade_orm.symbol,
                         "created_at": trade_orm.created_at,
                         "updated_at": trade_orm.updated_at,
@@ -497,7 +549,7 @@ class SupabasePersistenceService(IPersistenceService):
         async with self._get_session() as session:
             logger.debug(f"get_trades_with_filters - user_id: {user_id}, trading_mode: {trading_mode}, status: {status}, symbol: {symbol}, start_date: {start_date}, end_date: {end_date}, limit: {limit}, offset: {offset}")
             query = select(TradeORM).where(
-                TradeORM.user_id == UUID(user_id),
+                TradeORM.user_id == user_id,
                 TradeORM.mode == trading_mode
             )
 
@@ -519,11 +571,13 @@ class SupabasePersistenceService(IPersistenceService):
             for trade_orm_instance in trade_orms:
                 try:
                     trade_data = json.loads(cast(str, trade_orm_instance.data))
+                    logger.debug(f"get_trades_with_filters - trade_orm_instance.data: {trade_orm_instance.data}") # Debugging
+                    logger.debug(f"get_trades_with_filters - trade_data: {trade_data}") # Debugging
                     trade_data.update({
                         "id": str(trade_orm_instance.id),
                         "user_id": str(trade_orm_instance.user_id),
-                        "positionStatus": trade_orm_instance.position_status,
-                        "mode": trade_orm_instance.mode,
+                        "positionStatus": trade_orm_instance.position_status, # Mantener como str
+                        "mode": trade_orm_instance.mode, # Mantener como str
                         "symbol": trade_orm_instance.symbol,
                         "created_at": trade_orm_instance.created_at.isoformat(),
                         "updated_at": trade_orm_instance.updated_at.isoformat(),

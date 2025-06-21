@@ -1,7 +1,13 @@
+# --- Configuración temprana del bucle de eventos ---
 import asyncio
+import sys
+# Configuración de la política de bucle de eventos para Windows
+if sys.platform == "win32" and sys.version_info >= (3, 8):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+# --- Fin de la Configuración temprana del bucle de eventos ---
+
 import logging
 import os
-import sys
 from logging.config import dictConfig
 from uuid import UUID
 
@@ -43,6 +49,7 @@ LOGGING_CONFIG = {
     "loggers": {
         "httpx": {"handlers": ["console", "file"], "level": "INFO"},
         "src.ultibot_ui": {"handlers": ["console", "file"], "level": "DEBUG", "propagate": False},
+        "ultibot_backend": {"handlers": ["console", "file"], "level": "DEBUG", "propagate": False},
     },
     "root": {
         "level": "DEBUG",
@@ -76,6 +83,7 @@ async def _main_async(app: QtWidgets.QApplication):
 
         # Instanciar el cliente API singleton
         api_client = UltiBotAPIClient(base_url="http://127.0.0.1:8000")
+        await api_client.initialize_client() # Inicializar el cliente httpx aquí
 
         try:
             logger.info("Fetching initial user configuration...")
@@ -111,10 +119,6 @@ async def cleanup_resources():
 def main():
     """Punto de entrada principal para la aplicación de UI."""
     try:
-        # Configuración de la política de bucle de eventos para Windows
-        if sys.platform == "win32" and sys.version_info >= (3, 8):
-            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
         # Crear o obtener la instancia de QApplication
         app = QtWidgets.QApplication.instance()
         if not app:
@@ -146,11 +150,28 @@ def main():
     except Exception as e:
         logger.critical(f"Excepción no controlada en main: {e}", exc_info=True)
     finally:
-        # La limpieza ahora se maneja a través de la señal aboutToQuit
-        logger.info("Iniciando cierre de la aplicación.")
-        # Asegurarse de que el bucle se cierre correctamente
+        logger.info("Iniciando cierre de la aplicación y limpieza de tareas pendientes.")
         if 'loop' in locals() and loop.is_running():
+            # Cancelar todas las tareas pendientes y esperar a que terminen
+            pending_tasks = asyncio.all_tasks(loop=loop)
+            for task in pending_tasks:
+                task.cancel()
+            
+            # Esperar un corto tiempo para que las tareas canceladas se limpien
+            # Esto es un hack, la forma ideal es esperar cada tarea individualmente
+            # o usar asyncio.gather con return_exceptions=True
+            try:
+                loop.run_until_complete(asyncio.gather(*pending_tasks, return_exceptions=True))
+            except asyncio.CancelledError:
+                pass # Esto es esperado si las tareas se cancelan
+            except Exception as e:
+                logger.error(f"Error durante la espera de tareas pendientes: {e}", exc_info=True)
+
             loop.close()
+            logger.info("Bucle de eventos cerrado.")
+        else:
+            logger.warning("El bucle de eventos no estaba corriendo o no se encontró durante el cierre.")
+        
         logger.info("Aplicación cerrada.")
         sys.exit(0)
 

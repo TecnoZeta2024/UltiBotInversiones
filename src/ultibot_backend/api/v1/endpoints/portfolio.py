@@ -12,7 +12,7 @@ from shared.data_types import PortfolioSnapshot, PortfolioSummary, PerformanceMe
 from ultibot_backend.services.portfolio_service import PortfolioService
 from ultibot_backend.services.trading_report_service import TradingReportService # Importar TradingReportService
 from ultibot_backend import dependencies as deps
-from ultibot_backend.app_config import settings
+from ultibot_backend.app_config import get_app_settings
 
 # Configurar logging
 logger = logging.getLogger(__name__)
@@ -98,7 +98,7 @@ async def get_portfolio_summary(
     Returns:
         PortfolioSummary for the specified mode
     """
-    user_id = settings.FIXED_USER_ID
+    user_id = get_app_settings().FIXED_USER_ID
     try:
         if trading_mode == "paper":
             await portfolio_service.initialize_portfolio(user_id)
@@ -138,7 +138,7 @@ async def get_available_balance(
     Returns:
         Available balance in USDT
     """
-    user_id = settings.FIXED_USER_ID
+    user_id = get_app_settings().FIXED_USER_ID
     try:
         if trading_mode == "paper":
             await portfolio_service.initialize_portfolio(user_id)
@@ -187,7 +187,7 @@ async def get_paper_trading_performance(
     """
     Obtiene las métricas de rendimiento consolidadas para Paper Trading del usuario fijo.
     """
-    user_id = settings.FIXED_USER_ID
+    user_id = get_app_settings().FIXED_USER_ID
     try:
         metrics = await report_service.calculate_performance_metrics(
             user_id=user_id,
@@ -216,7 +216,7 @@ async def get_real_trading_performance(
     """
     Obtiene las métricas de rendimiento consolidadas para Trading Real del usuario fijo.
     """
-    user_id = settings.FIXED_USER_ID
+    user_id = get_app_settings().FIXED_USER_ID
     try:
         metrics = await report_service.calculate_performance_metrics(
             user_id=user_id,

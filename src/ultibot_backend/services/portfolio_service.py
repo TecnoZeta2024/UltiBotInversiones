@@ -1,4 +1,5 @@
 import logging
+import json
 from typing import Dict, List, Optional
 from uuid import UUID
 from datetime import datetime
@@ -57,6 +58,14 @@ class PortfolioService:
             user_config_dict = await self._persistence_service.get_one("user_configurations", f"user_id = '{user_id}'")
             
             if user_config_dict:
+                for key in ['risk_profile_settings', 'paper_trading_assets', 'notification_preferences', 'watchlists', 'favorite_pairs', 'real_trading_settings', 'ai_strategy_configurations', 'ai_analysis_confidence_thresholds', 'mcp_server_preferences', 'dashboard_layout_profiles', 'dashboard_layout_config', 'cloud_sync_preferences']:
+                    if key in user_config_dict and isinstance(user_config_dict[key], str):
+                        try:
+                            user_config_dict[key] = json.loads(user_config_dict[key])
+                        except json.JSONDecodeError:
+                            logger.warning(f"Could not decode JSON for key {key}, setting to None.")
+                            user_config_dict[key] = None
+                
                 user_config = UserConfiguration(**user_config_dict)
                 self.paper_trading_balance = user_config.default_paper_trading_capital or Decimal("10000.0")
                 if user_config.paper_trading_assets:

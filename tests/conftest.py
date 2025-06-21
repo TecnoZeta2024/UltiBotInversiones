@@ -34,7 +34,6 @@ from ultibot_backend.core.domain_models.user_configuration_models import UserCon
 
 # Configurar logging
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG) # Cambiar a DEBUG para ver mensajes detallados
 
 class MockUserConfigPersistence:
     """
@@ -62,8 +61,8 @@ async def set_test_environment():
     """
     os.environ['TESTING'] = 'True'
     
-    valid_key = Fernet.generate_key()
-    os.environ['CREDENTIAL_ENCRYPTION_KEY'] = valid_key.decode('utf-8')
+    # La clave de encriptación y otras variables se cargarán desde .env.test
+    # gracias a la lógica en app_config.py. No es necesario establecerla aquí.
     
     # Añadir 'src' al sys.path para asegurar que los módulos de la aplicación sean importables.
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
@@ -72,12 +71,11 @@ async def set_test_environment():
     
     # Limpieza de variables de entorno
     del os.environ['TESTING']
-    del os.environ['CREDENTIAL_ENCRYPTION_KEY']
     if 'DATABASE_URL' in os.environ:
         del os.environ['DATABASE_URL']
 
 # --- Importaciones de la Aplicación (Después de la Configuración) ---
-from ultibot_backend.main import app as fastapi_app
+from ultibot_backend.main import app as global_fastapi_app # Renombrar para claridad
 from ultibot_backend.dependencies import (
     get_persistence_service, get_strategy_service, get_performance_service,
     get_config_service, get_credential_service, get_market_data_service,
@@ -85,7 +83,7 @@ from ultibot_backend.dependencies import (
     get_ai_orchestrator_service, get_unified_order_execution_service,
     get_db_session, DependencyContainer, get_container_async
 )
-from fastapi import Request # Importar Request
+from fastapi import Request, FastAPI # Importar FastAPI
 from ultibot_backend.services.performance_service import PerformanceService
 from ultibot_backend.services.strategy_service import StrategyService
 from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
@@ -99,9 +97,10 @@ from ultibot_backend.services.order_execution_service import OrderExecutionServi
 from ultibot_backend.services.unified_order_execution_service import UnifiedOrderExecutionService
 from ultibot_backend.services.ai_orchestrator_service import AIOrchestrator
 from ultibot_backend.services.trading_engine_service import TradingEngine
-from ultibot_backend.app_config import settings as app_settings
-from shared.data_types import APICredential, ServiceName
-from ultibot_backend.core.domain_models.trade_models import OrderStatus, OrderCategory, TradeOrderDetails
+from ultibot_backend.app_config import get_app_settings, AppSettings
+from shared.data_types import APICredential, ServiceName, PerformanceMetrics
+from ultibot_backend.core.domain_models.trade_models import OrderStatus, OrderCategory, TradeOrderDetails, TradeMode, TradeSide, PositionStatus
+from ultibot_backend.api.v1.models.performance_models import StrategyPerformanceData, OperatingMode
 
 # --- Configuración de la Base de Datos de Prueba (SQLite en memoria) ---
 
@@ -139,60 +138,42 @@ async def db_engine() -> AsyncGenerator[Any, None]:
             await engine.dispose()
             logger.info("Motor de base de datos dispuesto.")
         
-        # Bucle de reintento para eliminar el directorio temporal, manejando bloqueos en Windows.
-        for i in range(5):
+        # Limpieza robusta del directorio temporal con reintentos
+        max_retries = 5
+        for i in range(max_retries):
             try:
-                shutil.rmtree(temp_dir)
-                logger.info(f"Directorio temporal {temp_dir} limpiado exitosamente.")
-                break
-            except PermissionError:
-                logger.warning(f"Intento {i+1}/5: No se pudo eliminar {temp_dir}. Reintentando en 0.2s...")
-                time.sleep(0.2)
+                if os.path.exists(temp_dir):
+                    shutil.rmtree(temp_dir)
+                    logger.info(f"Directorio temporal {temp_dir} eliminado exitosamente (intento {i+1}/{max_retries}).")
+                    break
+            except Exception as e:
+                logger.warning(f"Intento {i+1}/{max_retries}: No se pudo eliminar el directorio temporal {temp_dir}: {e}. Reintentando en 0.1 segundos...")
+                gc.collect() # Forzar recolección de basura
+                await asyncio.sleep(0.1) # Pequeño retardo
         else:
-            logger.error(f"No se pudo eliminar el directorio temporal {temp_dir} después de 5 intentos.")
-            shutil.rmtree(temp_dir, ignore_errors=True) # Fallback para no bloquear la suite
+            logger.error(f"Fallo al eliminar el directorio temporal {temp_dir} después de {max_retries} intentos.")
 
 @pytest_asyncio.fixture
 async def db_session(db_engine: Any) -> AsyncGenerator[AsyncSession, None]:
     """
-    Proporciona una sesión de BD limpia para cada test, eliminando todos los
-    datos de las tablas antes de cada ejecución para garantizar el aislamiento.
-    Este enfoque es más robusto para backends como aiosqlite que no soportan
-    completamente los SAVEPOINTS para transacciones anidadas.
+    Proporciona una sesión de BD transaccional y aislada para cada test.
+    Cada test se ejecuta dentro de una transacción que se revierte al final.
+    Esta fixture ya no necesita interactuar con la app, ya que el cliente
+    se encargará de la inyección de dependencias.
     """
-    # Crear una fábrica de sesiones directamente desde el motor
-    TestSessionFactory = async_sessionmaker(
-        bind=db_engine,
-        class_=AsyncSession,
-        expire_on_commit=False
-    )
+    connection = await db_engine.connect()
+    transaction = await connection.begin()
     
-    # La sesión para el test
-    async_session = TestSessionFactory()
-
-    # Limpiar todas las tablas antes del test
-    async with async_session.begin():
-        for table in reversed(Base.metadata.sorted_tables):
-            await async_session.execute(table.delete())
+    session = async_sessionmaker(
+        bind=connection, class_=AsyncSession, expire_on_commit=False
+    )()
     
-    # Sobrescribir la dependencia de la app para que use esta misma sesión
-    async def override_get_db_session() -> AsyncGenerator[AsyncSession, None]:
-        yield async_session
-
-    fastapi_app.dependency_overrides[get_db_session] = override_get_db_session
-
     try:
-        # Envolver la ejecución del test en una transacción.
-        # Esto asegura que los datos creados en la fase de "Arrange" del test
-        # sean visibles para el endpoint de la API cuando se llama en la fase "Act",
-        # ya que ambos operan dentro de la misma transacción.
-        # Al salir del bloque 'with', la transacción se confirma automáticamente.
-        async with async_session.begin():
-            yield async_session
+        yield session
     finally:
-        # Limpiar la sobreescritura y cerrar la sesión
-        fastapi_app.dependency_overrides.clear()
-        await async_session.close()
+        await session.close()
+        await transaction.rollback()
+        await connection.close()
 
 @pytest_asyncio.fixture
 async def persistence_service_fixture(db_session: AsyncSession) -> SupabasePersistenceService:
@@ -217,24 +198,58 @@ def mock_strategy_service_integration():
     service.get_strategy_config = AsyncMock(return_value=None)
     return service
 
-@pytest_asyncio.fixture
-async def client() -> AsyncGenerator[AsyncClient, None]:
+@pytest.fixture
+def mock_performance_service_for_endpoint():
     """
-    Cliente HTTP para tests.
-    IMPORTANTE: Esta fixture NO configura la base de datos.
-    Usar 'client_with_db' para tests de integración que la requieran.
+    Mock para PerformanceService para inyección en endpoints.
+    Devuelve un mock limpio que puede ser configurado en cada test.
     """
-    async with AsyncClient(app=fastapi_app, base_url="http://test") as c:
-        yield c
+    service = MagicMock(spec=PerformanceService)
+    # Los métodos que serán llamados son asíncronos, así que los reemplazamos con AsyncMock.
+    service.get_all_strategies_performance = AsyncMock()
+    service.get_trade_performance_metrics = AsyncMock()
+    return service
+
+@pytest.fixture
+def app_settings_fixture() -> AppSettings:
+    """
+    Returns a test-specific instance of AppSettings.
+    This allows tests to override specific settings without global state pollution.
+    """
+    # By default, it loads from .env.test due to the logic in app_config.py
+    # and the TESTING=True env var set in set_test_environment.
+    return get_app_settings()
 
 @pytest_asyncio.fixture
-async def client_with_db(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
+async def client(db_session: AsyncSession) -> AsyncGenerator[Tuple[AsyncClient, FastAPI], None]:
     """
-    Proporciona un AsyncClient para tests de integración que ya tiene la dependencia
-    de la base de datos sobreescrita por la fixture `db_session`.
+    Cliente de test definitivo que garantiza un aislamiento total.
+    - Devuelve una tupla (cliente, app) para permitir overrides de dependencias seguros.
+    - Parchea la session factory a nivel de módulo para forzar el uso de la sesión de test.
+    - Resetea el contenedor de dependencias global para cada test.
+    - Crea una nueva instancia de la app para cada test.
     """
-    async with AsyncClient(app=fastapi_app, base_url="http://test") as c:
-        yield c
+    from ultibot_backend.main import create_app
+    from ultibot_backend import dependencies
+
+    # 1. Forzar que cada test use la sesión de BD transaccional
+    def get_test_session_factory():
+        return lambda: db_session
+
+    # 2. Forzar que cada test cree un nuevo contenedor de dependencias
+    with patch.object(dependencies, '_global_container', None), \
+         patch.object(dependencies, '_session_factory', get_test_session_factory()):
+        
+        app = create_app()
+        
+        # Limpiar cualquier override de dependencias de tests anteriores
+        app.dependency_overrides.clear()
+
+        async with AsyncClient(app=app, base_url="http://test") as c:
+            yield c, app # Devolver tanto el cliente como la app
+        
+        # Limpieza final por si acaso
+        app.dependency_overrides.clear()
 
 @pytest.fixture
 def mock_binance_adapter_fixture():
@@ -306,29 +321,70 @@ def trade_factory():
     """
     import json
     from ultibot_backend.core.domain_models.orm_models import TradeORM
+    from ultibot_backend.core.domain_models.trade_models import (
+        Trade, TradeOrderDetails, OrderCategory, OrderStatus, TradeSide, PositionStatus, TradeMode
+    )
 
-    def _factory(data_dict: Optional[Dict] = None, **overrides):
+    def _factory(**overrides):
         now = datetime.now(timezone.utc)
         
-        # Datos por defecto para 'data'
-        default_data_dict = {"pnl_usd": 100.0, "side": "buy"}
-        if data_dict:
-            default_data_dict.update(data_dict)
-
-        trade_data = {
-            "id": str(uuid4()),
-            "user_id": FIXED_USER_ID, # Pasar como UUID directamente
-            "data": json.dumps(default_data_dict), # Siempre serializar a JSON aquí
-            "status": "closed",
-            "position_status": "closed",
-            "mode": "paper",
+        # Datos por defecto para el modelo Pydantic Trade
+        default_trade_data = {
+            "id": uuid4(),
+            "user_id": FIXED_USER_ID,
+            "mode": TradeMode.PAPER,
             "symbol": "BTCUSDT",
-            "created_at": now.isoformat(),
-            "updated_at": now.isoformat(),
-            "closed_at": now.isoformat(),
+            "side": TradeSide.BUY,
+            "entryOrder": TradeOrderDetails(
+                orderId_internal=uuid4(),
+                orderCategory=OrderCategory.ENTRY,
+                type="market",
+                status=OrderStatus.FILLED.value,
+                requestedPrice=None,
+                requestedQuantity=Decimal("1.0"),
+                executedQuantity=Decimal("1.0"),
+                executedPrice=Decimal("50000.0"),
+                cumulativeQuoteQty=Decimal("50000.0"),
+                commissions=[],
+                commission=Decimal("0.0"),
+                commissionAsset=None,
+                timestamp=now,
+                submittedAt=now,
+                fillTimestamp=now,
+                rawResponse={},
+                ocoOrderListId=None,
+                orderId_exchange=None,
+                clientOrderId_exchange=None,
+            ),
+            "exitOrders": [],
+            "positionStatus": PositionStatus.CLOSED,
+            "pnl_usd": Decimal("100.0"),
+            "pnl_percentage": Decimal("0.01"),
+            "created_at": now,
+            "opened_at": now,
+            "updated_at": now,
+            "closed_at": now,
         }
-        trade_data.update(overrides)
-        return trade_data
+        
+        # Aplicar overrides a los datos del modelo Pydantic
+        default_trade_data.update(overrides)
+
+        # Crear instancia del modelo Pydantic Trade
+        trade_instance = Trade.model_validate(default_trade_data)
+
+        # Construir el diccionario para TradeORM
+        trade_orm_data = {
+            "id": str(trade_instance.id), # Convertir a string para ORM
+            "user_id": trade_instance.user_id, # UUID para ORM (GUID type handles conversion)
+            "data": trade_instance.model_dump_json(), # Serializar el modelo Pydantic completo a JSON
+            "position_status": trade_instance.positionStatus, # Usar el valor del enum
+            "mode": trade_instance.mode, # Usar el valor del enum
+            "symbol": trade_instance.symbol,
+            "created_at": trade_instance.created_at,
+            "updated_at": trade_instance.updated_at,
+            "closed_at": trade_instance.closed_at,
+        }
+        return trade_orm_data
 
     return _factory
 
@@ -416,10 +472,20 @@ async def unified_order_execution_service_fixture():
         trading_mode: str,
         api_key: str,
         api_secret: Optional[str] = None,
-    ) -> Any: # Retorna un objeto con ocoOrderListId
+    ) -> Dict[str, Any]: # Retorna un diccionario, simulando una respuesta JSON
         logger.info(f"Mock create_oco_order called for {symbol} {side} TP:{price} SL:{stop_price}")
-        # Simular la respuesta de Binance para una orden OCO
-        return MagicMock(ocoOrderListId="mock_oco_list_id_" + str(uuid4()))
+        # Simular la respuesta de Binance para una orden OCO, que es un diccionario.
+        return {
+            "orderListId": uuid4().int, # Usar un entero grande como en la API real
+            "contingencyType": "OCO",
+            "listStatusType": "EXEC_STARTED",
+            "listOrderStatus": "EXECUTING",
+            "listClientOrderId": "mock_oco_list_id_" + str(uuid4()),
+            "transactionTime": int(datetime.now(timezone.utc).timestamp() * 1000),
+            "symbol": symbol,
+            "orders": [],
+            "orderReports": []
+        }
 
     mock_service.create_oco_order.side_effect = mock_create_oco_order
     
@@ -428,7 +494,7 @@ async def unified_order_execution_service_fixture():
 @pytest_asyncio.fixture
 async def ai_orchestrator_fixture(market_data_service_fixture):
     """Fixture para AIOrchestrator."""
-    if not app_settings.GEMINI_API_KEY:
+    if not get_app_settings().GEMINI_API_KEY:
         with patch('ultibot_backend.services.ai_orchestrator_service.ChatGoogleGenerativeAI', new_callable=AsyncMock):
             return AIOrchestrator(market_data_service=market_data_service_fixture)
     return AIOrchestrator(market_data_service=market_data_service_fixture)
@@ -460,7 +526,7 @@ async def trading_engine_fixture(
 
 @pytest.fixture
 def mock_user_config():
-    """Mock user configuration for testing."""
+    """Mock user configuration for testing, using camelCase aliases."""
     from ultibot_backend.core.domain_models.user_configuration_models import (
         UserConfiguration, RiskProfileSettings, RealTradingSettings, RiskProfile, Theme
     )
@@ -469,21 +535,21 @@ def mock_user_config():
     return UserConfiguration(
         id="test-config-id",
         user_id=str(FIXED_USER_ID),
-        telegram_chat_id="test-chat-id",
-        notification_preferences=[],
-        enable_telegram_notifications=True,
-        default_paper_trading_capital=Decimal("10000.0"),
-        paper_trading_active=True,
-        paper_trading_assets=[],
+        telegramChatId="test-chat-id",
+        notificationPreferences=[],
+        enableTelegramNotifications=True,
+        defaultPaperTradingCapital=Decimal("10000.0"),
+        paperTradingActive=True,
+        paperTradingAssets=[],
         watchlists=[],
-        favorite_pairs=[],
-        risk_profile=RiskProfile.MODERATE,
-        risk_profile_settings=RiskProfileSettings(
+        favoritePairs=[],
+        riskProfile=RiskProfile.MODERATE,
+        riskProfileSettings=RiskProfileSettings(
             per_trade_capital_risk_percentage=0.02,
             daily_capital_risk_percentage=0.1,
             max_drawdown_percentage=0.15
         ),
-        real_trading_settings=RealTradingSettings(
+        realTradingSettings=RealTradingSettings(
             real_trading_mode_active=False,
             real_trades_executed_count=0,
             max_concurrent_operations=3,
@@ -494,14 +560,16 @@ def mock_user_config():
             daily_capital_risked_usd=Decimal("0.0"),
             last_daily_reset=None
         ),
-        ai_strategy_configurations=[],
-        ai_analysis_confidence_thresholds=None,
-        mcp_server_preferences=[],
-        selected_theme=Theme.DARK,
-        dashboard_layout_profiles={},
-        active_dashboard_layout_profile_id=None,
-        dashboard_layout_config={},
-        cloud_sync_preferences=None
+        aiStrategyConfigurations=[],
+        aiAnalysisConfidenceThresholds=None,
+        mcpServerPreferences=[],
+        selectedTheme=Theme.DARK,
+        dashboardLayoutProfiles={},
+        activeDashboardLayoutProfileId=None,
+        dashboardLayoutConfig={},
+        cloudSyncPreferences=None,
+        createdAt=datetime.now(timezone.utc),
+        updatedAt=datetime.now(timezone.utc)
     )
 
 @pytest.fixture 

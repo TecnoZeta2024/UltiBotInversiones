@@ -40,6 +40,9 @@ async def test_start_application_success(qapp):
         # Mockear UltiBotAPIClient y sus métodos
         with patch('ultibot_ui.main.UltiBotAPIClient') as MockAPIClient:
             mock_api_client_instance = MockAPIClient.return_value
+            # Configurar todos los métodos asíncronos necesarios con AsyncMock
+            mock_api_client_instance.initialize_client = AsyncMock(return_value=None)
+            mock_api_client_instance.close = AsyncMock(return_value=None)
             mock_api_client_instance.get_user_configuration = AsyncMock(return_value={
                 "id": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
                 "telegram_chat_id": None,
@@ -98,6 +101,7 @@ async def test_start_application_success(qapp):
 
                     # Afirmaciones
                     MockAPIClient.assert_called_once()
+                    mock_api_client_instance.initialize_client.assert_awaited_once()
                     mock_api_client_instance.get_user_configuration.assert_awaited_once()
                     MockMainWindow.assert_called_once()
                     mock_main_window_instance.show.assert_called_once()

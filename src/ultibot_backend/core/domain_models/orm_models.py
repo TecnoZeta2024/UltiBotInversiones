@@ -90,7 +90,6 @@ class TradeORM(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True)
     user_id: Mapped[PythonUUID] = mapped_column(GUID(), nullable=False)
     data: Mapped[str] = mapped_column(Text, nullable=False)
-    status: Mapped[str] = mapped_column(String, nullable=False, default='PENDING')
     position_status: Mapped[str] = mapped_column(String, nullable=False)
     mode: Mapped[str] = mapped_column(String, nullable=False)
     symbol: Mapped[str] = mapped_column(String, nullable=False)

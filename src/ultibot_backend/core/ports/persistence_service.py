@@ -33,8 +33,18 @@ class IPersistenceService(ABC):
         pass
 
     @abstractmethod
+    async def upsert_all(self, items: List[Any]) -> None:
+        """
+        Inserts or updates multiple records in the specified table.
+
+        Args:
+            items: A list of Pydantic models to upsert.
+        """
+        pass
+
+    @abstractmethod
     async def get_all(
-        self, table_name: str, condition: Optional[str] = None
+        self, table_name: str, condition: Optional[str] = None, params: Optional[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
         """
         Retrieves all records from a table that match a given condition.
@@ -42,6 +52,7 @@ class IPersistenceService(ABC):
         Args:
             table_name: The name of the table.
             condition: An optional SQL-like condition string.
+            params: Optional dictionary of parameters for the condition.
 
         Returns:
             A list of dictionaries representing the records.
@@ -50,7 +61,7 @@ class IPersistenceService(ABC):
 
     @abstractmethod
     async def get_one(
-        self, table_name: str, condition: str
+        self, table_name: str, condition: str, params: Optional[Dict[str, Any]] = None
     ) -> Optional[Dict[str, Any]]:
         """
         Retrieves a single record from a table that matches a given condition.
@@ -58,6 +69,7 @@ class IPersistenceService(ABC):
         Args:
             table_name: The name of the table.
             condition: An SQL-like condition string.
+            params: Optional dictionary of parameters for the condition.
 
         Returns:
             A dictionary representing the record, or None if not found.
@@ -65,13 +77,14 @@ class IPersistenceService(ABC):
         pass
 
     @abstractmethod
-    async def delete(self, table_name: str, condition: str) -> None:
+    async def delete(self, table_name: str, condition: str, params: Optional[Dict[str, Any]] = None) -> None:
         """
         Deletes records from a table that match a given condition.
 
         Args:
             table_name: The name of the table.
             condition: An SQL-like condition string.
+            params: Optional dictionary of parameters for the condition.
         """
         pass
 
@@ -100,14 +113,14 @@ class IPersistenceService(ABC):
 
     @abstractmethod
     async def execute_raw_sql(
-        self, query: LiteralString, params: Optional[Tuple[Any, ...]] = None
+        self, query: LiteralString, params: Optional[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
         """
         Executes a raw SQL query.
 
         Args:
             query: The SQL query to execute.
-            params: Optional parameters for the query.
+            params: Optional dictionary of parameters for the query.
 
         Returns:
             A list of dictionaries representing the query result.

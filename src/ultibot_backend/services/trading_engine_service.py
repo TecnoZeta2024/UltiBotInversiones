@@ -184,6 +184,7 @@ class TradingEngine:
         daily_risk_limit_usd = portfolio_value_for_risk_calc * daily_risk_limit_percentage
 
         current_daily_risked = user_config.real_trading_settings.daily_capital_risked_usd or Decimal("0.0")
+        logger.debug(f"Validación de Capital: Límite Diario USD: {daily_risk_limit_usd}, Arriesgado Actual USD: {current_daily_risked}, Riesgo Potencial Trade USD: {potential_risk_usd}")
 
         if (current_daily_risked + potential_risk_usd) > daily_risk_limit_usd:
             error_msg = f"Límite de riesgo de capital diario excedido. Límite: {daily_risk_limit_usd}, Arriesgado: {current_daily_risked}, Nuevo Trade: {potential_risk_usd}"
@@ -266,7 +267,7 @@ class TradingEngine:
                 trade.entryOrder = executed_order
             else:
                 trade.entryOrder = TradeOrderDetails(**executed_order)
-            trade.positionStatus = PositionStatus.OPEN.value
+            trade.positionStatus = PositionStatus.OPEN
             logger.info(f"Successfully executed trade {trade.id} from confirmed opportunity.")
             
             # Usar trade.entryOrder para la notificación ya que executed_order podría ser un objeto
@@ -278,7 +279,7 @@ class TradingEngine:
                 message=f"Trade {trade.symbol} ({trade.side}) ejecutado exitosamente. Cantidad: {executed_qty}, Precio: {executed_price}",
                 status_level="INFO",
                 symbol=trade.symbol,
-                trade_id=trade.id
+                trade_id=UUID(str(trade.id)) # Convertir a UUID explícitamente
             )
 
             # Create OCO order for TSL/TP if applicable
@@ -304,12 +305,14 @@ class TradingEngine:
                         api_key=api_key,
                         api_secret=api_secret,
                     )
-                    if oco_order_result:
-                        # oco_order_result es un diccionario, no un objeto TradeOrderDetails
-                        trade.ocoOrderListId = oco_order_result.get("listClientOrderId") if isinstance(oco_order_result, dict) else str(oco_order_result)
+                    if oco_order_result and isinstance(oco_order_result, dict):
+                        trade.ocoOrderListId = oco_order_result.get("listClientOrderId")
                         logger.info(
                             f"Successfully created OCO order for trade {trade.id}. OCO List ID: {trade.ocoOrderListId}"
                         )
+                    else:
+                        logger.warning(f"OCO order result was not a dictionary or was empty: {oco_order_result}")
+                        trade.closingReason = "Position opened, but OCO creation response was invalid."
                 except Exception as oco_e:
                     logger.error(
                         f"Failed to create OCO order for trade {trade.id}: {oco_e}",
@@ -339,6 +342,7 @@ class TradingEngine:
 
                 current_risked = user_config.real_trading_settings.daily_capital_risked_usd or Decimal("0.0")
                 user_config.real_trading_settings.daily_capital_risked_usd = current_risked + trade_value_usd
+                logger.debug(f"Capital arriesgado actualizado para usuario {opportunity.user_id}: {user_config.real_trading_settings.daily_capital_risked_usd} (anterior: {current_risked}, valor trade: {trade_value_usd})")
                 
                 # Asegurar que real_trades_executed_count se inicialice si es None
                 if user_config.real_trading_settings.real_trades_executed_count is None:
@@ -356,7 +360,7 @@ class TradingEngine:
             return trade
         except Exception as e:
             logger.error(f"Failed to execute trade for opportunity {opportunity.id}: {e}", exc_info=True)
-            trade.positionStatus = PositionStatus.ERROR.value
+            trade.positionStatus = PositionStatus.ERROR
             trade.closingReason = str(e)
             await self.persistence_service.upsert_trade(trade) # Pasar el objeto Trade directamente
             await self.notification_service.send_real_trade_status_notification(
@@ -364,7 +368,7 @@ class TradingEngine:
                 message=f"Error al ejecutar trade para {opportunity.symbol}: {e}",
                 status_level="ERROR",
                 symbol=opportunity.symbol,
-                trade_id=trade.id
+                trade_id=UUID(str(trade.id)) # Convertir a UUID explícitamente
             )
             await self._update_opportunity_status(
                 opportunity,
@@ -413,9 +417,9 @@ class TradingEngine:
 
             trade = Trade(
                 user_id=UUID(str(strategy.user_id)),
-                mode=actual_trade_mode.value,
+                mode=actual_trade_mode,
                 symbol=opportunity.symbol,
-                side=actual_trade_side.value,
+                side=actual_trade_side,
                 entryOrder=self._create_entry_order_from_decision(
                     decision,
                     opportunity,
@@ -423,7 +427,7 @@ class TradingEngine:
                     current_price,
                     portfolio_snapshot,
                 ),
-                positionStatus=PositionStatus.PENDING_ENTRY_CONDITIONS.value,
+                positionStatus=PositionStatus.PENDING_ENTRY_CONDITIONS,
                 strategyId=UUID(str(strategy.id)),
                 opportunityId=UUID(str(opportunity.id)),
                 aiAnalysisConfidence=(
@@ -441,9 +445,6 @@ class TradingEngine:
             )
 
             logger.info(f"Created trade {trade.id} from decision {decision.decision_id}")
-
-            await self.persistence_service.upsert_trade(trade) # Pasar el objeto Trade directamente
-            logger.info(f"Trade {trade.id} persisted before execution.")
 
             return trade
         except Exception as e:

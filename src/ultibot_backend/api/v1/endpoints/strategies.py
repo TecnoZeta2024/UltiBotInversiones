@@ -18,7 +18,7 @@ from ultibot_backend.api.v1.models.strategy_models import (
 from ultibot_backend.core.domain_models.trading_strategy_models import BaseStrategyType
 from ultibot_backend.services.strategy_service import StrategyService
 from ultibot_backend import dependencies as deps
-from ultibot_backend.app_config import settings
+from ultibot_backend.app_config import get_app_settings
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ async def create_strategy(
     strategy_service: StrategyService = Depends(deps.get_strategy_service)
 ) -> TradingStrategyResponse:
     """Create a new trading strategy configuration for the fixed user."""
-    user_id = settings.FIXED_USER_ID
+    user_id = get_app_settings().FIXED_USER_ID
     try:
         logger.info(f"Creating new strategy: {strategy_request.config_name} for user {user_id}")
         strategy_data = strategy_request.dict(exclude_unset=True)
@@ -73,7 +73,7 @@ async def list_strategies(
     strategy_service: StrategyService = Depends(deps.get_strategy_service)
 ) -> StrategyListResponse:
     """List all trading strategy configurations for the fixed user."""
-    user_id = settings.FIXED_USER_ID
+    user_id = get_app_settings().FIXED_USER_ID
     try:
         logger.info(f"Listing strategies for user {user_id}")
         strategies = await strategy_service.list_strategy_configs(
@@ -107,7 +107,7 @@ async def get_strategy(
     strategy_service: StrategyService = Depends(deps.get_strategy_service)
 ) -> TradingStrategyResponse:
     """Get a trading strategy configuration by ID for the fixed user."""
-    user_id = settings.FIXED_USER_ID
+    user_id = get_app_settings().FIXED_USER_ID
     try:
         logger.info(f"Getting strategy {strategy_id} for user {user_id}")
         strategy = await strategy_service.get_strategy_config(
@@ -143,7 +143,7 @@ async def update_strategy(
     strategy_service: StrategyService = Depends(deps.get_strategy_service)
 ) -> TradingStrategyResponse:
     """Update a trading strategy configuration for the fixed user."""
-    user_id = settings.FIXED_USER_ID
+    user_id = get_app_settings().FIXED_USER_ID
     try:
         logger.info(f"Updating strategy {strategy_id} for user {user_id}")
         strategy_data = strategy_request.dict(exclude_unset=True)
@@ -180,7 +180,7 @@ async def delete_strategy(
     strategy_service: StrategyService = Depends(deps.get_strategy_service)
 ) -> None:
     """Delete a trading strategy configuration for the fixed user."""
-    user_id = settings.FIXED_USER_ID
+    user_id = get_app_settings().FIXED_USER_ID
     try:
         logger.info(f"Deleting strategy {strategy_id} for user {user_id}")
         deleted = await strategy_service.delete_strategy_config(
@@ -214,7 +214,7 @@ async def activate_strategy(
     strategy_service: StrategyService = Depends(deps.get_strategy_service)
 ) -> StrategyActivationResponse:
     """Activate a trading strategy in the specified mode for the fixed user."""
-    user_id = settings.FIXED_USER_ID
+    user_id = get_app_settings().FIXED_USER_ID
     try:
         logger.info(f"Activating strategy {strategy_id} in {activation_request.mode} mode for user {user_id}")
         updated_strategy = await strategy_service.activate_strategy(
@@ -261,7 +261,7 @@ async def deactivate_strategy(
     strategy_service: StrategyService = Depends(deps.get_strategy_service)
 ) -> StrategyActivationResponse:
     """Deactivate a trading strategy in the specified mode for the fixed user."""
-    user_id = settings.FIXED_USER_ID
+    user_id = get_app_settings().FIXED_USER_ID
     try:
         logger.info(f"Deactivating strategy {strategy_id} in {deactivation_request.mode} mode for user {user_id}")
         updated_strategy = await strategy_service.deactivate_strategy(
@@ -307,7 +307,7 @@ async def get_active_strategies_by_mode(
     strategy_service: StrategyService = Depends(deps.get_strategy_service)
 ) -> StrategyListResponse:
     """Get all active strategies for a specific trading mode for the fixed user."""
-    user_id = settings.FIXED_USER_ID
+    user_id = get_app_settings().FIXED_USER_ID
     try:
         logger.info(f"Getting active {mode} strategies for user {user_id}")
         strategies = await strategy_service.get_active_strategies(
@@ -332,4 +332,3 @@ async def get_active_strategies_by_mode(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve active {mode} strategies"
         )
-

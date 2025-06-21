@@ -21,19 +21,32 @@ class APIError(Exception):
 
 class UltiBotAPIClient:
     """Cliente para interactuar con la API del backend de UltiBot."""
-    _instance = None
-    _client = None
+    _instance: Optional["UltiBotAPIClient"] = None
+    _client: Optional[httpx.AsyncClient] = None
+    _base_url: Optional[str] = None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super(UltiBotAPIClient, cls).__new__(cls)
+            cls._instance._base_url = kwargs.get('base_url') # Guardar base_url para inicialización perezosa
+            cls._instance._client = None # Asegurar que no se inicialice aquí
         return cls._instance
 
     def __init__(self, base_url: str):
-        if self._client is None:
+        # El __init__ se llama cada vez que se instancia, pero solo queremos configurar el base_url una vez
+        if self._base_url is None:
             self._base_url = base_url
+        logger.debug(f"APIClient singleton: base URL establecida en {self._base_url}")
+
+    async def initialize_client(self):
+        """Inicializa el cliente httpx de forma asíncrona."""
+        if self._client is None or self._client.is_closed:
+            if self._base_url is None:
+                raise RuntimeError("Base URL not set for UltiBotAPIClient.")
             self._client = httpx.AsyncClient(base_url=self._base_url, timeout=30.0)
-            logger.debug(f"APIClient singleton inicializado con base URL: {self._base_url}")
+            logger.debug(f"APIClient httpx client inicializado con base URL: {self._base_url}")
+        else:
+            logger.debug("APIClient httpx client ya está inicializado.")
 
     def _convert_decimals_to_floats(self, obj: Any) -> Any:
         """

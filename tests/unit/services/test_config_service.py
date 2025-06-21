@@ -14,7 +14,7 @@ from ultibot_backend.core.domain_models.user_configuration_models import (
 )
 from shared.data_types import AIAnalysisConfidenceThresholds
 from ultibot_backend.core.exceptions import ConfigurationError
-from ultibot_backend.app_config import settings
+from ultibot_backend.app_config import AppSettings # Importar AppSettings
 
 @pytest.fixture
 def mock_persistence_service() -> MagicMock:
@@ -22,17 +22,17 @@ def mock_persistence_service() -> MagicMock:
     return AsyncMock(spec=SupabasePersistenceService)
 
 @pytest.fixture
-def config_service(mock_persistence_service: SupabasePersistenceService) -> ConfigurationService:
+def config_service(mock_persistence_service: SupabasePersistenceService, app_settings_fixture: AppSettings) -> ConfigurationService:
     """Fixture for ConfigurationService."""
     service = ConfigurationService(persistence_service=mock_persistence_service)
-    # Set the fixed user ID from settings, as the service does
-    service._user_id = settings.FIXED_USER_ID
+    # Set the fixed user ID from app_settings_fixture, as the service does
+    service._user_id = app_settings_fixture.FIXED_USER_ID
     return service
 
 @pytest.fixture
-def sample_user_id() -> UUID:
-    """Use the fixed user ID from settings for consistency."""
-    return settings.FIXED_USER_ID
+def sample_user_id(app_settings_fixture: AppSettings) -> UUID:
+    """Use the fixed user ID from app_settings_fixture for consistency."""
+    return app_settings_fixture.FIXED_USER_ID
 
 @pytest.fixture
 def default_user_config(sample_user_id: UUID) -> UserConfiguration:

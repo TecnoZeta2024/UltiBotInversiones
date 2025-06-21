@@ -1,5 +1,6 @@
 import logging
 import json
+from datetime import datetime, timezone
 from uuid import UUID
 from typing import Optional, Dict, Any, List
 
@@ -8,17 +9,18 @@ from ultibot_backend.adapters.telegram_adapter import TelegramAdapter
 from ultibot_backend.core.ports.persistence_service import IPersistenceService
 from ultibot_backend.services.credential_service import CredentialService
 from ultibot_backend.core.exceptions import CredentialError, NotificationError, TelegramNotificationError, ExternalAPIError
-from ultibot_backend.app_config import settings
+from ultibot_backend.app_config import get_app_settings
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 class NotificationService:
     def __init__(self, credential_service: CredentialService, persistence_service: IPersistenceService):
+        app_settings = get_app_settings()
         self.credential_service = credential_service
         self._persistence_service = persistence_service
         self._telegram_adapter: Optional[TelegramAdapter] = None
-        self._user_id: UUID = settings.FIXED_USER_ID
+        self._user_id: UUID = app_settings.FIXED_USER_ID
 
     async def _get_telegram_adapter(self) -> Optional[TelegramAdapter]:
         telegram_credential = await self.credential_service.get_credential(
@@ -78,7 +80,7 @@ class NotificationService:
             )
             if existing_notification_data:
                 existing_notification = Notification.model_validate(existing_notification_data)
-                existing_notification.isRead = True # Cambiar a camelCase
+                existing_notification.readAt = datetime.now(timezone.utc) # Corregir el campo y asignar datetime
                 updated_notification_data = await self._persistence_service.upsert(
                     table_name="notifications", 
                     data=existing_notification.model_dump(mode='json', by_alias=True, exclude_none=True), 

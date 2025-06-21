@@ -313,7 +313,7 @@ async def test_complete_real_trading_flow_with_capital_management():
     assert oco_call_args.kwargs["quantity"] == executed_quantity
 
     # 9.9 Verificar que se persistió el trade
-    assert mock_persistence_service.upsert_trade.call_count == 2, "Se esperaba que upsert_trade se llamara dos veces."
+    assert mock_persistence_service.upsert_trade.call_count == 1, "Se esperaba que upsert_trade se llamara una sola vez después de la ejecución completa."
     
     # 9.9 Verificar que se actualizó el estado de la oportunidad
     mock_persistence_service.update_opportunity_status.assert_called_once()

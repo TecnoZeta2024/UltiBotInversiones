@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from shared.data_types import Trade
 from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 from ultibot_backend import dependencies as deps
-from ultibot_backend.app_config import settings
+from ultibot_backend.app_config import get_app_settings
 from ultibot_backend.services.trading_report_service import TradingReportService # Importar TradingReportService
 
 # Configurar logging
@@ -51,7 +51,7 @@ async def get_user_trades(
     """
     Get trades for the fixed user filtered by trading mode and other criteria.
     """
-    user_id_str = str(settings.FIXED_USER_ID) # Convertir UUID a str
+    user_id_str = str(get_app_settings().FIXED_USER_ID) # Convertir UUID a str
     try:
         # Convertir date a datetime para la persistencia
         start_datetime = datetime.combine(date_from, datetime.min.time()) if date_from else None
@@ -114,7 +114,7 @@ async def get_trades_count(
     """
     Get count of trades matching the specified criteria for the fixed user.
     """
-    user_id = settings.FIXED_USER_ID
+    user_id = get_app_settings().FIXED_USER_ID
     try:
         # TODO: Implement count method in persistence service
         if trading_mode == "both":
@@ -161,7 +161,7 @@ async def get_paper_trading_history(
     """
     Obtiene el historial de operaciones de Paper Trading cerradas para el usuario fijo.
     """
-    user_id = settings.FIXED_USER_ID
+    user_id = get_app_settings().FIXED_USER_ID
     try:
         trades = await report_service.get_closed_trades(
             user_id=user_id,
@@ -216,7 +216,7 @@ async def get_real_trading_history(
     """
     Obtiene el historial de operaciones de Trading Real cerradas para el usuario fijo.
     """
-    user_id = settings.FIXED_USER_ID
+    user_id = get_app_settings().FIXED_USER_ID
     try:
         trades = await report_service.get_closed_trades(
             user_id=user_id,

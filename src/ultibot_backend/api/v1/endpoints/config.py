@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status
 from uuid import UUID
 
-from shared.data_types import UserConfiguration
+from ultibot_backend.core.domain_models.user_configuration_models import (
+    UserConfiguration, 
+    UserConfigurationUpdate
+)
 from ultibot_backend.services.config_service import ConfigurationService
 from ultibot_backend.dependencies import get_config_service
-from ultibot_backend.api.v1.models.config_models import UserConfigurationUpdate # Importación modificada a absoluta
 from ultibot_backend.core.exceptions import (
     ConfigurationError,
     BinanceAPIError,
@@ -15,12 +17,12 @@ from ultibot_backend.core.exceptions import (
 
 router = APIRouter()
 
-@router.get("/config", response_model=UserConfiguration)
+@router.get("/config", response_model=UserConfiguration, response_model_by_alias=True)
 async def get_user_config(
     config_service: ConfigurationService = Depends(get_config_service)
 ):
     """
-    Retorna la configuración actual del usuario.
+    Retorna la configuraciรณn actual del usuario.
     """
     try:
         config = await config_service.get_user_configuration()
@@ -30,44 +32,43 @@ async def get_user_config(
     except ConfigurationError as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al cargar la configuración: {e}"
+            detail=f"Error al cargar la configuraciรณn: {e}"
         )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error inesperado al cargar la configuración: {e}"
+            detail=f"Error inesperado al cargar la configuraciรณn: {e}"
         )
 
-@router.patch("/config", response_model=UserConfiguration)
+@router.patch("/config", response_model=UserConfiguration, response_model_by_alias=True)
 async def update_user_config(
-    config_update_payload: UserConfigurationUpdate, # Parámetro modificado
+    config_update: UserConfigurationUpdate,
     config_service: ConfigurationService = Depends(get_config_service)
 ):
     """
-    Permite actualizar parcialmente la configuración del usuario.
+    Permite actualizar parcialmente la configuraciรณn del usuario.
+    Utiliza Pydantic para un parcheo robusto y seguro.
     """
     try:
         existing_config = await config_service.get_user_configuration()
-        
-        update_data = config_update_payload.model_dump(exclude_unset=True) # Usar nuevo nombre de parámetro
-        
-        # Prevenir la sobreescritura de campos críticos
-        update_data.pop('user_id', None)
-        update_data.pop('id', None)
+        if not existing_config:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User configuration not found.")
 
-        updated_config_model = existing_config.model_copy(update=update_data)
+        update_data = config_update.model_dump(exclude_unset=True)
         
-        await config_service.save_user_configuration(updated_config_model)
-        return updated_config_model
+        updated_config = existing_config.model_copy(update=update_data)
+        
+        await config_service.save_user_configuration(updated_config)
+        return updated_config
     except ConfigurationError as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al guardar la configuración: {e}"
+            detail=f"Error al guardar la configuraciรณn: {e}"
         )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error inesperado al actualizar la configuración: {e}"
+            detail=f"Error inesperado al actualizar la configuraciรณn: {e}"
         )
 
 @router.post("/config/real-trading-mode/activate", response_model=dict)
@@ -85,7 +86,7 @@ async def activate_real_trading_mode_endpoint(
     except (BinanceAPIError, InsufficientUSDTBalanceError, CredentialError) as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
     except ConfigurationError as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error de configuración: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error de configuraciรณn: {e}")
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error inesperado: {e}")
 
@@ -100,7 +101,7 @@ async def deactivate_real_trading_mode_endpoint(
         await config_service.deactivate_real_trading_mode()
         return {"message": "Modo de operativa real limitada desactivado."}
     except ConfigurationError as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error de configuración: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error de configuraciรณn: {e}")
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error inesperado: {e}")
 
@@ -115,6 +116,6 @@ async def get_real_trading_mode_status_endpoint(
         status_data = await config_service.get_real_trading_status()
         return status_data
     except ConfigurationError as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error de configuración: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error de configuraciรณn: {e}")
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error inesperado: {e}")

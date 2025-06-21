@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from shared.data_types import Trade, PerformanceMetrics
 from ultibot_backend.services.trading_report_service import TradingReportService
 from ultibot_backend import dependencies as deps
-from ultibot_backend.app_config import settings
+from ultibot_backend.app_config import get_app_settings
 
 # Configurar logging
 logger = logging.getLogger(__name__)

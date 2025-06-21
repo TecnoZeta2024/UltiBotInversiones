@@ -21,7 +21,7 @@ from ultibot_backend.core.exceptions import (
     RealTradeLimitReachedError,
     CredentialError
 )
-from ultibot_backend.app_config import settings
+from ultibot_backend.app_config import get_app_settings
 
 if TYPE_CHECKING:
     from ultibot_backend.services.credential_service import CredentialService
@@ -32,12 +32,13 @@ logger = logging.getLogger(__name__)
 
 class ConfigurationService:
     def __init__(self, persistence_service: SupabasePersistenceService):
+        app_settings = get_app_settings()
         self.persistence_service = persistence_service
         self.credential_service: Optional["CredentialService"] = None
         self.portfolio_service: Optional["PortfolioService"] = None
         self.notification_service: Optional["NotificationService"] = None
         self._user_configuration: Optional[UserConfiguration] = None
-        self._user_id: UUID = settings.FIXED_USER_ID
+        self._user_id: UUID = app_settings.FIXED_USER_ID
 
     def set_credential_service(self, credential_service: "CredentialService"):
         if not self.credential_service:

@@ -220,14 +220,14 @@ async def get_container_async(request: Request) -> DependencyContainer:
         return _global_container
 
 
-async def get_persistence_service(
-    db_session: AsyncSession = Depends(get_db_session)
-) -> PersistenceService:
+async def get_persistence_service(request: Request) -> PersistenceService:
     """
-    Provides a PersistenceService instance with a managed database session.
-    This is a dependency provider for FastAPI.
+    Provides the singleton PersistenceService instance from the dependency container.
+    This ensures all services share the same persistence layer.
     """
-    return PersistenceService(session=db_session)
+    container = await get_container_async(request)
+    assert container.persistence_service is not None, "PersistenceService not initialized"
+    return container.persistence_service
 
 
 async def get_credential_service(request: Request) -> CredentialService:

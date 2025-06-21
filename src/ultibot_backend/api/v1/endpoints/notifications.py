@@ -3,7 +3,7 @@ from typing import List
 from uuid import UUID
 
 from ultibot_backend import dependencies as deps
-from ultibot_backend.app_config import settings
+from ultibot_backend.app_config import get_app_settings
 from shared.data_types import Notification
 from ultibot_backend.services.notification_service import NotificationService
 from ultibot_backend.core.exceptions import NotificationError
@@ -20,7 +20,8 @@ async def get_notification_history(
     Recupera el historial de notificaciones para el usuario.
     """
     try:
-        user_id = settings.FIXED_USER_ID # Se mantiene para consistencia si se necesita en el futuro
+        app_settings = get_app_settings()
+        user_id = app_settings.FIXED_USER_ID # Se mantiene para consistencia si se necesita en el futuro
         notifications = await notification_service.get_notification_history(limit)
         return notifications
     except NotificationError as e:
@@ -44,7 +45,8 @@ async def mark_notification_as_read(
     Marca una notificación específica como leída para el usuario.
     """
     try:
-        user_id = settings.FIXED_USER_ID # Se mantiene para consistencia si se necesita en el futuro
+        app_settings = get_app_settings()
+        user_id = app_settings.FIXED_USER_ID # Se mantiene para consistencia si se necesita en el futuro
         updated_notification = await notification_service.mark_notification_as_read(notification_id)
         if not updated_notification:
             raise HTTPException(

@@ -1,19 +1,17 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from dotenv import load_dotenv # Importar load_dotenv
-import os # Importar os
-from typing import Optional # Importar Optional
-from uuid import UUID # Add this import
+import os
+from typing import Optional
+from uuid import UUID
+from functools import lru_cache
 
-# Cargar variables de entorno condicionalmente para soportar un entorno de prueba
-if os.getenv("TESTING") == "True":
-    load_dotenv(dotenv_path=".env.test", override=True)
-else:
-    load_dotenv(override=True)
+# Determine which .env file to use based on the TESTING environment variable.
+# Pydantic's BaseSettings will handle the loading.
+env_file = ".env.test" if os.getenv("TESTING") == "True" else ".env"
 
 class AppSettings(BaseSettings):
-    # La carga del archivo .env se gestiona ahora con load_dotenv,
-    # pero mantenemos la configuración del modelo para otras funcionalidades de pydantic.
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    # Let Pydantic handle loading the correct .env file.
+    # It will automatically override with environment variables.
+    model_config = SettingsConfigDict(env_file=env_file, env_file_encoding="utf-8", extra="ignore")
 
     # Supabase
     SUPABASE_URL: str
@@ -45,4 +43,10 @@ class AppSettings(BaseSettings):
     BACKEND_PORT: int = 8000
     DEBUG_MODE: bool = False # For Uvicorn reload
 
-settings = AppSettings()
+@lru_cache()
+def get_app_settings() -> AppSettings:
+    """
+    Returns a cached instance of the application settings.
+    Using lru_cache ensures the settings are loaded only once.
+    """
+    return AppSettings()  # type: ignore
