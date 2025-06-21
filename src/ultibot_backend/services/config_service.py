@@ -9,8 +9,10 @@ from ultibot_backend.core.domain_models.user_configuration_models import (
     UserConfiguration,
     RiskProfile,
     Theme,
+    RealTradingSettings,
+    ConfidenceThresholds,
 )
-from shared.data_types import RealTradingSettings, AIAnalysisConfidenceThresholds, ServiceName
+from shared.data_types import ServiceName
 from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
 from ultibot_backend.core.exceptions import (
     ConfigurationError,
@@ -133,7 +135,7 @@ class ConfigurationService:
             enable_telegram_notifications=False,
             default_paper_trading_capital=Decimal("10000.0"),
             paper_trading_active=True,
-            ai_analysis_confidence_thresholds=AIAnalysisConfidenceThresholds(
+            ai_analysis_confidence_thresholds=ConfidenceThresholds(
                 paper_trading=0.7,
                 real_trading=0.8
             ),

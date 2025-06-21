@@ -351,12 +351,10 @@ class UserConfiguration(BaseModel):
     # --- AI and Analysis Preferences ---
     ai_strategy_configurations: Optional[List[AIStrategyConfiguration]] = Field(
         None, 
-        alias="aiStrategyConfigurations", # Mantener el alias para compatibilidad con la BD si es necesario
         description="List of AI strategy configurations for Gemini integration"
     )
     ai_analysis_confidence_thresholds: Optional[ConfidenceThresholds] = Field(
         None, 
-        alias="aiAnalysisConfidenceThresholds", # Mantener el alias
         description="Global AI confidence thresholds (fallback)"
     )
     

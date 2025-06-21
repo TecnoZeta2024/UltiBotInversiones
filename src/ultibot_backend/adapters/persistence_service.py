@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from ..core.ports.persistence_service import IPersistenceService
 from ..core.domain_models.trade_models import Trade, PositionStatus
-from ..core.domain_models.user_configuration_models import UserConfiguration, NotificationPreference, RiskProfile, AIStrategyConfiguration, MCPServerPreference, DashboardLayoutProfile, CloudSyncPreferences
+from ..core.domain_models.user_configuration_models import UserConfiguration, NotificationPreference, RiskProfile, AIStrategyConfiguration, MCPServerPreference, DashboardLayoutProfile, CloudSyncPreferences, ConfidenceThresholds
 from ..core.domain_models.opportunity_models import OpportunityStatus, Opportunity, InitialSignal, AIAnalysis, SourceType
 from ..core.domain_models.trading_strategy_models import TradingStrategyConfig, BaseStrategyType
 from ..core.domain_models.orm_models import TradeORM, UserConfigurationORM, PortfolioSnapshotORM, OpportunityORM, StrategyConfigORM
@@ -147,8 +147,19 @@ class SupabasePersistenceService(IPersistenceService):
                 risk_profile_obj = RiskProfile(user_config_orm.risk_profile) if user_config_orm.risk_profile is not None else None
                 risk_profile_settings_obj = json.loads(cast(str, user_config_orm.risk_profile_settings)) if user_config_orm.risk_profile_settings is not None else None
                 real_trading_settings_obj = json.loads(cast(str, user_config_orm.real_trading_settings)) if user_config_orm.real_trading_settings is not None else None
-                ai_strategy_configurations_obj = json.loads(cast(str, user_config_orm.ai_strategy_configurations)) if user_config_orm.ai_strategy_configurations is not None else None
-                ai_analysis_confidence_thresholds_obj = json.loads(cast(str, user_config_orm.ai_analysis_confidence_thresholds)) if user_config_orm.ai_analysis_confidence_thresholds is not None else None
+                # Deserializar ai_strategy_configurations como lista de AIStrategyConfiguration objects
+                ai_strategy_configurations_obj = None
+                if user_config_orm.ai_strategy_configurations is not None:
+                    ai_strategy_configs_json = json.loads(cast(str, user_config_orm.ai_strategy_configurations))
+                    if ai_strategy_configs_json:
+                        ai_strategy_configurations_obj = [AIStrategyConfiguration.model_validate(config) for config in ai_strategy_configs_json]
+                
+                # Deserializar ai_analysis_confidence_thresholds como ConfidenceThresholds object
+                ai_analysis_confidence_thresholds_obj = None
+                if user_config_orm.ai_analysis_confidence_thresholds is not None:
+                    confidence_thresholds_json = json.loads(cast(str, user_config_orm.ai_analysis_confidence_thresholds))
+                    if confidence_thresholds_json:
+                        ai_analysis_confidence_thresholds_obj = ConfidenceThresholds.model_validate(confidence_thresholds_json)
                 mcp_server_preferences_obj = json.loads(cast(str, user_config_orm.mcp_server_preferences)) if user_config_orm.mcp_server_preferences is not None else None
                 dashboard_layout_profiles_obj = json.loads(cast(str, user_config_orm.dashboard_layout_profiles)) if user_config_orm.dashboard_layout_profiles is not None else None
                 dashboard_layout_config_obj = json.loads(cast(str, user_config_orm.dashboard_layout_config)) if user_config_orm.dashboard_layout_config is not None else None
@@ -207,33 +218,62 @@ class SupabasePersistenceService(IPersistenceService):
 
     async def upsert_user_configuration(self, user_config: UserConfiguration) -> None:
         async with self._get_session() as session:
-            config_id = user_config.id if user_config.id is not None else str(uuid4())
-
-            user_config_orm = UserConfigurationORM(
-                id=config_id,
-                user_id=user_config.user_id,
-                telegram_chat_id=user_config.telegram_chat_id,
-                notification_preferences=self._pydantic_to_json_string(user_config.notification_preferences),
-                enable_telegram_notifications=user_config.enable_telegram_notifications,
-                default_paper_trading_capital=user_config.default_paper_trading_capital,
-                paper_trading_assets=self._pydantic_to_json_string(user_config.paper_trading_assets),
-                watchlists=self._pydantic_to_json_string(user_config.watchlists),
-                favorite_pairs=self._pydantic_to_json_string(user_config.favorite_pairs),
-                risk_profile=self._pydantic_to_json_string(user_config.risk_profile),
-                risk_profile_settings=self._pydantic_to_json_string(user_config.risk_profile_settings),
-                real_trading_settings=self._pydantic_to_json_string(user_config.real_trading_settings),
-                ai_strategy_configurations=self._pydantic_to_json_string(user_config.ai_strategy_configurations),
-                ai_analysis_confidence_thresholds=self._pydantic_to_json_string(user_config.ai_analysis_confidence_thresholds),
-                mcp_server_preferences=self._pydantic_to_json_string(user_config.mcp_server_preferences),
-                selected_theme=user_config.selected_theme,
-                dashboard_layout_profiles=self._pydantic_to_json_string(user_config.dashboard_layout_profiles),
-                active_dashboard_layout_profile_id=user_config.active_dashboard_layout_profile_id,
-                dashboard_layout_config=self._pydantic_to_json_string(user_config.dashboard_layout_config),
-                cloud_sync_preferences=self._pydantic_to_json_string(user_config.cloud_sync_preferences),
-                created_at=user_config.created_at,
-                updated_at=user_config.updated_at
+            result = await session.execute(
+                select(UserConfigurationORM).where(UserConfigurationORM.user_id == user_config.user_id)
             )
-            await session.merge(user_config_orm)
+            existing_config = result.scalars().first()
+
+            if existing_config:
+                # Update existing configuration
+                existing_config.telegram_chat_id = user_config.telegram_chat_id
+                existing_config.notification_preferences = self._pydantic_to_json_string(user_config.notification_preferences)
+                existing_config.enable_telegram_notifications = user_config.enable_telegram_notifications if user_config.enable_telegram_notifications is not None else False
+                existing_config.default_paper_trading_capital = float(user_config.default_paper_trading_capital) if user_config.default_paper_trading_capital is not None else 10000.0
+                existing_config.paper_trading_active = user_config.paper_trading_active if user_config.paper_trading_active is not None else False
+                existing_config.paper_trading_assets = self._pydantic_to_json_string(user_config.paper_trading_assets)
+                existing_config.watchlists = self._pydantic_to_json_string(user_config.watchlists)
+                existing_config.favorite_pairs = self._pydantic_to_json_string(user_config.favorite_pairs)
+                existing_config.risk_profile = user_config.risk_profile.value if user_config.risk_profile else None
+                existing_config.risk_profile_settings = self._pydantic_to_json_string(user_config.risk_profile_settings)
+                existing_config.real_trading_settings = self._pydantic_to_json_string(user_config.real_trading_settings)
+                existing_config.ai_strategy_configurations = self._pydantic_to_json_string(user_config.ai_strategy_configurations)
+                existing_config.ai_analysis_confidence_thresholds = self._pydantic_to_json_string(user_config.ai_analysis_confidence_thresholds)
+                existing_config.mcp_server_preferences = self._pydantic_to_json_string(user_config.mcp_server_preferences)
+                existing_config.selected_theme = user_config.selected_theme.value if user_config.selected_theme else None
+                existing_config.dashboard_layout_profiles = self._pydantic_to_json_string(user_config.dashboard_layout_profiles)
+                existing_config.active_dashboard_layout_profile_id = user_config.active_dashboard_layout_profile_id
+                existing_config.dashboard_layout_config = self._pydantic_to_json_string(user_config.dashboard_layout_config)
+                existing_config.cloud_sync_preferences = self._pydantic_to_json_string(user_config.cloud_sync_preferences)
+                existing_config.updated_at = datetime.now(timezone.utc)
+            else:
+                # Create new configuration
+                new_config_orm = UserConfigurationORM(
+                    id=user_config.id if user_config.id is not None else uuid4(),
+                    user_id=user_config.user_id,
+                    telegram_chat_id=user_config.telegram_chat_id,
+                    notification_preferences=self._pydantic_to_json_string(user_config.notification_preferences),
+                    enable_telegram_notifications=user_config.enable_telegram_notifications,
+                    default_paper_trading_capital=float(user_config.default_paper_trading_capital) if user_config.default_paper_trading_capital is not None else None,
+                    paper_trading_active=user_config.paper_trading_active,
+                    paper_trading_assets=self._pydantic_to_json_string(user_config.paper_trading_assets),
+                    watchlists=self._pydantic_to_json_string(user_config.watchlists),
+                    favorite_pairs=self._pydantic_to_json_string(user_config.favorite_pairs),
+                    risk_profile=user_config.risk_profile.value if user_config.risk_profile else None,
+                    risk_profile_settings=self._pydantic_to_json_string(user_config.risk_profile_settings),
+                    real_trading_settings=self._pydantic_to_json_string(user_config.real_trading_settings),
+                    ai_strategy_configurations=self._pydantic_to_json_string(user_config.ai_strategy_configurations),
+                    ai_analysis_confidence_thresholds=self._pydantic_to_json_string(user_config.ai_analysis_confidence_thresholds),
+                    mcp_server_preferences=self._pydantic_to_json_string(user_config.mcp_server_preferences),
+                    selected_theme=user_config.selected_theme.value if user_config.selected_theme else None,
+                    dashboard_layout_profiles=self._pydantic_to_json_string(user_config.dashboard_layout_profiles),
+                    active_dashboard_layout_profile_id=user_config.active_dashboard_layout_profile_id,
+                    dashboard_layout_config=self._pydantic_to_json_string(user_config.dashboard_layout_config),
+                    cloud_sync_preferences=self._pydantic_to_json_string(user_config.cloud_sync_preferences),
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc)
+                )
+                session.add(new_config_orm)
+            
             await session.commit()
 
     async def upsert_strategy_config(self, strategy_config: TradingStrategyConfig) -> None:
