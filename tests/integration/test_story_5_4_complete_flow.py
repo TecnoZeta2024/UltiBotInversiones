@@ -208,6 +208,8 @@ def scalping_strategy_btc(user_id):
             explicit_pairs=["BTCUSDT"],
             include_all_spot=False,
             dynamic_filter=None,
+            allowed_symbols=["BTCUSDT"],
+            excluded_symbols=[],
         ),
         ai_analysis_profile_id=None,  # No AI for this strategy
         risk_parameters_override=None,
@@ -248,6 +250,8 @@ def day_trading_strategy_multi(user_id):
             explicit_pairs=["BTCUSDT", "ETHUSDT", "ADAUSDT"],
             include_all_spot=False,
             dynamic_filter=None,
+            allowed_symbols=["BTCUSDT", "ETHUSDT", "ADAUSDT"],
+            excluded_symbols=[],
         ),
         ai_analysis_profile_id="ai_profile_1",  # Uses AI
         risk_parameters_override=None,
@@ -315,8 +319,8 @@ def user_configuration(user_id, ai_strategy_config):
             asset_specific_stop_loss=None,
             auto_pause_trading_conditions=None,
         ),
-        ai_strategy_configurations=[ai_strategy_config],
-        ai_analysis_confidence_thresholds=ConfidenceThresholds(
+        aiStrategyConfigurations=[ai_strategy_config], # Corregido a camelCase
+        aiAnalysisConfidenceThresholds=ConfidenceThresholds( # Corregido a camelCase
             paper_trading=0.60,
             real_trading=0.75,
         ),
@@ -378,16 +382,14 @@ class TestCompleteOpportunityProcessingFlow:
         
         # Mock database responses
         active_strategies_data = [
-            self._strategy_to_db_format(scalping_strategy_btc)
+            scalping_strategy_btc
         ]
-        mock_persistence_service.fetch_all.return_value = active_strategies_data
+        mock_persistence_service.list_strategy_configs_by_user = AsyncMock(return_value=active_strategies_data)
         
         # Mock get_strategy_config calls
         mock_persistence_service.get_user_configuration.return_value = user_configuration
-        # Manually attach the mock method to bypass spec check, revealing an inconsistency
-        # between StrategyService and the Persistence layer.
         mock_persistence_service.get_strategy_config_by_id = AsyncMock(
-            return_value=self._strategy_to_db_format(scalping_strategy_btc)
+            return_value=scalping_strategy_btc
         )
 
         # Mock trade creation (no actual DB persistence needed for this test)
@@ -458,8 +460,8 @@ class TestCompleteOpportunityProcessingFlow:
         
         # Mock active strategies (both apply to BTCUSDT)
         active_strategies_data = [
-            self._strategy_to_db_format(scalping_strategy_btc),
-            self._strategy_to_db_format(day_trading_strategy_multi),
+            scalping_strategy_btc,
+            day_trading_strategy_multi,
         ]
         # Correctly mock the methods that are actually called by the services
         mock_persistence_service.list_strategy_configs_by_user = AsyncMock(return_value=active_strategies_data)
@@ -467,11 +469,10 @@ class TestCompleteOpportunityProcessingFlow:
         # Mock the configuration service directly to ensure the correct user_config is returned
         trading_engine.configuration_service.get_user_configuration = AsyncMock(return_value=user_configuration)
         
-        # Manually attach the mock method to bypass spec check, ensuring it's iterable
         mock_persistence_service.get_strategy_config_by_id = AsyncMock(
             side_effect=[
-                self._strategy_to_db_format(scalping_strategy_btc),
-                self._strategy_to_db_format(day_trading_strategy_multi),
+                scalping_strategy_btc,
+                day_trading_strategy_multi,
             ]
         )
         
@@ -541,9 +542,9 @@ class TestCompleteOpportunityProcessingFlow:
         
         # Mock BTC-only strategy as active
         active_strategies_data = [
-            self._strategy_to_db_format(scalping_strategy_btc)
+            scalping_strategy_btc
         ]
-        mock_persistence_service.fetch_all.return_value = active_strategies_data
+        mock_persistence_service.list_strategy_configs_by_user = AsyncMock(return_value=active_strategies_data)
         mock_persistence_service.get_user_configuration.return_value = user_configuration
         
         with patch.object(trading_engine, '_update_opportunity_status') as mock_update_status:
@@ -582,9 +583,9 @@ class TestCompleteOpportunityProcessingFlow:
         
         # Mock active strategy
         active_strategies_data = [
-            self._strategy_to_db_format(day_trading_strategy_multi)
+            day_trading_strategy_multi
         ]
-        mock_persistence_service.fetch_all.return_value = active_strategies_data
+        mock_persistence_service.list_strategy_configs_by_user = AsyncMock(return_value=active_strategies_data)
         mock_persistence_service.get_user_configuration.return_value = user_configuration
         
         # Mock low-confidence AI analysis
@@ -634,10 +635,11 @@ class TestCompleteOpportunityProcessingFlow:
         scalping_strategy_btc.is_active_real_mode = True
         
         # Mock active strategy
+        scalping_strategy_btc.is_active_real_mode = True # Ensure it's active for real mode test
         active_strategies_data = [
-            self._strategy_to_db_format(scalping_strategy_btc)
+            scalping_strategy_btc
         ]
-        mock_persistence_service.fetch_all.return_value = active_strategies_data
+        mock_persistence_service.list_strategy_configs_by_user = AsyncMock(return_value=active_strategies_data)
         mock_persistence_service.get_user_configuration.return_value = user_configuration
         
         with patch.object(trading_engine, '_update_opportunity_status') as mock_update_status:
@@ -678,10 +680,10 @@ class TestCompleteOpportunityProcessingFlow:
         
         # Mock both strategies as active
         active_strategies_data = [
-            self._strategy_to_db_format(scalping_strategy_btc),
-            self._strategy_to_db_format(day_trading_strategy_multi),
+            scalping_strategy_btc,
+            day_trading_strategy_multi,
         ]
-        mock_persistence_service.fetch_all.return_value = active_strategies_data
+        mock_persistence_service.list_strategy_configs_by_user = AsyncMock(return_value=active_strategies_data)
         mock_persistence_service.get_user_configuration.return_value = user_configuration
         
         # Mock AI orchestrator to fail for the AI strategy
@@ -706,48 +708,6 @@ class TestCompleteOpportunityProcessingFlow:
                 "Executed 1 paper trades"
             )
 
-    def _strategy_to_db_format(self, strategy: TradingStrategyConfig) -> dict:
-        """
-        Convert strategy to a dictionary format that mimics a database record.
-        This ensures that nested Pydantic models are converted to dicts,
-        which the service layer expects to deserialize.
-        """
-        # Safely dump parameters to a dict
-        parameters_dump = (
-            strategy.parameters.model_dump(mode='json')
-            if hasattr(strategy.parameters, 'model_dump')
-            else strategy.parameters
-        )
-
-        # Safely dump applicability_rules to a dict, handling None case
-        applicability_rules_dump = None
-        if strategy.applicability_rules and hasattr(strategy.applicability_rules, 'model_dump'):
-            applicability_rules_dump = strategy.applicability_rules.model_dump(mode='json')
-        else:
-            applicability_rules_dump = strategy.applicability_rules
-
-        return {
-            "id": strategy.id,
-            "user_id": strategy.user_id,
-            "config_name": strategy.config_name,
-            "base_strategy_type": strategy.base_strategy_type,  # Keep as Enum as service expects it
-            "description": strategy.description,
-            "is_active_paper_mode": strategy.is_active_paper_mode,
-            "is_active_real_mode": strategy.is_active_real_mode,
-            "parameters": parameters_dump,
-            "applicability_rules": applicability_rules_dump,
-            "ai_analysis_profile_id": strategy.ai_analysis_profile_id,
-            "risk_parameters_override": None,
-            "version": strategy.version,
-            "parent_config_id": strategy.parent_config_id,
-            "performance_metrics": None,
-            "market_condition_filters": None,
-            "activation_schedule": None,
-            "depends_on_strategies": None,
-            "sharing_metadata": None,
-            "created_at": strategy.created_at,
-            "updated_at": strategy.updated_at,
-        }
 
 
 class TestTradeCreationWithStrategyAssociation:

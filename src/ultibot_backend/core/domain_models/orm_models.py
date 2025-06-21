@@ -142,3 +142,19 @@ class OpportunityORM(Base):
 
     def __repr__(self):
         return f"<OpportunityORM(id='{self.id}', symbol='{self.symbol}', status='{self.status}')>"
+
+class StrategyConfigORM(Base):
+    __tablename__ = 'strategy_configurations'
+
+    id = Column(GUID(), primary_key=True, default=PythonUUID)
+    user_id = Column(GUID(), nullable=False)
+    data = Column(Text, nullable=False) # JSON string of TradingStrategyConfig Pydantic model
+    config_name = Column(String, nullable=False)
+    base_strategy_type = Column(String, nullable=False) # Storing the enum value as string
+    is_active_paper_mode = Column(Boolean, default=False)
+    is_active_real_mode = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), default=func.now())
+    updated_at = Column(DateTime(timezone=True), default=func.now(), onupdate=func.now())
+
+    def __repr__(self):
+        return f"<StrategyConfigORM(id='{self.id}', config_name='{self.config_name}', user_id='{self.user_id}')>"

@@ -1,37 +1,75 @@
-### INFORME DE ESTADO Y PLAN DE ACCIÓN SRST - 2025-06-20 18:58:20
+### INFORME DE ESTADO Y PLAN DE ACCIÓN SRST - 2025-06-20 20:19:00
 
 **ESTADO ACTUAL:**
-* Ejecutando FASE 1: TRIAGE Y PLANIFICACIÓN post-análisis de `SRST_PROGRESS.md`.
+* Ejecutando FASE 2: RESOLUCIÓN ATÓMICA. Tickets `SRST-1515` y `SRST-1516` resueltos.
 
 **1. ANÁLISIS DE TRIAGE (Resultados de FASE 1):**
 * **Comando ejecutado:** `python scripts/srst_triage.py`
 * **Resumen de Tickets:**
-    * **Total:** 64
-    * **Critical:** 0
-    * **High:** 36
-    * **Medium:** 28
-    * **Low:** 0
-* **Errores Principales Identificados:** `TypeError`, `Business Logic Errors (AssertionError, HTTPException, etc.)`
+    *   **Total:** 33
+    *   **Critical:** 0
+    *   **High:** 0
+    *   **Medium:** 12
+    *   **Low:** 0
+* **Errores Principales Identificados:** `RuntimeError`
 
 **2. HIPÓTESIS CENTRAL (Causa Raíz General):**
-* **Causa raíz identificada:** Una cascada de `TypeError` que parece originarse en servicios base (ej. `CredentialService`). Estos errores impiden que los endpoints de la API (rendimiento, reportes, configuración) funcionen correctamente, lo que resulta en que la UI no reciba los datos del portafolio y muestre "N/A".
-* **Impacto sistémico:** La funcionalidad principal de la aplicación (visualización de datos de trading y rendimiento) está completamente bloqueada.
+* **Causa raíz identificada:** Errores de runtime en el frontend, posiblemente relacionados con la lógica de negocio o la interacción entre servicios.
+* **Impacto sistémico:** Impide el despliegue y la operación correcta de la aplicación.
 
 **3. PLAN DE ACCIÓN (SESIÓN ACTUAL - Máx 3 Tickets):**
 | Ticket ID | Archivo a Modificar | Descripción del Cambio | Justificación (Por qué soluciona el ticket) |
 | :--- | :--- | :--- | :--- |
-| `SRST-1402` | `src/ultibot_backend/services/credential_service.py` | (Pendiente de análisis del ticket) Corregir el `TypeError` en la función `add_credential`. | `CredentialService` es un servicio fundacional. Si no puede añadir o gestionar credenciales, ningún servicio que dependa de APIs externas (Binance, etc.) funcionará. Resolver esto es el primer paso crítico. |
-| `SRST-1403` | `src/ultibot_backend/services/credential_service.py` | (Pendiente de análisis del ticket) Corregir el `TypeError` en la función `get_credential`. | Relacionado directamente con el ticket anterior. Asegura que las credenciales no solo se puedan añadir, sino también recuperar y usar. |
-| `SRST-1457` | `src/ultibot_backend/services/test_config_service.py` | (Pendiente de análisis del ticket) Corregir el `TypeError` al obtener la configuración de usuario. | `ConfigService` es otro pilar. Si la configuración del usuario no se puede cargar, el sistema no sabe cómo operar (ej. modo paper/real, capital), afectando toda la lógica de trading. |
+| `SRST-1517` | `src/ultibot_backend/services/credential_service.py` | Investigar la causa del `RuntimeError` en la línea 314 y aplicar la corrección necesaria. | Resolverá el error específico reportado en los logs del frontend, permitiendo que el servicio de credenciales funcione correctamente. |
+| `SRST-1518` | `src/ultibot_backend/services/market_data_service.py` | Investigar la causa del `RuntimeError` en la línea 70 y aplicar la corrección necesaria. | Resolverá el error específico reportado en los logs del frontend, permitiendo que el servicio de datos de mercado funcione correctamente. |
+| `SRST-1519` | `src/ultibot_backend/services/market_data_service.py` | Investigar la causa del `RuntimeError` en la línea 78 y aplicar la corrección necesaria. | Resolverá el error específico reportado en los logs del frontend, permitiendo que el servicio de datos de mercado funcione correctamente. |
 
 **4. RIESGOS POTENCIALES:**
-* **Riesgo 1:** La corrección de estos servicios base puede desenmascarar errores subsiguientes en servicios de nivel superior que dependen de ellos.
-* **Mitigación:** Validación incremental estricta por ticket y re-ejecución del triage si es necesario.
-* **Protocolo de rollback:** `git reset --hard HEAD` si un fix introduce una regresión crítica.
+* **Riesgo 1:** La corrección de un error podría introducir nuevas regresiones en otros módulos.
+* **Protocolo de rollback:** `git reset --hard HEAD`
 
 **5. VALIDACIÓN PROGRAMADA:**
-* **Comando por ticket:** `poetry run pytest --collect-only -q` y `poetry run pytest -xvs <ruta_al_test_especifico>`
-* **Métrica de éxito de la sesión:** Resolución de los 3 tickets seleccionados y una reducción significativa de los `TypeError` en el siguiente triage.
+* **Comando por ticket:** `poetry run pytest --collect-only -q`
+* **Métrica de éxito de la sesión:** Resolución de los tickets seleccionados y reducción de errores en el triage.
 
 **6. SOLICITUD:**
-* [**PAUSA**] Espero aprobación para proceder con la resolución del ticket `SRST-1402`.
+* [**PAUSA**] Espero aprobación para proceder con la resolución del ticket `SRST-1517`.
+
+---
+
+### INFORME DE ESTADO Y PLAN DE ACCIÓN SRST - 2025-06-20 20:35:16
+
+**ESTADO ACTUAL:**
+* Ejecutando FASE 1: TRIAGE Y PLANIFICACIÓN con `srst_triage.py`.
+
+**1. ANÁLISIS DE TRIAGE (Resultados de FASE 1):**
+* **Comando ejecutado:** `python scripts/srst_triage.py`
+* **Resumen de Tickets:**
+    *   **Total:** 18
+    *   **Critical:** 0
+    *   **High:** 0
+    *   **Medium:** 18
+    *   **Low:** 0
+* **Errores Principales Identificados:** `RuntimeError` (todos de `logs/frontend.log`)
+
+**2. HIPÓTESIS CENTRAL (Causa Raíz General):**
+* **Causa raíz identificada:** Errores de runtime en varios servicios del backend, expuestos a medida que la aplicación avanza en su ejecución. Esto sugiere problemas en la lógica de negocio, manejo de datos o interacciones entre componentes.
+* **Impacto sistémico:** Impide la funcionalidad completa de la aplicación y el despliegue estable.
+
+**3. PLAN DE ACCIÓN (SESIÓN ACTUAL - Máx 3 Tickets):**
+| Ticket ID | Archivo a Modificar | Descripción del Cambio | Justificación (Por qué soluciona el ticket) |
+| :--- | :--- | :--- | :--- |
+| `SRST-1538` | `src/ultibot_backend/services/trading_engine_service.py` | Investigar `RuntimeError` en `trading_engine_service.py:190`. | Resolverá el error específico en el servicio del motor de trading. |
+| `SRST-1539` | `src/ultibot_backend/services/strategy_service.py` | Investigar `RuntimeError` en `strategy_service.py:89`. | Resolverá el error específico en el servicio de estrategias. |
+| `SRST-1540` | `src/ultibot_backend/services/credential_service.py` | Investigar `RuntimeError` en `credential_service.py:314`. | Resolverá el error específico en el servicio de credenciales. |
+
+**4. RIESGOS POTENCIALES:**
+* **Riesgo 1:** La corrección de un error podría introducir nuevas regresiones en otros módulos.
+* **Protocolo de rollback:** `git reset --hard HEAD`
+
+**5. VALIDACIÓN PROGRAMADA:**
+* **Comando por ticket:** `poetry run pytest --collect-only -q`
+* **Métrica de éxito de la sesión:** Resolución de los tickets seleccionados y reducción de errores en el triage.
+
+**6. SOLICITUD:**
+* [**PAUSA**] Espero aprobación para proceder con la resolución del ticket `SRST-1538`.

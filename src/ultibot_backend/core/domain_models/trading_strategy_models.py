@@ -37,6 +37,7 @@ class BaseStrategyType(str, Enum):
     DCA_INVESTING = "DCA_INVESTING"  # Dollar Cost Averaging
     CUSTOM_AI_DRIVEN = "CUSTOM_AI_DRIVEN"
     MCP_SIGNAL_FOLLOWER = "MCP_SIGNAL_FOLLOWER"
+    UNKNOWN = "UNKNOWN" # Añadido para manejar tipos de estrategia desconocidos
 
 
 class ScalpingParameters(BaseModel):
@@ -309,10 +310,9 @@ class DynamicFilter(BaseModel):
 class ApplicabilityRules(BaseModel):
     """Rules defining when and where a strategy applies."""
     
-    explicit_pairs: Optional[List[str]] = Field(
-        None, 
-        description="Explicit trading pairs to apply strategy to"
-    )
+    # Los campos allowed_symbols y excluded_symbols se moverán a TradingStrategyConfig directamente
+    # para simplificar la lógica de is_strategy_applicable_to_symbol.
+    
     include_all_spot: Optional[bool] = Field(
         False, 
         description="Whether to include all spot trading pairs"
@@ -478,9 +478,19 @@ class TradingStrategyConfig(BaseModel):
         description="Strategy-specific parameters"
     )
     
+    # Mover allowed_symbols y excluded_symbols aquí para simplificar la lógica de aplicabilidad
+    allowed_symbols: Optional[List[str]] = Field(
+        None, 
+        description="List of symbols this strategy is allowed to trade. If empty, all symbols are allowed unless excluded."
+    )
+    excluded_symbols: Optional[List[str]] = Field(
+        None, 
+        description="List of symbols this strategy is excluded from trading."
+    )
+
     applicability_rules: Optional[ApplicabilityRules] = Field(
         None, 
-        description="Rules defining strategy applicability"
+        description="Rules defining strategy applicability (e.g., dynamic filters). Note: explicit_pairs moved to allowed_symbols."
     )
     
     ai_analysis_profile_id: Optional[str] = Field(
@@ -578,6 +588,7 @@ class TradingStrategyConfig(BaseModel):
             BaseStrategyType.MCP_SIGNAL_FOLLOWER: MCPSignalFollowerParameters,
             BaseStrategyType.GRID_TRADING: GridTradingParameters,
             BaseStrategyType.DCA_INVESTING: DCAInvestingParameters,
+            BaseStrategyType.UNKNOWN: Dict[str, Any], # Manejar UNKNOWN como un dict genérico
         }
         
         expected_model = expected_parameter_models.get(strategy_type_enum_member)
@@ -588,7 +599,11 @@ class TradingStrategyConfig(BaseModel):
             # Pydantic's Union handling might have left it as a dict if it matched Dict[str, Any] first.
             if isinstance(v, dict) and not isinstance(v, expected_model):
                 try:
-                    v = expected_model(**v)
+                    # Si el expected_model es Dict[str, Any], no es necesario instanciarlo
+                    if expected_model is Dict[str, Any]:
+                        pass
+                    else:
+                        v = expected_model(**v)
                 except ValidationError as e:
                     # Re-raise with a more informative message, possibly including field details
                     raise ValueError(

@@ -114,10 +114,10 @@ async def db_session(db_engine: Any) -> AsyncGenerator[AsyncSession, None]:
         await transaction.rollback()
         await connection.close()
 
-# Eliminada persistence_service_fixture ya que get_persistence_service ahora usa get_db_session
-# @pytest_asyncio.fixture
-# async def persistence_service_fixture(db_session: AsyncSession) -> SupabasePersistenceService:
-#     return SupabasePersistenceService(session=db_session)
+@pytest_asyncio.fixture
+async def persistence_service_fixture(db_session: AsyncSession) -> SupabasePersistenceService:
+    """Fixture que proporciona una instancia del servicio de persistencia."""
+    return SupabasePersistenceService(session=db_session)
 
 
 @pytest.fixture(scope="session")
@@ -132,7 +132,6 @@ def event_loop():
 def mock_persistence_service_integration():
     """Mock del servicio de persistencia para integración."""
     mock = AsyncMock(spec=SupabasePersistenceService)
-    # Configurar el método get_trades_with_filters para que sea un AsyncMock
     mock.get_trades_with_filters = AsyncMock(return_value=[])
     return mock
 
@@ -145,159 +144,107 @@ def mock_strategy_service_integration():
     service.get_ai_configuration_for_strategy = AsyncMock()
     service.get_effective_confidence_thresholds_for_strategy = AsyncMock()
     service.get_active_strategies = AsyncMock()
-    # Añadir mock para get_strategy_config para evitar AttributeErrors en tests
     service.get_strategy_config = AsyncMock(return_value=None)
     return service
 
 @pytest_asyncio.fixture
 async def client(
-    db_session: AsyncSession,
     mock_persistence_service_integration,
     mock_strategy_service_integration,
-    # Mantener las otras fixtures en la firma para compatibilidad con otros tests
-    configuration_service_fixture,
-    credential_service_fixture,
-    market_data_service_fixture,
-    portfolio_service_fixture,
-    mock_notification_service_fixture,
-    unified_order_execution_service_fixture,
-    ai_orchestrator_fixture,
-    trading_engine_fixture
 ) -> AsyncGenerator[TestClient, None]:
     """
     Proporciona un TestClient que sobreescribe las dependencias a nivel de aplicación
-    para asegurar que los mocks correctos sean inyectados, usando el patrón
-    recomendado de FastAPI `app.dependency_overrides`.
+    para asegurar que los mocks correctos sean inyectados.
     """
-    # 1. Crear la instancia del servicio que queremos usar en el test,
-    #    inyectándole manualmente sus propias dependencias mockeadas.
-    mocked_performance_service = PerformanceService(
-        session_factory=lambda: db_session,
-        strategy_service=mock_strategy_service_integration,
-        persistence_service=mock_persistence_service_integration
-    )
-
-    # 2. Crear una función de "override" que devuelva la instancia mockeada.
-    async def override_get_performance_service() -> PerformanceService:
-        return mocked_performance_service
-
-    # 3. Aplicar el override al diccionario de dependencias de la aplicación.
-    #    FastAPI usará `override_get_performance_service` en lugar de `get_performance_service`.
+    fastapi_app.dependency_overrides[get_persistence_service] = lambda: mock_persistence_service_integration
+    fastapi_app.dependency_overrides[get_strategy_service] = lambda: mock_strategy_service_integration
+    
+    def override_get_performance_service():
+        return PerformanceService(
+            strategy_service=mock_strategy_service_integration,
+            persistence_service=mock_persistence_service_integration
+        )
     fastapi_app.dependency_overrides[get_performance_service] = override_get_performance_service
 
-    # 4. Usar TestClient como un gestor de contexto para asegurar que el lifespan se ejecute.
     with TestClient(fastapi_app) as c:
         yield c
 
-    # 5. Limpiar los overrides después del test para no afectar a otros.
     fastapi_app.dependency_overrides.clear()
 
 @pytest.fixture
 def mock_binance_adapter_fixture():
     """Mock para el BinanceAdapter."""
     mock = AsyncMock(spec=BinanceAdapter)
-    # Configurar retornos comunes si es necesario, ej:
     mock.get_ticker_24hr.return_value = {"lastPrice": "50000.0"}
     
-    # Simular una ejecución de orden exitosa
     async def mock_execute_market_order(*args, **kwargs):
         return {
-            "orderId_internal": "mock-order-id",
-            "orderCategory": "entry",
-            "type": "market",
-            "status": "filled",
-            "requestedPrice": kwargs.get("price"),
-            "requestedQuantity": kwargs.get("quantity"),
-            "executedQuantity": kwargs.get("quantity"),
-            "executedPrice": kwargs.get("price", 50000.0), # Usar un precio por defecto si no se proporciona
+            "orderId_internal": "mock-order-id", "orderCategory": "entry", "type": "market",
+            "status": "filled", "requestedPrice": kwargs.get("price"), "requestedQuantity": kwargs.get("quantity"),
+            "executedQuantity": kwargs.get("quantity"), "executedPrice": kwargs.get("price", 50000.0),
             "cumulativeQuoteQty": kwargs.get("quantity", 1.0) * kwargs.get("price", 50000.0),
-            "commissions": [],
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "commissions": [], "timestamp": datetime.now(timezone.utc).isoformat(),
         }
-    
     mock.execute_market_order = AsyncMock(side_effect=mock_execute_market_order)
-
-    # Configurar get_account_info para evitar RuntimeWarning
     mock.get_account_info = AsyncMock(return_value={"canTrade": True, "canWithdraw": True, "canDeposit": True})
-    
     return mock
 
 @pytest_asyncio.fixture
 async def credential_service_fixture(mock_binance_adapter_fixture, db_engine: Any):
-    """Fixture para CredentialService con dependencias reales."""
-    # Crear una session_factory a partir del db_engine para CredentialService
+    """Fixture para CredentialService con dependencias correctas."""
     session_factory = async_sessionmaker(db_engine, class_=AsyncSession, expire_on_commit=False)
-    service = CredentialService(
+    return CredentialService(
         session_factory=session_factory,
         binance_adapter=mock_binance_adapter_fixture
     )
-    return service
 
 @pytest_asyncio.fixture
-async def mock_notification_service_fixture(credential_service_fixture, db_session: AsyncSession):
+async def mock_notification_service_fixture():
     """Mock para NotificationService."""
-    # Para simplificar, usamos un AsyncMock completo.
-    # Si se necesita comportamiento específico, se puede instanciar NotificationService
-    # con sus dependencias mockeadas (credential_service_fixture, persistence_service_fixture).
-    persistence_service = SupabasePersistenceService(session=db_session)
-    mock = AsyncMock(spec=NotificationService)
-    # Ejemplo de configuración de un método mockeado:
-    # async def send_notification_mock(*args, **kwargs): return True
-    # mock.send_notification = AsyncMock(side_effect=send_notification_mock)
-    return mock
+    return AsyncMock(spec=NotificationService)
 
 @pytest_asyncio.fixture
 async def configuration_service_fixture(
     credential_service_fixture,
     mock_notification_service_fixture,
-    db_session: AsyncSession
+    persistence_service_fixture: SupabasePersistenceService
 ):
-    """Fixture para ConfigurationService con dependencias mínimas."""
-    persistence_service = SupabasePersistenceService(session=db_session)
-    service = ConfigurationService(persistence_service=persistence_service)
+    """Fixture para ConfigurationService con dependencias correctas."""
+    service = ConfigurationService(persistence_service=persistence_service_fixture)
     service.set_credential_service(credential_service_fixture)
-    # El portfolio_service se inyectará en tiempo de ejecución o se mockeará donde sea necesario,
-    # para evitar dependencias circulares en las fixtures.
-    # service.set_portfolio_service(portfolio_service_fixture) 
     service.set_notification_service(mock_notification_service_fixture)
     return service
 
-# Para la v1.0, se puede asumir un user_id fijo como en el backend
 FIXED_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
-
-# Eliminada la fixture cleanup_db_after_each_test ya que setup_and_cleanup_db en test_reports_endpoints.py la maneja.
 
 @pytest_asyncio.fixture
 async def market_data_service_fixture(
     credential_service_fixture,
     mock_binance_adapter_fixture,
-    db_engine: Any # Cambiar a db_engine para crear session_factory
+    persistence_service_fixture: SupabasePersistenceService
 ):
-    """Fixture para MarketDataService con dependencias reales."""
-    session_factory = async_sessionmaker(db_engine, class_=AsyncSession, expire_on_commit=False)
+    """Fixture para MarketDataService con dependencias correctas."""
     service = MarketDataService(
         credential_service=credential_service_fixture,
         binance_adapter=mock_binance_adapter_fixture,
-        session_factory=session_factory # Pasar session_factory
+        persistence_service=persistence_service_fixture
     )
     yield service
-    await service.close() # Asegurar que se cierre el servicio y sus websockets si los tuviera
+    await service.close()
 
 @pytest_asyncio.fixture
-async def portfolio_service_fixture(market_data_service_fixture, db_engine: Any):
-    """Fixture para PortfolioService con dependencias."""
-    session_factory = async_sessionmaker(db_engine, class_=AsyncSession, expire_on_commit=False)
+async def portfolio_service_fixture(market_data_service_fixture, persistence_service_fixture: SupabasePersistenceService):
+    """Fixture para PortfolioService con dependencias correctas."""
     service = PortfolioService(
         market_data_service=market_data_service_fixture,
-        session_factory=session_factory # Pasar session_factory
+        persistence_service=persistence_service_fixture
     )
-    # Inicializar el portafolio para el usuario fijo de test
     await service.initialize_portfolio(FIXED_USER_ID)
     return service
 
 @pytest.fixture
 def real_order_execution_service_fixture(mock_binance_adapter_fixture):
-    """Fixture para OrderExecutionService (real) con BinanceAdapter mockeado."""
+    """Fixture para OrderExecutionService (real)."""
     return OrderExecutionService(binance_adapter=mock_binance_adapter_fixture)
 
 @pytest.fixture
@@ -306,80 +253,33 @@ def paper_order_execution_service_fixture():
     return PaperOrderExecutionService(initial_capital=Decimal("10000.0"))
 
 @pytest.fixture
-def unified_order_execution_service_fixture(
-    real_order_execution_service_fixture,
-    paper_order_execution_service_fixture
-):
+def unified_order_execution_service_fixture():
     """Fixture para UnifiedOrderExecutionService."""
-    mock = AsyncMock(spec=UnifiedOrderExecutionService)
-
-    async def mock_execute_market_order(
-        user_id: UUID,
-        symbol: str,
-        side: str,
-        quantity: Decimal,
-        trading_mode: str,
-        api_key: Optional[str] = None,
-        api_secret: Optional[str] = None,
-        oco_order_list_id: Optional[str] = None
-    ) -> TradeOrderDetails:
-        # Simular una orden ejecutada exitosamente
-        return TradeOrderDetails(
-            orderId_internal=uuid4(),
-            orderId_exchange=str(uuid4()), # Proporcionar un valor por defecto
-            clientOrderId_exchange=str(uuid4()), # Proporcionar un valor por defecto
-            orderCategory=OrderCategory.ENTRY,
-            type='market',
-            status=OrderStatus.FILLED.value, # Asegurar que el estado sea 'filled'
-            requestedPrice=Decimal("30000.0"),
-            requestedQuantity=quantity,
-            executedQuantity=quantity,
-            executedPrice=Decimal("30000.0"),
-            cumulativeQuoteQty=quantity * Decimal("30000.0"),
-            commissions=[],
-            commission=Decimal("0.0"),
-            commissionAsset="USDT",
-            submittedAt=datetime.now(timezone.utc),
-            fillTimestamp=datetime.now(timezone.utc),
-            rawResponse={"mock_response": "filled"},
-            ocoOrderListId=oco_order_list_id
-        )
-    
-    mock.execute_market_order.side_effect = mock_execute_market_order
-    
-    return mock
+    return AsyncMock(spec=UnifiedOrderExecutionService)
 
 @pytest_asyncio.fixture
 async def ai_orchestrator_fixture(market_data_service_fixture):
     """Fixture para AIOrchestrator."""
-    # Asegurar que GEMINI_API_KEY esté disponible en el entorno de test
-    # Si no, mockear ChatGoogleGenerativeAI
     if not app_settings.GEMINI_API_KEY:
-        with patch('ultibot_backend.services.ai_orchestrator_service.ChatGoogleGenerativeAI', new_callable=AsyncMock) as mock_llm:
-            # Configurar el mock_llm si es necesario para devolver respuestas simuladas
-            mock_llm_instance = mock_llm.return_value
-            # Ejemplo: mock_llm_instance.ainvoke.return_value = AsyncMock(content="...") 
-            service = AIOrchestrator(market_data_service=market_data_service_fixture)
-    else:
-        service = AIOrchestrator(market_data_service=market_data_service_fixture)
-    return service
+        with patch('ultibot_backend.services.ai_orchestrator_service.ChatGoogleGenerativeAI', new_callable=AsyncMock):
+            return AIOrchestrator(market_data_service=market_data_service_fixture)
+    return AIOrchestrator(market_data_service=market_data_service_fixture)
 
 @pytest_asyncio.fixture
 async def trading_engine_fixture(
+    persistence_service_fixture,
     market_data_service_fixture,
     unified_order_execution_service_fixture,
     credential_service_fixture,
     mock_notification_service_fixture,
-    mock_strategy_service_integration, # Usar el mock existente para StrategyService
+    mock_strategy_service_integration,
     configuration_service_fixture,
     portfolio_service_fixture,
-    ai_orchestrator_fixture,
-    db_session: AsyncSession # Añadir db_session para inicializar PersistenceService
+    ai_orchestrator_fixture
 ):
     """Fixture completa para TradingEngine con todas las dependencias."""
-    persistence_service = SupabasePersistenceService(session=db_session)
-    engine = TradingEngine(
-        persistence_service=persistence_service, # Usar la fixture real de persistencia
+    return TradingEngine(
+        persistence_service=persistence_service_fixture,
         market_data_service=market_data_service_fixture,
         unified_order_execution_service=unified_order_execution_service_fixture,
         credential_service=credential_service_fixture,
@@ -389,4 +289,3 @@ async def trading_engine_fixture(
         portfolio_service=portfolio_service_fixture,
         ai_orchestrator=ai_orchestrator_fixture
     )
-    return engine

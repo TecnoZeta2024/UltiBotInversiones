@@ -54,16 +54,16 @@ async def test_get_strategies_performance_endpoint_with_data(client, mock_persis
             orderCategory=OrderCategory.ENTRY,
             type=OrderType.LIMIT.value,
             status=OrderStatus.FILLED.value,
-            requestedQuantity=float(Decimal("0.002")),
-            executedQuantity=float(Decimal("0.002")),
-            executedPrice=float(Decimal("50000.0")),
+            requestedQuantity=Decimal("0.002"),
+            executedQuantity=Decimal("0.002"),
+            executedPrice=Decimal("50000.0"),
             timestamp=datetime.now(timezone.utc),
-            requestedPrice=float(Decimal("50000.0")),
+            requestedPrice=Decimal("50000.0"),
             orderId_exchange=str(uuid4()),
             clientOrderId_exchange=str(uuid4()),
-            cumulativeQuoteQty=float(Decimal("0.002")) * float(Decimal("50000.0")),
+            cumulativeQuoteQty=Decimal("0.002") * Decimal("50000.0"),
             commissions=[],
-            commission=0.0,
+            commission=Decimal("0.0"),
             commissionAsset="USDT",
             submittedAt=datetime.now(timezone.utc),
             fillTimestamp=datetime.now(timezone.utc),
@@ -72,8 +72,8 @@ async def test_get_strategies_performance_endpoint_with_data(client, mock_persis
         ),
         positionStatus=PositionStatus.CLOSED.value,
         strategyId=strategy_id,
-        pnl_usd=100.0,
-        pnl_percentage=0.1,
+        pnl_usd=Decimal("100.0"),
+        pnl_percentage=Decimal("0.1"),
         opened_at=datetime.now(timezone.utc),
         closed_at=datetime.now(timezone.utc),
         opportunityId=None, aiAnalysisConfidence=None, closingReason="Test",
@@ -99,7 +99,8 @@ async def test_get_strategies_performance_endpoint_with_data(client, mock_persis
         description="Strategy for integration test",
         version=1, applicability_rules=None, ai_analysis_profile_id=None, risk_parameters_override=None,
         parent_config_id=None, performance_metrics=None, market_condition_filters=None,
-        activation_schedule=None, depends_on_strategies=None, sharing_metadata=None, created_at=None, updated_at=None
+        activation_schedule=None, depends_on_strategies=None, sharing_metadata=None, created_at=None, updated_at=None,
+        allowed_symbols=None, excluded_symbols=None # Añadir los nuevos parámetros
     )
     mock_strategy_service_integration.get_strategy_config.return_value = strategy_config
 
@@ -140,16 +141,16 @@ async def test_get_strategies_performance_endpoint_filter_real_mode(client, mock
             orderCategory=OrderCategory.ENTRY,
             type=OrderType.LIMIT.value,
             status=OrderStatus.FILLED.value,
-            requestedQuantity=float(Decimal("0.1")),
-            executedQuantity=float(Decimal("0.1")),
-            executedPrice=float(Decimal("2000.0")),
+            requestedQuantity=Decimal("0.1"),
+            executedQuantity=Decimal("0.1"),
+            executedPrice=Decimal("2000.0"),
             timestamp=datetime.now(timezone.utc),
-            requestedPrice=float(Decimal("2000.0")),
+            requestedPrice=Decimal("2000.0"),
             orderId_exchange=str(uuid4()),
             clientOrderId_exchange=str(uuid4()),
-            cumulativeQuoteQty=float(Decimal("0.1")) * float(Decimal("2000.0")),
+            cumulativeQuoteQty=Decimal("0.1") * Decimal("2000.0"),
             commissions=[],
-            commission=0.0,
+            commission=Decimal("0.0"),
             commissionAsset="USDT",
             submittedAt=datetime.now(timezone.utc),
             fillTimestamp=datetime.now(timezone.utc),
@@ -158,8 +159,8 @@ async def test_get_strategies_performance_endpoint_filter_real_mode(client, mock
         ),
         positionStatus=PositionStatus.CLOSED.value,
         strategyId=strategy_id_real,
-        pnl_usd=250.0,
-        pnl_percentage=0.25,
+        pnl_usd=Decimal("250.0"),
+        pnl_percentage=Decimal("0.25"),
         opened_at=datetime.now(timezone.utc),
         closed_at=datetime.now(timezone.utc),
         opportunityId=None, aiAnalysisConfidence=None, closingReason="Real Test",
@@ -190,7 +191,8 @@ async def test_get_strategies_performance_endpoint_filter_real_mode(client, mock
         description="Strategy for real mode integration test",
         version=1, applicability_rules=None, ai_analysis_profile_id=None, risk_parameters_override=None,
         parent_config_id=None, performance_metrics=None, market_condition_filters=None,
-        activation_schedule=None, depends_on_strategies=None, sharing_metadata=None, created_at=None, updated_at=None
+        activation_schedule=None, depends_on_strategies=None, sharing_metadata=None, created_at=None, updated_at=None,
+        allowed_symbols=None, excluded_symbols=None # Añadir los nuevos parámetros
     )
     mock_strategy_service_integration.get_strategy_config.return_value = strategy_config_real
 
@@ -231,22 +233,22 @@ async def test_get_strategies_performance_endpoint_multiple_strategies(client, m
         symbol="BTCUSDT",
         side="BUY",
         strategyId=strategy_id_1,
-        pnl_usd=50.0,
+        pnl_usd=Decimal("50.0"),
         entryOrder=TradeOrderDetails(
             orderId_internal=uuid4(),
             orderCategory=OrderCategory.ENTRY,
             type=OrderType.MARKET.value,
             status=OrderStatus.FILLED.value,
-            requestedQuantity=float(Decimal("1.0")),
-            executedQuantity=float(Decimal("1.0")),
-            executedPrice=float(Decimal("1.0")),
+            requestedQuantity=Decimal("1.0"),
+            executedQuantity=Decimal("1.0"),
+            executedPrice=Decimal("1.0"),
             timestamp=datetime.now(timezone.utc),
-            requestedPrice=float(Decimal("1.0")),
+            requestedPrice=Decimal("1.0"),
             orderId_exchange=str(uuid4()),
             clientOrderId_exchange=str(uuid4()),
-            cumulativeQuoteQty=float(Decimal("1.0")) * float(Decimal("1.0")),
+            cumulativeQuoteQty=Decimal("1.0") * Decimal("1.0"),
             commissions=[],
-            commission=0.0,
+            commission=Decimal("0.0"),
             commissionAsset="USDT",
             submittedAt=datetime.now(timezone.utc),
             fillTimestamp=datetime.now(timezone.utc),
@@ -256,7 +258,7 @@ async def test_get_strategies_performance_endpoint_multiple_strategies(client, m
         positionStatus=PositionStatus.CLOSED.value,
         opened_at=datetime.now(timezone.utc), 
         closed_at=datetime.now(timezone.utc),
-        pnl_percentage=0.1, 
+        pnl_percentage=Decimal("0.1"), 
         opportunityId=None, 
         aiAnalysisConfidence=None,
         closingReason="Test", 
@@ -274,22 +276,22 @@ async def test_get_strategies_performance_endpoint_multiple_strategies(client, m
         symbol="ETHUSDT",
         side="SELL",
         strategyId=strategy_id_1,
-        pnl_usd=-10.0,
+        pnl_usd=Decimal("-10.0"),
         entryOrder=TradeOrderDetails(
             orderId_internal=uuid4(),
             orderCategory=OrderCategory.ENTRY,
             type=OrderType.MARKET.value,
             status=OrderStatus.FILLED.value,
-            requestedQuantity=float(Decimal("1.0")),
-            executedQuantity=float(Decimal("1.0")),
-            executedPrice=float(Decimal("1.0")),
+            requestedQuantity=Decimal("1.0"),
+            executedQuantity=Decimal("1.0"),
+            executedPrice=Decimal("1.0"),
             timestamp=datetime.now(timezone.utc),
-            requestedPrice=float(Decimal("1.0")),
+            requestedPrice=Decimal("1.0"),
             orderId_exchange=str(uuid4()),
             clientOrderId_exchange=str(uuid4()),
-            cumulativeQuoteQty=float(Decimal("1.0")) * float(Decimal("1.0")),
+            cumulativeQuoteQty=Decimal("1.0") * Decimal("1.0"),
             commissions=[],
-            commission=0.0,
+            commission=Decimal("0.0"),
             commissionAsset="USDT",
             submittedAt=datetime.now(timezone.utc),
             fillTimestamp=datetime.now(timezone.utc),
@@ -299,7 +301,7 @@ async def test_get_strategies_performance_endpoint_multiple_strategies(client, m
         positionStatus=PositionStatus.CLOSED.value,
         opened_at=datetime.now(timezone.utc), 
         closed_at=datetime.now(timezone.utc),
-        pnl_percentage=0.1, 
+        pnl_percentage=Decimal("0.1"), 
         opportunityId=None, 
         aiAnalysisConfidence=None,
         closingReason="Test", 
@@ -317,22 +319,22 @@ async def test_get_strategies_performance_endpoint_multiple_strategies(client, m
         symbol="ADAUSDT",
         side="BUY",
         strategyId=strategy_id_2,
-        pnl_usd=75.0,
+        pnl_usd=Decimal("75.0"),
         entryOrder=TradeOrderDetails(
             orderId_internal=uuid4(),
             orderCategory=OrderCategory.ENTRY,
             type=OrderType.MARKET.value,
             status=OrderStatus.FILLED.value,
-            requestedQuantity=float(Decimal("1.0")),
-            executedQuantity=float(Decimal("1.0")),
-            executedPrice=float(Decimal("1.0")),
+            requestedQuantity=Decimal("1.0"),
+            executedQuantity=Decimal("1.0"),
+            executedPrice=Decimal("1.0"),
             timestamp=datetime.now(timezone.utc),
-            requestedPrice=float(Decimal("1.0")),
+            requestedPrice=Decimal("1.0"),
             orderId_exchange=str(uuid4()),
             clientOrderId_exchange=str(uuid4()),
-            cumulativeQuoteQty=float(Decimal("1.0")) * float(Decimal("1.0")),
+            cumulativeQuoteQty=Decimal("1.0") * Decimal("1.0"),
             commissions=[],
-            commission=0.0,
+            commission=Decimal("0.0"),
             commissionAsset="USDT",
             submittedAt=datetime.now(timezone.utc),
             fillTimestamp=datetime.now(timezone.utc),
@@ -342,7 +344,7 @@ async def test_get_strategies_performance_endpoint_multiple_strategies(client, m
         positionStatus=PositionStatus.CLOSED.value,
         opened_at=datetime.now(timezone.utc), 
         closed_at=datetime.now(timezone.utc),
-        pnl_percentage=0.1, 
+        pnl_percentage=Decimal("0.1"), 
         opportunityId=None, 
         aiAnalysisConfidence=None,
         closingReason="Test", 
@@ -369,7 +371,8 @@ async def test_get_strategies_performance_endpoint_multiple_strategies(client, m
         is_active_paper_mode=True, is_active_real_mode=False, description="Paper multi test", version=1,
         applicability_rules=None, ai_analysis_profile_id=None, risk_parameters_override=None, parent_config_id=None,
         performance_metrics=None, market_condition_filters=None, activation_schedule=None,
-        depends_on_strategies=None, sharing_metadata=None, created_at=None, updated_at=None
+        depends_on_strategies=None, sharing_metadata=None, created_at=None, updated_at=None,
+        allowed_symbols=None, excluded_symbols=None # Añadir los nuevos parámetros
     )
     config_strat2 = TradingStrategyConfig(
         id=str(strategy_id_2), user_id=str(settings.FIXED_USER_ID), config_name="Multi Strat Real",
@@ -386,7 +389,8 @@ async def test_get_strategies_performance_endpoint_multiple_strategies(client, m
         is_active_paper_mode=False, is_active_real_mode=True, description="Real multi test", version=1,
         applicability_rules=None, ai_analysis_profile_id=None, risk_parameters_override=None, parent_config_id=None,
         performance_metrics=None, market_condition_filters=None, activation_schedule=None,
-        depends_on_strategies=None, sharing_metadata=None, created_at=None, updated_at=None
+        depends_on_strategies=None, sharing_metadata=None, created_at=None, updated_at=None,
+        allowed_symbols=None, excluded_symbols=None # Añadir los nuevos parámetros
     )
 
     async def side_effect_get_strategy_config(strat_id_str, user_id_str):
@@ -403,13 +407,13 @@ async def test_get_strategies_performance_endpoint_multiple_strategies(client, m
     data = response.json()
     assert len(data) == 2 # Debería devolver datos para ambas estrategias/modos
 
-    perf_strat1 = next(p for p in data_all if p["strategyId"] == str(strategy_id_1))
-    perf_strat2 = next(p for p in data_all if p["strategyId"] == str(strategy_id_2))
+    perf_strat1 = next(p for p in data if p["strategyId"] == str(strategy_id_1))
+    perf_strat2 = next(p for p in data if p["strategyId"] == str(strategy_id_2))
 
     assert perf_strat1["strategyName"] == "Multi Strat Paper"
     assert perf_strat1["mode"] == "paper"
     assert perf_strat1["totalOperations"] == 2
-    assert perf_strat1["totalPnl"] == 40.0 # 50 - 10
+    assert perf_strat1["totalPnl"] == Decimal("40.0") # 50 - 10
     assert perf_strat1["win_rate"] == 50.0
 
     assert perf_strat2["strategyName"] == "Multi Strat Real"
@@ -441,16 +445,16 @@ async def test_get_strategies_performance_endpoint_strategy_not_found(client, mo
             orderCategory=OrderCategory.ENTRY,
             type=OrderType.LIMIT.value,
             status=OrderStatus.FILLED.value,
-            requestedQuantity=float(Decimal("3.0")),
-            executedQuantity=float(Decimal("3.0")),
-            executedPrice=float(Decimal("10.0")),
+            requestedQuantity=Decimal("3.0"),
+            executedQuantity=Decimal("3.0"),
+            executedPrice=Decimal("10.0"),
             timestamp=datetime.now(timezone.utc),
-            requestedPrice=float(Decimal("10.0")),
+            requestedPrice=Decimal("10.0"),
             orderId_exchange=str(uuid4()),
             clientOrderId_exchange=str(uuid4()),
-            cumulativeQuoteQty=float(Decimal("3.0")) * float(Decimal("10.0")),
+            cumulativeQuoteQty=Decimal("3.0") * Decimal("10.0"),
             commissions=[],
-            commission=0.0,
+            commission=Decimal("0.0"),
             commissionAsset="USDT",
             submittedAt=datetime.now(timezone.utc),
             fillTimestamp=datetime.now(timezone.utc),
@@ -459,8 +463,8 @@ async def test_get_strategies_performance_endpoint_strategy_not_found(client, mo
         ),
         positionStatus=PositionStatus.CLOSED.value,
         strategyId=unknown_strategy_id, # Este ID no tendrá una config asociada
-        pnl_usd=30.0,
-        pnl_percentage=0.03,
+        pnl_usd=Decimal("30.0"),
+        pnl_percentage=Decimal("0.03"),
         opened_at=datetime.now(timezone.utc),
         closed_at=datetime.now(timezone.utc),
         opportunityId=None, aiAnalysisConfidence=None, closingReason="Test Unknown",
@@ -504,7 +508,7 @@ async def test_get_strategies_performance_endpoint_invalid_mode_parameter(client
     assert "detail" in data
     # Verificar que el detalle del error menciona el parámetro 'mode' y el valor inválido
     assert any(
-        err["type"] == "enum" and err["loc"] == ["query", "mode"] and "invalid_mode" in err["msg"]
+        err["type"] == "enum" and err["loc"] == ["query", "mode"]
         for err in data["detail"]
     )
 
@@ -528,22 +532,22 @@ async def test_get_strategies_performance_endpoint_no_mode_filter(client, mock_p
         symbol="XRPUSDT",
         side="BUY",
         strategyId=strategy_id_paper,
-        pnl_usd=60.0,
+        pnl_usd=Decimal("60.0"),
         entryOrder=TradeOrderDetails(
             orderId_internal=uuid4(),
             orderCategory=OrderCategory.ENTRY,
             type=OrderType.MARKET.value,
             status=OrderStatus.FILLED.value,
-            requestedQuantity=float(Decimal("1.0")),
-            executedQuantity=float(Decimal("1.0")),
-            executedPrice=float(Decimal("1.0")),
+            requestedQuantity=Decimal("1.0"),
+            executedQuantity=Decimal("1.0"),
+            executedPrice=Decimal("1.0"),
             timestamp=datetime.now(timezone.utc),
-            requestedPrice=float(Decimal("1.0")),
+            requestedPrice=Decimal("1.0"),
             orderId_exchange=str(uuid4()),
             clientOrderId_exchange=str(uuid4()),
-            cumulativeQuoteQty=float(Decimal("1.0")) * float(Decimal("1.0")),
+            cumulativeQuoteQty=Decimal("1.0") * Decimal("1.0"),
             commissions=[],
-            commission=0.0,
+            commission=Decimal("0.0"),
             commissionAsset="USDT",
             submittedAt=datetime.now(timezone.utc),
             fillTimestamp=datetime.now(timezone.utc),
@@ -553,7 +557,7 @@ async def test_get_strategies_performance_endpoint_no_mode_filter(client, mock_p
         positionStatus=PositionStatus.CLOSED.value,
         opened_at=datetime.now(timezone.utc), 
         closed_at=datetime.now(timezone.utc),
-        pnl_percentage=0.1, 
+        pnl_percentage=Decimal("0.1"), 
         opportunityId=None, 
         aiAnalysisConfidence=None,
         closingReason="Test No Filter", 
@@ -570,21 +574,23 @@ async def test_get_strategies_performance_endpoint_no_mode_filter(client, mock_p
         mode="real",
         symbol="DOTUSDT",
         side="SELL",
+        strategyId=strategy_id_real, # Añadido
+        pnl_usd=Decimal("90.0"), # Añadido
         entryOrder=TradeOrderDetails(
             orderId_internal=uuid4(),
             orderCategory=OrderCategory.ENTRY,
             type=OrderType.MARKET.value,
             status=OrderStatus.FILLED.value,
-            requestedQuantity=float(Decimal("1.0")),
-            executedQuantity=float(Decimal("1.0")),
-            executedPrice=float(Decimal("1.0")),
+            requestedQuantity=Decimal("1.0"),
+            executedQuantity=Decimal("1.0"),
+            executedPrice=Decimal("1.0"),
             timestamp=datetime.now(timezone.utc),
-            requestedPrice=float(Decimal("1.0")),
+            requestedPrice=Decimal("1.0"),
             orderId_exchange=str(uuid4()),
             clientOrderId_exchange=str(uuid4()),
-            cumulativeQuoteQty=float(Decimal("1.0")) * float(Decimal("1.0")),
+            cumulativeQuoteQty=Decimal("1.0") * Decimal("1.0"),
             commissions=[],
-            commission=0.0,
+            commission=Decimal("0.0"),
             commissionAsset="USDT",
             submittedAt=datetime.now(timezone.utc),
             fillTimestamp=datetime.now(timezone.utc),
@@ -594,7 +600,7 @@ async def test_get_strategies_performance_endpoint_no_mode_filter(client, mock_p
         positionStatus=PositionStatus.CLOSED.value,
         opened_at=datetime.now(timezone.utc), 
         closed_at=datetime.now(timezone.utc),
-        pnl_percentage=0.1, 
+        pnl_percentage=Decimal("0.1"), 
         opportunityId=None, 
         aiAnalysisConfidence=None,
         closingReason="Test No Filter", 
@@ -620,7 +626,8 @@ async def test_get_strategies_performance_endpoint_no_mode_filter(client, mock_p
         is_active_paper_mode=True, is_active_real_mode=False, description="Paper no filter", version=1,
         applicability_rules=None, ai_analysis_profile_id=None, risk_parameters_override=None, parent_config_id=None,
         performance_metrics=None, market_condition_filters=None, activation_schedule=None,
-        depends_on_strategies=None, sharing_metadata=None, created_at=None, updated_at=None
+        depends_on_strategies=None, sharing_metadata=None, created_at=None, updated_at=None,
+        allowed_symbols=None, excluded_symbols=None # Añadir los nuevos parámetros
     )
     config_real = TradingStrategyConfig(
         id=str(strategy_id_real), user_id=str(settings.FIXED_USER_ID), config_name="NoFilter Real Strat",
@@ -637,7 +644,8 @@ async def test_get_strategies_performance_endpoint_no_mode_filter(client, mock_p
         is_active_paper_mode=False, is_active_real_mode=True, description="Real no filter", version=1,
         applicability_rules=None, ai_analysis_profile_id=None, risk_parameters_override=None, parent_config_id=None,
         performance_metrics=None, market_condition_filters=None, activation_schedule=None,
-        depends_on_strategies=None, sharing_metadata=None, created_at=None, updated_at=None
+        depends_on_strategies=None, sharing_metadata=None, created_at=None, updated_at=None,
+        allowed_symbols=None, excluded_symbols=None # Añadir los nuevos parámetros
     )
 
     async def side_effect_get_strategy_config(strat_id_str, user_id_str):

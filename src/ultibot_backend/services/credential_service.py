@@ -63,8 +63,8 @@ class CredentialService:
         async with self.session_factory() as session:
             persistence_service = SupabasePersistenceService(session_factory=self.session_factory) # Usar session_factory
             encrypted_api_key = self.encrypt_data(api_key)
-            encrypted_api_secret = self.encrypt_data(api_secret) if api_secret else None
-            encrypted_other_details = self.encrypt_data(json.dumps(other_details)) if other_details else None
+            encrypted_api_secret = self.encrypt_data(api_secret) if api_secret is not None else None # Corrected to handle None explicitly
+            encrypted_other_details = self.encrypt_data(json.dumps(other_details)) if other_details is not None else None # Corrected to handle None explicitly
 
             credential_data = APICredential(
                 user_id=self.fixed_user_id,
@@ -410,18 +410,31 @@ class CredentialService:
                     data=update_data,
                     on_conflict=["id"]
                 )
-            raise e
+            return False # Asegurar que siempre retorna un booleano
         except Exception as e:
             logger.error(f"Error inesperado durante la verificación de la API Key de Binance para {self.fixed_user_id}: {str(e)}", exc_info=True)
             async with self.session_factory() as session:
-                persistence_service = SupabasePersistenceService(session_factory=self.session_factory) # Usar session_factory
+                persistence_service = SupabasePersistenceService(session_factory=self.session_factory)
+                
+                # Construir update_data de forma defensiva
+                update_data: Dict[str, Any] = {
+                    'status': "verification_failed",
+                    'updated_at': datetime.utcnow().isoformat()
+                }
+                
+                # Intentar añadir id, user_id, service_name, credential_label si binance_credential es válido
+                if isinstance(binance_credential, APICredential):
+                    update_data['id'] = str(binance_credential.id)
+                    update_data['user_id'] = str(binance_credential.user_id)
+                    update_data['service_name'] = binance_credential.service_name.value
+                    update_data['credential_label'] = binance_credential.credential_label
+                else:
+                    logger.warning(f"binance_credential no es un objeto APICredential válido en el bloque de excepción. No se puede actualizar con todos los detalles.")
+
                 # Usar upsert para actualizar el estado
-                update_data = binance_credential.model_dump(mode='json')
-                update_data['status'] = "verification_failed"
-                update_data['updated_at'] = datetime.utcnow().isoformat()
                 await persistence_service.upsert(
                     table_name="api_credentials",
                     data=update_data,
-                    on_conflict=["id"]
+                    on_conflict=["id"] if 'id' in update_data else ["user_id", "service_name", "credential_label"] # Usar id si está disponible, sino las claves de conflicto
                 )
-            raise BinanceAPIError(message="Error inesperado al verificar la API Key de Binance.", original_exception=e)
+            return False # Asegurar que siempre retorna un booleano

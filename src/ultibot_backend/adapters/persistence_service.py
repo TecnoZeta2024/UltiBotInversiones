@@ -1,19 +1,20 @@
 from sqlalchemy.ext.asyncio import AsyncSession, AsyncEngine, async_sessionmaker
-from sqlalchemy.sql import text, select, update # Importar update
+from sqlalchemy.sql import text, select, update, delete
 from sqlalchemy.dialects import postgresql
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 from typing_extensions import LiteralString
-from datetime import datetime, timezone # Importar datetime y timezone
+from datetime import datetime, timezone
 from uuid import UUID, uuid4
 import json
-from pydantic import BaseModel # Añadir esta importación para la función auxiliar
+from pydantic import BaseModel
 
 from ..core.ports.persistence_service import IPersistenceService
-from ..core.domain_models.trade_models import Trade, PositionStatus # Importar Trade Pydantic model
-from ..core.domain_models.user_configuration_models import UserConfiguration, NotificationPreference, RiskProfile, AIStrategyConfiguration, MCPServerPreference, DashboardLayoutProfile, CloudSyncPreferences # Importar UserConfiguration Pydantic model y sus sub-modelos
-from ..core.domain_models.opportunity_models import OpportunityStatus, Opportunity, InitialSignal, AIAnalysis, SourceType # Importar OpportunityStatus, Opportunity, InitialSignal, AIAnalysis, SourceType
-from ..core.domain_models.orm_models import TradeORM, UserConfigurationORM, PortfolioSnapshotORM, OpportunityORM # Importar modelos ORM y OpportunityORM
-import asyncpg # Importar asyncpg para el tipo Pool
+from ..core.domain_models.trade_models import Trade, PositionStatus
+from ..core.domain_models.user_configuration_models import UserConfiguration, NotificationPreference, RiskProfile, AIStrategyConfiguration, MCPServerPreference, DashboardLayoutProfile, CloudSyncPreferences
+from ..core.domain_models.opportunity_models import OpportunityStatus, Opportunity, InitialSignal, AIAnalysis, SourceType
+from ..core.domain_models.trading_strategy_models import TradingStrategyConfig, BaseStrategyType
+from ..core.domain_models.orm_models import TradeORM, UserConfigurationORM, PortfolioSnapshotORM, OpportunityORM, StrategyConfigORM
+import asyncpg
 
 class SupabasePersistenceService(IPersistenceService):
     """
@@ -24,16 +25,14 @@ class SupabasePersistenceService(IPersistenceService):
     def __init__(self, session: Optional[AsyncSession] = None, engine: Optional[AsyncEngine] = None, pool: Optional[asyncpg.Pool] = None, session_factory: Optional[async_sessionmaker[AsyncSession]] = None):
         self._session = session
         self._engine = engine
-        self._pool = pool # Para compatibilidad con asyncpg si se usa directamente
-        self._async_session_factory = session_factory # Usar la factoría si se inyecta
+        self._pool = pool
+        self._async_session_factory = session_factory
 
         if not (session or engine or pool or session_factory):
             raise ValueError("SupabasePersistenceService must be initialized with either a session, an engine, a pool, or a session_factory.")
 
-        # Si se proporciona un motor y no una factoría, crear una factoría
         if self._engine and not self._async_session_factory:
             self._async_session_factory = async_sessionmaker(self._engine, expire_on_commit=False)
-        # Si se proporciona una sesión directa, la factoría no es necesaria para _get_session
         elif self._session:
             self._async_session_factory = None
 
@@ -44,10 +43,9 @@ class SupabasePersistenceService(IPersistenceService):
             return obj.model_dump_json()
         if isinstance(obj, list) and all(isinstance(item, BaseModel) for item in obj):
             return json.dumps([item.model_dump() for item in obj])
-        # Para otros tipos que ya son serializables a JSON (ej. List[str], Dict[str, Any])
         if isinstance(obj, (list, dict)):
             return json.dumps(obj)
-        return str(obj) # Fallback para tipos simples si es necesario
+        return str(obj)
 
     def _get_session(self):
         """Get a session context manager."""
@@ -55,8 +53,6 @@ class SupabasePersistenceService(IPersistenceService):
             return self._async_session_factory()
         
         if self._session:
-            # This path should ideally only be used in tests where the session
-            # lifecycle is managed externally.
             class MockSessionManager:
                 def __init__(self, session: AsyncSession):
                     self._session = session
@@ -65,8 +61,6 @@ class SupabasePersistenceService(IPersistenceService):
                     return self._session
 
                 async def __aexit__(self, exc_type, exc_val, exc_tb):
-                    # In a test context, we don't close the session here.
-                    # It's managed by the test fixture.
                     pass
             return MockSessionManager(self._session)
 
@@ -107,7 +101,6 @@ class SupabasePersistenceService(IPersistenceService):
         conflict_columns = ", ".join(on_conflict)
         update_placeholders = ", ".join(f"{col} = EXCLUDED.{col}" for col in data.keys() if col not in on_conflict)
 
-        # Using SQLite compatible upsert syntax
         query = f"""
             INSERT INTO {table_name} ({columns})
             VALUES ({placeholders})
@@ -147,7 +140,6 @@ class SupabasePersistenceService(IPersistenceService):
             )
             user_config_orm = result.scalars().first()
             if user_config_orm:
-                # Deserializar los campos JSON a sus modelos Pydantic correspondientes
                 notification_preferences_obj = json.loads(cast(str, user_config_orm.notification_preferences)) if user_config_orm.notification_preferences is not None else None
                 paper_trading_assets_obj = json.loads(cast(str, user_config_orm.paper_trading_assets)) if user_config_orm.paper_trading_assets is not None else None
                 watchlists_obj = json.loads(cast(str, user_config_orm.watchlists)) if user_config_orm.watchlists is not None else None
@@ -162,7 +154,6 @@ class SupabasePersistenceService(IPersistenceService):
                 dashboard_layout_config_obj = json.loads(cast(str, user_config_orm.dashboard_layout_config)) if user_config_orm.dashboard_layout_config is not None else None
                 cloud_sync_preferences_obj = json.loads(cast(str, user_config_orm.cloud_sync_preferences)) if user_config_orm.cloud_sync_preferences is not None else None
 
-                # Mapear los campos de UserConfigurationORM a UserConfiguration
                 full_user_config_data = {
                     "id": user_config_orm.id,
                     "user_id": user_config_orm.user_id,
@@ -196,7 +187,7 @@ class SupabasePersistenceService(IPersistenceService):
             trade_orm = TradeORM(
                 id=trade.id,
                 user_id=trade.user_id,
-                data=trade.model_dump_json(), # Convertir Pydantic a JSON string
+                data=trade.model_dump_json(),
                 position_status=trade.positionStatus,
                 mode=trade.mode,
                 symbol=trade.symbol,
@@ -204,10 +195,9 @@ class SupabasePersistenceService(IPersistenceService):
                 updated_at=trade.updated_at,
                 closed_at=trade.closed_at
             )
-            # Usar merge para upsert: inserta si no existe, actualiza si existe
             session.add(trade_orm)
             await session.commit()
-            await session.refresh(trade_orm) # Refrescar para obtener cualquier valor generado por la BD
+            await session.refresh(trade_orm)
 
     async def execute_raw_sql(self, query: LiteralString, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         async with self._get_session() as session:
@@ -217,7 +207,6 @@ class SupabasePersistenceService(IPersistenceService):
 
     async def upsert_user_configuration(self, user_config: UserConfiguration) -> None:
         async with self._get_session() as session:
-            # Generar un nuevo ID si no existe
             config_id = user_config.id if user_config.id is not None else str(uuid4())
 
             user_config_orm = UserConfigurationORM(
@@ -227,7 +216,6 @@ class SupabasePersistenceService(IPersistenceService):
                 notification_preferences=self._pydantic_to_json_string(user_config.notification_preferences),
                 enable_telegram_notifications=user_config.enable_telegram_notifications,
                 default_paper_trading_capital=user_config.default_paper_trading_capital,
-                paper_trading_active=user_config.paper_trading_active,
                 paper_trading_assets=self._pydantic_to_json_string(user_config.paper_trading_assets),
                 watchlists=self._pydantic_to_json_string(user_config.watchlists),
                 favorite_pairs=self._pydantic_to_json_string(user_config.favorite_pairs),
@@ -248,6 +236,80 @@ class SupabasePersistenceService(IPersistenceService):
             await session.merge(user_config_orm)
             await session.commit()
 
+    async def upsert_strategy_config(self, strategy_config: TradingStrategyConfig) -> None:
+        async with self._get_session() as session:
+            strategy_orm = StrategyConfigORM(
+                id=strategy_config.id,
+                user_id=strategy_config.user_id,
+                data=strategy_config.model_dump_json(),
+                config_name=strategy_config.config_name,
+                base_strategy_type=strategy_config.base_strategy_type.value,
+                is_active_paper_mode=strategy_config.is_active_paper_mode,
+                is_active_real_mode=strategy_config.is_active_real_mode,
+                created_at=strategy_config.created_at,
+                updated_at=strategy_config.updated_at
+            )
+            await session.merge(strategy_orm)
+            await session.commit()
+
+    async def get_strategy_config_by_id(self, strategy_id: UUID, user_id: UUID) -> Optional[TradingStrategyConfig]:
+        async with self._get_session() as session:
+            result = await session.execute(
+                select(StrategyConfigORM).where(
+                    StrategyConfigORM.id == strategy_id,
+                    StrategyConfigORM.user_id == user_id
+                )
+            )
+            strategy_orm = result.scalars().first()
+            if strategy_orm:
+                strategy_data = json.loads(cast(str, strategy_orm.data))
+                # Asegurar que los campos del ORM se usen para la construcción del modelo Pydantic
+                # y que los tipos sean correctos (UUID a str, datetime a isoformat, Enum a valor)
+                strategy_data.update({
+                    "id": str(strategy_orm.id),
+                    "user_id": str(strategy_orm.user_id),
+                    "config_name": strategy_orm.config_name,
+                    "base_strategy_type": BaseStrategyType(strategy_orm.base_strategy_type), # Convertir a Enum
+                    "is_active_paper_mode": strategy_orm.is_active_paper_mode,
+                    "is_active_real_mode": strategy_orm.is_active_real_mode,
+                    "created_at": strategy_orm.created_at,
+                    "updated_at": strategy_orm.updated_at,
+                })
+                return TradingStrategyConfig.model_validate(strategy_data)
+            return None
+
+    async def list_strategy_configs_by_user(self, user_id: UUID) -> List[TradingStrategyConfig]:
+        async with self._get_session() as session:
+            result = await session.execute(
+                select(StrategyConfigORM).where(StrategyConfigORM.user_id == user_id)
+            )
+            strategy_orms = result.scalars().all()
+            strategies = []
+            for strategy_orm in strategy_orms:
+                strategy_data = json.loads(cast(str, strategy_orm.data))
+                strategy_data.update({
+                    "id": str(strategy_orm.id),
+                    "user_id": str(strategy_orm.user_id),
+                    "config_name": strategy_orm.config_name,
+                    "base_strategy_type": BaseStrategyType(strategy_orm.base_strategy_type), # Convertir a Enum
+                    "is_active_paper_mode": strategy_orm.is_active_paper_mode,
+                    "is_active_real_mode": strategy_orm.is_active_real_mode,
+                    "created_at": strategy_orm.created_at,
+                    "updated_at": strategy_orm.updated_at,
+                })
+                strategies.append(TradingStrategyConfig.model_validate(strategy_data))
+            return strategies
+
+    async def delete_strategy_config(self, strategy_id: UUID, user_id: UUID) -> bool:
+        async with self._get_session() as session:
+            stmt = delete(StrategyConfigORM).where(
+                StrategyConfigORM.id == strategy_id,
+                StrategyConfigORM.user_id == user_id
+            )
+            result = await session.execute(stmt)
+            await session.commit()
+            return result.rowcount > 0
+
     async def update_opportunity_status(self, opportunity_id: UUID, new_status: OpportunityStatus, status_reason: str) -> None:
         async with self._get_session() as session:
             stmt = (
@@ -255,8 +317,8 @@ class SupabasePersistenceService(IPersistenceService):
                 .where(OpportunityORM.id == opportunity_id)
                 .values(
                     status=new_status.value,
-                    status_reason_code=status_reason, # Usar status_reason como reason_code
-                    status_reason_text=status_reason, # Usar status_reason como reason_text
+                    status_reason_code=status_reason,
+                    status_reason_text=status_reason,
                     updated_at=datetime.now(timezone.utc)
                 )
             )
@@ -270,23 +332,21 @@ class SupabasePersistenceService(IPersistenceService):
             )
             opportunity_orm = result.scalars().first()
             if opportunity_orm:
-                # Deserializar los campos JSON a sus modelos Pydantic correspondientes
                 initial_signal_obj = InitialSignal.model_validate_json(cast(str, opportunity_orm.initial_signal)) if opportunity_orm.initial_signal is not None else None
                 ai_analysis_obj = AIAnalysis.model_validate_json(cast(str, opportunity_orm.ai_analysis)) if opportunity_orm.ai_analysis is not None else None
                 
-                # Mapear los campos de OpportunityORM a Opportunity
                 full_opportunity_data = {
                     "id": opportunity_orm.id,
                     "user_id": opportunity_orm.user_id,
                     "symbol": opportunity_orm.symbol,
                     "detected_at": opportunity_orm.detected_at,
-                    "source_type": SourceType(opportunity_orm.source_type), # Convertir a enum
+                    "source_type": SourceType(opportunity_orm.source_type),
                     "source_name": opportunity_orm.source_name,
-                    "source_data": json.loads(cast(str, opportunity_orm.source_data)) if opportunity_orm.source_data is not None else None, # source_data es un JSON string
+                    "source_data": json.loads(cast(str, opportunity_orm.source_data)) if opportunity_orm.source_data is not None else None,
                     "initial_signal": initial_signal_obj,
                     "system_calculated_priority_score": opportunity_orm.system_calculated_priority_score,
                     "last_priority_calculation_at": opportunity_orm.last_priority_calculation_at,
-                    "status": OpportunityStatus(opportunity_orm.status), # Convertir a enum
+                    "status": OpportunityStatus(opportunity_orm.status),
                     "status_reason_code": opportunity_orm.status_reason_code,
                     "status_reason_text": opportunity_orm.status_reason_text,
                     "ai_analysis": ai_analysis_obj,
@@ -310,7 +370,7 @@ class SupabasePersistenceService(IPersistenceService):
         async with self._get_session() as session:
             query = select(TradeORM).where(
                 TradeORM.user_id == user_id,
-                TradeORM.position_status == PositionStatus.CLOSED.value # Usar el valor del enum
+                TradeORM.position_status == PositionStatus.CLOSED.value
             )
 
             if symbol:
@@ -325,14 +385,11 @@ class SupabasePersistenceService(IPersistenceService):
             result = await session.execute(query)
             trade_orms = result.scalars().all()
             
-            # Convertir TradeORM a Trade Pydantic model
             trades = []
             for trade_orm in trade_orms:
                 try:
-                    # Deserializar el JSON 'data'
                     trade_data_from_json = json.loads(cast(str, trade_orm.data))
 
-                    # Combinar con los campos directamente de TradeORM
                     full_trade_data = {
                         "id": trade_orm.id,
                         "user_id": trade_orm.user_id,
@@ -342,16 +399,14 @@ class SupabasePersistenceService(IPersistenceService):
                         "created_at": trade_orm.created_at,
                         "updated_at": trade_orm.updated_at,
                         "closed_at": trade_orm.closed_at,
-                        **trade_data_from_json # Añadir el resto de los datos del JSON
+                        **trade_data_from_json
                     }
                     
-                    # Validar y crear el modelo Pydantic
                     trade_pydantic = Trade.model_validate(full_trade_data)
                     
                     trades.append(trade_pydantic)
                 except Exception as e:
                     print(f"Error al validar Trade Pydantic desde ORM: {e}")
-            # Opcional: loggear el trade_orm.data para depuración
             return trades
 
     async def get_trades_with_filters(
@@ -392,7 +447,6 @@ class SupabasePersistenceService(IPersistenceService):
             for trade_orm_instance in trade_orms:
                 try:
                     trade_data = json.loads(cast(str, trade_orm_instance.data))
-                    # Asegurarse de que los campos del ORM sobreescriben los del JSON si hay conflicto
                     trade_data.update({
                         "id": str(trade_orm_instance.id),
                         "user_id": str(trade_orm_instance.user_id),
@@ -405,6 +459,5 @@ class SupabasePersistenceService(IPersistenceService):
                     })
                     trades.append(Trade.model_validate(trade_data))
                 except Exception as e:
-                    # Log del error, idealmente con un logger real
                     print(f"Error procesando trade desde la BD: {e}")
             return trades

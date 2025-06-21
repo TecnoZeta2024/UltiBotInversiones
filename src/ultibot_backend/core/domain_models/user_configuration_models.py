@@ -351,10 +351,12 @@ class UserConfiguration(BaseModel):
     # --- AI and Analysis Preferences ---
     ai_strategy_configurations: Optional[List[AIStrategyConfiguration]] = Field(
         None, 
+        alias="aiStrategyConfigurations", # Mantener el alias para compatibilidad con la BD si es necesario
         description="List of AI strategy configurations for Gemini integration"
     )
     ai_analysis_confidence_thresholds: Optional[ConfidenceThresholds] = Field(
         None, 
+        alias="aiAnalysisConfidenceThresholds", # Mantener el alias
         description="Global AI confidence thresholds (fallback)"
     )
     
@@ -403,11 +405,11 @@ class UserConfiguration(BaseModel):
         }
 
     @field_validator(
-        'notification_preferences', 'paper_trading_assets', 'watchlists', 
-        'favorite_pairs', 'risk_profile_settings', 'real_trading_settings', 
-        'ai_strategy_configurations', 'ai_analysis_confidence_thresholds', 
-        'mcp_server_preferences', 'dashboard_layout_profiles', 
-        'dashboard_layout_config', 'cloud_sync_preferences', 
+        'notification_preferences', 'paper_trading_assets', 'watchlists',
+        'favorite_pairs', 'risk_profile_settings', 'real_trading_settings',
+        'ai_strategy_configurations', 'ai_analysis_confidence_thresholds',
+        'mcp_server_preferences', 'dashboard_layout_profiles',
+        'dashboard_layout_config', 'cloud_sync_preferences',
         mode='before'
     )
     @classmethod
@@ -440,6 +442,7 @@ class UserConfiguration(BaseModel):
         Returns:
             The AIStrategyConfiguration if found, None otherwise.
         """
+        # Acceder a través del alias si se usa, o directamente si Pydantic lo maneja
         if not self.ai_strategy_configurations:
             return None
         
@@ -467,4 +470,5 @@ class UserConfiguration(BaseModel):
             if ai_config and ai_config.confidence_thresholds:
                 return ai_config.confidence_thresholds
         
+        # Acceder a través del alias si se usa, o directamente si Pydantic lo maneja
         return self.ai_analysis_confidence_thresholds

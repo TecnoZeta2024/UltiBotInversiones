@@ -1,5 +1,7 @@
 import logging
-from typing import Any, Dict, Optional, List
+import json
+from decimal import Decimal
+from typing import Any, Dict, Optional, List, Union
 from uuid import UUID
 import httpx
 
@@ -33,6 +35,18 @@ class UltiBotAPIClient:
             self._client = httpx.AsyncClient(base_url=self._base_url, timeout=30.0)
             logger.debug(f"APIClient singleton inicializado con base URL: {self._base_url}")
 
+    def _convert_decimals_to_floats(self, obj: Any) -> Any:
+        """
+        Convierte recursivamente objetos Decimal a float en diccionarios y listas.
+        """
+        if isinstance(obj, Decimal):
+            return float(obj)
+        elif isinstance(obj, dict):
+            return {k: self._convert_decimals_to_floats(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._convert_decimals_to_floats(elem) for elem in obj]
+        return obj
+
     async def close(self):
         """Cierra el cliente httpx."""
         if self._client:
@@ -46,17 +60,27 @@ class UltiBotAPIClient:
         url = f"{self._base_url}{endpoint}"
         try:
             logger.debug(f"APIClient: _make_request invocado para {method} {endpoint}")
+            
             response = await self._client.request(method, endpoint, **kwargs)
             
             logger.info(f"HTTP Request: {method} {self._base_url}{endpoint} \"HTTP/{response.http_version} {response.status_code} {response.reason_phrase}\"")
 
             response.raise_for_status()
-            logger.debug(f"Response content: {response.text}")  # Log del contenido de la respuesta
-            return response.json()
+            
+            # Decodificar la respuesta JSON y convertir Decimal a float
+            json_response = response.json()
+            processed_response = self._convert_decimals_to_floats(json_response)
+            
+            logger.debug(f"Response content (processed): {processed_response}")
+            return processed_response
         except httpx.HTTPStatusError as e:
             logger.error(f"Error HTTP {e.response.status_code} para {method} {url}: {e.response.text}")
+            try:
+                error_detail = e.response.json().get("detail", e.response.text)
+            except json.JSONDecodeError:
+                error_detail = e.response.text
             raise APIError(
-                message=e.response.json().get("detail", e.response.text),
+                message=error_detail,
                 status_code=e.response.status_code
             ) from e
         except httpx.RequestError as e:
@@ -65,11 +89,7 @@ class UltiBotAPIClient:
 
     async def get_user_configuration(self) -> Dict[str, Any]:
         logger.info("Obteniendo configuración de usuario.")
-        try:
-            return await self._make_request("GET", "/api/v1/config")
-        except TypeError as e:
-            logger.error(f"TypeError al obtener configuración de usuario: {e}")
-            raise
+        return await self._make_request("GET", "/api/v1/config")
 
     async def get_portfolio_snapshot(self, user_id: UUID, trading_mode: str) -> Dict[str, Any]:
         logger.info(f"Obteniendo snapshot del portafolio para {user_id}, modo: {trading_mode}")

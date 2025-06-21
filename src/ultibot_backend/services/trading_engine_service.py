@@ -189,7 +189,7 @@ class TradingEngine:
             error_msg = f"Límite de riesgo de capital diario excedido. Límite: {daily_risk_limit_usd}, Arriesgado: {current_daily_risked}, Nuevo Trade: {potential_risk_usd}"
             logger.error(error_msg)
             await self._update_opportunity_status(opportunity, OpportunityStatus.ERROR_IN_PROCESSING, "daily_capital_limit_exceeded", error_msg)
-            raise OrderExecutionError(error_msg)
+            raise HTTPException(status_code=400, detail=error_msg)
         # --- Fin de la Lógica de Validación de Capital ---
         
         current_price_raw = await self.market_data_service.get_latest_price(opportunity.symbol)
@@ -319,13 +319,15 @@ class TradingEngine:
                 if user_config.real_trading_settings.daily_capital_risked_usd is None:
                     user_config.real_trading_settings.daily_capital_risked_usd = Decimal("0.0")
 
-                trade_value_usd = executed_order.executedQuantity * executed_order.executedPrice
-                
-                # Asegurar que los valores son Decimal antes de la suma
-                current_risked = user_config.real_trading_settings.daily_capital_risked_usd or Decimal("0.0")
-                trade_value_decimal = Decimal(str(trade_value_usd))
+                trade_value_usd: Decimal
+                if executed_order and isinstance(executed_order.executedQuantity, Decimal) and isinstance(executed_order.executedPrice, Decimal):
+                    trade_value_usd = executed_order.executedQuantity * executed_order.executedPrice
+                else:
+                    logger.error(f"Invalid executed_order details for trade {trade.id}. Quantity: {getattr(executed_order, 'executedQuantity', 'N/A')}, Price: {getattr(executed_order, 'executedPrice', 'N/A')}")
+                    trade_value_usd = Decimal("0.0") # Default to 0 to avoid further errors
 
-                user_config.real_trading_settings.daily_capital_risked_usd = current_risked + trade_value_decimal
+                current_risked = user_config.real_trading_settings.daily_capital_risked_usd or Decimal("0.0")
+                user_config.real_trading_settings.daily_capital_risked_usd = current_risked + trade_value_usd
                 
                 # Asegurar que real_trades_executed_count se inicialice si es None
                 if user_config.real_trading_settings.real_trades_executed_count is None:
@@ -682,7 +684,7 @@ class TradingEngine:
                                 reasoning=ai_result.reasoning_ai, opportunity_id=str(opportunity.id),
                                 strategy_id=str(strategy.id), mode=mode, ai_analysis_used=True,
                                 ai_analysis_profile_id=ai_config.id, 
-                                recommended_trade_params=ai_result.recommended_trade_params.model_dump() if ai_result.recommended_trade_params else None,
+                                recommended_trade_params=ai_result.recommended_trade_params if ai_result.recommended_trade_params else None,
                                 warnings=ai_result.ai_warnings
                             )
                         else:
