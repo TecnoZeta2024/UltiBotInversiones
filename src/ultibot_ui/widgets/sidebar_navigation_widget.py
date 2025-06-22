@@ -13,16 +13,17 @@ class SidebarNavigationWidget(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 20, 10, 10)
         layout.setSpacing(10)
-        layout.setAlignment(Qt.AlignTop)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         # Título o Logo
         logo_label = QLabel("UltiBot")
-        logo_label.setAlignment(Qt.AlignCenter)
+        logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         logo_label.setStyleSheet("font-size: 24px; font-weight: bold; margin-bottom: 20px;")
         layout.addWidget(logo_label)
 
         # Botones de navegación
         self._add_nav_button(layout, "Dashboard", "dashboard")
+        self._add_nav_button(layout, "Terminal", "terminal")
         self._add_nav_button(layout, "Oportunidades", "opportunities")
         self._add_nav_button(layout, "Portafolio", "portfolio") # Added Portfolio button
         self._add_nav_button(layout, "Estrategias", "strategies")

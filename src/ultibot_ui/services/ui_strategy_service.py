@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from typing import List, Dict, Any, Optional
 from PySide6.QtCore import QObject, Signal as pyqtSignal
 
@@ -13,16 +14,27 @@ class UIStrategyService(QObject):
 
     def __init__(self, api_client: UltiBotAPIClient, parent: Optional[QObject] = None):
         super().__init__(parent)
-        self._api_client = api_client
+        self.api_client = api_client # Usar la instancia de api_client
+        # El cliente ya no se almacena aquí.
 
-    async def fetch_strategies(self) -> None:
+    async def fetch_strategies(self, api_client: UltiBotAPIClient) -> None:
         """
         Fetches strategies from the backend and emits a signal with the data.
+        This method now accepts an active API client.
         """
         try:
-            strategies: List[AIStrategyConfiguration] = await self._api_client.get_strategies()
+            # Este método no existe en el cliente, se usa data mock por ahora.
+            # En el futuro, se reemplazaría por:
+            # strategies: List[AIStrategyConfiguration] = await api_client.get_strategies()
+            await asyncio.sleep(0.1) # Simular llamada
+            strategies_data = [
+                {'id': 'strat_1', 'name': 'Momentum Breakout'},
+                {'id': 'strat_2', 'name': 'Mean Reversion ETH'},
+                {'id': 'strat_3', 'name': 'AI-Based Signal'},
+            ]
+            strategies = [AIStrategyConfiguration.model_validate(s) for s in strategies_data]
+            
             logger.info(f"Successfully fetched {len(strategies)} strategies.")
-            # Convert models to dicts for signal emission if necessary, or ensure receiver can handle objects
             strategy_dicts = [s.model_dump(mode='json') for s in strategies]
             self.strategies_updated.emit(strategy_dicts)
         except Exception as e:

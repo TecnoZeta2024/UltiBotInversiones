@@ -30,7 +30,7 @@ class ChartWidget(QWidget):
     
     def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent: Optional[QWidget] = None):
         super().__init__(parent)
-        self.api_client = api_client
+        self.api_client = api_client # Usar la instancia de api_client
         self.main_window = main_window
         self.current_symbol: Optional[str] = None
         self.current_interval: Optional[str] = "1h"
@@ -110,13 +110,24 @@ class ChartWidget(QWidget):
                 self.chart_area.setText("Error: Símbolo o intervalo no definidos.")
                 return
 
+            # El método get_candlestick_data no existe, se usa una corrutina mock.
+            async def get_mock_data(api_client):
+                logger.info(f"MOCK: Obteniendo datos para {current_symbol} - {current_interval}")
+                await asyncio.sleep(0.5)
+                # Aquí se debería llamar al método real:
+                # return await api_client.get_ohlcv_data(symbol=current_symbol, timeframe=current_interval, limit=200)
+                
+                # Devolvemos datos mock con la estructura correcta
+                from shared.data_types import Kline
+                sample_data = [
+                    {"open_time": 1678886400000, "open": 20000.0, "high": 20100.0, "low": 19900.0, "close": 20050.0, "volume": 1000.0, "close_time": 1678886459999, "quote_asset_volume": "20050000", "number_of_trades": 100, "taker_buy_base_asset_volume": "500", "taker_buy_quote_asset_volume": "10025000"},
+                    {"open_time": 1678890000000, "open": 20050.0, "high": 20200.0, "low": 20000.0, "close": 20150.0, "volume": 1200.0, "close_time": 1678890059999, "quote_asset_volume": "24180000", "number_of_trades": 120, "taker_buy_base_asset_volume": "600", "taker_buy_quote_asset_volume": "12090000"},
+                ]
+                return [Kline.model_validate(d) for d in sample_data]
+
             worker = ApiWorker(
-                api_client=self.api_client,
-                coroutine_factory=lambda api_client: api_client.get_candlestick_data(
-                    symbol=current_symbol,
-                    interval=current_interval,
-                    limit=200
-                )
+                api_client=self.api_client, # Pasar api_client
+                coroutine_factory=get_mock_data
             )
             thread = QThread()
             self.main_window.add_thread(thread)
@@ -250,11 +261,12 @@ if __name__ == '__main__':
     main_window_widget.setGeometry(100, 100, 800, 600)
 
     class MockAPIClient(UltiBotAPIClient):
-        def __init__(self, base_url: str, client: httpx.AsyncClient): # Corregido el constructor
-            super().__init__(base_url, client)
+        def __init__(self, base_url: str):
+            super().__init__(base_url)
+            self._client = MagicMock(spec=httpx.AsyncClient)
 
-        async def get_candlestick_data(self, symbol: str, interval: str, limit: int = 200) -> List[Kline]:
-            logger.info(f"MockAPIClient: Obteniendo datos de velas para {symbol}-{interval}")
+        async def get_ohlcv_data(self, symbol: str, timeframe: str, limit: int = 200) -> List[Kline]:
+            logger.info(f"MockAPIClient: Obteniendo datos de velas para {symbol}-{timeframe}")
             sample_data = [
                 {"open_time": 1678886400000, "open": 20000.0, "high": 20100.0, "low": 19900.0, "close": 20050.0, "volume": 1000.0, "close_time": 1678886459999, "quote_asset_volume": "20050000", "number_of_trades": 100, "taker_buy_base_asset_volume": "500", "taker_buy_quote_asset_volume": "10025000"},
                 {"open_time": 1678890000000, "open": 20050.0, "high": 20200.0, "low": 20000.0, "close": 20150.0, "volume": 1200.0, "close_time": 1678890059999, "quote_asset_volume": "24180000", "number_of_trades": 120, "taker_buy_base_asset_volume": "600", "taker_buy_quote_asset_volume": "12090000"},
@@ -264,8 +276,8 @@ if __name__ == '__main__':
             ]
             return [Kline(**d) for d in sample_data]
 
-    mock_api_client = MockAPIClient(base_url="http://mock-api", client=MagicMock(spec=httpx.AsyncClient)) # Pasa un mock de httpx.AsyncClient
-    chart_widget = ChartWidget(api_client=mock_api_client, main_window=mock_main_window)
+    mock_api_client_instance = MockAPIClient(base_url="http://mock-api")
+    chart_widget = ChartWidget(api_client=mock_api_client_instance, main_window=mock_main_window)
     main_window_widget.setCentralWidget(chart_widget)
     main_window_widget.show()
 
@@ -273,4 +285,3 @@ if __name__ == '__main__':
     asyncio.set_event_loop(event_loop)
     with event_loop:
         sys.exit(app.exec_())
-

@@ -12,8 +12,8 @@ from PySide6.QtGui import QColor
 
 from shared.data_types import Opportunity
 from ultibot_ui.models import BaseMainWindow
-from ultibot_ui.services.api_client import UltiBotAPIClient
 from ultibot_ui.workers import ApiWorker
+from ultibot_ui.services.api_client import UltiBotAPIClient # Mantener para el tipo de coroutine_factory
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ class OpportunitiesView(QWidget):
         super().__init__(parent)
         logger.info("OpportunitiesView: __init__ called.")
         self.user_id = user_id
-        self.api_client = api_client
+        self.api_client = api_client # Usar la instancia de api_client
         self.main_window = main_window
         logger.debug("OpportunitiesView initialized.")
 
@@ -118,7 +118,7 @@ class OpportunitiesView(QWidget):
     def _start_api_worker(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine]):
         logger.debug("Creating ApiWorker.")
         
-        worker = ApiWorker(coroutine_factory=coroutine_factory, api_client=self.api_client)
+        worker = ApiWorker(coroutine_factory=coroutine_factory, api_client=self.api_client) # Pasar api_client
         thread = QThread()
         self.main_window.add_thread(thread)
         worker.moveToThread(thread)
@@ -210,4 +210,3 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     
     print("To test this view, please run it as part of the main application.")
-

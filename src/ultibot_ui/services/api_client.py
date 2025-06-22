@@ -4,6 +4,7 @@ from decimal import Decimal
 from typing import Any, Dict, Optional, List, Union
 from uuid import UUID
 import httpx
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,13 @@ class UltiBotAPIClient:
             self._base_url = base_url
         logger.debug(f"APIClient singleton: base URL establecida en {self._base_url}")
 
+    @property
+    def base_url(self) -> str:
+        """Retorna la URL base del cliente API."""
+        if self._base_url is None:
+            raise RuntimeError("Base URL not set for UltiBotAPIClient.")
+        return self._base_url
+
     async def initialize_client(self):
         """Inicializa el cliente httpx de forma asíncrona."""
         if self._client is None or self._client.is_closed:
@@ -67,8 +75,19 @@ class UltiBotAPIClient:
             self._client = None
             logger.info("APIClient httpx client closed.")
 
+    @retry(
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        stop=stop_after_attempt(5),
+        retry=retry_if_exception_type(httpx.RequestError),
+        before_sleep=lambda retry_state: logger.warning(
+            f"Fallo de conexión, reintentando en {retry_state.idle_for:.2f}s... "
+            f"(Intento {retry_state.attempt_number}) para {retry_state.args[1]}"
+        )
+    )
     async def _make_request(self, method: str, endpoint: str, **kwargs) -> Any:
         if not self._client:
+            # Este chequeo es importante, ya que si el cliente no está inicializado,
+            # no es un error de red retriable, sino un error de lógica interna.
             raise RuntimeError("HTTP client is not initialized or has been closed.")
         url = f"{self._base_url}{endpoint}"
         try:
@@ -97,8 +116,8 @@ class UltiBotAPIClient:
                 status_code=e.response.status_code
             ) from e
         except httpx.RequestError as e:
-            logger.error(f"Error de red para {method} {url}: {e}")
-            raise APIError(f"Error de conexión: {e}") from e
+            logger.warning(f"Error de red para {method} {url}: {e}. Re-lanzando para posible reintento.")
+            raise  # Re-lanza la excepción original para que tenacity la capture
 
     async def get_user_configuration(self) -> Dict[str, Any]:
         logger.info("Obteniendo configuración de usuario.")
@@ -122,6 +141,11 @@ class UltiBotAPIClient:
     async def get_ai_opportunities(self) -> List[Dict[str, Any]]:
         return await self._make_request("GET", "/api/v1/opportunities/ai")
 
+    async def get_notification_history(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """Obtiene el historial de notificaciones."""
+        logger.info(f"Obteniendo historial de notificaciones, límite: {limit}")
+        return await self._make_request("GET", "/api/v1/notifications", params={"limit": limit})
+
     async def execute_market_order(self, order_data: Dict[str, Any]) -> Dict[str, Any]:
         """Ejecuta una orden de mercado."""
         trading_mode = order_data.get("trading_mode")
@@ -140,3 +164,17 @@ class UltiBotAPIClient:
             f"/api/v1/trades/trades/{user_id}/open",
             params={"trading_mode": trading_mode}
         )
+
+    async def create_order(self, symbol: str, order_type: str, side: str, amount: float, price: Optional[float] = None) -> Dict[str, Any]:
+        """Crea una nueva orden."""
+        order_data = {
+            "symbol": symbol,
+            "type": order_type,
+            "side": side,
+            "amount": amount,
+        }
+        if price is not None:
+            order_data["price"] = price
+        
+        logger.info(f"Enviando nueva orden: {order_data}")
+        return await self._make_request("POST", "/api/v1/orders/", json=order_data)

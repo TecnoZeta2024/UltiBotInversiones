@@ -221,7 +221,7 @@ def app_settings_fixture() -> AppSettings:
     return get_app_settings()
 
 @pytest_asyncio.fixture
-async def client(db_session: AsyncSession) -> AsyncGenerator[Tuple[AsyncClient, FastAPI], None]:
+async def client(db_session: AsyncSession) -> AsyncGenerator[Tuple[AsyncClient, FastAPI], Any]:
     """
     Cliente de test definitivo que garantiza un aislamiento total.
     - Devuelve una tupla (cliente, app) para permitir overrides de dependencias seguros.
@@ -250,6 +250,14 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[Tuple[AsyncClient, 
         
         # Limpieza final por si acaso
         app.dependency_overrides.clear()
+
+@pytest_asyncio.fixture
+async def client_with_db(client: Tuple[AsyncClient, FastAPI]) -> AsyncGenerator[AsyncClient, Any]:
+    """
+    Proporciona un cliente HTTP asíncrono para interactuar con la aplicación FastAPI
+    en un contexto de base de datos de prueba.
+    """
+    yield client[0] # Devuelve solo el AsyncClient de la tupla
 
 @pytest.fixture
 def mock_binance_adapter_fixture():

@@ -3,11 +3,9 @@ import asyncio
 from typing import Optional, List, Dict, Any, Callable, Coroutine, Tuple
 from uuid import UUID
 from datetime import datetime
-from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QLabel, QGroupBox, QFormLayout, QHBoxLayout, 
-    QTableWidget, QTableWidgetItem, QHeaderView, QScrollArea, QFrame, QPushButton,
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QGroupBox, QFormLayout, QHBoxLayout, \
+    QTableWidget, QTableWidgetItem, QHeaderView, QScrollArea, QFrame, QPushButton, \
     QTabWidget, QProgressBar, QMessageBox
-)
 from PySide6.QtCore import Qt, Signal as pyqtSignal, QTimer, QObject, QThread
 from PySide6.QtGui import QFont, QColor
 
@@ -31,7 +29,7 @@ class PortfolioWidget(QWidget):
     def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.user_id = user_id
-        self.api_client = api_client
+        self.api_client = api_client # Usar la instancia de api_client
         self.main_window = main_window
         self.active_workers: List[Tuple[QThread, ApiWorker]] = []
         self.current_snapshot: Optional[Dict[str, Any]] = None
@@ -45,7 +43,7 @@ class PortfolioWidget(QWidget):
 
     def _start_api_worker(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine], on_success, on_error):
         thread = QThread()
-        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory)
+        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory) # Pasar api_client
         worker.moveToThread(thread)
 
         # Conexiones de señales y slots

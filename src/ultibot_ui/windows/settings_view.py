@@ -21,7 +21,7 @@ class SettingsView(QWidget):
     def __init__(self, user_id: str, api_client: UltiBotAPIClient, parent=None):
         super().__init__(parent)
         self.user_id = user_id
-        self.api_client = api_client
+        self.api_client = api_client # Usar la instancia de api_client
         self.current_config: Optional[UserConfiguration] = None
         self.real_trading_status: Dict[str, Any] = {"isActive": False, "executedCount": 0, "limit": 5}
         self.active_threads: List[QThread] = []
@@ -93,7 +93,7 @@ class SettingsView(QWidget):
         self._load_real_trading_status()
 
     def _start_api_worker(self, coroutine_factory, on_success, on_error):
-        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory)
+        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory) # Pasar api_client
         thread = QThread()
         self.active_threads.append(thread)
         worker.moveToThread(thread)
@@ -116,8 +116,9 @@ class SettingsView(QWidget):
         try:
             self.current_config = UserConfiguration(**config_data)
             assert self.current_config is not None
-            self.paper_trading_checkbox.setChecked(self.current_config.paperTradingActive or False)
-            self.initial_capital_spinbox.setValue(self.current_config.defaultPaperTradingCapital or 10000.0)
+            self.paper_trading_checkbox.setChecked(self.current_config.paper_trading_active or False)
+            # Convertir Decimal a float para setValue
+            self.initial_capital_spinbox.setValue(float(self.current_config.default_paper_trading_capital or 10000.0))
             logger.info("Configuración de usuario general cargada y aplicada en la UI de Settings.")
         except Exception as e:
             logger.error(f"Error al procesar la configuración general recibida: {e}", exc_info=True)
@@ -173,8 +174,8 @@ class SettingsView(QWidget):
 
         try:
             updated_config_data = {
-                "paperTradingActive": self.paper_trading_checkbox.isChecked(),
-                "defaultPaperTradingCapital": self.initial_capital_spinbox.value(),
+                "paper_trading_active": self.paper_trading_checkbox.isChecked(),
+                "default_paper_trading_capital": self.initial_capital_spinbox.value(),
             }
             updated_config_model = self.current_config.model_copy(update=updated_config_data)
             
@@ -250,4 +251,3 @@ class SettingsView(QWidget):
         logger.error(f"Error al desactivar el modo de operativa real: {error_message}")
         QMessageBox.critical(self, "Error de Desactivación", f"No se pudo desactivar el modo real: {error_message}")
         self.real_trading_checkbox.setChecked(True)
-

@@ -13,7 +13,7 @@ from uuid import UUID
 
 import httpx
 import qasync
-from typing import cast
+from typing import cast, Optional
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
@@ -109,12 +109,19 @@ async def _main_async(app: QtWidgets.QApplication):
         main_window.activateWindow()
         main_window.raise_()
 
-async def cleanup_resources():
+    # Devolver el cliente para que pueda ser cerrado correctamente
+    if 'api_client' in locals():
+        return api_client
+    return None
+
+async def cleanup_resources(api_client: UltiBotAPIClient):
     """Cierra los recursos de la aplicación de forma segura."""
-    logger.info("Cleaning up resources...")
-    api_client = UltiBotAPIClient(base_url="http://127.0.0.1:8000")
-    await api_client.close()
-    logger.info("Cleanup complete.")
+    if api_client:
+        logger.info("Cleaning up resources...")
+        await api_client.close()
+        logger.info("Cleanup complete.")
+    else:
+        logger.warning("API client not available for cleanup.")
 
 def main():
     """Punto de entrada principal para la aplicación de UI."""
@@ -131,16 +138,26 @@ def main():
         loop = qasync.QEventLoop(app)
         asyncio.set_event_loop(loop)
 
-        # Conectar la limpieza de recursos a la señal de cierre de la aplicación
+        # Usar un objeto mutable para pasar el cliente API y asegurar su limpieza
+        api_client_container: dict[str, Optional[UltiBotAPIClient]] = {'instance': None}
+
+        async def _main_async_wrapper(app: QtWidgets.QApplication):
+            """Envuelve _main_async para capturar la instancia del cliente API."""
+            api_client = await _main_async(app)
+            if api_client:
+                api_client_container['instance'] = api_client
+
         def cleanup_slot():
             """Slot para ejecutar la limpieza de recursos en el event loop existente."""
             logger.info("aboutToQuit signal received, scheduling resource cleanup.")
-            loop.create_task(cleanup_resources())
+            if api_client_container['instance']:
+                # Usamos create_task para no bloquear la señal de cierre
+                loop.create_task(cleanup_resources(api_client_container['instance']))
 
         app.aboutToQuit.connect(cleanup_slot)
 
-        # Crear y ejecutar la tarea principal
-        async_task = loop.create_task(_main_async(app))
+        # Crear y ejecutar la tarea principal de inicialización
+        loop.create_task(_main_async_wrapper(app))
 
         with loop:
             loop.run_forever()
@@ -158,8 +175,6 @@ def main():
                 task.cancel()
             
             # Esperar un corto tiempo para que las tareas canceladas se limpien
-            # Esto es un hack, la forma ideal es esperar cada tarea individualmente
-            # o usar asyncio.gather con return_exceptions=True
             try:
                 loop.run_until_complete(asyncio.gather(*pending_tasks, return_exceptions=True))
             except asyncio.CancelledError:

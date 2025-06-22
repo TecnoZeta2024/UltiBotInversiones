@@ -165,6 +165,21 @@ poetry run python scripts/verify_psycopg.py
 poetry run python -c "import os; print(os.getenv('DATABASE_URL'))"
 ```
 
+### Falsos Positivos del Linter (PySide6, etc.)
+```bash
+# Diagnóstico de entorno de linter
+# Verificar si el entorno virtual está activado y las dependencias instaladas
+poetry run python -c "import sys; print(sys.executable); import PySide6.QtWidgets; print('✅ PySide6 import OK')"
+
+# Reinstalar dependencias si es necesario
+poetry env remove --all && poetry install
+
+# Verificar la configuración del linter (ej. .pylintrc, pyproject.toml)
+# Buscar secciones como [MASTER.init-hook] o [tool.pylint]
+# cat .pylintrc
+```
+**Directriz:** Si los errores de linter persisten en código sintácticamente correcto (especialmente para imports de librerías como PySide6), considerar que son falsos positivos. Antes de modificar el código, verificar la configuración del entorno virtual y del linter. Si el problema es de linter, documentar y proceder con la lógica de negocio.
+
 ## Debugging Escalation Matrix
 
 | Error Type | Level 1 | Level 2 | Level 3 | Level 4 |

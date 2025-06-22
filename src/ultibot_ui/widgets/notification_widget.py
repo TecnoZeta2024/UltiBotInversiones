@@ -24,7 +24,7 @@ class NotificationWidget(QWidget):
 
     def __init__(self, api_client: UltiBotAPIClient, user_id: UUID, main_window: BaseMainWindow, parent: Optional[QWidget] = None):
         super().__init__(parent)
-        self.api_client = api_client
+        self.api_client = api_client # Usar la instancia de api_client
         self.user_id = user_id
         self.main_window = main_window
         self.notifications: List[Notification] = []
@@ -46,7 +46,7 @@ class NotificationWidget(QWidget):
         self._is_fetching_notifications = True
         
         worker = ApiWorker(
-            api_client=self.api_client,
+            api_client=self.api_client, # Pasar api_client
             coroutine_factory=lambda client: client.get_notification_history(limit=20)
         )
         thread = QThread()
@@ -326,15 +326,21 @@ if __name__ == '__main__':
             ]
 
     test_user_id = uuid4()
-    # This will fail now as it needs a mock main_window
-    # notification_widget = NotificationWidget(MockUltiBotAPIClient(), test_user_id) # type: ignore
-    # main_layout.addWidget(notification_widget)
     
-    from datetime import timedelta
+    class MockMainWindow(BaseMainWindow):
+        def add_thread(self, thread: QThread):
+            print(f"MockMainWindow: Thread '{thread.objectName()}' added for tracking.")
 
-    # notification_widget.add_notification(Notification(id=uuid4(), eventType="SYSTEM_ERROR", channel="ui", title="Error Crítico de Conexión", message="No se pudo establecer conexión con la API de Binance.", priority=NotificationPriority.CRITICAL, createdAt=datetime.utcnow() - timedelta(minutes=5)))
-    # notification_widget.add_notification(Notification(id=uuid4(), eventType="REAL_TRADE_EXECUTED", channel="ui", title="Operación Exitosa", message="Compra de BTC/USDT ejecutada.", priority=NotificationPriority.HIGH, createdAt=datetime.utcnow() - timedelta(minutes=2)))
+    mock_main_window = MockMainWindow()
+
+    notification_widget = NotificationWidget(MockUltiBotAPIClient(), test_user_id, mock_main_window)
+    main_layout.addWidget(notification_widget)
+    
+    # Añadir algunas notificaciones de ejemplo para visualización
+    from datetime import timedelta
+    notification_widget.add_notification(Notification(id=uuid4(), userId=test_user_id, eventType="SYSTEM_ERROR", channel="ui", title="Error Crítico de Conexión", message="No se pudo establecer conexión con la API de Binance.", priority=NotificationPriority.CRITICAL, createdAt=datetime.utcnow() - timedelta(minutes=5)))
+    notification_widget.add_notification(Notification(id=uuid4(), userId=test_user_id, eventType="REAL_TRADE_EXECUTED", channel="ui", title="Operación Exitosa", message="Compra de BTC/USDT ejecutada.", priority=NotificationPriority.HIGH, createdAt=datetime.utcnow() - timedelta(minutes=2)))
+    notification_widget.add_notification(Notification(id=uuid4(), userId=test_user_id, eventType="INFO", channel="ui", title="Actualización del Sistema", message="La versión 1.2.0 ha sido desplegada con éxito.", priority=NotificationPriority.MEDIUM, createdAt=datetime.utcnow() - timedelta(minutes=1)))
 
     main_window_widget.show()
     sys.exit(app.exec_())
-

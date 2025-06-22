@@ -111,6 +111,7 @@ Cuando uses la herramienta `new_task`, el contenido del traspaso **debe** seguir
 - **MUST** structure the handoff so the next session can begin working immediately
 - **MUST** include setup instructions if environment configuration is needed
 - **MUST** provide a quick summary at the top for rapid context restoration
+- **MUST** re-read the entire file immediately after a `replace_in_file` "no match" error before attempting another `replace_in_file` operation, to ensure the `SEARCH` block is based on the most current and exact file content.
 
 ## Example Task Handoff
 

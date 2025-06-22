@@ -22,7 +22,7 @@ class PortfolioView(QWidget):
     def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.user_id = user_id
-        self.api_client = api_client
+        self.api_client = api_client # Usar la instancia de api_client
         self.current_portfolio_data: Optional[PortfolioSnapshot] = None
 
         self.trading_mode_manager: TradingModeStateManager = get_trading_mode_manager()
@@ -128,7 +128,9 @@ class PortfolioView(QWidget):
 
     async def _get_portfolio_snapshot_async(self):
         """Corrutina que realmente obtiene y maneja los datos del portafolio."""
+        # Usar la instancia de api_client inyectada
         try:
+            await self.api_client.initialize_client()
             snapshot = await self.api_client.get_portfolio_snapshot(
                 user_id=self.user_id, trading_mode=self.trading_mode_manager.current_mode
             )
@@ -138,13 +140,23 @@ class PortfolioView(QWidget):
         except Exception as e:
             logger.critical(f"An unexpected error occurred during portfolio fetch: {e}", exc_info=True)
             self._handle_portfolio_error(f"An unexpected error occurred: {e}")
+        finally:
+            if self.api_client:
+                await self.api_client.close() # Cerrar el cliente después de usarlo
 
-    def _handle_portfolio_result(self, portfolio_snapshot: PortfolioSnapshot):
+    def _handle_portfolio_result(self, portfolio_snapshot_data: dict):
         logger.info("PortfolioView: Portfolio snapshot data received.")
+        
+        try:
+            # Validar y convertir el diccionario en un objeto Pydantic
+            portfolio_snapshot = PortfolioSnapshot.model_validate(portfolio_snapshot_data)
+            self.current_portfolio_data = portfolio_snapshot
+        except Exception as e:
+            self._handle_portfolio_error(f"Data validation error: {e}")
+            return
+
         self.status_label.setText("Portfolio data loaded successfully.")
         self.refresh_button.setEnabled(True)
-
-        self.current_portfolio_data = portfolio_snapshot
         
         if self.trading_mode_manager.current_mode == "paper":
             mode_specific_data = portfolio_snapshot.paper_trading
@@ -281,7 +293,6 @@ if __name__ == '__main__':
                             "quantity": 0.1,
                             "entry_price": 55000.0,
                             "current_price": 60000.0,
-                            "current_value_usd": 6000.0,
                             "unrealized_pnl_percentage": 9.09
                         }]
                     },
@@ -304,11 +315,11 @@ if __name__ == '__main__':
     loop = qasync.QEventLoop(app)
     asyncio.set_event_loop(loop)
 
-    mock_api_client = MockApiClient(base_url="http://mock.server")
+    mock_api_client = MockApiClient(base_url="http://mock.server") # Instanciar el mock
     
     view = PortfolioView(
         user_id=UUID("00000000-0000-0000-0000-000000000000"),
-        api_client=mock_api_client
+        api_client=mock_api_client # Pasar la instancia del mock
     )
     view.setWindowTitle("Portfolio View - Test")
     view.setGeometry(100, 100, 1000, 700)

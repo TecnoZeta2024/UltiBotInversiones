@@ -23,7 +23,9 @@ from ultibot_ui.services.ui_strategy_service import UIStrategyService
 from ultibot_ui.views.strategies_view import StrategiesView
 from ultibot_ui.views.opportunities_view import OpportunitiesView
 from ultibot_ui.views.portfolio_view import PortfolioView
+from ultibot_ui.views.trading_terminal_view import TradingTerminalView
 from ultibot_ui.workers import ApiWorker
+from ultibot_ui.config import get_api_base_url
 
 logger = logging.getLogger(__name__)
 
@@ -33,13 +35,14 @@ class MainWindow(QtWidgets.QMainWindow, BaseMainWindow):
     def __init__(
         self,
         user_id: UUID,
-        api_client: UltiBotAPIClient,
+        api_client: UltiBotAPIClient, # Añadir api_client
         parent: Optional[QtWidgets.QWidget] = None,
     ):
         """Inicializa la ventana principal."""
         super().__init__(parent)
         self.user_id = user_id
-        self.api_client = api_client
+        self.api_client = api_client # Guardar la instancia de api_client
+        self.api_base_url = self.api_client.base_url # Usar la base_url del cliente inyectado
         
         self.active_threads: List[QtCore.QThread] = []
 
@@ -136,46 +139,50 @@ class MainWindow(QtWidgets.QMainWindow, BaseMainWindow):
         self.stacked_widget = QtWidgets.QStackedWidget()
         main_layout.addWidget(self.stacked_widget)
 
+        # Pasar la instancia de api_client a las vistas que la necesiten
         self.dashboard_view = DashboardView(
             user_id=self.user_id,
-            api_client=self.api_client,
+            api_client=self.api_client, # Usar el api_client inyectado
             main_window=self
         )
         self.stacked_widget.addWidget(self.dashboard_view)
 
         self.opportunities_view = OpportunitiesView(
-            user_id=self.user_id, 
-            api_client=self.api_client, 
+            user_id=self.user_id,
+            api_client=self.api_client, # Usar el api_client inyectado
             main_window=self
         )
         self.stacked_widget.addWidget(self.opportunities_view)
 
-        self.strategies_view = StrategiesView(parent=self)
+        self.strategies_view = StrategiesView(api_client=self.api_client, parent=self) # Usar el api_client inyectado
         self.stacked_widget.addWidget(self.strategies_view)
 
         self.portfolio_view = PortfolioView(
-            user_id=self.user_id, 
-            api_client=self.api_client
+            user_id=self.user_id,
+            api_client=self.api_client # Usar el api_client inyectado
         )
         self.stacked_widget.addWidget(self.portfolio_view)
 
         self.history_view = HistoryView(
-            user_id=self.user_id, 
-            api_client=self.api_client, 
+            user_id=self.user_id,
+            api_client=self.api_client, # Usar el api_client inyectado
             main_window=self
         )
         self.stacked_widget.addWidget(self.history_view)
 
-        self.settings_view = SettingsView(str(self.user_id), self.api_client)
+        self.settings_view = SettingsView(str(self.user_id), self.api_client) # Usar el api_client inyectado
         self.stacked_widget.addWidget(self.settings_view)
+
+        self.terminal_view = TradingTerminalView(api_client=self.api_client) # Usar el api_client inyectado
+        self.stacked_widget.addWidget(self.terminal_view)
 
         self.view_map = {
             "dashboard": 0, "opportunities": 1, "strategies": 2,
-            "portfolio": 3, "history": 4, "settings": 5,
+            "portfolio": 3, "history": 4, "settings": 5, "terminal": 6,
         }
 
         # Setup strategy service
-        self.strategy_service = UIStrategyService(api_client=self.api_client)
+        self.strategy_service = UIStrategyService(api_client=self.api_client) # Usar el api_client inyectado
         self.strategy_service.strategies_updated.connect(self.strategies_view.update_strategies)
         self.strategy_service.error_occurred.connect(lambda msg: self._log_debug(f"[STRATEGY_SVC_ERR] {msg}"))
         
@@ -189,11 +196,13 @@ class MainWindow(QtWidgets.QMainWindow, BaseMainWindow):
 
     def _fetch_strategies_async(self):
         """Ejecuta la obtención de estrategias en un hilo de trabajo."""
-        coro_factory = lambda client: self.strategy_service.fetch_strategies()
+        # La factory ahora pasa el cliente creado por el worker al método del servicio.
+        # Usar self.api_client directamente en el worker
+        coro_factory = lambda api_client: self.strategy_service.fetch_strategies(api_client) # Pasar api_client al servicio
         
         # El ApiWorker se encargará de emitir la señal strategies_updated del servicio
         # ya que el servicio y la vista están conectados. No necesitamos conectar aquí.
-        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coro_factory)
+        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coro_factory) # Pasar api_client
         thread = QtCore.QThread()
         worker.moveToThread(thread)
 
@@ -217,12 +226,17 @@ class MainWindow(QtWidgets.QMainWindow, BaseMainWindow):
             self.stacked_widget.setCurrentIndex(index)
             if view_name == "strategies":
                 self._fetch_strategies_async() # Refresh strategies when view is shown
+            elif view_name == "terminal":
+                # Si la vista del terminal tiene alguna lógica de actualización al mostrarse,
+                # se llamaría aquí. Por ejemplo:
+                # self.terminal_view.refresh_data()
+                pass
 
     def cleanup(self):
         """Limpia los recursos de la ventana."""
         self._log_debug(f"Cleaning up MainWindow resources. Stopping {len(self.active_threads)} active threads...")
         
-        for view_widget in [self.dashboard_view, self.history_view, self.opportunities_view, self.portfolio_view, self.settings_view]:
+        for view_widget in [self.dashboard_view, self.history_view, self.opportunities_view, self.portfolio_view, self.settings_view, self.terminal_view]:
             if hasattr(view_widget, "cleanup"):
                 view_widget.cleanup()
         

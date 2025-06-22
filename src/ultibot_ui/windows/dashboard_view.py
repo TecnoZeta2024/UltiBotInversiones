@@ -26,7 +26,7 @@ class DashboardView(QWidget):
     def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.user_id = user_id
-        self.api_client = api_client
+        self.api_client = api_client # Usar la instancia de api_client
         self.main_window = main_window
         self._is_initialized = False
         self._pending_tasks = 0
@@ -42,9 +42,9 @@ class DashboardView(QWidget):
     def _setup_ui(self):
         """Configura la interfaz de usuario básica del dashboard usando tarjetas."""
         # Crear widgets
-        self.portfolio_widget = PortfolioWidget(self.user_id, self.api_client, self.main_window, self)
-        self.chart_widget = ChartWidget(self.api_client, self.main_window, self)
-        self.notification_widget = NotificationWidget(self.api_client, self.user_id, self.main_window, self)
+        self.portfolio_widget = PortfolioWidget(self.user_id, self.api_client, self.main_window, self) # Pasar api_client
+        self.chart_widget = ChartWidget(self.api_client, self.main_window, self) # Pasar api_client
+        self.notification_widget = NotificationWidget(self.api_client, self.user_id, self.main_window, self) # Pasar api_client
 
         # Crear tarjeta para el Portfolio
         portfolio_card = QFrame()
@@ -76,7 +76,7 @@ class DashboardView(QWidget):
     ):
         """Inicia un ApiWorker en un hilo separado para ejecutar una corutina."""
         worker = ApiWorker(
-            api_client=self.api_client,
+            api_client=self.api_client, # Pasar api_client
             coroutine_factory=coroutine_factory
         )
         thread = QThread()
@@ -140,4 +140,3 @@ class DashboardView(QWidget):
         if hasattr(self.notification_widget, 'cleanup'): self.notification_widget.cleanup()
 
         logger.info("DashboardView: Limpieza completada.")
-
