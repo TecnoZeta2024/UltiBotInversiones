@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Optional, Callable, Coroutine
 
-from PySide6.QtCore import QObject, Signal as pyqtSignal, Slot as pyqtSlot
+from PySide6.QtCore import QObject, Signal, Slot
 
 from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
 
@@ -13,9 +13,9 @@ class ApiWorker(QObject):
     Worker que ejecuta una corutina de API en un hilo separado, integrándose
     correctamente con el event loop de qasync.
     """
-    result_ready = pyqtSignal(object)
-    error_occurred = pyqtSignal(str)
-    finished = pyqtSignal()
+    result_ready = Signal(object)
+    error_occurred = Signal(str)
+    finished = Signal()
 
     def __init__(self,
                  api_client: UltiBotAPIClient, # Cambiar a api_client
@@ -25,7 +25,7 @@ class ApiWorker(QObject):
         self.coroutine_factory = coroutine_factory
         logger.debug(f"ApiWorker initialized with api_client: {api_client}, coroutine_factory: {'set' if coroutine_factory else 'not set'}")
 
-    @pyqtSlot()
+    @Slot()
     def run(self):
         """
         Ejecuta la corutina de la API en un nuevo bucle de eventos
@@ -61,20 +61,20 @@ class ApiWorker(QObject):
             logger.error(f"ApiWorker: Generic Exception: {exc}", exc_info=True)
             self.error_occurred.emit(str(exc))
         finally:
-            # El worker no debe cerrar el cliente de API ni el bucle de eventos.
-            # Esta responsabilidad recae en el ciclo de vida de la aplicación principal.
             logger.debug("ApiWorker: Task finished, emitting 'finished' signal.")
             self.finished.emit()
             logger.debug("ApiWorker: run method finished.")
+            # Cerrar el event loop creado en este hilo
+            loop.close()
 
 
 class StrategiesWorker(QObject):
     """
     Worker to fetch trading strategies asynchronously.
     """
-    finished = pyqtSignal()
-    strategies_ready = pyqtSignal(list)
-    error_occurred = pyqtSignal(str)
+    finished = Signal()
+    strategies_ready = Signal(list)
+    error_occurred = Signal(str)
 
     def __init__(self, api_client: UltiBotAPIClient, parent=None): # Cambiar a api_client
         super().__init__(parent)
@@ -95,7 +95,7 @@ class StrategiesWorker(QObject):
         logger.info("Mock strategies fetched.")
         return mock_strategies
 
-    @pyqtSlot()
+    @Slot()
     def run(self):
         """
         Executes the strategy fetching task in an event loop.
@@ -114,18 +114,19 @@ class StrategiesWorker(QObject):
             logger.error(f"Error in StrategiesWorker: {e}", exc_info=True)
             self.error_occurred.emit(str(e))
         finally:
-            # El worker no debe cerrar el cliente de API.
             self.finished.emit()
             logger.info("StrategiesWorker finished.")
+            # Cerrar el event loop creado en este hilo
+            loop.close()
 
 
 class PerformanceWorker(QObject):
     """
     Worker to fetch performance data asynchronously.
     """
-    finished = pyqtSignal()
-    performance_data_ready = pyqtSignal(dict)
-    error_occurred = pyqtSignal(str)
+    finished = Signal()
+    performance_data_ready = Signal(dict)
+    error_occurred = Signal(str)
 
     def __init__(self, api_client: UltiBotAPIClient, parent=None):
         super().__init__(parent)
@@ -149,7 +150,7 @@ class PerformanceWorker(QObject):
         logger.info("Mock performance data fetched.")
         return mock_data
 
-    @pyqtSlot()
+    @Slot()
     def run(self):
         """
         Executes the performance data fetching task in an event loop.
@@ -166,15 +167,17 @@ class PerformanceWorker(QObject):
         finally:
             self.finished.emit()
             logger.info("PerformanceWorker finished.")
+            # Cerrar el event loop creado en este hilo
+            loop.close()
 
 
 class OrdersWorker(QObject):
     """
     Worker to fetch order history asynchronously.
     """
-    finished = pyqtSignal()
-    orders_ready = pyqtSignal(list)
-    error_occurred = pyqtSignal(str)
+    finished = Signal()
+    orders_ready = Signal(list)
+    error_occurred = Signal(str)
 
     def __init__(self, api_client: UltiBotAPIClient, parent=None):
         super().__init__(parent)
@@ -193,7 +196,7 @@ class OrdersWorker(QObject):
         logger.info("Mock order history fetched.")
         return mock_orders
 
-    @pyqtSlot()
+    @Slot()
     def run(self):
         """
         Executes the order fetching task in an event loop.
@@ -208,7 +211,7 @@ class OrdersWorker(QObject):
             logger.error(f"Error in OrdersWorker: {e}", exc_info=True)
             self.error_occurred.emit(str(e))
         finally:
-            # loop.close()
+            loop.close() # Descomentado
             self.finished.emit()
             logger.info("OrdersWorker finished.")
 
@@ -217,9 +220,9 @@ class TradingTerminalWorker(QObject):
     """
     Worker to fetch real-time market data for the trading terminal.
     """
-    price_updated = pyqtSignal(dict)
-    finished = pyqtSignal()
-    error_occurred = pyqtSignal(str)
+    price_updated = Signal(dict)
+    finished = Signal()
+    error_occurred = Signal(str)
 
     def __init__(self, api_client: UltiBotAPIClient, symbol: str, parent=None):
         super().__init__(parent)
@@ -250,7 +253,7 @@ class TradingTerminalWorker(QObject):
 
         logger.info(f"Price feed for {self.symbol} finished.")
 
-    @pyqtSlot()
+    @Slot()
     def run(self):
         """
         Executes the price feed task in an event loop.
@@ -264,7 +267,7 @@ class TradingTerminalWorker(QObject):
             logger.error(f"Error in TradingTerminalWorker: {e}", exc_info=True)
             self.error_occurred.emit(str(e))
         finally:
-            # loop.close()
+            loop.close() # Descomentado
             self.finished.emit()
             logger.info("TradingTerminalWorker finished.")
 

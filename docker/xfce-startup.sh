@@ -1,11 +1,17 @@
 #!/bin/bash
 # Start XFCE desktop environment for VNC session
 
-# Wait for VNC server to start
-sleep 2
+# Wait for VNC server to be ready
+while [ ! -e /tmp/.X11-unix/X1 ]; do
+  sleep 1
+done
 
 # Launch XFCE
-startxfce4 &
+/usr/bin/startxfce4 &
 
-# Keep the script running to prevent supervisor from restarting XFCE repeatedly
+# Launch the UltiBot UI application
+# We assume the working directory is /app where the project is located
+poetry run python src/ultibot_ui/main.py
+
+# Keep the script running
 wait

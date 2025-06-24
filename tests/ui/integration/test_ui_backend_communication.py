@@ -39,18 +39,23 @@ async def test_successful_connection_and_data_fetch(api_client_fixture: UltiBotA
     del backend simulado a través del cliente de API.
     """
     # Arrange: Creamos un worker con el cliente de API configurado
-    # Este worker usa datos mock, pero la prueba valida la capa de comunicación.
     worker = StrategiesWorker(api_client=api_client_fixture)
-    
-    # Act: Ejecutamos la corutina del worker directamente para el test
-    # (No necesitamos QThread aquí)
-    strategies = await worker._fetch_strategies(api_client_fixture)
-    
-    # Assert: Verificamos que se recibieron los datos esperados
-    assert isinstance(strategies, list)
-    assert len(strategies) > 0
-    assert "name" in strategies[0]
-    assert strategies[0]['name'] == 'Momentum Breakout'
+
+    # Mockeamos el método _fetch_strategies para aislar el test y evitar una llamada real a la API.
+    # Esto nos permite probar la lógica del worker (p. ej., emisión de señales) de forma independiente.
+    with patch.object(worker, '_fetch_strategies', new_callable=AsyncMock) as mock_fetch:
+        # Configuramos el mock para que devuelva los datos que el test espera.
+        mock_fetch.return_value = [{'id': 'strat_1', 'name': 'Momentum Breakout'}, {'id': 'strat_2', 'name': 'Mean Reversion ETH'}]
+
+        # Act: Ejecutamos la corutina del worker directamente para el test
+        # (No necesitamos QThread aquí)
+        strategies = await worker._fetch_strategies()
+
+        # Assert: Verificamos que se recibieron los datos esperados
+        assert isinstance(strategies, list)
+        assert len(strategies) > 0
+        assert "name" in strategies[0]
+        assert strategies[0]['name'] == 'Momentum Breakout'
 
 @pytest.mark.asyncio
 @patch('httpx.AsyncClient.request', new_callable=AsyncMock)

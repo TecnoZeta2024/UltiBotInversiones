@@ -51,19 +51,14 @@ class PortfolioWidget(QWidget):
         worker.error_occurred.connect(on_error)
         thread.started.connect(worker.run)
         
-        # Limpieza automática del hilo y del worker
-        def cleanup_worker():
-            # Encuentra y elimina el par (thread, worker) de la lista activa
-            for i, (t, w) in enumerate(self.active_workers):
-                if t is thread:
-                    self.active_workers.pop(i)
-                    break
-            thread.quit()
-
-        worker.result_ready.connect(cleanup_worker)
-        worker.error_occurred.connect(cleanup_worker)
+        # Conectar señales para la limpieza automática del hilo y del worker
+        # Cuando el worker termina (éxito o error), el hilo se detiene.
+        worker.result_ready.connect(thread.quit)
+        worker.error_occurred.connect(thread.quit)
+        
+        # Cuando el hilo termina, los objetos worker y thread se eliminan de forma segura.
         thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
+        thread.finished.connect(thread.deleteLater) # Asegurar que el QThread se elimine
 
         self.active_workers.append((thread, worker))
         thread.start()
@@ -365,10 +360,26 @@ class PortfolioWidget(QWidget):
 
     def cleanup(self):
         logger.info("PortfolioWidget: Limpiando hilos y workers activos.")
-        self.stop_updates()
+        self.stop_updates() # Detener el QTimer
+        
+        # Crear una copia de la lista para evitar problemas de modificación durante la iteración
         for thread, worker in list(self.active_workers):
             if thread.isRunning():
-                thread.quit()
-                thread.wait(5000)
-        self.active_workers.clear()
+                logger.debug(f"PortfolioWidget: Deteniendo hilo {thread.objectName()}...")
+                # Si el worker es una instancia de TradingTerminalWorker, llamamos a su método stop
+                # Importar TradingTerminalWorker aquí para evitar circular dependencies si es necesario
+                from ultibot_ui.workers import TradingTerminalWorker 
+                if isinstance(worker, TradingTerminalWorker) and hasattr(worker, 'stop') and callable(worker.stop):
+                    worker.stop()
+                
+                thread.quit() # Solicitar al hilo que termine su bucle de eventos
+                if not thread.wait(2000): # Esperar hasta 2 segundos para que el hilo termine
+                    logger.warning(f"PortfolioWidget: Hilo {thread.objectName()} no terminó en el tiempo esperado. Terminando forzosamente.")
+                    thread.terminate() # Terminar forzosamente si no responde
+                    thread.wait(500) # Esperar un poco más después de terminar
+            # Eliminar el hilo y worker de la lista activa
+            if (thread, worker) in self.active_workers:
+                self.active_workers.remove((thread, worker))
+        
+        self.active_workers.clear() # Asegurar que la lista esté vacía
         logger.info("PortfolioWidget: Limpieza completada.")

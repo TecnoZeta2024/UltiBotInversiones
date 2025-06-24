@@ -19,7 +19,7 @@ fi
 
 # Wait for backend to be ready
 echo "Waiting for backend service to be available..."
-/app/wait-for-it.sh ${BACKEND_URL:-http://backend:8000}/health --timeout=60
+/app/wait-for-it.sh -t 60 ${BACKEND_URL:-http://backend:8000}/health
 BACKEND_STATUS=$?
 
 if [ $BACKEND_STATUS -ne 0 ]; then
@@ -27,6 +27,9 @@ if [ $BACKEND_STATUS -ne 0 ]; then
 else
     echo "Backend service is available"
 fi
+
+# Print the API_BASE_URL for debugging
+echo "API_BASE_URL is set to: $API_BASE_URL"
 
 # Start supervisord to manage all processes
 echo "Starting supervisord to manage all processes..."

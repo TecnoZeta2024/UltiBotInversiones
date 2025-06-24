@@ -45,6 +45,7 @@ pytestdebug.log
 # Bases de datos locales
 test_db.sqlite
 ultibot_local.db
+db_data/
 
 # Caché de Testing
 .pytest_cache/

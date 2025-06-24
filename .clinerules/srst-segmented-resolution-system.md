@@ -72,19 +72,26 @@ TICKET_SRST_001/
    ```bash
    poetry run pytest --collect-only -q 2>&1 | head -20
    ```
-2. **Clasificar errores** por categoría y prioridad
+2. **Clasificar errores** por categoría y prioridad.
 3. **Crear máximo 3 tickets** para la sesión actual (o continuar con el ticket activo si es una continuación de tarea).
-4. **Documentar en SRST_TRACKER.md**
+4. **Validar Ticket Generado:** Antes de proceder, realizar una verificación rápida del ticket de mayor prioridad. ¿Apunta a un archivo de código fuente lógico? ¿El comando de validación es sintácticamente correcto? Si no, la primera acción será corregir la comprensión del ticket, no el código.
+5. **Documentar en SRST_TRACKER.md**.
 
 ### **FASE 2: RESOLUCIÓN MICRO-SEGMENTADA (15 mins por ticket)**
-1. **Seleccionar 1 ticket** de máxima prioridad
-2. **Cargar contexto mínimo** (solo archivos relevantes)
-3. **Aplicar fix quirúrgico** específico
+1. **Seleccionar 1 ticket** de máxima prioridad.
+2. **Cargar contexto mínimo** (solo archivos relevantes).
+3. **Aplicar fix quirúrgico** específico.
 4. **Validar inmediatamente**:
-   ```bash
-   poetry run pytest -xvs {SPECIFIC_TEST}
-   ```
-5. **Documentar resultado** en SRST_PROGRESS.md
+   - **Si el comando del ticket es válido:**
+     ```bash
+     poetry run pytest -xvs {SPECIFIC_TEST}
+     ```
+   - **Si el comando del ticket es inválido o el error es sistémico:** Ejecutar la suite completa o un subconjunto relevante para verificar el fix.
+     ```bash
+     poetry run pytest
+     ```
+5. **Refactorizar Tests si es Necesario:** Si la corrección del bug causa que un test falle porque el test dependía del comportamiento erróneo anterior, la tarea incluye la refactorización del test para que se alinee con la nueva lógica correcta.
+6. **Documentar resultado** en SRST_PROGRESS.md.
 *   **Análisis Profundo:** Si un ticket requiere un análisis más profundo o si los logs iniciales no revelan la causa raíz, utilizar la herramienta `sequential-thinking` para desglosar el problema y formular hipótesis antes de proponer cambios en el código.
 
 ### **FASE 3: VALIDACIÓN Y HANDOFF (5 mins)**

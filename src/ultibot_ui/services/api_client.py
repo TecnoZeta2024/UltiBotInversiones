@@ -85,10 +85,13 @@ class UltiBotAPIClient:
         )
     )
     async def _make_request(self, method: str, endpoint: str, **kwargs) -> Any:
-        if not self._client:
-            # Este chequeo es importante, ya que si el cliente no está inicializado,
-            # no es un error de red retriable, sino un error de lógica interna.
-            raise RuntimeError("HTTP client is not initialized or has been closed.")
+        # Asegurar que el cliente esté inicializado antes de cada solicitud
+        await self.initialize_client()
+        
+        # Asegurar que self._client no es None después de la inicialización
+        if self._client is None:
+            raise RuntimeError("HTTP client failed to initialize.")
+
         url = f"{self._base_url}{endpoint}"
         try:
             logger.debug(f"APIClient: _make_request invocado para {method} {endpoint}")

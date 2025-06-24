@@ -50,6 +50,7 @@ LOGGING_CONFIG = {
         "httpx": {"handlers": ["console", "file"], "level": "INFO"},
         "src.ultibot_ui": {"handlers": ["console", "file"], "level": "DEBUG", "propagate": False},
         "ultibot_backend": {"handlers": ["console", "file"], "level": "DEBUG", "propagate": False},
+        "qasync": {"handlers": ["console", "file"], "level": "DEBUG", "propagate": False}, # Añadido para capturar logs de qasync
     },
     "root": {
         "level": "DEBUG",

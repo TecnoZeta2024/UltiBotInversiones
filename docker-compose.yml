@@ -58,7 +58,7 @@ services:
       - PYTHONPATH=/app/src
       - PYTHONUNBUFFERED=1
       - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY:-m-28Nzt6UpR8G9AiQWNGqh0X3on5mYcxPjlHKKXzjoM=}
-      - BACKEND_URL=http://backend:8000
+      - API_BASE_URL=http://backend:8000
       - VNC_PASSWORD=${VNC_PASSWORD:-1234}
     depends_on:
       backend:

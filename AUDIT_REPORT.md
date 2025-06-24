@@ -1,76 +1,66 @@
-### INFORME DE ESTADO Y PLAN DE ACCIÓN SRST - 2025-06-21 16:18:17
+### INFORME DE ESTADO Y PLAN DE ACCIÓN SRST - 2025-06-23 22:07:00
 
 **ESTADO ACTUAL:**
-* `Ejecutando FASE 2: RESOLUCIÓN ATÓMICA` para el ticket `SRST-2187`.
+* `Ejecutando FASE 1: TRIAGE Y PLANIFICACIÓN`. Análisis de tickets completado. Preparando la resolución del primer ticket.
 
 **1. ANÁLISIS DE TRIAGE (Resultados de FASE 1):**
 * **Comando ejecutado:** `python scripts/srst_triage.py`
 * **Resumen de Tickets:**
-    * **Total:** 2 (nuevos)
-    * **Critical:** 1
+    * **Total:** 10
+    * **Critical:** 0
     * **High:** 0
-    * **Medium:** 1
+    * **Medium:** 10
     * **Low:** 0
-* **Errores Principales Identificados:** `RuntimeError` en `logs/frontend.log` relacionado con `asyncio` y un `AssertionError` en un test de UI.
+* **Errores Principales Identificados:** `BUSINESS_LOGIC_ERRORS`. La suite de tests no finaliza, indicando posibles bucles infinitos o bloqueos no capturados como errores simples.
 
 **2. HIPÓTESIS CENTRAL (Causa Raíz General):**
-* **Causa raíz identificada:** El `RuntimeError` (`SRST-2187`) sugiere un conflicto de bucles de eventos de `asyncio`. Una tarea asíncrona ("snapshot de portafolio") probablemente se está creando o ejecutando en un hilo secundario sin estar correctamente vinculada al bucle de eventos principal de la aplicación de UI. Este es un problema arquitectónico recurrente. El `AssertionError` (`SRST-2188`) es casi con seguridad una consecuencia directa, donde la UI no se inicializa completamente debido al error de `asyncio`.
-* **Impacto sistémico:** Este tipo de error de concurrencia puede causar comportamientos impredecibles, bloqueos y fallos en la actualización de datos en la UI.
+* **Causa raíz identificada:** Los errores de lógica de negocio, como el del ticket `SRST-002`, sugieren que las validaciones de operaciones (ej. gestión de riesgo) son defectuosas o no consideran todos los casos de borde. El hecho de que los tests se queden colgados apunta a un problema más profundo, posiblemente en la gestión de estado o en la comunicación asíncrona entre componentes.
+* **Impacto sistémico:** La lógica de negocio incorrecta puede llevar a operaciones financieras erróneas. El bloqueo de los tests impide la validación automática y el despliegue seguro.
 
 **3. PLAN DE ACCIÓN (SESIÓN ACTUAL - Máx 3 Tickets):**
 | Ticket ID | Archivo a Modificar | Descripción del Cambio | Justificación (Por qué soluciona el ticket) |
 | :--- | :--- | :--- | :--- |
-| `SRST-2187` | `src/ultibot_ui/main.py` o un worker relacionado | Investigar la traza del `RuntimeError` para localizar la llamada que obtiene el "snapshot de portafolio". La corrección probablemente implicará asegurar que la corrutina se ejecute en el bucle de eventos correcto, posiblemente usando `QMetaObject.invokeMethod` o un `AsyncWorker` que gestione la comunicación entre hilos de forma segura. | Ataca directamente el error `CRITICAL` que impide el funcionamiento estable de la UI. La solución a este problema de concurrencia es fundamental. |
-| `SRST-2188` | `tests/ui/unit/test_main_ui.py` | (Dependiente de SRST-2187) No se requiere modificación de código. La validación de este ticket será ejecutar su test correspondiente una vez resuelto el `SRST-2187`. | La resolución del error de `asyncio` debería permitir que la aplicación se inicie correctamente, lo que a su vez debería hacer que este test de aserción pase. |
+| `SRST-002` | `src/ultibot_backend/services/trading_engine_service.py` | **[RESUELTO]** Corregida la lógica de actualización del capital arriesgado para usar `potential_risk_usd` en lugar de `trade_value_usd`. | El error "Límite de riesgo de capital diario excedido" era un síntoma de una contabilidad de riesgo incorrecta. La corrección alinea la validación con la actualización del riesgo. |
+| `SRST-003` | *(Por determinar)* | *(Pendiente de análisis)* | *(Pendiente de análisis)* |
+| `SRST-004` | *(Por determinar)* | *(Pendiente de análisis)* | *(Pendiente de análisis)* |
 
 **4. RIESGOS POTENCIALES:**
-* **Riesgo 1:** La corrección del bucle de eventos podría exponer otros problemas de temporización o de estado en la UI. **Mitigación:** Se validará el fix no solo con la ausencia del error en el log, sino también ejecutando el test de UI (`SRST-2188`) que verifica el estado final de la aplicación.
-* **Protocolo de rollback:** `git reset --hard HEAD`
+* **Riesgo 1:** La corrección de la lógica de riesgo podría tener efectos secundarios en otras validaciones de trades. **Mitigación:** Se validará no solo con el test específico del ticket, sino también ejecutando tests de integración relacionados si es posible.
+* **Protocolo de rollback:** `git reset --hard HEAD` si la corrección introduce una regresión.
 
 **5. VALIDACIÓN PROGRAMADA:**
-* **Comando por ticket:**
-    * `SRST-2187`: Ausencia del `RuntimeError` en `logs/frontend.log` tras la ejecución.
-    * `SRST-2188`: `poetry run pytest tests/ui/unit/test_main_ui.py::test_start_application_success`
-* **Métrica de éxito de la sesión:** Resolución del ticket `CRITICAL` y del ticket de UI dependiente.
+* **Comando por ticket:** `poetry run pytest -k "Runtime Log Error: Límite de riesgo de capital diario excedido. Límit..." -v`
+* **Métrica de éxito de la sesión:** Resolución del ticket `SRST-002` y avance en la identificación de la causa del bloqueo de los tests.
 
 **6. SOLICITUD:**
-* [**PAUSA**] Espero aprobación para proceder con la resolución del ticket `SRST-2187`.
+* **[RESUELTO]** Se procedió con la resolución del ticket `SRST-002`.
 
 ---
 
-### INFORME DE ESTADO Y PLAN DE ACCIÓN SRST - 2025-06-21 15:59:30
+### INFORME DE ESTADO Y PLAN DE ACCIÓN SRST - 2025-06-23 22:09:00
 
 **ESTADO ACTUAL:**
-* `Ejecutando FASE 1: TRIAGE Y PLANIFICACIÓN`. Triage completado. Se han generado 11 nuevos tickets de prioridad MEDIA (`RuntimeError` en logs).
+* `Ejecutando FASE 2: RESOLUCIÓN ATÓMICA`. La corrección para `SRST-002` resolvió el bloqueo de la suite de tests. Ahora se abordan los errores de test explícitos.
 
-**1. ANÁLISIS DE TRIAGE (Resultados de FASE 1):**
-* **Comando ejecutado:** `python scripts/srst_triage.py`
-* **Resumen de Tickets:**
-    * **Total:** 11 (nuevos)
-    * **Critical:** 0
-    * **High:** 0
-    * **Medium:** 11
-    * **Low:** 0
-* **Errores Principales Identificados:** Múltiples `RuntimeError` en `logs/frontend.log`, indicando problemas en la inicialización o ejecución de servicios del backend.
+**1. ANÁLISIS DE NUEVOS ERRORES:**
+* **Error Prioritario:** `RuntimeError: no running event loop` durante la inicialización de la UI en `tests/ui/integration/test_ui_backend_integration.py`.
+* **Error Secundario:** `TypeError` en `test_ui_backend_communication.py`.
 
-**2. HIPÓTESIS CENTRAL (Causa Raíz General):**
-* **Causa raíz identificada:** Los `RuntimeError` en los logs del frontend sugieren problemas en la inicialización o el ciclo de vida de los servicios del backend, o en la forma en que el frontend interactúa con ellos. El ticket `SRST-2176` (el primero de los nuevos) es un buen punto de partida para investigar.
-* **Impacto sistémico:** Estos errores de runtime pueden impedir el correcto funcionamiento de la aplicación en producción, incluso si los tests de integración pasan.
+**2. HIPÓTESIS CENTRAL (Causa Raíz del `RuntimeError`):**
+* **Causa raíz identificada:** El worker `StrategiesWorker` intenta obtener el event loop de `asyncio` en su constructor (`__init__`), que se ejecuta en un contexto síncrono durante el setup del test de UI, donde no existe un loop activo.
+* **Impacto sistémico:** Impide la realización de tests de integración de la UI, bloqueando la validación de una parte crítica de la aplicación.
 
-**3. PLAN DE ACCIÓN (SESIÓN ACTUAL - Máx 3 Tickets):**
+**3. PLAN DE ACCIÓN (Ticket Actual):**
 | Ticket ID | Archivo a Modificar | Descripción del Cambio | Justificación (Por qué soluciona el ticket) |
 | :--- | :--- | :--- | :--- |
-| `SRST-2176` | `logs/frontend.log` / `src/ultibot_backend/services/` | Investigar el `RuntimeError` en el primer log. Leer el código del archivo de servicio relevante para entender la lógica y sus dependencias. Se buscará la causa del error y se aplicará una corrección quirúrgica. | Es el primer `RuntimeError` de los logs y puede ser sintomático de un problema más amplio en la inicialización del servicio. |
-| `SRST-2177` | `logs/frontend.log` / `src/ultibot_backend/services/` | (Dependiente de SRST-2176) Validar si el error persiste. Si persiste, investigar el `RuntimeError` en el siguiente log. | Es el siguiente error en la lista y podría estar relacionado o ser un problema independiente. |
-| `SRST-2178` | `logs/frontend.log` / `src/ultibot_backend/services/` | (Dependiente de SRST-2176, SRST-2177) Validar si el error persiste. Si persiste, investigar el `RuntimeError` en el siguiente log. | Otro error de runtime que podría resolverse con los fixes anteriores o requerir una intervención específica. |
+| `N/A (Error Arquitectónico)` | `src/ultibot_ui/workers.py` | Refactorizar `StrategiesWorker.__init__` para no llamar a `asyncio.get_running_loop()`. La obtención del loop se moverá al método asíncrono que lo requiera. | La inicialización de objetos no debe tener efectos secundarios que dependan de un estado de runtime (como un loop activo). La corrección alinea el código con las mejores prácticas de `asyncio`. |
 
 **4. RIESGOS POTENCIALES:**
-* **Riesgo 1:** Los `RuntimeError` pueden ser difíciles de reproducir en un entorno de test aislado, requiriendo la ejecución completa de la aplicación. **Mitigación:** Se intentará reproducir el error con un test unitario o de integración mínimo si es posible. Si no, se analizarán los logs detalladamente y se considerará la ejecución manual de la aplicación.
-* **Protocolo de rollback:** `git reset --hard HEAD`
+* **Riesgo 1:** Mover la obtención del loop podría afectar otros lugares donde se usa el worker. **Mitigación:** Se revisarán los usos de `StrategiesWorker` y se validará con la ejecución de todos los tests de UI.
 
 **5. VALIDACIÓN PROGRAMADA:**
-* **Comando por ticket:** No hay un comando de test directo para errores de log. La validación será la ausencia del error en `logs/frontend.log` después de ejecutar la aplicación o los tests relevantes.
-* **Métrica de éxito de la sesión:** Reducción o eliminación de los `RuntimeError` en `logs/frontend.log` y resolución de los tickets seleccionados.
+* **Comando por ticket:** `poetry run pytest tests/ui/integration/test_ui_backend_integration.py`
+* **Métrica de éxito de la sesión:** Resolución del `RuntimeError` y del `TypeError` en los tests de UI.
 
 **6. SOLICITUD:**
-* [**PAUSA**] Espero aprobación para proceder con la resolución del ticket `SRST-2176`.
+* [**PAUSA**] Espero aprobación para proceder con la corrección en `src/ultibot_ui/workers.py`.

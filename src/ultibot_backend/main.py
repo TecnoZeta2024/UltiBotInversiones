@@ -165,10 +165,51 @@ def create_app() -> FastAPI:
     logger.info("Todos los routers han sido registrados.")
 
     @app_instance.get("/health", tags=["health"])
-    def health_check():
-        """Endpoint de salud para verificar que la aplicación está en funcionamiento."""
-        logger.debug("Health check solicitado.")
-        return {"status": "ok"}
+    async def health_check():
+        """Endpoint de salud con validaciones de dependencias críticas"""
+        logger.info("Ejecutando health check extendido")
+        
+        # Obtener contenedor de dependencias desde el contexto de la app
+        container = app_instance.state.container
+        
+        # Verificar estado de componentes críticos
+        health_status = {
+            "status": "ok",
+            "components": {
+                "database": "healthy",
+                "redis": "healthy",
+                "binance_api": "healthy"
+            },
+            "message": "Todos los componentes están operativos"
+        }
+        
+        try:
+            # Verificar conexión a base de datos
+            if not await container.db_client.ping():
+                health_status["components"]["database"] = "unhealthy"
+                logger.warning("Health check: Base de datos no respondiendo")
+            
+            # Verificar conexión a Redis
+            if not await container.cache.ping():
+                health_status["components"]["redis"] = "unhealthy"
+                logger.warning("Health check: Redis no respondiendo")
+            
+            # Verificar conexión a Binance
+            if not await container.binance_adapter.test_connection():
+                health_status["components"]["binance_api"] = "unhealthy"
+                logger.warning("Health check: API de Binance no disponible")
+            
+            # Si algún componente falla, ajustar mensaje y status
+            if any(status != "healthy" for status in health_status["components"].values()):
+                health_status["status"] = "partial"
+                health_status["message"] = "Algunos componentes no están disponibles"
+                
+        except Exception as e:
+            logger.error(f"Error durante health check: {str(e)}")
+            return JSONResponse(status_code=503, content={"status": "error", "detail": str(e)})
+            
+        logger.info(f"Health check completado: {health_status['message']}")
+        return JSONResponse(content=health_status, status_code=200)
         
     return app_instance
 

@@ -2,7 +2,7 @@
 # Start the TightVNC server
 
 # Clean up any existing sessions
-vncserver -kill :1 >/dev/null 2>&1 || true
+/usr/bin/vncserver -kill :1 >/dev/null 2>&1 || true
 rm -rf /tmp/.X1* >/dev/null 2>&1 || true
 
 # Configure VNC session
@@ -13,7 +13,7 @@ touch $HOME/.Xauthority
 
 # Start VNC server
 echo "Starting VNC server with resolution $VNC_RESOLUTION and color depth $VNC_DEPTH"
-vncserver :1 -geometry ${VNC_RESOLUTION:-1280x800} -depth ${VNC_DEPTH:-24} -localhost no -SecurityTypes VncAuth -PasswordFile $HOME/.vnc/passwd
+/usr/bin/vncserver :1 -geometry ${VNC_RESOLUTION:-1280x800} -depth ${VNC_DEPTH:-24} -localhost no -SecurityTypes VncAuth -PasswordFile $HOME/.vnc/passwd
 
 # Log VNC startup
 echo "VNC server started on port 5900"
