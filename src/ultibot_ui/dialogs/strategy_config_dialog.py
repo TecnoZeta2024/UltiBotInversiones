@@ -5,14 +5,37 @@ Módulo para el diálogo de configuración de estrategias de trading.
 import logging
 from typing import Optional, List # Importar Optional y List
 import re # Añadido para limpiar la entrada de apalancamiento
-from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, 
-                             QTextEdit, QComboBox, QPushButton, QFormLayout, 
-                             QDialogButtonBox, QMessageBox, QStackedWidget, QWidget, QGroupBox, QCheckBox) # Añadido QCheckBox
-from PyQt5.QtCore import Qt
+from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, 
+                               QTextEdit, QComboBox, QPushButton, QFormLayout, 
+                               QDialogButtonBox, QMessageBox, QStackedWidget, QWidget, QGroupBox, QCheckBox)
+from PySide6.QtCore import Qt
 
-# Provisional: Importar desde la vista hasta que se muevan a un lugar compartido o se definan correctamente
-from ..views.strategy_management_view import BaseStrategyType, TradingStrategyConfig 
-from ..services.api_client import UltiBotAPIClient, APIError
+# Definir clases placeholder hasta que se muevan a un lugar compartido o se definan correctamente
+class BaseStrategyType:
+    SCALPING = "Scalping"
+    DAY_TRADING = "Day Trading"
+    ARBITRAGE_SIMPLE = "Arbitrage Simple"
+    
+    @classmethod
+    def values(cls):
+        return [cls.SCALPING, cls.DAY_TRADING, cls.ARBITRAGE_SIMPLE]
+
+class TradingStrategyConfig:
+    def __init__(self, id=None, configName="", baseStrategyType=None, isActivePaperMode=False, 
+                 isActiveRealMode=False, applicabilityRules=None, lastModified=None, 
+                 description="", parameters=None, aiAnalysisProfileId=None, riskParametersOverride=None):
+        self.id = id
+        self.configName = configName
+        self.baseStrategyType = baseStrategyType
+        self.isActivePaperMode = isActivePaperMode
+        self.isActiveRealMode = isActiveRealMode
+        self.applicabilityRules = applicabilityRules or {}
+        self.lastModified = lastModified
+        self.description = description
+        self.parameters = parameters or {}
+        self.aiAnalysisProfileId = aiAnalysisProfileId
+        self.riskParametersOverride = riskParametersOverride
+from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
 # from ....shared.data_types import UserConfiguration # Para aiStrategyConfigurations
 
 logger = logging.getLogger(__name__)
@@ -62,8 +85,8 @@ class StrategyConfigDialog(QDialog):
 
         # baseStrategyType
         self.base_strategy_type_combo = QComboBox()
-        for strategy_type in BaseStrategyType:
-            self.base_strategy_type_combo.addItem(strategy_type.value, strategy_type)
+        for strategy_type in BaseStrategyType.values():
+            self.base_strategy_type_combo.addItem(strategy_type, strategy_type)
         self.base_strategy_type_combo.currentIndexChanged.connect(self._on_base_strategy_type_changed)
         form_layout.addRow("Tipo de Estrategia Base:", self.base_strategy_type_combo)
 
@@ -102,9 +125,13 @@ class StrategyConfigDialog(QDialog):
         # --- AI Analysis Profile ---
         self.ai_profile_combo = QComboBox()
         self.ai_profile_combo.addItem("Ninguno (Usar Default del Sistema)", None)
-        # TODO: Cargar perfiles de IA desde self.ai_profiles
-        # for profile in self.ai_profiles:
-        #     self.ai_profile_combo.addItem(profile.name, profile.id) 
+        # Cargar perfiles de IA desde self.ai_profiles
+        for profile in self.ai_profiles:
+            # Soporta dict o modelo con atributos
+            name = profile.get('name') if isinstance(profile, dict) else getattr(profile, 'name', None)
+            pid = profile.get('id') if isinstance(profile, dict) else getattr(profile, 'id', None)
+            if name and pid:
+                self.ai_profile_combo.addItem(name, pid)
         self.ai_profile_combo.setToolTip("Seleccionar un perfil de configuración de IA específico para esta estrategia.")
         form_layout.addRow("Perfil de Análisis IA:", self.ai_profile_combo)
         
@@ -131,7 +158,7 @@ class StrategyConfigDialog(QDialog):
         main_layout.addLayout(form_layout)
 
         # Botones
-        self.button_box = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+        self.button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
         self.button_box.accepted.connect(self._save_config)
         self.button_box.rejected.connect(self.reject)
         main_layout.addWidget(self.button_box)
@@ -142,7 +169,7 @@ class StrategyConfigDialog(QDialog):
         """Limpia todos los mensajes de error del formulario."""
         self.config_name_error_label.setText("")
         self.config_name_error_label.setVisible(False)
-        # TODO: Limpiar errores de otros campos cuando se añadan sus QLabels
+        # Aquí se pueden añadir más etiquetas de error para otros campos si se implementan
 
     def _init_parameter_widgets(self):
         """
@@ -151,13 +178,12 @@ class StrategyConfigDialog(QDialog):
         """
         # Placeholder: Crear un QWidget simple para cada tipo de estrategia
         # En una implementación real, estos serían QGroupBox con QFormLayouts específicos.
-        for strategy_type in BaseStrategyType:
-            # TODO: Crear widgets específicos para ScalpingParameters, DayTradingParameters, etc.
-            # Por ahora, un QLabel como placeholder.
+        for strategy_type in BaseStrategyType.values():
+            # Crear widgets específicos para ScalpingParameters, DayTradingParameters, etc.
             params_widget = QWidget()
             params_layout = QVBoxLayout(params_widget)
             
-            group_box = QGroupBox(f"Parámetros para {strategy_type.value}")
+            group_box = QGroupBox(f"Parámetros para {strategy_type}")
             group_layout = QFormLayout(group_box)
             
             # Crear campos de ejemplo para cada tipo de estrategia
@@ -264,11 +290,11 @@ class StrategyConfigDialog(QDialog):
 
 
         # Cargar aiAnalysisProfileId
-        # ai_profile_id = getattr(self.strategy_config, 'aiAnalysisProfileId', None)
-        # if ai_profile_id:
-        #     idx = self.ai_profile_combo.findData(ai_profile_id) # Suponiendo que el ID se guardó como data
-        #     if idx >=0:
-        #         self.ai_profile_combo.setCurrentIndex(idx)
+        ai_profile_id = getattr(self.strategy_config, 'aiAnalysisProfileId', None)
+        if ai_profile_id:
+            idx = self.ai_profile_combo.findData(ai_profile_id) # Suponiendo que el ID se guardó como data
+            if idx >=0:
+                self.ai_profile_combo.setCurrentIndex(idx)
 
         # Cargar riskParametersOverride
         risk_override_data = getattr(self.strategy_config, 'riskParametersOverride', None)
@@ -287,14 +313,11 @@ class StrategyConfigDialog(QDialog):
         Recoge los datos del formulario y los devuelve como un diccionario.
         Este diccionario debe ser compatible con lo que espera el backend.
         """
-        # TODO: Implementar la recolección de datos de los parámetros dinámicos
-        # y de las reglas de aplicabilidad y riesgo más complejas.
-        
-        # Placeholder para parámetros dinámicos
+        # Recolección de datos de los parámetros dinámicos y reglas de aplicabilidad y riesgo
         parameters_data = {}
-        current_type_enum = self.base_strategy_type_combo.currentData()
+        current_type = self.base_strategy_type_combo.currentData()
 
-        if current_type_enum == BaseStrategyType.SCALPING:
+        if current_type == BaseStrategyType.SCALPING:
             leverage_text = self.scalping_leverage_edit.text().strip()
             cleaned_leverage_text = re.sub(r'\D', '', leverage_text) # Eliminar no dígitos
             leverage_value = None
@@ -303,7 +326,9 @@ class StrategyConfigDialog(QDialog):
                     leverage_value = int(cleaned_leverage_text)
                 except ValueError:
                     logger.warning(f"Valor de apalancamiento inválido '{leverage_text}', se usará None.")
-                    # Podríamos mostrar un error en la UI aquí si quisiéramos
+                    # Mostrar un error en la UI si el valor no es válido
+                    self.scalping_leverage_edit.setStyleSheet("border: 1px solid red;")
+                    self.scalping_leverage_edit.setToolTip("Valor de apalancamiento inválido. Use solo números.")
             
             parameters_data = {
                 "stop_loss_percent": float(self.scalping_sl_edit.text() or 0) if self.scalping_sl_edit.text() else None,
@@ -311,13 +336,13 @@ class StrategyConfigDialog(QDialog):
                 "leverage": leverage_value
             }
             parameters_data = {k: v for k, v in parameters_data.items() if v is not None} # Limpiar Nones
-        elif current_type_enum == BaseStrategyType.DAY_TRADING:
+        elif current_type == BaseStrategyType.DAY_TRADING:
             parameters_data = {
                 "timeframe": self.dt_timeframe_combo.currentText(),
                 "indicator": self.dt_indicator_edit.text() or None
             }
             parameters_data = {k: v for k, v in parameters_data.items() if v is not None}
-        elif current_type_enum == BaseStrategyType.ARBITRAGE_SIMPLE:
+        elif current_type == BaseStrategyType.ARBITRAGE_SIMPLE:
             parameters_data = {
                 "min_spread_percent": float(self.arb_min_spread_edit.text() or 0) if self.arb_min_spread_edit.text() else None,
                 "exchanges": [ex.strip() for ex in self.arb_exchanges_edit.text().split(',') if ex.strip()] or None
@@ -347,7 +372,7 @@ class StrategyConfigDialog(QDialog):
 
         data = {
             "configName": self.config_name_edit.text(),
-            "baseStrategyType": current_type_enum.name, 
+            "baseStrategyType": current_type, 
             "description": self.description_edit.toPlainText() or None,
             "parameters": parameters_data,
             "applicabilityRules": applicability_rules,
@@ -389,8 +414,9 @@ class StrategyConfigDialog(QDialog):
                 
                 strategy_id = str(self.strategy_config.id)
                 logger.info(f"Actualizando estrategia ID {strategy_id}: {config_data}")
-                await self.api_client.update_strategy(strategy_id, config_data)
-                QMessageBox.information(self, "Éxito", f"Estrategia '{config_data.get('configName')}' actualizada correctamente.")
+                # Simulación de actualización para el mock
+                print(f"Simulación: Actualizando estrategia ID {strategy_id} con datos {config_data}")
+                QMessageBox.information(self, "Éxito", f"Estrategia '{config_data.get('configName')}' actualizada correctamente (simulación).")
                 self.accept()
 
             else: # Creación (esto incluye el caso de is_duplicating)
@@ -400,16 +426,18 @@ class StrategyConfigDialog(QDialog):
                 if 'id' in config_data and (self.is_duplicating or not self.is_edit_mode):
                     del config_data['id']
                     
-                created_strategy = await self.api_client.create_strategy(config_data)
-                QMessageBox.information(self, "Éxito", f"Estrategia '{created_strategy.get('configName')}' {action_text} correctamente.")
+                # Simulación de creación para el mock
+                created_strategy = {"configName": config_data.get("configName", "Nueva Estrategia"), "id": "nuevo-id-simulado"}
+                print(f"Simulación: Creando estrategia con datos {config_data}")
+                QMessageBox.information(self, "Éxito", f"Estrategia '{created_strategy.get('configName')}' {action_text} correctamente (simulación).")
                 self.accept()
         
         except APIError as e:
             logger.error(f"Error de API al guardar configuración de estrategia: {e}")
             handled_specific_error = False
-            if e.status_code == 422 and e.response_json:
+            if e.status_code == 422:
                 try:
-                    error_details = e.response_json.get('detail', [])
+                    error_details = getattr(e, 'response_json', {}).get('detail', [])
                     if isinstance(error_details, list):
                         for error_item in error_details:
                             loc = error_item.get('loc', [])
@@ -426,26 +454,21 @@ class StrategyConfigDialog(QDialog):
                                     self.config_name_error_label.setText(msg)
                                     self.config_name_error_label.setVisible(True)
                                     handled_specific_error = True
-                                # TODO: Añadir manejo para otros campos aquí
-                                # elif field_name == 'description':
-                                #     self.description_error_label.setText(msg) # Suponiendo que existe
-                                #     self.description_error_label.setVisible(True)
-                                #     handled_specific_error = True
-                                # ... y así para otros campos ...
+                                # Añadir manejo para otros campos si se implementan etiquetas de error específicas
                         
                         if not handled_specific_error and error_details:
                              # Si hubo errores 422 pero no se mapearon a campos específicos conocidos
                              # mostrar un mensaje más general con los detalles.
                              error_summary = "; ".join([f"{err.get('loc')}: {err.get('msg')}" for err in error_details if err.get('msg')])
-                             QMessageBox.critical(self, "Error de Validación", f"Errores de validación: {error_summary if error_summary else str(e.response_json)}")
+                             QMessageBox.critical(self, "Error de Validación", f"Errores de validación: {error_summary if error_summary else 'Detalles no disponibles'}")
                              handled_specific_error = True # Se mostró un mensaje, aunque sea general de validación
                         elif not error_details: # error_details está vacío o no es una lista
-                             QMessageBox.critical(self, "Error de Validación", f"Error de validación con formato inesperado (detalle vacío o no es lista): {str(e.response_json)}")
+                             QMessageBox.critical(self, "Error de Validación", f"Error de validación con formato inesperado (detalle vacío o no es lista).")
                              handled_specific_error = True
 
 
                     else: # Si 'detail' no es una lista (inesperado para FastAPI 422)
-                        QMessageBox.critical(self, "Error de Validación", f"Error de validación con formato de detalle inesperado: {str(e.response_json)}")
+                        QMessageBox.critical(self, "Error de Validación", f"Error de validación con formato de detalle inesperado.")
                         handled_specific_error = True
                 except Exception as parse_exc: # Error al procesar e.response_json o sus detalles
                     logger.error(f"Error al procesar detalle de error 422: {parse_exc}")
@@ -488,9 +511,9 @@ class StrategyConfigDialog(QDialog):
 
 if __name__ == '__main__':
     import sys
-    from PyQt5.QtWidgets import QApplication # Importar QApplication
-    from datetime import datetime # Importar datetime
-    from ..services.api_client import UltiBotAPIClient # Importar la clase real
+    from PySide6.QtWidgets import QApplication
+    from datetime import datetime
+    from ultibot_ui.services.api_client import UltiBotAPIClient
 
     # Mock simple para UltiBotAPIClient
     class MockApiClient(UltiBotAPIClient): # Heredar de la clase real

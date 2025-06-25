@@ -23,9 +23,9 @@ class DashboardView(QWidget):
     """
     initialization_complete = pyqtSignal(bool)
 
-    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent: Optional[QWidget] = None):
+    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent: Optional[QWidget] = None):
         super().__init__(parent)
-        self.user_id = user_id
+        self.user_id: Optional[UUID] = None # Se inicializará asíncronamente
         self.api_client = api_client # Usar la instancia de api_client
         self.main_window = main_window
         self._is_initialized = False
@@ -37,14 +37,26 @@ class DashboardView(QWidget):
         self.setLayout(self.main_layout)
 
         self._setup_ui()
-        self._initialize_async_components()
+        # No llamar a _initialize_async_components aquí, se llamará después de set_user_id
+
+    def set_user_id(self, user_id: UUID):
+        """Establece el user_id y actualiza los widgets dependientes."""
+        self.user_id = user_id
+        logger.info(f"DashboardView: User ID set to {user_id}. Initializing async components.")
+        
+        # Actualizar widgets que dependen del user_id
+        self.portfolio_widget.set_user_id(user_id)
+        self.notification_widget.set_user_id(user_id)
+
+        # La inicialización asíncrona ahora se llama desde MainWindow._post_show_initialization
+        # self._initialize_async_components()
 
     def _setup_ui(self):
         """Configura la interfaz de usuario básica del dashboard usando tarjetas."""
-        # Crear widgets
-        self.portfolio_widget = PortfolioWidget(self.user_id, self.api_client, self.main_window, self) # Pasar api_client
+        # Crear widgets sin user_id inicial, se establecerá después
+        self.portfolio_widget = PortfolioWidget(self.api_client, self.main_window, self) # Pasar api_client
         self.chart_widget = ChartWidget(self.api_client, self.main_window, self) # Pasar api_client
-        self.notification_widget = NotificationWidget(self.api_client, self.user_id, self.main_window, self) # Pasar api_client
+        self.notification_widget = NotificationWidget(self.api_client, self.main_window, self) # Pasar api_client
 
         # Crear tarjeta para el Portfolio
         portfolio_card = QFrame()
@@ -87,16 +99,19 @@ class DashboardView(QWidget):
         worker.result_ready.connect(on_success)
         worker.error_occurred.connect(lambda e: on_error(Exception(e)))
 
-        worker.result_ready.connect(thread.quit)
-        worker.error_occurred.connect(thread.quit)
+        # Conectar la señal finished del worker para que el hilo se cierre
+        worker.finished.connect(thread.quit)
+        
+        # Conectar la señal finished del hilo para limpiar el worker y el hilo
         thread.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
         
         thread.started.connect(worker.run)
         thread.start()
 
-    def _initialize_async_components(self):
+    def initialize_async_components(self):
         """Inicia la carga de datos asíncrona para los componentes del dashboard."""
-        logger.info("DashboardView: _initialize_async_components INVOCADO")
+        logger.info("DashboardView: initialize_async_components INVOCADO")
         self._pending_tasks = 1
 
         self._start_api_worker(

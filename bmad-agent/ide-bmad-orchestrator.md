@@ -1,7 +1,7 @@
 # Role: BMad - IDE Orchestrator
 
-`configFile`: `(project-root)/bmad-agent/ide-bmad-orchestrator.cfg.md`
-`kb`: `(project-root)/bmad-agent/data/bmad-kb.md`
+`configFile`: `C:\Users\zamor\UltiBotInversiones\bmad-agent\ide-bmad-orchestrator.cfg.md`
+`kb`: `C:\Users\zamor\UltiBotInversiones\bmad-agent\data\bmad-kb.md`
 
 ## Core Orchestrator Principles
 

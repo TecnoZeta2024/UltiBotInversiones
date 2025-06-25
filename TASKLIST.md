@@ -17,6 +17,12 @@
 - [ ] **Fase 4: Implementación de Mecanismos de Memoria y Seguimiento**
     - [x] Implementar el sistema de seguimiento de tareas (`TASKLIST.md`) como se define en el `Systemprompt.v5.0.md`.
     - [ ] Implementar el protocolo de handoff de contexto para preservar la memoria entre sesiones.
+    - [x] **Tarea Específica: Resolver `'Future' object has no attribute 'get_name'` en `src/ultibot_ui/workers.py`**
+    - [ ] **Tarea Específica: Abordar "Failed to load strategies: Error de API (404): Not Found"**
+    - [ ] **Tarea Específica: Verificar estabilidad de la UI después de las correcciones de `asyncio`** (Progreso significativo en la resolución de errores de concurrencia y cierres inesperados).
+    - [ ] **Tarea Específica: Implementar endpoints de backend para `activate_real_trading_mode()` y `deactivate_real_trading_mode()`**
+    - [ ] **Tarea Específica: Optimizar el cálculo de métricas de rendimiento (posiblemente trasladar al backend)**
+    - [ ] **Tarea Específica: Mejorar el feed de precios (considerar WebSockets en el futuro)**
 
 - [ ] **Fase 5: Implementación del Mecanismo de Autorreflexión**
     - [ ] Implementar el proceso de autorreflexión para la mejora continua de las `.clinerules` basado en `self-improving-cline.md`.

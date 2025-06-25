@@ -4,20 +4,24 @@ import logging
 from typing import List, Dict, Any, Optional, Callable, Coroutine
 from uuid import UUID
 import random
+from datetime import datetime
+from decimal import Decimal
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget,
     QTableWidgetItem, QHeaderView, QApplication, QLineEdit, QPushButton, QDialog,
     QDialogButtonBox, QCompleter, QMessageBox, QAbstractItemView, QListWidget, QListWidgetItem
 )
-from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QThread
-from PyQt5.QtGui import QColor, QFont
+from PySide6.QtCore import Qt, QTimer, Signal as pyqtSignal, QThread
+from PySide6.QtGui import QColor, QFont
 
 import qasync
 
 from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
 from ultibot_ui.workers import ApiWorker
 from shared.data_types import UserConfiguration
+from ultibot_backend.core.domain_models.user_configuration_models import RiskProfile, Theme
+from ultibot_ui.models import BaseMainWindow # Importar BaseMainWindow
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +59,7 @@ class PairConfigurationDialog(QDialog):
         layout.addWidget(self.list_widget)
 
         self.button_box = QDialogButtonBox()
-        self.button_box.setStandardButtons(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.button_box.setStandardButtons(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
         layout.addWidget(self.button_box)
@@ -82,13 +86,14 @@ class MarketDataWidget(QWidget):
     config_saved = pyqtSignal(UserConfiguration)
     market_data_api_error = pyqtSignal(str)
     
-    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, parent: Optional[QWidget] = None):
+    def __init__(self, user_id: Optional[UUID], api_client: UltiBotAPIClient, main_window: Optional[BaseMainWindow], parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.user_id = user_id
         self.api_client = api_client
+        self.main_window = main_window # Guardar referencia a MainWindow
         self.selected_pairs: List[str] = [] 
         self.all_available_pairs: List[str] = [] 
-        self.active_api_workers: List[Any] = []
+        # self.active_api_workers ya no es necesario si MainWindow gestiona los hilos
 
         self._init_ui()
         self._setup_timers()
@@ -105,7 +110,9 @@ class MarketDataWidget(QWidget):
 
         worker = ApiWorker(coroutine_factory=coroutine_factory, api_client=self.api_client)
         thread = QThread()
-        self.active_api_workers.append((worker, thread))
+        # Añadir el hilo a la ventana principal para su seguimiento, si main_window existe
+        if self.main_window:
+            self.main_window.add_thread(thread)
 
         worker.moveToThread(thread)
 
@@ -119,14 +126,14 @@ class MarketDataWidget(QWidget):
         worker.result_ready.connect(_on_result)
         worker.error_occurred.connect(_on_error)
         
-        thread.started.connect(worker.run)
-
-        worker.result_ready.connect(thread.quit)
-        worker.error_occurred.connect(thread.quit)
+        # Conectar la señal finished del worker para que el hilo se cierre
+        worker.finished.connect(thread.quit)
+        
+        # Conectar la señal finished del hilo para limpiar el worker y el hilo
         thread.finished.connect(worker.deleteLater)
         thread.finished.connect(thread.deleteLater)
-        thread.finished.connect(lambda: self.active_api_workers.remove((worker, thread)) if (worker, thread) in self.active_api_workers else None)
 
+        thread.started.connect(worker.run)
         thread.start()
         return future
 
@@ -135,7 +142,7 @@ class MarketDataWidget(QWidget):
         self.setLayout(layout)
 
         title_label = QLabel("Datos de Mercado")
-        title_label.setFont(QFont("Arial", 14, QFont.Bold))
+        title_label.setFont(QFont("Arial", 14, QFont.Weight.Bold))
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title_label)
 
@@ -159,16 +166,16 @@ class MarketDataWidget(QWidget):
         self.tickers_timer.timeout.connect(self.update_tickers_data)
 
     def _handle_user_config_result(self, config: UserConfiguration):
-        self.selected_pairs = config.favoritePairs or ["BTC/USDT", "ETH/USDT"]
+        self.selected_pairs = config.favorite_pairs or ["BTC/USDT", "ETH/USDT"]
         self.all_available_pairs = ALL_AVAILABLE_PAIRS_EXAMPLE
         
         update_interval_seconds = 30
-        if config.mcpServerPreferences:
-            market_pref = next((p for p in config.mcpServerPreferences 
-                                if p.queryFrequencySeconds and ('market' in p.id.lower() or 'ccxt' in p.id.lower() or 'mobula' in p.id.lower())), 
+        if config.mcp_server_preferences:
+            market_pref = next((p for p in config.mcp_server_preferences 
+                                if p.query_frequency_seconds and ('market' in p.id.lower() or 'ccxt' in p.id.lower() or 'mobula' in p.id.lower())), 
                                None)
-            if market_pref and market_pref.queryFrequencySeconds is not None:
-                update_interval_seconds = market_pref.queryFrequencySeconds
+            if market_pref and market_pref.query_frequency_seconds is not None:
+                update_interval_seconds = market_pref.query_frequency_seconds
                 logger.info(f"Intervalo de actualización de UI configurado desde MCP '{market_pref.id}': {update_interval_seconds}s")
 
         update_interval_ms = update_interval_seconds * 1000
@@ -250,7 +257,7 @@ class MarketDataWidget(QWidget):
                 return
             
             current_config: UserConfiguration = f.result()
-            current_config.favoritePairs = self.selected_pairs
+            current_config.favorite_pairs = self.selected_pairs
             
             future_update = self._run_api_worker_and_await_result(
                 lambda api_client: api_client.update_user_configuration(current_config)
@@ -266,13 +273,12 @@ class MarketDataWidget(QWidget):
         QMessageBox.warning(self, "Error de API en Datos de Mercado", message)
 
     def cleanup(self):
+        """Detiene el temporizador de actualización."""
+        logger.info("MarketDataWidget: Iniciando limpieza.")
         if hasattr(self, 'tickers_timer') and self.tickers_timer.isActive():
             self.tickers_timer.stop()
-        for worker, thread in self.active_api_workers[:]:
-            if thread.isRunning():
-                thread.quit()
-                thread.wait(1000)
-        self.active_api_workers.clear()
+        # Los hilos de los workers son gestionados por MainWindow.
+        logger.info("MarketDataWidget: Limpieza completada.")
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -280,7 +286,31 @@ if __name__ == '__main__':
     class MockAPIClient(UltiBotAPIClient):
         async def get_user_configuration(self) -> UserConfiguration:
             await asyncio.sleep(0.1)
-            return UserConfiguration(user_id=UUID("123e4567-e89b-12d3-a456-426614174000"), favoritePairs=["BTC/USDT", "ETH/USDT"])
+            return UserConfiguration(
+                id=str(UUID("123e4567-e89b-12d3-a456-426614174000")), # Asignar un ID si es necesario
+                user_id=str(UUID("123e4567-e89b-12d3-a456-426614174000")),
+                favoritePairs=["BTC/USDT", "ETH/USDT"],
+                telegramChatId=None,
+                notificationPreferences=[],
+                enableTelegramNotifications=True,
+                defaultPaperTradingCapital=Decimal("10000.00"),
+                paperTradingActive=True,
+                paperTradingAssets=[],
+                watchlists=[],
+                riskProfile=RiskProfile.MODERATE,
+                riskProfileSettings=None,
+                realTradingSettings=None,
+                aiStrategyConfigurations=[],
+                aiAnalysisConfidenceThresholds=None,
+                mcpServerPreferences=[],
+                selectedTheme=Theme.DARK,
+                dashboardLayoutProfiles={},
+                activeDashboardLayoutProfileId=None,
+                dashboardLayoutConfig={},
+                cloudSyncPreferences=None,
+                createdAt=datetime.utcnow(),
+                updatedAt=datetime.utcnow()
+            )
         
         async def update_user_configuration(self, config: UserConfiguration) -> UserConfiguration:
             await asyncio.sleep(0.1)
@@ -304,7 +334,8 @@ if __name__ == '__main__':
 
         test_user_id = UUID("123e4567-e89b-12d3-a456-426614174000")
         mock_api_client = MockAPIClient(base_url="http://mock")
-        widget = MarketDataWidget(user_id=test_user_id, api_client=mock_api_client)
+        # Pasar None para main_window en el contexto de prueba
+        widget = MarketDataWidget(user_id=test_user_id, api_client=mock_api_client, main_window=None)
         
         widget.load_initial_configuration()
         widget.show()
@@ -315,4 +346,3 @@ if __name__ == '__main__':
             qasync.run(main_async)
         except KeyboardInterrupt:
             logger.info("Aplicación de prueba cerrada.")
-

@@ -16,6 +16,7 @@ from ultibot_backend.services.order_execution_service import PaperOrderExecution
 from ultibot_backend.adapters.binance_adapter import BinanceAdapter
 from ultibot_backend.adapters.mobula_adapter import MobulaAdapter
 from ultibot_backend.adapters.persistence_service import SupabasePersistenceService as PersistenceService
+from ultibot_backend.adapters.redis_cache import RedisCache # Importar RedisCache
 from ultibot_backend.services.ai_orchestrator_service import AIOrchestrator as AIOrchestratorService
 from ultibot_backend.services.config_service import ConfigurationService
 from ultibot_backend.services.credential_service import CredentialService
@@ -115,6 +116,7 @@ class DependencyContainer:
         self.strategy_service: Optional[StrategyService] = None
         self.trading_engine_service: Optional[TradingEngineService] = None
         self.persistence_service: Optional[PersistenceService] = None
+        self.cache: Optional[RedisCache] = None # Añadir el servicio de caché
 
     async def initialize_services(self):
         logger.info("Initializing dependency container...")
@@ -126,6 +128,9 @@ class DependencyContainer:
         self.persistence_service = PersistenceService(session_factory=cast(async_sessionmaker[AsyncSession], _session_factory))
         
         self.http_client = httpx.AsyncClient(timeout=30.0)
+
+        self.cache = RedisCache() # Inicializar RedisCache
+        await self.cache.initialize() # Inicializar el cliente Redis
 
         self.binance_adapter = BinanceAdapter()
         self.paper_order_execution_service = PaperOrderExecutionService()
@@ -202,6 +207,8 @@ class DependencyContainer:
             await self.http_client.aclose()
         if self.binance_adapter:
             await self.binance_adapter.close()
+        if self.cache: # Cerrar el cliente Redis
+            await self.cache.close()
         logger.info("Dependency container shut down.")
 
 
@@ -300,3 +307,12 @@ async def get_ai_orchestrator_service(request: Request) -> AIOrchestratorService
     container = await get_container_async(request)
     assert container.ai_orchestrator_service is not None, "AIOrchestratorService not initialized"
     return container.ai_orchestrator_service
+
+
+async def get_cache_service(request: Request) -> RedisCache:
+    """
+    Provides the singleton RedisCache instance from the dependency container.
+    """
+    container = await get_container_async(request)
+    assert container.cache is not None, "RedisCache not initialized"
+    return container.cache

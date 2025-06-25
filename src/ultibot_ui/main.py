@@ -16,8 +16,12 @@ import qasync
 from typing import cast, Optional
 from PySide6 import QtCore, QtGui, QtWidgets
 
+from ultibot_ui.config import app_config
+from ultibot_ui.models import UserConfiguration
 from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
 from ultibot_ui.windows.main_window import MainWindow
+# from ultibot_ui.dialogs.login_dialog import LoginDialog # Eliminar importación de LoginDialog
+from ultibot_ui.workers import ApiWorker
 
 # --- Configuración de Logging ---
 LOGS_DIR = "logs"
@@ -83,37 +87,37 @@ async def _main_async(app: QtWidgets.QApplication):
         load_stylesheet(app)
 
         # Instanciar el cliente API singleton
-        api_client = UltiBotAPIClient(base_url="http://127.0.0.1:8000")
+        api_client = UltiBotAPIClient(base_url=app_config.BACKEND_API_URL)
         await api_client.initialize_client() # Inicializar el cliente httpx aquí
 
-        try:
-            logger.info("Fetching initial user configuration...")
-            user_config = await api_client.get_user_configuration()
-            user_id = UUID(user_config['id'])
-            logger.info(f"Configuration received for user ID: {user_id}")
-            
-            main_window = MainWindow(user_id=user_id, api_client=api_client)
-            main_window.show()
-            logger.info("Main window created and shown.")
+        # Crear y mostrar la ventana principal inmediatamente
+        main_window = MainWindow(api_client=api_client)
+        main_window.show()
+        logger.info("Main window created and shown (loading configuration asynchronously).")
 
+        # Cargar la configuración del usuario directamente sin el diálogo de login
+        try:
+            logger.info("Fetching initial user configuration asynchronously...")
+            user_config_dict = await api_client.get_user_configuration()
+            user_config = UserConfiguration.model_validate(user_config_dict)
+            user_id = UUID(user_config.user_id)
+            logger.info(f"Configuration received and validated for user ID: {user_id}. Updating UI.")
+            main_window.set_user_configuration(user_id, user_config)
+            
         except APIError as e:
-            logger.critical(f"Failed to fetch initial configuration: {e}. Cannot start application.")
-            await api_client.close() # Asegurarse de cerrar el cliente en caso de error
-            return
+            logger.critical(f"Failed to fetch initial configuration: {e}. Application may not function correctly.")
+            main_window.show_error_message(f"Error al cargar configuración inicial: {e}")
         except Exception as e:
-            logger.critical(f"An unexpected error occurred during initialization: {e}", exc_info=True)
-            await api_client.close() # Asegurarse de cerrar el cliente en caso de error
-            return
+            logger.critical(f"An unexpected error occurred during configuration fetch: {e}", exc_info=True)
+            main_window.show_error_message(f"Error inesperado: {e}")
     else:
         logger.info("Existing MainWindow found. Activating it.")
         main_window.show()
         main_window.activateWindow()
         main_window.raise_()
 
-    # Devolver el cliente para que pueda ser cerrado correctamente
-    if 'api_client' in locals():
-        return api_client
-    return None
+    # Devolver la ventana principal para mantener una referencia fuerte
+    return main_window
 
 async def cleanup_resources(api_client: UltiBotAPIClient):
     """Cierra los recursos de la aplicación de forma segura."""
@@ -138,22 +142,39 @@ def main():
         # Configurar y ejecutar el bucle de eventos con qasync
         loop = qasync.QEventLoop(app)
         asyncio.set_event_loop(loop)
+        app.setProperty("main_event_loop", loop) # Establecer el bucle de eventos como propiedad de la aplicación con el nombre correcto
 
-        # Usar un objeto mutable para pasar el cliente API y asegurar su limpieza
-        api_client_container: dict[str, Optional[UltiBotAPIClient]] = {'instance': None}
+        # Referencias para mantener la ventana principal y el cliente API vivos
+        main_window_ref: Optional[MainWindow] = None
+        api_client_ref: Optional[UltiBotAPIClient] = None
 
         async def _main_async_wrapper(app: QtWidgets.QApplication):
-            """Envuelve _main_async para capturar la instancia del cliente API."""
-            api_client = await _main_async(app)
-            if api_client:
-                api_client_container['instance'] = api_client
+            """Envuelve _main_async para inicializar la aplicación y capturar la referencia a MainWindow."""
+            nonlocal main_window_ref
+            main_window_ref = await _main_async(app) # _main_async ahora devuelve MainWindow o None
+            
+            # Programar la inicialización post-mostrar en el bucle de eventos principal
+            if main_window_ref:
+                # Crear una instancia real de QShowEvent
+                show_event = QtGui.QShowEvent() # El tipo de evento Show es el predeterminado
+                # Usar cast para ayudar a Pylance a reconocer el tipo de main_window_ref
+                main_window_casted = cast(MainWindow, main_window_ref)
+                # Usar QTimer.singleShot para diferir la llamada a la siguiente iteración del bucle de eventos
+                QtCore.QTimer.singleShot(0, lambda: main_window_casted.post_show_initialization(show_event))
 
         def cleanup_slot():
             """Slot para ejecutar la limpieza de recursos en el event loop existente."""
             logger.info("aboutToQuit signal received, scheduling resource cleanup.")
-            if api_client_container['instance']:
-                # Usamos create_task para no bloquear la señal de cierre
-                loop.create_task(cleanup_resources(api_client_container['instance']))
+            nonlocal main_window_ref # Necesitamos esta referencia para llamar a cleanup
+            if main_window_ref:
+                main_window_ref.cleanup() # Llamar al cleanup de la ventana principal
+            
+            # Acceder al cliente API directamente desde la instancia singleton para cerrarlo
+            api_client_instance = getattr(UltiBotAPIClient, 'instance', None)
+            if api_client_instance:
+                loop.create_task(cleanup_resources(api_client_instance))
+            else:
+                logger.warning("UltiBotAPIClient instance not found for cleanup.")
 
         app.aboutToQuit.connect(cleanup_slot)
 

@@ -25,15 +25,23 @@ class HistoryView(QWidget):
     Incluye tanto paper trading como trading real en pestañas separadas.
     """
     
-    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent=None):
+    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent=None):
         super().__init__(parent)
-        self.user_id = user_id
+        self.user_id: Optional[UUID] = None # Se inicializará asíncronamente
         self.api_client = api_client
         self.main_window = main_window
         
         self.setup_ui()
-        logger.info(f"HistoryView inicializada para usuario {user_id}")
+        logger.info("HistoryView inicializada.")
         
+    def set_user_id(self, user_id: UUID):
+        """Establece el user_id y activa la carga de datos."""
+        self.user_id = user_id
+        logger.info(f"HistoryView: User ID set to {user_id}. Loading data.")
+        if hasattr(self, 'paper_trading_report_widget'):
+            self.paper_trading_report_widget.set_user_id(user_id)
+            self.paper_trading_report_widget.load_data() # Cargar datos una vez que el user_id esté disponible
+
     def setup_ui(self):
         """Configura la interfaz de usuario."""
         layout = QVBoxLayout(self)
@@ -62,7 +70,15 @@ class HistoryView(QWidget):
         layout.addWidget(self.tab_widget)
         
         # === PESTAÑA 1: PAPER TRADING ===
-        self.paper_trading_tab = self.create_paper_trading_tab()
+        # Pasar api_client y main_window, user_id se establecerá después
+        self.paper_trading_report_widget = PaperTradingReportWidget(
+            api_client=self.api_client,
+            main_window=self.main_window
+        )
+        self.paper_trading_tab = QWidget()
+        paper_layout = QVBoxLayout(self.paper_trading_tab)
+        paper_layout.setContentsMargins(5, 5, 5, 5)
+        paper_layout.addWidget(self.paper_trading_report_widget)
         self.tab_widget.addTab(self.paper_trading_tab, "📊 Paper Trading")
         
         # === PESTAÑA 2: TRADING REAL (PLACEHOLDER POR AHORA) ===
@@ -71,22 +87,6 @@ class HistoryView(QWidget):
         
         # Configurar pestaña inicial
         self.tab_widget.setCurrentIndex(0)  # Comenzar con Paper Trading
-        
-    def create_paper_trading_tab(self) -> QWidget:
-        """Crea la pestaña de Paper Trading."""
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(5, 5, 5, 5)
-        
-        # Integrar el widget de paper trading report
-        self.paper_trading_report_widget = PaperTradingReportWidget(
-            user_id=self.user_id, 
-            api_client=self.api_client,
-            main_window=self.main_window
-        )
-        layout.addWidget(self.paper_trading_report_widget)
-        
-        return tab
         
     def create_real_trading_tab(self) -> QWidget:
         """Crea la pestaña de Trading Real (placeholder por ahora)."""
@@ -118,7 +118,7 @@ class HistoryView(QWidget):
         
     def refresh_data(self):
         """Refresca los datos de todas las pestañas."""
-        if hasattr(self, 'paper_trading_report_widget'):
+        if hasattr(self, 'paper_trading_report_widget') and self.user_id:
             self.paper_trading_report_widget.load_data()
             logger.info("Datos del historial de paper trading refrescados")
         
@@ -129,4 +129,3 @@ class HistoryView(QWidget):
         if hasattr(self, 'paper_trading_report_widget'):
             self.paper_trading_report_widget.cleanup()
         logger.info("HistoryView cleanup completado")
-

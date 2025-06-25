@@ -82,6 +82,20 @@ class SupabasePersistenceService(IPersistenceService):
         if self._pool:
             await self._pool.close()
 
+    async def test_connection(self) -> bool:
+        """
+        Tests the database connection by executing a simple query.
+        Returns True if the connection is successful, False otherwise.
+        """
+        try:
+            async with self._get_session() as session:
+                await session.execute(text("SELECT 1"))
+            logger.info("Database connection test successful.")
+            return True
+        except Exception as e:
+            logger.error(f"Database connection test failed: {e}")
+            return False
+
     async def fetch_one(self, query: LiteralString, params: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
         async with self._get_session() as session:
             result = await session.execute(text(query), params)

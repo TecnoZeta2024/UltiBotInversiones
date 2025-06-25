@@ -77,6 +77,7 @@ class OrderCategory(str, Enum):
     TRAILING_STOP_LOSS = "trailing_stop_loss"
     MANUAL_CLOSE = "manual_close"
     OCO_ORDER = "oco_order"
+    EXIT = "exit" # Añadido para órdenes de salida
 
 class Commission(BaseModel):
     """Commission information for an order."""
@@ -109,6 +110,11 @@ class TradeOrderDetails(BaseModel):
     fillTimestamp: Optional[datetime] = Field(None, description="Marca de tiempo de cuando la orden fue completamente llenada.")
     rawResponse: Optional[Dict[str, Any]] = Field(None, description="Respuesta cruda del exchange (para órdenes reales).")
     ocoOrderListId: Optional[str] = Field(None, description="ID de la lista de órdenes OCO a la que pertenece esta orden (si aplica).")
+    
+    # Campos adicionales para órdenes LIMIT y STOP_LOSS_LIMIT
+    price: Optional[Decimal] = Field(None, description="Precio de la orden (para LIMIT, STOP_LOSS_LIMIT).")
+    stopPrice: Optional[Decimal] = Field(None, description="Precio de activación para órdenes STOP_LOSS_LIMIT.")
+    timeInForce: Optional[str] = Field(None, description="Política de tiempo en vigor para la orden (ej. 'GTC', 'FOK', 'IOC').")
 
 
 class RiskRewardAdjustment(BaseModel):

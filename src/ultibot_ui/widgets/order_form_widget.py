@@ -6,13 +6,7 @@ import logging
 import asyncio
 from typing import Optional, Dict, Any, Callable, Coroutine
 from uuid import UUID
-from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QLabel, QPushButton, 
-    QLineEdit, QComboBox, QDoubleSpinBox, QFrame, QGroupBox, QMessageBox,
-    QTextEdit, QCheckBox, QProgressBar
-)
-from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QObject, QThread
-from PyQt5.QtGui import QFont, QColor, QDoubleValidator
+from PySide6 import QtWidgets, QtCore, QtGui
 
 from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
 from ultibot_ui.services.trading_mode_state import get_trading_mode_manager, TradingModeStateManager
@@ -21,7 +15,7 @@ from ultibot_ui.workers import ApiWorker
 
 logger = logging.getLogger(__name__)
 
-class OrderFormWidget(QWidget):
+class OrderFormWidget(QtWidgets.QWidget):
     """
     Widget para crear y ejecutar órdenes de mercado.
     
@@ -29,10 +23,10 @@ class OrderFormWidget(QWidget):
     al sistema de gestión de modo de trading.
     """
     
-    order_executed = pyqtSignal(object)
-    order_failed = pyqtSignal(str)
+    order_executed = QtCore.Signal(object)
+    order_failed = QtCore.Signal(str)
     
-    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, parent: Optional[QWidget] = None):
+    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, parent: Optional[QtWidgets.QWidget] = None):
         super().__init__(parent)
         self.user_id = user_id
         self.api_client = api_client
@@ -53,7 +47,7 @@ class OrderFormWidget(QWidget):
         future = qasync_loop.create_future()
 
         worker = ApiWorker(coroutine_factory=coroutine_factory, api_client=self.api_client)
-        thread = QThread()
+        thread = QtCore.QThread()
         self.active_api_workers.append((worker, thread))
 
         worker.moveToThread(thread)
@@ -80,7 +74,7 @@ class OrderFormWidget(QWidget):
         return future
 
     def init_ui(self):
-        main_layout = QVBoxLayout(self)
+        main_layout = QtWidgets.QVBoxLayout(self)
         main_layout.setSpacing(15)
         
         self._create_header(main_layout)
@@ -89,75 +83,75 @@ class OrderFormWidget(QWidget):
         self._create_action_buttons(main_layout)
         self._create_results_area(main_layout)
 
-    def _create_header(self, layout: QVBoxLayout):
-        header_frame = QFrame()
-        header_frame.setFrameStyle(QFrame.Box)
+    def _create_header(self, layout: QtWidgets.QVBoxLayout):
+        header_frame = QtWidgets.QFrame()
+        header_frame.setFrameStyle(QtWidgets.QFrame.Shape.Box)
         header_frame.setMaximumHeight(60)
         
-        header_layout = QHBoxLayout(header_frame)
+        header_layout = QtWidgets.QHBoxLayout(header_frame)
         header_layout.setContentsMargins(10, 5, 10, 5)
         
-        title_label = QLabel("Crear Orden de Mercado")
-        title_label.setFont(QFont("Arial", 14, QFont.Bold))
+        title_label = QtWidgets.QLabel("Crear Orden de Mercado")
+        title_label.setFont(QtGui.QFont("Arial", 14, QtGui.QFont.Weight.Bold))
         header_layout.addWidget(title_label)
         
         header_layout.addStretch()
         
-        self.mode_indicator = QLabel()
-        self.mode_indicator.setFont(QFont("Arial", 12, QFont.Bold))
+        self.mode_indicator = QtWidgets.QLabel()
+        self.mode_indicator.setFont(QtGui.QFont("Arial", 12, QtGui.QFont.Weight.Bold))
         header_layout.addWidget(self.mode_indicator)
         
         layout.addWidget(header_frame)
 
-    def _create_form(self, layout: QVBoxLayout):
-        form_group = QGroupBox("Detalles de la Orden")
-        form_layout = QFormLayout(form_group)
+    def _create_form(self, layout: QtWidgets.QVBoxLayout):
+        form_group = QtWidgets.QGroupBox("Detalles de la Orden")
+        form_layout = QtWidgets.QFormLayout(form_group)
         
-        self.symbol_input = QLineEdit()
+        self.symbol_input = QtWidgets.QLineEdit()
         self.symbol_input.setPlaceholderText("Ej: BTCUSDT")
         self.symbol_input.textChanged.connect(self._validate_form)
         form_layout.addRow("Símbolo:", self.symbol_input)
         
-        self.side_combo = QComboBox()
+        self.side_combo = QtWidgets.QComboBox()
         self.side_combo.addItems(["BUY", "SELL"])
         self.side_combo.currentTextChanged.connect(self._validate_form)
         form_layout.addRow("Operación:", self.side_combo)
         
-        self.quantity_input = QDoubleSpinBox()
+        self.quantity_input = QtWidgets.QDoubleSpinBox()
         self.quantity_input.setRange(0.00000001, 999999999.0)
         self.quantity_input.setDecimals(8)
         self.quantity_input.setSingleStep(0.01)
         self.quantity_input.valueChanged.connect(self._validate_form)
         form_layout.addRow("Cantidad:", self.quantity_input)
         
-        self.mode_info_label = QLabel()
+        self.mode_info_label = QtWidgets.QLabel()
         self.mode_info_label.setWordWrap(True)
         self.mode_info_label.setStyleSheet("color: #888; font-style: italic;")
         form_layout.addRow("Modo:", self.mode_info_label)
         
         layout.addWidget(form_group)
 
-    def _create_api_credentials_section(self, layout: QVBoxLayout):
-        self.credentials_group = QGroupBox("Credenciales API (Solo Real Trading)")
-        credentials_layout = QFormLayout(self.credentials_group)
+    def _create_api_credentials_section(self, layout: QtWidgets.QVBoxLayout):
+        self.credentials_group = QtWidgets.QGroupBox("Credenciales API (Solo Real Trading)")
+        credentials_layout = QtWidgets.QFormLayout(self.credentials_group)
         
-        self.api_key_input = QLineEdit()
-        self.api_key_input.setEchoMode(QLineEdit.Password)
+        self.api_key_input = QtWidgets.QLineEdit()
+        self.api_key_input.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
         self.api_key_input.setPlaceholderText("API Key de Binance")
         self.api_key_input.textChanged.connect(self._validate_form)
         credentials_layout.addRow("API Key:", self.api_key_input)
         
-        self.api_secret_input = QLineEdit()
-        self.api_secret_input.setEchoMode(QLineEdit.Password)
+        self.api_secret_input = QtWidgets.QLineEdit()
+        self.api_secret_input.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
         self.api_secret_input.setPlaceholderText("API Secret de Binance")
         self.api_secret_input.textChanged.connect(self._validate_form)
         credentials_layout.addRow("API Secret:", self.api_secret_input)
         
-        self.show_credentials_checkbox = QCheckBox("Mostrar credenciales")
+        self.show_credentials_checkbox = QtWidgets.QCheckBox("Mostrar credenciales")
         self.show_credentials_checkbox.toggled.connect(self._toggle_credentials_visibility)
         credentials_layout.addRow("", self.show_credentials_checkbox)
         
-        security_warning = QLabel(
+        security_warning = QtWidgets.QLabel(
             "⚠️ IMPORTANTE: Las credenciales se envían de forma segura pero no se almacenan. "
             "Asegúrese de que su API Key tenga solo permisos de trading y no de retiro."
         )
@@ -167,35 +161,35 @@ class OrderFormWidget(QWidget):
         
         layout.addWidget(self.credentials_group)
 
-    def _create_action_buttons(self, layout: QVBoxLayout):
-        buttons_layout = QHBoxLayout()
+    def _create_action_buttons(self, layout: QtWidgets.QVBoxLayout):
+        buttons_layout = QtWidgets.QHBoxLayout()
         
-        self.validate_button = QPushButton("Validar Orden")
+        self.validate_button = QtWidgets.QPushButton("Validar Orden")
         self.validate_button.clicked.connect(self._validate_order)
         buttons_layout.addWidget(self.validate_button)
         
         buttons_layout.addStretch()
         
-        self.clear_button = QPushButton("Limpiar")
+        self.clear_button = QtWidgets.QPushButton("Limpiar")
         self.clear_button.clicked.connect(self._clear_form)
         buttons_layout.addWidget(self.clear_button)
         
-        self.execute_button = QPushButton("Ejecutar Orden")
+        self.execute_button = QtWidgets.QPushButton("Ejecutar Orden")
         self.execute_button.clicked.connect(self._execute_order)
         self.execute_button.setEnabled(False)
         buttons_layout.addWidget(self.execute_button)
         
         layout.addLayout(buttons_layout)
         
-        self.progress_bar = QProgressBar()
+        self.progress_bar = QtWidgets.QProgressBar()
         self.progress_bar.setVisible(False)
         layout.addWidget(self.progress_bar)
 
-    def _create_results_area(self, layout: QVBoxLayout):
-        results_group = QGroupBox("Resultado")
-        results_layout = QVBoxLayout(results_group)
+    def _create_results_area(self, layout: QtWidgets.QVBoxLayout):
+        results_group = QtWidgets.QGroupBox("Resultado")
+        results_layout = QtWidgets.QVBoxLayout(results_group)
         
-        self.results_text = QTextEdit()
+        self.results_text = QtWidgets.QTextEdit()
         self.results_text.setMaximumHeight(150)
         self.results_text.setStyleSheet("""
             QTextEdit {
@@ -257,7 +251,7 @@ class OrderFormWidget(QWidget):
         self._update_mode_display()
 
     def _toggle_credentials_visibility(self, show: bool):
-        echo_mode = QLineEdit.Normal if show else QLineEdit.Password
+        echo_mode = QtWidgets.QLineEdit.EchoMode.Normal if show else QtWidgets.QLineEdit.EchoMode.Password
         self.api_key_input.setEchoMode(echo_mode)
         self.api_secret_input.setEchoMode(echo_mode)
 
@@ -281,24 +275,24 @@ class OrderFormWidget(QWidget):
     def _validate_order(self):
         order_data = self._get_order_data()
         
-        validation_result = f"""
-📋 VALIDACIÓN DE ORDEN
-========================
-Símbolo: {order_data['symbol']}
-Operación: {order_data['side']}
-Cantidad: {order_data['quantity']:,.8f}
-Modo: {order_data['trading_mode'].upper()}
-Usuario: {order_data['user_id']}
-
-Estado: ✅ Orden válida y lista para ejecutar
-        """
+        validation_result = (
+            "📋 VALIDACIÓN DE ORDEN\n"
+            "========================\n"
+            f"Símbolo: {order_data['symbol']}\n"
+            f"Operación: {order_data['side']}\n"
+            f"Cantidad: {order_data['quantity']:,.8f}\n"
+            f"Modo: {order_data['trading_mode'].upper()}\n"
+            f"Usuario: {order_data['user_id']}\n\n"
+            "Estado: ✅ Orden válida y lista para ejecutar"
+        )
         
         if order_data['trading_mode'] == 'real':
-            validation_result += f"""
-⚠️  TRADING REAL ACTIVO
-- Se utilizarán fondos reales
-- Credenciales API configuradas: Sí
-"""
+            validation_result += (
+                "\n\n"
+                "⚠️  TRADING REAL ACTIVO\n"
+                "- Se utilizarán fondos reales\n"
+                "- Credenciales API configuradas: Sí"
+            )
         
         self.results_text.setText(validation_result)
 
@@ -306,18 +300,18 @@ Estado: ✅ Orden válida y lista para ejecutar
         current_mode = self.trading_mode_manager.current_mode
         
         if current_mode == 'real':
-            reply = QMessageBox.question(
+            reply = QtWidgets.QMessageBox.question(
                 self, 
                 "Confirmar Orden Real",
                 f"¿Está seguro de que desea ejecutar esta orden con FONDOS REALES?\n\n"
                 f"Símbolo: {self.symbol_input.text()}\n"
                 f"Operación: {self.side_combo.currentText()}\n"
                 f"Cantidad: {self.quantity_input.value():,.8f}",
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No
+                QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
+                QtWidgets.QMessageBox.StandardButton.No
             )
             
-            if reply != QMessageBox.Yes:
+            if reply != QtWidgets.QMessageBox.StandardButton.Yes:
                 return
         
         order_data = self._get_order_data()
@@ -327,13 +321,15 @@ Estado: ✅ Orden válida y lista para ejecutar
         self.execute_button.setEnabled(False)
         
         self._run_api_worker_and_await_result(
-            lambda api_client: api_client.create_trade(
-                symbol=order_data["symbol"],
-                side=order_data["side"],
-                quantity=order_data["quantity"],
-                trading_mode=order_data["trading_mode"],
-                api_key=order_data.get("api_key"),
-                api_secret=order_data.get("api_secret")
+            lambda api_client: api_client.execute_market_order(
+                order_data={
+                    "symbol": order_data["symbol"],
+                    "side": order_data["side"],
+                    "quantity": order_data["quantity"],
+                    "trading_mode": order_data["trading_mode"],
+                    "api_key": order_data.get("api_key"),
+                    "api_secret": order_data.get("api_secret")
+                }
             )
         ).add_done_callback(self._handle_order_result_from_future)
         
@@ -368,39 +364,37 @@ Estado: ✅ Orden válida y lista para ejecutar
     def _handle_order_result(self, result: Dict[str, Any]):
         order_details = result
         
-        result_text = f"""
-✅ ORDEN EJECUTADA EXITOSAMENTE
-================================
-Orden ID: {order_details.get('orderId_internal', 'N/A')}
-Símbolo: {order_details.get('symbol', 'N/A')}
-Lado: {order_details.get('side', 'N/A')}
-Cantidad: {order_details.get('executedQuantity', 0):,.8f}
-Precio: {order_details.get('executedPrice', 0):,.4f}
-Estado: {order_details.get('status', 'N/A')}
-Modo: {self.trading_mode_manager.current_mode.upper()}
-Fecha: {order_details.get('timestamp', 'N/A')}
-
-💰 Total: {order_details.get('cumulativeQuoteQty', 0):,.2f} USDT
-        """
+        result_text = (
+            "✅ ORDEN EJECUTADA EXITOSAMENTE\n"
+            "================================\n"
+            f"Orden ID: {order_details.get('orderId_internal', 'N/A')}\n"
+            f"Símbolo: {order_details.get('symbol', 'N/A')}\n"
+            f"Lado: {order_details.get('side', 'N/A')}\n"
+            f"Cantidad: {order_details.get('executedQuantity', 0):,.8f}\n"
+            f"Precio: {order_details.get('executedPrice', 0):,.4f}\n"
+            f"Estado: {order_details.get('status', 'N/A')}\n"
+            f"Modo: {self.trading_mode_manager.current_mode.upper()}\n"
+            f"Fecha: {order_details.get('timestamp', 'N/A')}\n\n"
+            f"💰 Total: {order_details.get('cumulativeQuoteQty', 0):,.2f} USDT"
+        )
         
         self.results_text.setText(result_text)
         self.order_executed.emit(order_details)
         
-        QTimer.singleShot(5000, self._clear_form)
+        QtCore.QTimer.singleShot(5000, self._clear_form)
 
     def _handle_order_error(self, error_msg: str):
-        error_text = f"""
-❌ ERROR EN LA EJECUCIÓN
-========================
-{error_msg}
-
-Por favor, verifique:
-- Símbolo válido
-- Cantidad suficiente
-- Credenciales API (modo real)
-- Conexión a internet
-- Estado del mercado
-        """
+        error_text = (
+            "❌ ERROR EN LA EJECUCIÓN\n"
+            "========================\n"
+            f"{error_msg}\n\n"
+            "Por favor, verifique:\n"
+            "- Símbolo válido\n"
+            "- Cantidad suficiente\n"
+            "- Credenciales API (modo real)\n"
+            "- Conexión a internet\n"
+            "- Estado del mercado"
+        )
         
         self.results_text.setText(error_text)
         self.order_failed.emit(error_msg)
@@ -443,4 +437,3 @@ Por favor, verifique:
                 worker.deleteLater()
                 thread.deleteLater()
         logger.info("OrderFormWidget: Limpieza de ApiWorkers completada.")
-

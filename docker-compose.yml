@@ -18,6 +18,19 @@ services:
     networks:
       - ultibot-network
 
+  redis:
+    image: redis:6.2-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - ultibot-network
+
   backend:
     build:
       context: .
@@ -30,48 +43,53 @@ services:
       - .env
     environment:
       - DATABASE_URL=postgresql+psycopg://test:test@db:5432/testdb
+      - REDIS_URL=redis://redis:6379/0 # Añadir URL de Redis
       - PYTHONPATH=/app/src
       - PYTHONUNBUFFERED=1
       - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY:-m-28Nzt6UpR8G9AiQWNGqh0X3on5mYcxPjlHKKXzjoM=}
     depends_on:
       db:
         condition: service_healthy
+      redis: # Añadir dependencia a Redis
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 10s
+      retries: 5 # Aumentar reintentos
+      start_period: 30s # Aumentar el período de inicio
     restart: unless-stopped
     networks:
       - ultibot-network
 
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
-    ports:
-      - "5900:5900"  # VNC port
-    volumes:
-      - ./logs:/app/logs
-    environment:
-      - PYTHONPATH=/app/src
-      - PYTHONUNBUFFERED=1
-      - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY:-m-28Nzt6UpR8G9AiQWNGqh0X3on5mYcxPjlHKKXzjoM=}
-      - API_BASE_URL=http://backend:8000
-      - VNC_PASSWORD=${VNC_PASSWORD:-1234}
-    depends_on:
-      backend:
-        condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "5900"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
-    networks:
-      - ultibot-network
+  # frontend:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.frontend
+  #   ports:
+  #     - "5902:5900"  # VNC port (host:container)
+  #   volumes:
+  #     - ./logs:/app/logs
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     - PYTHONPATH=/app/src
+  #     - PYTHONUNBUFFERED=1
+  #     - CREDENTIAL_ENCRYPTION_KEY=${CREDENTIAL_ENCRYPTION_KEY:-m-28Nzt6UpR8G9AiQWNGqh0X3on5mYcxPjlHKKXzjoM=}
+  #     - API_BASE_URL=http://backend:8000
+  #     - VNC_PASSWORD=${VNC_PASSWORD}
+  #   depends_on:
+  #     backend:
+  #       condition: service_healthy
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD", "nc", "-z", "localhost", "5900"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 15s
+  #   networks:
+  #     - ultibot-network
 
 networks:
   ultibot-network:
@@ -81,4 +99,6 @@ volumes:
   logs:
     driver: local
   postgres_data:
+    driver: local
+  redis_data: # Añadir volumen para Redis
     driver: local

@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QDate, QThread
 from PySide6.QtGui import QFont, QColor
+from decimal import Decimal # Importar Decimal
 
 from ultibot_ui.services.api_client import UltiBotAPIClient
 from shared.data_types import Trade, PerformanceMetrics
@@ -27,9 +28,9 @@ class PaperTradingReportWidget(QWidget):
     Widget principal para mostrar resultados y rendimiento del Paper Trading.
     """
     
-    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent=None):
+    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent=None):
         super().__init__(parent)
-        self.user_id = user_id
+        self.user_id: Optional[UUID] = None # Se inicializará asíncronamente
         self.api_client = api_client
         self.main_window = main_window
         self.current_trades_data: List[Trade] = []
@@ -38,8 +39,14 @@ class PaperTradingReportWidget(QWidget):
         self.setup_ui()
         self.connect_signals()
         
-        self.load_data()
+        # No llamar a load_data aquí, se llamará después de set_user_id
         
+    def set_user_id(self, user_id: UUID):
+        """Establece el user_id y activa la carga de datos."""
+        self.user_id = user_id
+        logger.info(f"PaperTradingReportWidget: User ID set to {user_id}. Loading data.")
+        self.load_data()
+
     def setup_ui(self):
         """Configura la interfaz de usuario."""
         layout = QVBoxLayout(self)
@@ -182,6 +189,10 @@ class PaperTradingReportWidget(QWidget):
         
     def load_data(self):
         """Carga tanto las métricas como los trades."""
+        if self.user_id is None:
+            logger.warning("PaperTradingReportWidget: user_id no está disponible. No se pueden cargar los datos.")
+            self.show_error_message("Error: Configuración de usuario no cargada. Intente reiniciar la aplicación.")
+            return
         self.load_metrics()
         self.load_trades()
 
@@ -205,15 +216,18 @@ class PaperTradingReportWidget(QWidget):
         """Carga las métricas de rendimiento."""
         self.show_loading(True)
         params = self.get_filters()
-        coro_factory = lambda client: client.get_trading_performance(trading_mode="paper", **params)
-        self._start_api_worker(coro_factory, self.on_metrics_loaded, self.on_error)
+        # Obtener todos los trades para el cálculo de métricas en el frontend
+        coro_factory = lambda client: client.get_trades(user_id=self.user_id, trading_mode="paper", status="closed", **params)
+        self._start_api_worker(coro_factory, self._calculate_and_display_metrics, self.on_error)
         
     def load_trades(self):
         """Carga la lista de trades."""
+        self.show_loading(True)
         params = self.get_filters()
         params['limit'] = 500
         params['offset'] = 0
-        coro_factory = lambda client: client.get_trades(trading_mode="paper", **params)
+        # Obtener trades cerrados para la tabla
+        coro_factory = lambda client: client.get_trades(user_id=self.user_id, trading_mode="paper", status="closed", **params)
         self._start_api_worker(coro_factory, self.on_trades_loaded, self.on_error)
 
     def get_filters(self) -> Dict[str, Any]:
@@ -231,20 +245,67 @@ class PaperTradingReportWidget(QWidget):
         
         return filters
         
-    def on_metrics_loaded(self, data: object):
-        """Maneja la carga exitosa de métricas."""
+    def _calculate_and_display_metrics(self, trades_data: List[Dict[str, Any]]):
+        """
+        Calcula las métricas de rendimiento a partir de los trades y actualiza la UI.
+        """
         try:
-            if not isinstance(data, PerformanceMetrics):
-                error_msg = f"Tipo de dato inesperado para métricas: se esperaba PerformanceMetrics pero se recibió {type(data).__name__}"
-                logger.error(error_msg)
-                self.on_error(error_msg)
-                return
-            self.current_metrics_data = data
-            self.update_metrics_display(data)
-            logger.info("Métricas de rendimiento cargadas exitosamente")
+            trades = [Trade.model_validate(t) for t in trades_data]
+            
+            total_trades = len(trades)
+            winning_trades = 0
+            losing_trades = 0
+            total_pnl = Decimal('0.0')
+            best_trade_pnl = Decimal('-999999999.0')
+            worst_trade_pnl = Decimal('999999999.0')
+            total_volume_traded = Decimal('0.0')
+            
+            for trade in trades:
+                if trade.pnl_usd is not None:
+                    total_pnl += trade.pnl_usd
+                    if trade.pnl_usd > 0:
+                        winning_trades += 1
+                    elif trade.pnl_usd < 0:
+                        losing_trades += 1
+                    
+                    if trade.pnl_usd > best_trade_pnl:
+                        best_trade_pnl = trade.pnl_usd
+                    if trade.pnl_usd < worst_trade_pnl:
+                        worst_trade_pnl = trade.pnl_usd
+                
+                if trade.entryOrder and trade.entryOrder.cumulativeQuoteQty:
+                    total_volume_traded += trade.entryOrder.cumulativeQuoteQty
+            
+            win_rate = Decimal('0.0')
+            if total_trades > 0:
+                win_rate = (Decimal(winning_trades) / Decimal(total_trades)) * 100
+            
+            avg_pnl_per_trade = Decimal('0.0')
+            if total_trades > 0:
+                avg_pnl_per_trade = total_pnl / Decimal(total_trades)
+
+            metrics = PerformanceMetrics(
+                total_trades=total_trades,
+                winning_trades=winning_trades,
+                losing_trades=losing_trades,
+                win_rate=win_rate,
+                total_pnl=total_pnl,
+                avg_pnl_per_trade=avg_pnl_per_trade,
+                best_trade_pnl=best_trade_pnl if best_trade_pnl != Decimal('-999999999.0') else Decimal('0.0'),
+                worst_trade_pnl=worst_trade_pnl if worst_trade_pnl != Decimal('999999999.0') else Decimal('0.0'),
+                best_trade_symbol=None, # Añadir valores por defecto
+                worst_trade_symbol=None, # Añadir valores por defecto
+                period_start=None, # Añadir valores por defecto
+                period_end=None, # Añadir valores por defecto
+                total_volume_traded=total_volume_traded
+            )
+            
+            self.current_metrics_data = metrics
+            self.update_metrics_display(metrics)
+            logger.info("Métricas de rendimiento calculadas y cargadas exitosamente.")
         except Exception as e:
-            logger.error(f"Error procesando métricas: {e}", exc_info=True)
-            self.show_error_message(f"Error procesando métricas: {str(e)}")
+            logger.error(f"Error calculando métricas: {e}", exc_info=True)
+            self.show_error_message(f"Error calculando métricas: {str(e)}")
         finally:
             self.show_loading(False)
             
@@ -344,4 +405,3 @@ class PaperTradingReportWidget(QWidget):
         """Limpia los recursos del widget."""
         logger.info("PaperTradingReportWidget cleanup: No hay acciones que tomar.")
         pass
-

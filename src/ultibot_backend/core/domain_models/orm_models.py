@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, Float, DateTime, Text, Numeric
+from sqlalchemy import Column, String, Boolean, Float, DateTime, Text, Numeric, Index
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.types import TypeDecorator, CHAR
 from sqlalchemy.sql import func
@@ -81,6 +81,12 @@ class UserConfigurationORM(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())  # pylint: disable=not-callable
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), onupdate=func.now())  # pylint: disable=not-callable
 
+    __table_args__ = (
+        Index('ix_user_configurations_user_id', 'user_id'),
+        Index('ix_user_configurations_created_at', 'created_at'),
+        Index('ix_user_configurations_updated_at', 'updated_at'),
+    )
+
     def __repr__(self):
         return f"<UserConfigurationORM(user_id='{self.user_id}')>"
 
@@ -89,13 +95,24 @@ class TradeORM(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
     user_id: Mapped[PythonUUID] = mapped_column(GUID(), nullable=False)
-    data: Mapped[str] = mapped_column(Text, nullable=False)
-    position_status: Mapped[str] = mapped_column(String, nullable=False)
     mode: Mapped[str] = mapped_column(String, nullable=False)
     symbol: Mapped[str] = mapped_column(String, nullable=False)
+    side: Mapped[str] = mapped_column(String, nullable=False)
+    position_status: Mapped[str] = mapped_column(String, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())  # pylint: disable=not-callable
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), onupdate=func.now())  # pylint: disable=not-callable
     closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    data: Mapped[str] = mapped_column(Text, nullable=False)  # Residual JSON data for complex or less queried fields
+
+    __table_args__ = (
+        Index('ix_trades_user_id', 'user_id'),
+        Index('ix_trades_symbol', 'symbol'),
+        Index('ix_trades_position_status', 'position_status'),
+        Index('ix_trades_mode', 'mode'),
+        Index('ix_trades_created_at', 'created_at'),
+        Index('ix_trades_updated_at', 'updated_at'),
+        Index('ix_trades_closed_at', 'closed_at'),
+    )
 
     def __repr__(self):
         return f"<TradeORM(id='{self.id}', symbol='{self.symbol}', status='{self.position_status}')>"
@@ -107,6 +124,11 @@ class PortfolioSnapshotORM(Base):
     user_id: Mapped[PythonUUID] = mapped_column(GUID(), nullable=False)
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=func.now())  # pylint: disable=not-callable
     data: Mapped[str] = mapped_column(Text, nullable=False)
+
+    __table_args__ = (
+        Index('ix_portfolio_snapshots_user_id', 'user_id'),
+        Index('ix_portfolio_snapshots_timestamp', 'timestamp'),
+    )
 
     def __repr__(self):
         return f"<PortfolioSnapshotORM(id='{self.id}', user_id='{self.user_id}', timestamp='{self.timestamp}')>"
@@ -139,6 +161,15 @@ class OpportunityORM(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), onupdate=func.now())  # pylint: disable=not-callable
     strategy_id: Mapped[Optional[PythonUUID]] = mapped_column(GUID(), nullable=True)
 
+    __table_args__ = (
+        Index('ix_opportunities_user_id', 'user_id'),
+        Index('ix_opportunities_symbol', 'symbol'),
+        Index('ix_opportunities_status', 'status'),
+        Index('ix_opportunities_detected_at', 'detected_at'),
+        Index('ix_opportunities_created_at', 'created_at'),
+        Index('ix_opportunities_updated_at', 'updated_at'),
+    )
+
     def __repr__(self):
         return f"<OpportunityORM(id='{self.id}', symbol='{self.symbol}', status='{self.status}')>"
 
@@ -154,6 +185,14 @@ class StrategyConfigORM(Base):
     is_active_real_mode: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())  # pylint: disable=not-callable
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), onupdate=func.now())  # pylint: disable=not-callable
+
+    __table_args__ = (
+        Index('ix_strategy_configurations_user_id', 'user_id'),
+        Index('ix_strategy_configurations_config_name', 'config_name'),
+        Index('ix_strategy_configurations_base_strategy_type', 'base_strategy_type'),
+        Index('ix_strategy_configurations_created_at', 'created_at'),
+        Index('ix_strategy_configurations_updated_at', 'updated_at'),
+    )
 
     def __repr__(self):
         return f"<StrategyConfigORM(id='{self.id}', config_name='{self.config_name}', user_id='{self.user_id}')>"

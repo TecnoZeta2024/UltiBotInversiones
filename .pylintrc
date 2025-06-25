@@ -1,3 +1,4 @@
 [MAIN]
 load-plugins=pylint.extensions.mccabe,pylint.extensions.typing
 init-hook='import sys; sys.path.insert(0, "src")'
+extension-pkg-whitelist=PySide6

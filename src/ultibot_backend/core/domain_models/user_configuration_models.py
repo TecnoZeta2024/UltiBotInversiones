@@ -205,6 +205,14 @@ class AIStrategyConfiguration(BaseModel):
     id: str = Field(..., description="Unique identifier for this AI configuration")
     name: str = Field(..., description="Descriptive name for this AI configuration")
     
+    # Estado de la estrategia
+    is_active_paper_mode: bool = Field(False, description="Indica si la estrategia está activa en modo paper trading.")
+    is_active_real_mode: bool = Field(False, description="Indica si la estrategia está activa en modo real trading.")
+    
+    # Métricas de rendimiento (añadidas para la UI)
+    total_pnl: Decimal = Field(Decimal("0.0"), description="Ganancia/Pérdida neta total de la estrategia.")
+    number_of_trades: int = Field(0, description="Número total de operaciones ejecutadas por la estrategia.")
+
     applies_to_strategies: Optional[List[str]] = Field(
         None, 
         description="Strategy names this configuration applies to"

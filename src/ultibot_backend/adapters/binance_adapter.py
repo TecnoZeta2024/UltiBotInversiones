@@ -8,6 +8,7 @@ import asyncio
 import websockets
 from typing import Dict, Any, List, Optional, Callable
 from datetime import datetime
+from decimal import Decimal # Importar Decimal
 
 from ultibot_backend.core.exceptions import BinanceAPIError, ExternalAPIError, CredentialError
 from shared.data_types import AssetBalance
@@ -136,8 +137,8 @@ class BinanceAdapter:
         asset_balances: List[AssetBalance] = []
         for balance in balances_data:
             try:
-                free = float(balance.get("free", 0))
-                locked = float(balance.get("locked", 0))
+                free = Decimal(balance.get("free", "0"))
+                locked = Decimal(balance.get("locked", "0"))
                 total = free + locked
                 if total > 0:
                     asset_balances.append(AssetBalance(
@@ -360,3 +361,23 @@ class BinanceAdapter:
         else:
             print("BinanceAdapter: Ya estaba cerrado.")
 
+    async def test_connection(self) -> bool:
+        """
+        Tests the connection to Binance API by fetching server time.
+        Returns True if the connection is successful, False otherwise.
+        """
+        endpoint = "/api/v3/time"
+        try:
+            response = await self.client.get(endpoint)
+            response.raise_for_status()
+            # Si llegamos aquí, la conexión fue exitosa
+            return True
+        except httpx.RequestError as e:
+            print(f"BinanceAdapter: Error de conexión durante test_connection: {e}")
+            return False
+        except httpx.HTTPStatusError as e:
+            print(f"BinanceAdapter: Error HTTP durante test_connection: {e.response.status_code} - {e.response.text}")
+            return False
+        except Exception as e:
+            print(f"BinanceAdapter: Error inesperado durante test_connection: {e}")
+            return False

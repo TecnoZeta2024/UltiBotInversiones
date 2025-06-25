@@ -63,4 +63,16 @@ class SidebarNavigationWidget(QWidget):
         for button in self.findChildren(QPushButton):
             if button.objectName().startswith("navButton_") and button.objectName() != f"navButton_{name}":
                 button.setChecked(False)
+        
+        # Asegurarse de que el botón actual esté marcado
+        current_button = self.findChild(QPushButton, f"navButton_{name}")
+        if current_button:
+            current_button.setChecked(True)
+
         self.navigation_requested.emit(name)
+
+    def select_view(self, name: str):
+        """Selecciona una vista mediante programación, simulando un clic de botón."""
+        button = self.findChild(QPushButton, f"navButton_{name}")
+        if button:
+            button.click()

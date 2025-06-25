@@ -8,12 +8,13 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     libgl1-mesa-glx libglib2.0-0 libegl1 \
     xfce4 xfce4-goodies \
-    tightvncserver \
+    xvfb x11vnc \
     dbus-x11 x11-xserver-utils \
     tini supervisor \
     libxkbcommon-x11-0 libxcb-xinerama0 libxcb-cursor0 libxrender1 libsm6 libxext6 \
     curl netcat xterm xfonts-base xfonts-75dpi xfonts-100dpi fonts-dejavu \
     nano wget procps psmisc \
+    libxcb-cursor0 \
     libxcb-icccm4 \
     libxcb-keysyms1 \
     libxcb-randr0 \
@@ -53,12 +54,11 @@ COPY src /app/src
 # Copia los scripts de configuración y inicio
 COPY docker/frontend-entrypoint.sh /app/entrypoint.sh
 COPY docker/vnc-startup.sh /app/vnc-startup.sh
-COPY docker/xfce-startup.sh /app/xfce-startup.sh
 COPY docker/wait-for-it.sh /app/wait-for-it.sh
 
 # Asigna permisos de ejecución a los scripts y asegura formato de línea correcto
-RUN sed -i 's/\r$//' /app/entrypoint.sh /app/vnc-startup.sh /app/xfce-startup.sh /app/wait-for-it.sh && \
-    chmod +x /app/entrypoint.sh /app/vnc-startup.sh /app/xfce-startup.sh /app/wait-for-it.sh
+RUN sed -i 's/\r$//' /app/entrypoint.sh /app/vnc-startup.sh /app/wait-for-it.sh && \
+    chmod +x /app/entrypoint.sh /app/vnc-startup.sh /app/wait-for-it.sh
 
 # Expone el puerto VNC
 EXPOSE 5900
@@ -74,5 +74,5 @@ ENV PYTHONPATH=/app/src \
     USER=root \
     TERM=xterm
 
-ENTRYPOINT ["tini", "--"]
-CMD ["/app/entrypoint.sh"]
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

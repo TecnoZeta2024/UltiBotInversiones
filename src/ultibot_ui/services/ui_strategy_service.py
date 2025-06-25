@@ -23,15 +23,7 @@ class UIStrategyService(QObject):
         This method now accepts an active API client.
         """
         try:
-            # Este método no existe en el cliente, se usa data mock por ahora.
-            # En el futuro, se reemplazaría por:
-            # strategies: List[AIStrategyConfiguration] = await api_client.get_strategies()
-            await asyncio.sleep(0.1) # Simular llamada
-            strategies_data = [
-                {'id': 'strat_1', 'name': 'Momentum Breakout'},
-                {'id': 'strat_2', 'name': 'Mean Reversion ETH'},
-                {'id': 'strat_3', 'name': 'AI-Based Signal'},
-            ]
+            strategies_data: List[Dict[str, Any]] = await api_client.get_strategies()
             strategies = [AIStrategyConfiguration.model_validate(s) for s in strategies_data]
             
             logger.info(f"Successfully fetched {len(strategies)} strategies.")
@@ -39,5 +31,20 @@ class UIStrategyService(QObject):
             self.strategies_updated.emit(strategy_dicts)
         except Exception as e:
             error_message = f"Failed to fetch strategies: {e}"
+            logger.error(error_message, exc_info=True)
+            self.error_occurred.emit(error_message)
+
+    async def toggle_strategy_status(self, strategy_id: str, current_status: bool, trading_mode: str) -> None:
+        """
+        Alterna el estado activo de una estrategia (activar/desactivar) y emite una señal.
+        """
+        try:
+            new_status = not current_status
+            await self.api_client.update_strategy_status(strategy_id, new_status, trading_mode)
+            logger.info(f"Estrategia {strategy_id} actualizada a estado activo: {new_status}.")
+            # No emitimos una lista vacía, la vista se encargará de recargar
+            # self.strategies_updated.emit([]) 
+        except Exception as e:
+            error_message = f"Failed to toggle strategy status for {strategy_id}: {e}"
             logger.error(error_message, exc_info=True)
             self.error_occurred.emit(error_message)

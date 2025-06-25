@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal as pyqtSignal, QTimer, QThread, QObject
 from PySide6.QtGui import QColor, QFont, QIcon
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Dict # Importar Dict
 from datetime import datetime
 from uuid import UUID, uuid4
 
@@ -22,22 +22,31 @@ class NotificationWidget(QWidget):
     notification_dismissed = pyqtSignal(str)
     all_notifications_read = pyqtSignal()
 
-    def __init__(self, api_client: UltiBotAPIClient, user_id: UUID, main_window: BaseMainWindow, parent: Optional[QWidget] = None):
+    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.api_client = api_client # Usar la instancia de api_client
-        self.user_id = user_id
+        self.user_id: Optional[UUID] = None # Se inicializará asíncronamente
         self.main_window = main_window
         self.notifications: List[Notification] = []
         self._is_fetching_notifications = False
+        self.update_timer: Optional[QTimer] = None
         self.init_ui()
         self._setup_styles()
-        self._setup_realtime_updates()
+        # No iniciar _setup_realtime_updates aquí, se iniciará después de set_user_id
+
+    def set_user_id(self, user_id: UUID):
+        """Establece el user_id y activa las actualizaciones de notificaciones."""
+        self.user_id = user_id
+        print(f"NotificationWidget: User ID set to {user_id}. Starting real-time updates.")
+        self._setup_realtime_updates() # Iniciar actualizaciones una vez que el user_id esté disponible
 
     def _setup_realtime_updates(self):
-        self.update_timer = QTimer(self)
-        self.update_timer.setInterval(5000)
-        self.update_timer.timeout.connect(self._fetch_notifications)
-        self.update_timer.start()
+        if self.update_timer is None: # Asegurarse de que el timer se inicialice una sola vez
+            self.update_timer = QTimer(self)
+            self.update_timer.setInterval(5000)
+            self.update_timer.timeout.connect(self._fetch_notifications)
+        if not self.update_timer.isActive():
+            self.update_timer.start()
 
     def _fetch_notifications(self):
         if self._is_fetching_notifications:
@@ -57,9 +66,11 @@ class NotificationWidget(QWidget):
         worker.error_occurred.connect(self._handle_fetch_notifications_error)
 
         thread.started.connect(worker.run)
-        worker.result_ready.connect(thread.quit)
-        worker.error_occurred.connect(thread.quit)
         
+        # Conectar la señal finished del worker para que el hilo se cierre
+        worker.finished.connect(thread.quit)
+        
+        # Conectar la señal finished del hilo para limpiar el worker y el hilo
         thread.finished.connect(worker.deleteLater)
         thread.finished.connect(thread.deleteLater)
         
@@ -73,10 +84,11 @@ class NotificationWidget(QWidget):
                 return
 
             for notif_data in new_notifications_response:
-                if isinstance(notif_data, Notification):
-                     self.add_notification(notif_data)
-                else:
-                    print(f"Tipo de notificación desconocido recibido: {type(notif_data)}")
+                try:
+                    notification = Notification.model_validate(notif_data)
+                    self.add_notification(notification)
+                except Exception as e:
+                    print(f"Error de validación de notificación: {e} para datos: {notif_data}")
         except Exception as e:
             print(f"Error al procesar resultado de notificaciones: {e}")
         finally:
@@ -289,13 +301,12 @@ class NotificationWidget(QWidget):
 
     def start_updates(self):
         """Inicia la actualización de notificaciones en tiempo real."""
-        if not self.update_timer.isActive():
-            self.update_timer.start()
-            self._fetch_notifications() # Fetch immediately on start
+        self._setup_realtime_updates() # Asegura que el timer esté configurado y activo
+        self._fetch_notifications() # Fetch immediately on start
 
     def stop_updates(self):
         """Detiene la actualización de notificaciones en tiempo real."""
-        if self.update_timer.isActive():
+        if self.update_timer and self.update_timer.isActive():
             self.update_timer.stop()
 
     def cleanup(self):
@@ -317,12 +328,12 @@ if __name__ == '__main__':
     main_layout = QVBoxLayout(main_window_widget)
     main_window_widget.setLayout(main_layout)
 
-    class MockUltiBotAPIClient:
-        async def get_notification_history(self, limit: int = 50) -> List[Notification]:
+    class MockUltiBotAPIClient(UltiBotAPIClient): # Heredar de UltiBotAPIClient
+        async def get_notification_history(self, limit: int = 50) -> List[Dict[str, Any]]: # Retornar Dict[str, Any]
             from datetime import timedelta
             return [
-                Notification(id=uuid4(), userId=uuid4(), eventType="MOCK_INFO", channel="ui", title="Notificación de Prueba 1", message="Este es un mensaje de prueba para el historial.", createdAt=datetime.utcnow() - timedelta(minutes=10)),
-                Notification(id=uuid4(), userId=uuid4(), eventType="MOCK_WARNING", channel="ui", title="Notificación de Prueba 2", message="Otro mensaje de prueba para el historial.", createdAt=datetime.utcnow() - timedelta(minutes=20))
+                {"id": str(uuid4()), "userId": str(uuid4()), "eventType": "MOCK_INFO", "channel": "ui", "title": "Notificación de Prueba 1", "message": "Este es un mensaje de prueba para el historial.", "createdAt": (datetime.utcnow() - timedelta(minutes=10)).isoformat()},
+                {"id": str(uuid4()), "userId": str(uuid4()), "eventType": "MOCK_WARNING", "channel": "ui", "title": "Notificación de Prueba 2", "message": "Otro mensaje de prueba para el historial.", "createdAt": (datetime.utcnow() - timedelta(minutes=20)).isoformat()}
             ]
 
     test_user_id = uuid4()
@@ -333,7 +344,8 @@ if __name__ == '__main__':
 
     mock_main_window = MockMainWindow()
 
-    notification_widget = NotificationWidget(MockUltiBotAPIClient(), test_user_id, mock_main_window)
+    notification_widget = NotificationWidget(MockUltiBotAPIClient(base_url="http://mock"), mock_main_window) # Pasar base_url
+    notification_widget.set_user_id(test_user_id) # Establecer user_id
     main_layout.addWidget(notification_widget)
     
     # Añadir algunas notificaciones de ejemplo para visualización

@@ -70,7 +70,7 @@ class UltiBotAPIClient:
 
     async def close(self):
         """Cierra el cliente httpx."""
-        if self._client:
+        if self._client and not self._client.is_closed:
             await self._client.aclose()
             self._client = None
             logger.info("APIClient httpx client closed.")
@@ -91,6 +91,11 @@ class UltiBotAPIClient:
         # Asegurar que self._client no es None después de la inicialización
         if self._client is None:
             raise RuntimeError("HTTP client failed to initialize.")
+
+        # Convertir Decimals en el cuerpo de la solicitud JSON, si existe
+        if 'json' in kwargs:
+            kwargs['json'] = self._convert_decimals_to_floats(kwargs['json'])
+            logger.debug(f"Request payload (processed for JSON): {kwargs['json']}")
 
         url = f"{self._base_url}{endpoint}"
         try:
@@ -132,17 +137,34 @@ class UltiBotAPIClient:
         params = {"trading_mode": trading_mode}
         return await self._make_request("GET", endpoint, params=params)
 
-    async def get_trades(self, trading_mode: str, status: str = 'open', limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+    async def get_trades(self, user_id: Optional[UUID] = None, trading_mode: str = 'paper', status: str = 'open', limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
         params = {"trading_mode": trading_mode, "limit": limit, "offset": offset, "status": status}
+        if user_id:
+            params["user_id"] = str(user_id)
         logger.info(f"Obteniendo trades, modo: {trading_mode}, filtros: {params}")
         return await self._make_request("GET", "/api/v1/trades", params=params)
 
     async def get_ohlcv_data(self, symbol: str, timeframe: str, limit: int = 100) -> List[Dict[str, Any]]:
-        params = {"symbol": symbol, "timeframe": timeframe, "limit": limit}
-        return await self._make_request("GET", "/api/v1/market/ohlcv", params=params)
+        params = {"symbol": symbol, "interval": timeframe, "limit": limit}
+        return await self._make_request("GET", "/api/v1/market/klines", params=params)
+
+    async def get_strategies(self) -> List[Dict[str, Any]]:
+        """Obtiene la lista de estrategias de trading configuradas."""
+        logger.info("Obteniendo estrategias de trading.")
+        return await self._make_request("GET", "/api/v1/strategies")
 
     async def get_ai_opportunities(self) -> List[Dict[str, Any]]:
         return await self._make_request("GET", "/api/v1/opportunities/ai")
+
+    async def update_strategy_status(self, strategy_id: str, is_active: bool, trading_mode: str) -> Dict[str, Any]:
+        """Actualiza el estado activo de una estrategia."""
+        logger.info(f"Actualizando estado de estrategia {strategy_id} a activo={is_active} en modo {trading_mode}.")
+        payload = {
+            "strategy_id": strategy_id,
+            "is_active": is_active,
+            "trading_mode": trading_mode
+        }
+        return await self._make_request("PUT", f"/api/v1/strategies/{strategy_id}/status", json=payload)
 
     async def get_notification_history(self, limit: int = 50) -> List[Dict[str, Any]]:
         """Obtiene el historial de notificaciones."""
@@ -181,3 +203,18 @@ class UltiBotAPIClient:
         
         logger.info(f"Enviando nueva orden: {order_data}")
         return await self._make_request("POST", "/api/v1/orders/", json=order_data)
+
+    async def get_market_data(self, symbols: List[str]) -> Dict[str, Any]:
+        """Obtiene datos de mercado para una lista de símbolos."""
+        logger.info(f"Obteniendo datos de mercado para símbolos: {symbols}")
+        # Asumiendo que el backend tiene un endpoint que acepta una lista de símbolos como query param o en el body
+        # Para GET, es mejor usar query params si la lista no es demasiado larga
+        params = {"symbols": ",".join(symbols)}
+        return await self._make_request("GET", "/api/v1/market/tickers", params=params)
+
+    async def update_user_configuration(self, config: Any) -> Dict[str, Any]:
+        """Actualiza la configuración del usuario."""
+        logger.info("Actualizando configuración de usuario.")
+        # Convertir el objeto Pydantic a un diccionario para la solicitud JSON
+        config_dict = config.model_dump(by_alias=True, exclude_unset=True)
+        return await self._make_request("PUT", "/api/v1/config", json=config_dict)

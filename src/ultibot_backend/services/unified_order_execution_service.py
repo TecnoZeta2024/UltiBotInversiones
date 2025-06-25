@@ -142,6 +142,103 @@ class UnifiedOrderExecutionService:
         else:
             raise OrderExecutionError(f"Invalid trading mode: {trading_mode}")
 
+    async def execute_limit_order(
+        self,
+        user_id: UUID,
+        symbol: str,
+        side: str,
+        quantity: Decimal,
+        price: Decimal,
+        trading_mode: TradingMode,
+        api_key: Optional[str] = None,
+        api_secret: Optional[str] = None,
+        time_in_force: Optional[str] = "GTC"
+    ) -> TradeOrderDetails:
+        """
+        Execute a limit order in the specified trading mode.
+        """
+        logger.info(f"Executing {trading_mode} limit order for {symbol} {side} {quantity}@{price} for user {user_id}")
+        try:
+            if trading_mode == "paper":
+                return await self.paper_execution_service.execute_limit_order(
+                    user_id=user_id,
+                    symbol=symbol,
+                    side=side,
+                    quantity=quantity,
+                    price=price,
+                    time_in_force=time_in_force
+                )
+            elif trading_mode == "real":
+                if not api_key or not api_secret:
+                    raise ConfigurationError("API key and secret are required for real trading mode")
+                return await self.real_execution_service.execute_limit_order(
+                    user_id=user_id,
+                    symbol=symbol,
+                    side=side,
+                    quantity=quantity,
+                    price=price,
+                    api_key=api_key,
+                    api_secret=api_secret,
+                    time_in_force=time_in_force
+                )
+            else:
+                raise OrderExecutionError(f"Invalid trading mode: {trading_mode}. Must be 'paper' or 'real'")
+        except (OrderExecutionError, ConfigurationError):
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error executing {trading_mode} limit order: {e}", exc_info=True)
+            raise OrderExecutionError(f"Unexpected error executing {trading_mode} limit order: {e}") from e
+
+    async def execute_stop_loss_limit_order(
+        self,
+        user_id: UUID,
+        symbol: str,
+        side: str,
+        quantity: Decimal,
+        price: Decimal, # Limit price
+        stop_price: Decimal,
+        trading_mode: TradingMode,
+        api_key: Optional[str] = None,
+        api_secret: Optional[str] = None,
+        time_in_force: Optional[str] = "GTC"
+    ) -> TradeOrderDetails:
+        """
+        Execute a stop-loss-limit order in the specified trading mode.
+        """
+        logger.info(f"Executing {trading_mode} stop-loss-limit order for {symbol} {side} {quantity}@{price} stop@{stop_price} for user {user_id}")
+        try:
+            if trading_mode == "paper":
+                return await self.paper_execution_service.execute_stop_loss_limit_order(
+                    user_id=user_id,
+                    symbol=symbol,
+                    side=side,
+                    quantity=quantity,
+                    price=price,
+                    stop_price=stop_price,
+                    time_in_force=time_in_force
+                )
+            elif trading_mode == "real":
+                if not api_key or not api_secret:
+                    raise ConfigurationError("API key and secret are required for real trading mode")
+                return await self.real_execution_service.execute_stop_loss_limit_order(
+                    user_id=user_id,
+                    symbol=symbol,
+                    side=side,
+                    quantity=quantity,
+                    price=price,
+                    stop_price=stop_price,
+                    api_key=api_key,
+                    api_secret=api_secret,
+                    time_in_force=time_in_force
+                )
+            else:
+                raise OrderExecutionError(f"Invalid trading mode: {trading_mode}. Must be 'paper' or 'real'")
+        except (OrderExecutionError, ConfigurationError):
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error executing {trading_mode} stop-loss-limit order: {e}", exc_info=True)
+            raise OrderExecutionError(f"Unexpected error executing {trading_mode} stop-loss-limit order: {e}") from e
+
     async def get_virtual_balances(self) -> dict:
         """
         Get virtual balances from paper trading service.
@@ -228,12 +325,37 @@ class UnifiedOrderExecutionService:
                 trading_mode=trading_mode,
                 api_key=api_key,
                 api_secret=api_secret,
-                oco_order_list_id=order_details.ocoOrderListId # Corregido: oco_group_id_exchange a ocoOrderListId
+                oco_order_list_id=order_details.ocoOrderListId
             )
-        # TODO: Añadir manejo para otros tipos de órdenes (LIMIT, STOP_LOSS, etc.)
-        # elif order_details.type == OrderType.LIMIT:
-        #     # Lógica para órdenes LIMIT
-        #     pass
+        elif order_details.type == "limit":
+            if order_details.price is None:
+                raise OrderExecutionError("Price is required for LIMIT orders.")
+            return await self.execute_limit_order(
+                user_id=user_id,
+                symbol=symbol,
+                side=side,
+                quantity=order_details.requestedQuantity,
+                price=order_details.price, # Ahora garantizado no ser None
+                trading_mode=trading_mode,
+                api_key=api_key,
+                api_secret=api_secret,
+                time_in_force=order_details.timeInForce if order_details.timeInForce else "GTC"
+            )
+        elif order_details.type == "stop_loss_limit":
+            if order_details.price is None or order_details.stopPrice is None:
+                raise OrderExecutionError("Price and stopPrice are required for STOP_LOSS_LIMIT orders.")
+            return await self.execute_stop_loss_limit_order(
+                user_id=user_id,
+                symbol=symbol,
+                side=side,
+                quantity=order_details.requestedQuantity,
+                price=order_details.price, # Ahora garantizado no ser None
+                stop_price=order_details.stopPrice, # Ahora garantizado no ser None
+                trading_mode=trading_mode,
+                api_key=api_key,
+                api_secret=api_secret,
+                time_in_force=order_details.timeInForce if order_details.timeInForce else "GTC"
+            )
         else:
             error_msg = f"Order type '{order_details.type}' not yet supported by UnifiedOrderExecutionService."
             logger.error(error_msg)

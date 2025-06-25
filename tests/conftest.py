@@ -24,31 +24,232 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 from sqlalchemy import text
-from ultibot_backend.core.domain_models.base import Base # Importar Base
-# Importar explícitamente todos los módulos que contienen modelos ORM para asegurar que se registren con Base.metadata
-from ultibot_backend.core.domain_models import orm_models
-from ultibot_backend.core.domain_models import trade_models
-from ultibot_backend.core.domain_models import market_data_models
-from ultibot_backend.core.domain_models import api_credential_models # Importar el nuevo módulo de credenciales
-from ultibot_backend.core.domain_models.user_configuration_models import UserConfiguration # Importar UserConfiguration
 
-# Configurar logging
 logger = logging.getLogger(__name__)
 
+# --- Selección de modo backend o stubs según variable de entorno ---
+from enum import Enum
+
+SKIP_BACKEND_TESTS = os.environ.get("ULTIBOT_SKIP_BACKEND_IMPORTS", "False") == "True"
+
+if not SKIP_BACKEND_TESTS:
+    try:
+        from ultibot_backend.core.domain_models.base import Base  # Importar Base
+        from ultibot_backend.core.domain_models import orm_models
+        from ultibot_backend.core.domain_models import trade_models
+        from ultibot_backend.core.domain_models import market_data_models
+        from ultibot_backend.core.domain_models import api_credential_models
+        from ultibot_backend.main import app as global_fastapi_app_real
+        from ultibot_backend.dependencies import (
+            get_persistence_service, get_strategy_service, get_performance_service,
+            get_config_service, get_credential_service, get_market_data_service,
+            get_portfolio_service, get_notification_service, get_trading_engine_service,
+            get_ai_orchestrator_service, get_unified_order_execution_service,
+            get_db_session, DependencyContainer, get_container_async
+        )
+        from fastapi import Request, FastAPI as FastAPI_Real
+        from ultibot_backend.services.performance_service import PerformanceService as PerformanceService_Real
+        from ultibot_backend.services.strategy_service import StrategyService as StrategyService_Real
+        from ultibot_backend.adapters.persistence_service import SupabasePersistenceService as SupabasePersistenceService_Real
+        from ultibot_backend.services.config_service import ConfigurationService as ConfigurationService_Real
+        from ultibot_backend.services.credential_service import CredentialService as CredentialService_Real
+        from ultibot_backend.adapters.binance_adapter import BinanceAdapter as BinanceAdapter_Real
+        from ultibot_backend.services.notification_service import NotificationService as NotificationService_Real
+        from ultibot_backend.services.market_data_service import MarketDataService as MarketDataService_Real
+        from ultibot_backend.services.portfolio_service import PortfolioService as PortfolioService_Real
+        from ultibot_backend.services.order_execution_service import OrderExecutionService as OrderExecutionService_Real
+        from ultibot_backend.services.order_execution_service import PaperOrderExecutionService as PaperOrderExecutionService_Real
+        from ultibot_backend.services.unified_order_execution_service import UnifiedOrderExecutionService as UnifiedOrderExecutionService_Real
+        from ultibot_backend.services.ai_orchestrator_service import AIOrchestrator as AIOrchestrator_Real
+        from ultibot_backend.services.trading_engine_service import TradingEngine as TradingEngine_Real
+        from ultibot_backend.app_config import get_app_settings as get_app_settings_real, AppSettings as AppSettings_Real
+        from shared.data_types import APICredential as APICredential_Real, ServiceName as ServiceName_Real, PerformanceMetrics as PerformanceMetrics_Real
+        from ultibot_backend.api.v1.models.performance_models import StrategyPerformanceData as StrategyPerformanceData_Real, OperatingMode as OperatingMode_Real
+
+        # Asignar las clases reales a los nombres que se usarán en las fixtures
+        global_fastapi_app = global_fastapi_app_real
+
+        SKIP_BACKEND_TESTS = False
+    except ImportError as e:
+        logger.warning(f"No se pudieron importar los módulos del backend en conftest.py: {e}. Esto es esperado para tests de UI cuando ULTIBOT_SKIP_BACKEND_IMPORTS está activado.")
+        SKIP_BACKEND_TESTS = True
+
+if SKIP_BACKEND_TESTS:
+    # --- Definir stubs/mocks para todas las clases y tipos usados en fixtures ---
+    from enum import Enum
+
+    class UserConfiguration:
+        def __init__(self, *args, **kwargs): pass
+
+    class SupabasePersistenceService:
+        def __init__(self, *args, **kwargs): pass
+        get_user_configuration = AsyncMock()
+        upsert_user_configuration = AsyncMock()
+
+    class PerformanceService:
+        def __init__(self, *args, **kwargs): pass
+    class StrategyService:
+        def __init__(self, *args, **kwargs): pass
+    class ConfigurationService:
+        def __init__(self, *args, **kwargs): pass
+        set_credential_service = MagicMock()
+        set_notification_service = MagicMock()
+    class CredentialService:
+        def __init__(self, *args, **kwargs): pass
+        encrypt_data = MagicMock(return_value="mock_encrypted_data")
+        get_credential = AsyncMock()
+    class BinanceAdapter:
+        def __init__(self, *args, **kwargs): pass
+        get_ticker_24hr = AsyncMock()
+        execute_market_order = AsyncMock()
+        get_account_info = AsyncMock()
+    class NotificationService:
+        def __init__(self, *args, **kwargs): pass
+    class MarketDataService:
+        def __init__(self, *args, **kwargs): pass
+        close = AsyncMock()
+    class PortfolioService:
+        def __init__(self, *args, **kwargs): pass
+        initialize_portfolio = AsyncMock()
+    class OrderExecutionService:
+        def __init__(self, *args, **kwargs): pass
+    class PaperOrderExecutionService:
+        def __init__(self, *args, **kwargs): pass
+    class UnifiedOrderExecutionService:
+        def __init__(self, *args, **kwargs): pass
+        execute_market_order = AsyncMock()
+        create_oco_order = AsyncMock()
+    class AIOrchestrator:
+        def __init__(self, *args, **kwargs): pass
+    class TradingEngine:
+        def __init__(self, *args, **kwargs): pass
+    class AppSettings:
+        GEMINI_API_KEY = None
+    def get_app_settings(): return AppSettings()
+    class FastAPI:
+        dependency_overrides = {}
+        def __init__(self, *args, **kwargs): pass
+
+    class APICredential:
+        def __init__(self, **kwargs):
+            self.id = kwargs.get('id')
+            self.user_id = kwargs.get('user_id')
+            self.service_name = kwargs.get('service_name')
+            self.credential_label = kwargs.get('credential_label')
+            self.encrypted_api_key = kwargs.get('encrypted_api_key')
+            self.encrypted_api_secret = kwargs.get('encrypted_api_secret')
+            self.status = kwargs.get('status')
+            self.created_at = kwargs.get('created_at')
+            self.updated_at = kwargs.get('updated_at')
+
+    class ServiceName(str, Enum):
+        BINANCE_SPOT = "BINANCE_SPOT"
+
+    class PerformanceMetrics: pass
+
+    class OrderStatus(str, Enum):
+        FILLED = "FILLED"
+        PENDING = "PENDING"
+        CANCELED = "CANCELED"
+
+    class OrderCategory(str, Enum):
+        ENTRY = "ENTRY"
+        EXIT = "EXIT"
+
+    class TradeOrderDetails:
+        def __init__(self, **kwargs):
+            self.orderId_internal = kwargs.get('orderId_internal')
+            self.orderCategory = kwargs.get('orderCategory')
+            self.type = kwargs.get('type')
+            self.status = kwargs.get('status')
+            self.requestedPrice = kwargs.get('requestedPrice')
+            self.requestedQuantity = kwargs.get('requestedQuantity')
+            self.executedQuantity = kwargs.get('executedQuantity')
+            self.executedPrice = kwargs.get('executedPrice')
+            self.cumulativeQuoteQty = kwargs.get('cumulativeQuoteQty')
+            self.commissions = kwargs.get('commissions', [])
+            self.commission = kwargs.get('commission')
+            self.commissionAsset = kwargs.get('commissionAsset')
+            self.timestamp = kwargs.get('timestamp')
+            self.submittedAt = kwargs.get('submittedAt')
+            self.fillTimestamp = kwargs.get('fillTimestamp')
+            self.rawResponse = kwargs.get('rawResponse', {})
+            self.ocoOrderListId = kwargs.get('ocoOrderListId')
+            self.orderId_exchange = kwargs.get('orderId_exchange')
+            self.clientOrderId_exchange = kwargs.get('clientOrderId_exchange')
+
+    class TradeMode(str, Enum):
+        PAPER = "PAPER"
+        LIVE = "LIVE"
+
+    class TradeSide(str, Enum):
+        BUY = "BUY"
+        SELL = "SELL"
+
+    class PositionStatus(str, Enum):
+        OPEN = "OPEN"
+        CLOSED = "CLOSED"
+
+    class StrategyPerformanceData:
+        """
+        Stub de datos de performance de estrategia para pruebas.
+        """
+        def __init__(self, performance=0.0):
+            self.performance = performance
+
+        def get_performance(self):
+            """Devuelve el valor de performance simulado."""
+            return self.performance
+
+        def reset_performance(self):
+            """Resetea el valor de performance a cero."""
+            self.performance = 0.0
+
+    class OperatingMode:
+        """Stub de modo operativo para pruebas."""
+        def __init__(self, mode="PAPER"):
+            self.mode = mode
+
+    class Base:
+        """Stub de Base SQLAlchemy para pruebas."""
+        metadata = MagicMock()
+    class RiskProfileSettings: pass
+    class RealTradingSettings: pass
+    class RiskProfile(str, Enum):
+        CONSERVATIVE = "CONSERVATIVE"
+        MODERATE = "MODERATE"
+        AGGRESSIVE = "AGGRESSIVE"
+
+    class Theme(str, Enum):
+        LIGHT = "LIGHT"
+        DARK = "DARK"
+
+    class PortfolioSnapshot:
+        def __init__(self, **kwargs):
+            self.paper_trading = kwargs.get('paper_trading')
+            self.real_trading = kwargs.get('real_trading')
+
+    class PortfolioSummary:
+        def __init__(self, **kwargs):
+            self.available_balance_usdt = kwargs.get('available_balance_usdt')
+            self.total_assets_value_usd = kwargs.get('total_assets_value_usd')
+            self.total_portfolio_value_usd = kwargs.get('total_portfolio_value_usd')
+            self.assets = kwargs.get('assets', [])
+            self.error_message = kwargs.get('error_message')
 class MockUserConfigPersistence:
     """
     Mock en memoria para SupabasePersistenceService, enfocado en UserConfiguration.
     """
     def __init__(self):
-        self._user_configs: Dict[str, UserConfiguration] = {}
+        self._user_configs: Dict[str, Any] = {}
         self.get_trades_with_filters = AsyncMock(return_value=[])
         self.upsert_user_configuration = AsyncMock(side_effect=self._real_upsert_user_configuration) # Mockear con side_effect
 
-    async def get_user_configuration(self, user_id: str) -> Optional[UserConfiguration]:
+    async def get_user_configuration(self, user_id: str) -> Optional[Any]:
         return self._user_configs.get(user_id)
 
-    async def _real_upsert_user_configuration(self, config: UserConfiguration):
-        self._user_configs[str(config.user_id)] = config
+    async def _real_upsert_user_configuration(self, config: Any):
+        self._user_configs[str(getattr(config, "user_id", None))] = config
         return config
 
 # --- Configuración Inicial Obligatoria ---
@@ -75,32 +276,46 @@ async def set_test_environment():
         del os.environ['DATABASE_URL']
 
 # --- Importaciones de la Aplicación (Después de la Configuración) ---
-from ultibot_backend.main import app as global_fastapi_app # Renombrar para claridad
-from ultibot_backend.dependencies import (
-    get_persistence_service, get_strategy_service, get_performance_service,
-    get_config_service, get_credential_service, get_market_data_service,
-    get_portfolio_service, get_notification_service, get_trading_engine_service,
-    get_ai_orchestrator_service, get_unified_order_execution_service,
-    get_db_session, DependencyContainer, get_container_async
-)
-from fastapi import Request, FastAPI # Importar FastAPI
-from ultibot_backend.services.performance_service import PerformanceService
-from ultibot_backend.services.strategy_service import StrategyService
-from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from ultibot_backend.services.config_service import ConfigurationService
-from ultibot_backend.services.credential_service import CredentialService
-from ultibot_backend.adapters.binance_adapter import BinanceAdapter
-from ultibot_backend.services.notification_service import NotificationService
-from ultibot_backend.services.market_data_service import MarketDataService
-from ultibot_backend.services.portfolio_service import PortfolioService
-from ultibot_backend.services.order_execution_service import OrderExecutionService, PaperOrderExecutionService
-from ultibot_backend.services.unified_order_execution_service import UnifiedOrderExecutionService
-from ultibot_backend.services.ai_orchestrator_service import AIOrchestrator
-from ultibot_backend.services.trading_engine_service import TradingEngine
-from ultibot_backend.app_config import get_app_settings, AppSettings
-from shared.data_types import APICredential, ServiceName, PerformanceMetrics
-from ultibot_backend.core.domain_models.trade_models import OrderStatus, OrderCategory, TradeOrderDetails, TradeMode, TradeSide, PositionStatus
-from ultibot_backend.api.v1.models.performance_models import StrategyPerformanceData, OperatingMode
+import os
+
+# Variable para controlar si se saltan las fixtures del backend
+# Esta variable se establece en el bloque try-except de importación de backend.
+# SKIP_BACKEND_TESTS = os.environ.get("ULTIBOT_SKIP_BACKEND_IMPORTS") == "True"
+
+# if not SKIP_BACKEND_TESTS:
+#     try:
+#         from ultibot_backend.main import app as global_fastapi_app # Renombrar para claridad
+#         from ultibot_backend.dependencies import (
+#             get_persistence_service, get_strategy_service, get_performance_service,
+#             get_config_service, get_credential_service, get_market_data_service,
+#             get_portfolio_service, get_notification_service, get_trading_engine_service,
+#             get_ai_orchestrator_service, get_unified_order_execution_service,
+#             get_db_session, DependencyContainer, get_container_async
+#         )
+#         from fastapi import Request, FastAPI # Importar FastAPI
+#         from ultibot_backend.services.performance_service import PerformanceService
+#         from ultibot_backend.services.strategy_service import StrategyService
+#         from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+#         from ultibot_backend.services.config_service import ConfigurationService
+#         from ultibot_backend.services.credential_service import CredentialService
+#         from ultibot_backend.adapters.binance_adapter import BinanceAdapter
+#         from ultibot_backend.services.notification_service import NotificationService
+#         from ultibot_backend.services.market_data_service import MarketDataService
+#         from ultibot_backend.services.portfolio_service import PortfolioService
+#         from ultibot_backend.services.order_execution_service import OrderExecutionService, PaperOrderExecutionService
+#         from ultibot_backend.services.unified_order_execution_service import UnifiedOrderExecutionService
+#         from ultibot_backend.services.ai_orchestrator_service import AIOrchestrator
+#         from ultibot_backend.services.trading_engine_service import TradingEngine
+#         from ultibot_backend.app_config import get_app_settings, AppSettings
+#         from shared.data_types import APICredential, ServiceName, PerformanceMetrics
+#         from ultibot_backend.core.domain_models.trade_models import OrderStatus, OrderCategory, TradeOrderDetails, TradeMode, TradeSide, PositionStatus
+#         from ultibot_backend.api.v1.models.performance_models import StrategyPerformanceData, OperatingMode
+#     except ImportError as e:
+#         logger.warning(f"No se pudieron importar los módulos del backend en conftest.py: {e}. Esto es esperado para tests de UI cuando ULTIBOT_SKIP_BACKEND_IMPORTS está activado.")
+#         # No es necesario redefinir los stubs aquí, ya están definidos globalmente.
+#         # Solo se necesita asegurar que global_fastapi_app y get_app_settings apunten a los stubs.
+#         global_fastapi_app = FastAPI() # Usar el stub global
+#         get_app_settings = lambda: AppSettings() # Usar el stub global
 
 # --- Configuración de la Base de Datos de Prueba (SQLite en memoria) ---
 

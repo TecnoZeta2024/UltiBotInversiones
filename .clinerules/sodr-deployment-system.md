@@ -24,11 +24,10 @@ Garantizar un entorno de ejecución **local, funcional, estable y sin costo** pa
 ### **FASE 2: ALGORITMO DE DESPLIEGUE AUTOMATIZADO (SECUENCIA)**
 - **Objetivo:** Iniciar el sistema completo (backend y UI) con **una sola acción**.
 - **Implementación:** A través de `tasks.json` en VS Code.
-- **Secuencia de Arranque (`start-all-local` task):**
-  1.  **Verificar Entorno:** Comprobar que `poetry` está instalado y las dependencias actualizadas.
-  2.  **Iniciar Backend:** Ejecutar `uvicorn src.ultibot_backend.main:app --reload` en una terminal dedicada. El backend debe usar la configuración para `SQLite`.
-  3.  **Iniciar UI:** Ejecutar `python -m src.ultibot_ui.main` en una segunda terminal. La UI debe estar configurada para comunicarse con el backend local.
-  4.  **Validación:** El `healthcheck` del backend (`/health`) debe responder `200 OK`. La UI debe arrancar sin errores y mostrar su ventana principal.
+- **Secuencia de Arranque:**
+  1.  **Iniciar Backend (Docker Compose):** Ejecutar `docker-compose up --build -d` para desplegar el backend y sus dependencias.
+  2.  **Iniciar UI (Local):** Ejecutar `run_ui_local.bat` para iniciar la interfaz de usuario localmente. Este script esperará a que el backend esté operativo.
+  3.  **Validación:** El `healthcheck` del backend (`/health`) debe responder `200 OK`. La UI debe arrancar sin errores y mostrar su ventana principal.
 
 ### **FASE 3: CICLO DE OPTIMIZACIÓN (ITERACIÓN)**
 - **Propósito:** Mejorar continuamente el rendimiento y la estabilidad del despliegue local.

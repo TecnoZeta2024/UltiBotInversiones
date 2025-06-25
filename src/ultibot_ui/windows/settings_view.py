@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QLineEdit, QPushButton, QGroupBox, QDoubleSpinBox, QMessageBox
 from PySide6.QtCore import Qt, Signal as pyqtSignal, QTimer, QThread
 import logging
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, cast
 from uuid import UUID
 import asyncio
 
@@ -18,16 +18,22 @@ class SettingsView(QWidget):
     config_changed = pyqtSignal(UserConfiguration)
     real_trading_mode_status_changed = pyqtSignal(bool, int, int)
 
-    def __init__(self, user_id: str, api_client: UltiBotAPIClient, parent=None):
+    def __init__(self, api_client: UltiBotAPIClient, parent=None):
         super().__init__(parent)
-        self.user_id = user_id
+        self.user_id: Optional[UUID] = None # Se inicializará asíncronamente
         self.api_client = api_client # Usar la instancia de api_client
         self.current_config: Optional[UserConfiguration] = None
         self.real_trading_status: Dict[str, Any] = {"isActive": False, "executedCount": 0, "limit": 5}
         self.active_threads: List[QThread] = []
 
         self._setup_ui()
-        QTimer.singleShot(0, self._load_initial_data)
+        # No llamar a _load_initial_data aquí, se llamará después de set_user_id
+
+    def set_user_id(self, user_id: str):
+        """Establece el user_id y activa la carga de datos."""
+        self.user_id = UUID(user_id) # Convertir a UUID
+        logger.info(f"SettingsView: User ID set to {self.user_id}. Loading initial data.")
+        self._load_initial_data()
 
     def _setup_ui(self):
         main_layout = QVBoxLayout(self)
@@ -104,7 +110,10 @@ class SettingsView(QWidget):
         worker.result_ready.connect(thread.quit)
         worker.error_occurred.connect(thread.quit)
         thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(lambda t=thread: self.active_threads.remove(t) if t in self.active_threads else None)
+        # Conectar la señal finished del hilo para limpiar el worker y el hilo, y removerlo de la lista
+        thread.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        thread.finished.connect(lambda: self.active_threads.remove(thread) if thread in self.active_threads else None)
         thread.start()
 
     def _load_config_into_ui(self):
@@ -129,17 +138,35 @@ class SettingsView(QWidget):
         QMessageBox.critical(self, "Error de Carga", f"No se pudo cargar la configuración general: {error_message}")
 
     def _load_real_trading_status(self):
-        logger.info("SettingsView: Solicitando estado de operativa real.")
-        coro_factory = lambda api_client: api_client.get_real_trading_mode_status()
+        logger.info("SettingsView: Solicitando configuración de usuario para estado de operativa real.")
+        coro_factory = lambda api_client: api_client.get_user_configuration()
         self._start_api_worker(coro_factory, self._handle_load_real_trading_status_result, self._handle_load_real_trading_status_error)
 
-    def _handle_load_real_trading_status_result(self, status_data: Dict[str, Any]):
+    def _handle_load_real_trading_status_result(self, config_data: Dict[str, Any]):
         try:
-            self.real_trading_status = status_data
+            user_config = UserConfiguration(**config_data)
+            real_trading_settings = user_config.real_trading_settings
+
+            is_active = getattr(real_trading_settings, 'real_trading_mode_active', False) if real_trading_settings else False
+            executed_count = getattr(real_trading_settings, 'real_trades_executed_count', 0) if real_trading_settings else 0
+            limit = 5 # Valor por defecto
+
+            # Si real_trading_settings es None, los valores por defecto (False, 0, 5) ya están establecidos.
+            # No es necesario inicializar RealTradingSettings() aquí si solo se usan los valores.
+            # Si se necesitara el objeto RealTradingSettings para otras operaciones, se haría:
+            # if real_trading_settings is None:
+            #     real_trading_settings = RealTradingSettings()
+
+
+            self.real_trading_status = {
+                "isActive": is_active,
+                "executedCount": executed_count,
+                "limit": limit
+            }
             self._update_real_trading_ui()
-            logger.info(f"Estado de operativa real cargado y UI actualizada: {status_data}")
+            logger.info(f"Estado de operativa real cargado y UI actualizada: {self.real_trading_status}")
         except Exception as e:
-            logger.error(f"Error al procesar el estado de operativa real recibido: {e}", exc_info=True)
+            logger.error(f"Error al procesar la configuración de operativa real recibida: {e}", exc_info=True)
             QMessageBox.critical(self, "Error de Procesamiento", f"No se pudo procesar el estado de operativa real: {e}")
 
     def _handle_load_real_trading_status_error(self, error_message: str):
@@ -251,3 +278,20 @@ class SettingsView(QWidget):
         logger.error(f"Error al desactivar el modo de operativa real: {error_message}")
         QMessageBox.critical(self, "Error de Desactivación", f"No se pudo desactivar el modo real: {error_message}")
         self.real_trading_checkbox.setChecked(True)
+
+    def cleanup(self):
+        """Detiene todos los hilos activos gestionados por SettingsView."""
+        logger.info(f"SettingsView: Cleaning up. Stopping {len(self.active_threads)} active threads...")
+        for thread in self.active_threads[:]: # Iterar sobre una copia para permitir la modificación de la lista
+            if thread.isRunning():
+                logger.info(f"SettingsView: Quitting and waiting for thread {thread.objectName() or 'unnamed'}...")
+                thread.quit()
+                if not thread.wait(5000): # Esperar hasta 5 segundos
+                    logger.warning(f"SettingsView: Thread {thread.objectName() or 'unnamed'} did not terminate gracefully.")
+            try:
+                thread.finished.disconnect() # Desconectar para evitar errores si ya está desconectado
+            except TypeError:
+                pass
+            thread.deleteLater() # Asegurarse de que el objeto QThread sea eliminado
+        self.active_threads.clear()
+        logger.info("SettingsView: Cleanup complete.")

@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from uuid import UUID
-from typing import List, Dict, Any, Coroutine, Callable
+from typing import List, Dict, Any, Coroutine, Callable, Optional # Importar Optional
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget, QTableWidgetItem,
@@ -18,15 +18,21 @@ from ultibot_ui.services.api_client import UltiBotAPIClient # Mantener para el t
 logger = logging.getLogger(__name__)
 
 class OpportunitiesView(QWidget):
-    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent=None):
+    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent=None):
         super().__init__(parent)
         logger.info("OpportunitiesView: __init__ called.")
-        self.user_id = user_id
+        self.user_id: Optional[UUID] = None # Se inicializará asíncronamente
         self.api_client = api_client # Usar la instancia de api_client
         self.main_window = main_window
         logger.debug("OpportunitiesView initialized.")
 
         self._setup_ui()
+        # No llamar a _load_initial_data aquí, se llamará después de set_user_id
+
+    def set_user_id(self, user_id: UUID):
+        """Establece el user_id y activa la carga inicial de datos."""
+        self.user_id = user_id
+        logger.info(f"OpportunitiesView: User ID set to {user_id}. Loading initial data.")
         self._load_initial_data()
 
     def _setup_ui(self):
@@ -112,7 +118,7 @@ class OpportunitiesView(QWidget):
         self.refresh_button.setEnabled(False)
         self.opportunities_table.setRowCount(0)
         
-        coro_factory = lambda api_client: api_client.get_gemini_opportunities()
+        coro_factory = lambda api_client: api_client.get_ai_opportunities()
         self._start_api_worker(coro_factory)
 
     def _start_api_worker(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine]):
@@ -125,11 +131,15 @@ class OpportunitiesView(QWidget):
 
         worker.result_ready.connect(self._handle_opportunities_result)
         worker.error_occurred.connect(self._handle_opportunities_error)
-        thread.started.connect(worker.run)
-        worker.result_ready.connect(thread.quit)
-        worker.error_occurred.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
         
+        # Conectar la señal finished del worker para que el hilo se cierre
+        worker.finished.connect(thread.quit)
+        
+        # Conectar la señal finished del hilo para limpiar el worker y el hilo
+        thread.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        
+        thread.started.connect(worker.run)
         thread.start()
 
     def _handle_opportunities_result(self, opportunities: List[Opportunity]):

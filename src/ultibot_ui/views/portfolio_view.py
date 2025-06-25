@@ -19,17 +19,28 @@ from ultibot_ui.services.trading_mode_state import get_trading_mode_manager, Tra
 logger = logging.getLogger(__name__)
 
 class PortfolioView(QWidget):
-    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, parent: Optional[QWidget] = None):
+    def __init__(self, api_client: UltiBotAPIClient, parent: Optional[QWidget] = None):
         super().__init__(parent)
-        self.user_id = user_id
-        self.api_client = api_client # Usar la instancia de api_client
+        self.user_id: Optional[UUID] = None
+        self.api_client = api_client
         self.current_portfolio_data: Optional[PortfolioSnapshot] = None
 
         self.trading_mode_manager: TradingModeStateManager = get_trading_mode_manager()
         self.trading_mode_manager.trading_mode_changed.connect(self._on_trading_mode_changed)
 
         self._setup_ui()
-        QTimer.singleShot(0, self._fetch_portfolio_data)
+        # No llamar a _fetch_portfolio_data aquí, esperar a que se establezca el user_id
+
+    def set_user_id(self, user_id: UUID):
+        """Establece el ID de usuario y activa la carga inicial de datos."""
+        if self.user_id is None:
+            self.user_id = user_id
+            logger.info(f"PortfolioView: User ID set to {user_id}. Triggering initial data fetch.")
+            # Usar QTimer para asegurar que la carga se inicie en el hilo de la UI
+            QTimer.singleShot(0, self._fetch_portfolio_data)
+        else:
+            logger.warning(f"PortfolioView: User ID already set. Ignoring new value {user_id}.")
+            pass # Añadir pass para el bloque else vacío
 
     def _setup_ui(self):
         main_layout = QVBoxLayout(self)
@@ -118,6 +129,11 @@ class PortfolioView(QWidget):
 
     def _fetch_portfolio_data(self):
         """Ejecuta la obtención de datos del portafolio de forma asíncrona."""
+        if not self.user_id:
+            logger.warning("PortfolioView: _fetch_portfolio_data called without user_id. Aborting.")
+            self.status_label.setText("Error: User ID not set.")
+            return
+            
         logger.info("PortfolioView: Scheduling portfolio snapshot fetch.")
         self.status_label.setText(f"Loading portfolio data ({self.trading_mode_manager.current_mode.title()})...")
         self.refresh_button.setEnabled(False)
@@ -128,6 +144,11 @@ class PortfolioView(QWidget):
 
     async def _get_portfolio_snapshot_async(self):
         """Corrutina que realmente obtiene y maneja los datos del portafolio."""
+        if not self.user_id:
+            logger.error("PortfolioView: _get_portfolio_snapshot_async called without a valid user_id.")
+            self._handle_portfolio_error("User ID not available.")
+            return
+
         # Usar la instancia de api_client inyectada
         try:
             await self.api_client.initialize_client()
@@ -140,9 +161,6 @@ class PortfolioView(QWidget):
         except Exception as e:
             logger.critical(f"An unexpected error occurred during portfolio fetch: {e}", exc_info=True)
             self._handle_portfolio_error(f"An unexpected error occurred: {e}")
-        finally:
-            if self.api_client:
-                await self.api_client.close() # Cerrar el cliente después de usarlo
 
     def _handle_portfolio_result(self, portfolio_snapshot_data: dict):
         logger.info("PortfolioView: Portfolio snapshot data received.")
@@ -318,9 +336,10 @@ if __name__ == '__main__':
     mock_api_client = MockApiClient(base_url="http://mock.server") # Instanciar el mock
     
     view = PortfolioView(
-        user_id=UUID("00000000-0000-0000-0000-000000000000"),
         api_client=mock_api_client # Pasar la instancia del mock
     )
+    # Establecer el user_id para el test
+    view.set_user_id(UUID("00000000-0000-0000-0000-000000000000"))
     view.setWindowTitle("Portfolio View - Test")
     view.setGeometry(100, 100, 1000, 700)
     view.show()

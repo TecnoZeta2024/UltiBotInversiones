@@ -184,8 +184,8 @@ def create_app() -> FastAPI:
         }
         
         try:
-            # Verificar conexión a base de datos
-            if not await container.db_client.ping():
+            # Verificar conexión a base de datos a través del PersistenceService
+            if not await container.persistence_service.test_connection():
                 health_status["components"]["database"] = "unhealthy"
                 logger.warning("Health check: Base de datos no respondiendo")
             

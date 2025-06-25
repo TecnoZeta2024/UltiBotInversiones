@@ -1,31 +1,17 @@
-# SRST Progress Tracker - 2025-06-23 22:06:36
+# Sistema de Resolución Segmentada de Tests - Progreso
 
-## Sesión Actual
-**Nuevos tickets generados:** 10
-**Total de tickets (incluyendo resueltos):** 10
+## Ticket: TASK-UI-001
+- **Estado:** RESUELTO
+- **Agente:** LeadCoder
+- **Resumen:** Se resolvió `ModuleNotFoundError` para `qasync` añadiendo la dependencia al `pyproject.toml` con `poetry add qasync`.
 
-## Tickets por Prioridad
+## Ticket: TASK-UI-002
+- **Estado:** RESUELTO
+- **Agente:** LeadCoder
+- **Resumen:** Se resolvió `AttributeError` de `dateutil` fijando la versión a `2.8.2` en `pyproject.toml` para asegurar la compatibilidad con `matplotlib`.
 
-### 🚨 CRITICAL (0 tickets)
-Ninguno
-
-### 🔥 HIGH ({len(high_lines)} tickets)
-Ninguno
-
-### 📋 MEDIUM ({len(medium_lines)} tickets)
-- [ ] **SRST-002:** RuntimeError en `logs/frontend.log` (Test: Runtime Log Error: Límite de riesgo de capital diario excedido. Límit...) - ⏱️ 30min [P:MEDIUM]
-- [ ] **SRST-003:** RuntimeError en `logs/frontend.log` (Test: Runtime Log Error: Intento de orden real sin credenciales....) - ⏱️ 30min [P:MEDIUM]
-- [ ] **SRST-004:** RuntimeError en `logs/frontend.log` (Test: Runtime Log Error: Error de Binance API durante la verificación: Bina...) - ⏱️ 30min [P:MEDIUM]
-- [ ] **SRST-005:** RuntimeError en `logs/frontend.log` (Test: Runtime Log Error: Fallo en la verificación de conexión con Binance. ...) - ⏱️ 30min [P:MEDIUM]
-- [ ] **SRST-006:** RuntimeError en `logs/frontend.log` (Test: Runtime Log Error: Error al acceder a las credenciales de Binance: De...) - ⏱️ 30min [P:MEDIUM]
-- [ ] **SRST-007:** RuntimeError en `logs/frontend.log` (Test: Runtime Log Error: Error de la API de Binance: API unavailable...) - ⏱️ 30min [P:MEDIUM]
-- [ ] **SRST-008:** RuntimeError en `logs/frontend.log` (Test: Runtime Log Error: Error de la API de Binance al obtener balances: Fa...) - ⏱️ 30min [P:MEDIUM]
-- [ ] **SRST-009:** RuntimeError en `logs/frontend.log` (Test: Runtime Log Error: Error notifying subscriber about mode change: Test...) - ⏱️ 30min [P:MEDIUM]
-- [ ] **SRST-010:** RuntimeError en `logs/frontend.log` (Test: Runtime Log Error: Error al obtener trades cerrados para usuario f0eb...) - ⏱️ 30min [P:MEDIUM]
-- [ ] **SRST-011:** RuntimeError en `logs/frontend.log` (Test: Runtime Log Error: Fallo al eliminar el directorio temporal C:\Users\...) - ⏱️ 30min [P:MEDIUM]
-
-### 📝 LOW ({len(low_lines)} tickets)
-Ninguno
-
-## Recomendación de Sesión
-**Empezar con:** El primer ticket CRITICAL no resuelto.
+## Ticket: TASK-UI-003
+- **Estado:** PENDIENTE
+- **Agente:** LeadCoder
+- **Resumen:** Se identificó un `RuntimeError` al cerrar la UI, causado por una condición de carrera en la limpieza de `QThread`. Se aplicó una corrección inicial a `main_window.py` para centralizar la lógica de limpieza, pero el problema persiste.
+- **Próximo Paso:** Traspaso al agente "debugger" para un análisis más profundo de la gestión del ciclo de vida de los hilos en PySide6 y `qasync`.
