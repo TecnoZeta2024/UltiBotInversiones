@@ -151,7 +151,7 @@ class MarketDataService:
                 binance_formatted_symbol = self.binance_adapter.normalize_symbol(original_symbol)
                 
                 ticker_data = await self.binance_adapter.get_ticker_24hr(binance_formatted_symbol)
-                market_data[original_symbol] = {
+                market_data[binance_formatted_symbol] = { # Cambiado de original_symbol a binance_formatted_symbol
                     "lastPrice": float(ticker_data.get("lastPrice", 0)),
                     "priceChangePercent": float(ticker_data.get("priceChangePercent", 0)),
                     "quoteVolume": float(ticker_data.get("quoteVolume", 0))

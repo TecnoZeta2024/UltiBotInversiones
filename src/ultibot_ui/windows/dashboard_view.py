@@ -4,6 +4,7 @@ from uuid import UUID
 import asyncio
 
 from PySide6.QtCore import Signal as pyqtSignal, QObject, QThread
+from PySide6 import QtWidgets # Importar QtWidgets completo
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QFrame
 
 from shared.data_types import Trade
@@ -23,11 +24,12 @@ class DashboardView(QWidget):
     """
     initialization_complete = pyqtSignal(bool)
 
-    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent: Optional[QWidget] = None):
+    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, main_event_loop: asyncio.AbstractEventLoop, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.user_id: Optional[UUID] = None # Se inicializará asíncronamente
         self.api_client = api_client # Usar la instancia de api_client
         self.main_window = main_window
+        self.main_event_loop = main_event_loop # Guardar la referencia al bucle de eventos
         self._is_initialized = False
         self._pending_tasks = 0
 
@@ -54,9 +56,9 @@ class DashboardView(QWidget):
     def _setup_ui(self):
         """Configura la interfaz de usuario básica del dashboard usando tarjetas."""
         # Crear widgets sin user_id inicial, se establecerá después
-        self.portfolio_widget = PortfolioWidget(self.api_client, self.main_window, self) # Pasar api_client
-        self.chart_widget = ChartWidget(self.api_client, self.main_window, self) # Pasar api_client
-        self.notification_widget = NotificationWidget(self.api_client, self.main_window, self) # Pasar api_client
+        self.portfolio_widget = PortfolioWidget(self.api_client, self.main_window, self.main_event_loop, self) # Pasar api_client y main_event_loop
+        self.chart_widget = ChartWidget(self.api_client, self.main_window, self.main_event_loop, self) # Pasar api_client y main_event_loop
+        self.notification_widget = NotificationWidget(self.api_client, self.main_window, self) # Pasar api_client y main_window
 
         # Crear tarjeta para el Portfolio
         portfolio_card = QFrame()
@@ -87,11 +89,19 @@ class DashboardView(QWidget):
         worker_id: str,
     ):
         """Inicia un ApiWorker en un hilo separado para ejecutar una corutina."""
+        # Usar el bucle de eventos principal que ya se pasó al constructor de DashboardView
+        if not self.main_event_loop:
+            logger.error("DashboardView: El bucle de eventos principal no está disponible para ApiWorker.")
+            on_error(Exception("Error interno: Bucle de eventos principal no disponible."))
+            return
+
         worker = ApiWorker(
-            api_client=self.api_client, # Pasar api_client
+            api_client=self.api_client,
+            main_event_loop=self.main_event_loop, # Usar self.main_event_loop
             coroutine_factory=coroutine_factory
         )
         thread = QThread()
+        thread.setObjectName(f"DashboardApiWorkerThread_{worker_id}")
         self.main_window.add_thread(thread)
 
         worker.moveToThread(thread)

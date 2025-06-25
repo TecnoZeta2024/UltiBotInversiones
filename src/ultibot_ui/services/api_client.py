@@ -156,6 +156,21 @@ class UltiBotAPIClient:
     async def get_ai_opportunities(self) -> List[Dict[str, Any]]:
         return await self._make_request("GET", "/api/v1/opportunities/ai")
 
+    async def analyze_opportunity_with_ai(self, user_id: str, opportunity_id: str) -> Dict[str, Any]:
+        """Solicita un análisis de IA para una oportunidad específica."""
+        logger.info(f"Solicitando análisis de IA para la oportunidad {opportunity_id} del usuario {user_id}.")
+        endpoint = f"/api/v1/opportunities/{opportunity_id}/analyze"
+        # El user_id se puede pasar en el cuerpo si es necesario para la lógica del backend
+        payload = {"user_id": user_id}
+        return await self._make_request("POST", endpoint, json=payload)
+
+    async def execute_trade_from_opportunity(self, user_id: str, opportunity_id: str, trading_mode: str) -> Dict[str, Any]:
+        """Ejecuta un trade basado en una oportunidad analizada por IA."""
+        logger.info(f"Ejecutando trade desde la oportunidad {opportunity_id} para el usuario {user_id} en modo {trading_mode}.")
+        endpoint = f"/api/v1/opportunities/{opportunity_id}/execute"
+        payload = {"user_id": user_id, "trading_mode": trading_mode}
+        return await self._make_request("POST", endpoint, json=payload)
+
     async def update_strategy_status(self, strategy_id: str, is_active: bool, trading_mode: str) -> Dict[str, Any]:
         """Actualiza el estado activo de una estrategia."""
         logger.info(f"Actualizando estado de estrategia {strategy_id} a activo={is_active} en modo {trading_mode}.")
@@ -218,3 +233,18 @@ class UltiBotAPIClient:
         # Convertir el objeto Pydantic a un diccionario para la solicitud JSON
         config_dict = config.model_dump(by_alias=True, exclude_unset=True)
         return await self._make_request("PUT", "/api/v1/config", json=config_dict)
+
+    async def create_strategy_config(self, strategy_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Crea una nueva configuración de estrategia."""
+        logger.info(f"Creando nueva estrategia: {strategy_data.get('configName')}")
+        return await self._make_request("POST", "/api/v1/strategies", json=strategy_data)
+
+    async def update_strategy_config(self, strategy_id: str, strategy_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Actualiza una configuración de estrategia existente."""
+        logger.info(f"Actualizando estrategia {strategy_id}: {strategy_data.get('configName')}")
+        return await self._make_request("PUT", f"/api/v1/strategies/{strategy_id}", json=strategy_data)
+
+    async def delete_strategy_config(self, strategy_id: str) -> Dict[str, Any]:
+        """Elimina una configuración de estrategia."""
+        logger.info(f"Eliminando estrategia {strategy_id}.")
+        return await self._make_request("DELETE", f"/api/v1/strategies/{strategy_id}")

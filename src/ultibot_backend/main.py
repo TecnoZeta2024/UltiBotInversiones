@@ -18,8 +18,12 @@ from ultibot_backend.api.v1.endpoints import (
     config, market_data, notifications, opportunities,
     performance, portfolio, reports, strategies, trades, trading
 )
+from dotenv import load_dotenv
 from ultibot_backend.dependencies import DependencyContainer
 from ultibot_backend.core.exceptions import UltiBotError
+
+# Cargar variables de entorno desde .env al inicio
+load_dotenv()
 
 # --- Nueva Configuración de Logging ---
 LOGS_DIR = "logs"
@@ -153,13 +157,13 @@ def create_app() -> FastAPI:
     api_prefix = "/api/v1"
     logger.info("Registrando routers de la API...")
     app_instance.include_router(config.router, prefix=api_prefix, tags=["configuration"])
+    app_instance.include_router(strategies.router, prefix=api_prefix, tags=["strategies"]) # Mover strategies arriba
     app_instance.include_router(notifications.router, prefix=f"{api_prefix}/notifications", tags=["notifications"])
     app_instance.include_router(reports.router, prefix=api_prefix, tags=["reports"])
     app_instance.include_router(portfolio.router, prefix=f"{api_prefix}/portfolio", tags=["portfolio"])
     app_instance.include_router(trades.router, prefix=f"{api_prefix}/trades", tags=["trades"])
     app_instance.include_router(performance.router, prefix=f"{api_prefix}/performance", tags=["performance"])
     app_instance.include_router(opportunities.router, prefix=f"{api_prefix}/opportunities", tags=["opportunities"])
-    app_instance.include_router(strategies.router, prefix=f"{api_prefix}/strategies", tags=["strategies"])
     app_instance.include_router(trading.router, prefix=f"{api_prefix}/trading", tags=["trading"])
     app_instance.include_router(market_data.router, prefix=f"{api_prefix}/market", tags=["market_data"])
     logger.info("Todos los routers han sido registrados.")

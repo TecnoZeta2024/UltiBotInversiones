@@ -24,11 +24,12 @@ class PortfolioWidget(QtWidgets.QWidget):
     portfolio_updated = QtCore.Signal(object)
     error_occurred = QtCore.Signal(str)
 
-    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent: Optional[QtWidgets.QWidget] = None):
+    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, main_event_loop: asyncio.AbstractEventLoop, parent: Optional[QtWidgets.QWidget] = None):
         super().__init__(parent)
         self.user_id: Optional[UUID] = None # Se inicializará asíncronamente
         self.api_client = api_client # Usar la instancia de api_client
         self.main_window = main_window
+        self.main_event_loop = main_event_loop # Guardar la referencia al bucle de eventos
         self.current_snapshot: Optional[Dict[str, Any]] = None
         self.open_trades: List[Dict[str, Any]] = []
 
@@ -46,9 +47,13 @@ class PortfolioWidget(QtWidgets.QWidget):
         self.start_updates() # Iniciar actualizaciones una vez que el user_id esté disponible
 
     def _start_api_worker(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine], on_success, on_error):
+        if not self.main_event_loop:
+            logger.error("PortfolioWidget: El bucle de eventos principal no está disponible para ApiWorker.")
+            raise RuntimeError("Bucle de eventos principal no disponible.")
+
         thread = QtCore.QThread()
         thread.setObjectName("PortfolioApiWorkerThread")
-        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory)
+        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory, main_event_loop=self.main_event_loop) # Usar self.main_event_loop
         worker.moveToThread(thread)
 
         worker.result_ready.connect(on_success)

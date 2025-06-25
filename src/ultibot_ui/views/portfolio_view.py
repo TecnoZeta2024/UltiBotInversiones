@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget, QTableWidgetItem,
     QHeaderView, QPushButton, QMessageBox, QFrame, QSplitter, QScrollArea, QGroupBox, QAbstractItemView, QApplication
 )
-from PySide6.QtCore import Qt, QTimer, Signal, QObject
+from PySide6.QtCore import Qt, QTimer, Signal, QObject, QThread # Importar QThread
 import asyncio
 from PySide6.QtGui import QPainter, QFont, QColor
 from PySide6.QtCharts import QChart, QChartView, QPieSeries, QPieSlice
@@ -15,14 +15,17 @@ from decimal import Decimal
 from shared.data_types import PortfolioSnapshot, PortfolioAsset
 from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
 from ultibot_ui.services.trading_mode_state import get_trading_mode_manager, TradingModeStateManager
+from ultibot_ui.workers import ApiWorker # Importar ApiWorker
+from ultibot_ui.models import BaseMainWindow # Importar BaseMainWindow para type hinting
 
 logger = logging.getLogger(__name__)
 
 class PortfolioView(QWidget):
-    def __init__(self, api_client: UltiBotAPIClient, parent: Optional[QWidget] = None):
+    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent: Optional[QWidget] = None): # Añadir main_window
         super().__init__(parent)
         self.user_id: Optional[UUID] = None
         self.api_client = api_client
+        self.main_window = main_window # Guardar la referencia a main_window
         self.current_portfolio_data: Optional[PortfolioSnapshot] = None
 
         self.trading_mode_manager: TradingModeStateManager = get_trading_mode_manager()
@@ -139,28 +142,35 @@ class PortfolioView(QWidget):
         self.refresh_button.setEnabled(False)
         self.assets_table.setRowCount(0)
 
-        # Crear la tarea directamente en el bucle de eventos de qasync
-        asyncio.create_task(self._get_portfolio_snapshot_async())
-
-    async def _get_portfolio_snapshot_async(self):
-        """Corrutina que realmente obtiene y maneja los datos del portafolio."""
-        if not self.user_id:
-            logger.error("PortfolioView: _get_portfolio_snapshot_async called without a valid user_id.")
-            self._handle_portfolio_error("User ID not available.")
+        main_event_loop = QApplication.instance().property("main_event_loop")
+        if not main_event_loop:
+            logger.error("PortfolioView: No se pudo obtener el bucle de eventos principal de QApplication.")
+            self._handle_portfolio_error("Error interno: Bucle de eventos principal no disponible.")
             return
 
-        # Usar la instancia de api_client inyectada
-        try:
-            await self.api_client.initialize_client()
-            snapshot = await self.api_client.get_portfolio_snapshot(
+        def coroutine_factory(api_client: UltiBotAPIClient):
+            if not self.user_id:
+                raise ValueError("User ID not available for portfolio snapshot.")
+            return api_client.get_portfolio_snapshot(
                 user_id=self.user_id, trading_mode=self.trading_mode_manager.current_mode
             )
-            self._handle_portfolio_result(snapshot)
-        except APIError as e:
-            self._handle_portfolio_error(str(e))
-        except Exception as e:
-            logger.critical(f"An unexpected error occurred during portfolio fetch: {e}", exc_info=True)
-            self._handle_portfolio_error(f"An unexpected error occurred: {e}")
+
+        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory, main_event_loop=main_event_loop)
+        thread = QThread()
+        thread.setObjectName("PortfolioApiWorkerThread_fetch_snapshot")
+        worker.moveToThread(thread)
+
+        worker.result_ready.connect(self._handle_portfolio_result)
+        worker.error_occurred.connect(lambda msg: self._handle_portfolio_error(str(msg)))
+        
+        thread.started.connect(worker.run)
+        
+        worker.finished.connect(thread.quit)
+        thread.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        
+        self.main_window.add_thread(thread)
+        thread.start()
 
     def _handle_portfolio_result(self, portfolio_snapshot_data: dict):
         logger.info("PortfolioView: Portfolio snapshot data received.")
@@ -335,8 +345,15 @@ if __name__ == '__main__':
 
     mock_api_client = MockApiClient(base_url="http://mock.server") # Instanciar el mock
     
+    class MockMainWindow(QObject, BaseMainWindow): # Definir MockMainWindow para el test, heredando de BaseMainWindow
+        def add_thread(self, thread: QThread): # Importar QThread aquí
+            logger.info(f"MockMainWindow: Thread '{thread.objectName()}' added for tracking.")
+
+    mock_main_window = MockMainWindow()
+
     view = PortfolioView(
-        api_client=mock_api_client # Pasar la instancia del mock
+        api_client=mock_api_client, # Pasar la instancia del mock
+        main_window=mock_main_window # Pasar la instancia de MockMainWindow
     )
     # Establecer el user_id para el test
     view.set_user_id(UUID("00000000-0000-0000-0000-000000000000"))

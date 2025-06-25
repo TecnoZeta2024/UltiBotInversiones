@@ -31,7 +31,7 @@ class TradingTerminalView(QWidget):
         app_instance = QtCore.QCoreApplication.instance()
         self.main_event_loop = None
         if app_instance:
-            self.main_event_loop = app_instance.property("asyncio_event_loop")
+            self.main_event_loop = app_instance.property("main_event_loop") # Corregido el nombre de la propiedad
         
         if not self.main_event_loop:
             logger.error("TradingTerminalView: No se encontró el bucle de eventos de asyncio principal. La funcionalidad de feed de precios puede no funcionar correctamente.")
@@ -157,7 +157,7 @@ class TradingTerminalView(QWidget):
             logger.error("TradingTerminalView: No se puede iniciar el feed de precios porque el bucle de eventos principal no está disponible.")
             return
 
-        self.price_worker = TradingTerminalWorker(self.api_client, symbol, self.main_event_loop)
+        self.price_worker = TradingTerminalWorker(self.api_client, symbol, self.main_event_loop) # Pasar main_event_loop
         self.price_worker.price_updated.connect(self._update_price_chart)
         self.price_worker.finished.connect(self.price_worker.deleteLater)
         
@@ -229,7 +229,13 @@ class TradingTerminalView(QWidget):
                 price=price
             )
 
-        order_worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory)
+        # Asegurarse de que main_event_loop esté disponible
+        if not self.main_event_loop:
+            QMessageBox.critical(self, "Error de Inicialización", "El bucle de eventos principal no está disponible. No se puede enviar la orden.")
+            logger.error("TradingTerminalView: No se puede enviar la orden porque el bucle de eventos principal no está disponible.")
+            return
+
+        order_worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory, main_event_loop=self.main_event_loop) # Pasar main_event_loop
         order_thread = QThread()
         order_thread.setObjectName(f"OrderWorkerThread_{symbol}_{side}")
         order_worker.moveToThread(order_thread)

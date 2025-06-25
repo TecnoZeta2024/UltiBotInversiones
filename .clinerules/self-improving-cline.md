@@ -16,3 +16,13 @@
 # Constraint: Do not offer reflection if:
 - No .clinerules were active.
 - The task was very simple and involved no feedback.
+
+---
+
+## Suggested Improvements from Interactions
+
+### 1. Reforzar la verificación de la aplicación de cambios en entornos con recarga automática:
+Si un error persiste después de aplicar un cambio a un archivo y el servidor se reinicia automáticamente (ej. Uvicorn con `--reload`), y los logs del servidor no muestran un error de carga, considere un reinicio manual del proceso del servidor (ej. `taskkill /F /IM <nombre_proceso>.exe` en Windows o `killall <nombre_proceso>` en Linux/macOS) **y la eliminación de artefactos persistentes como bases de datos locales (`ultibot_local.db`)** antes de reintentar la operación. Esto asegura que la última versión del código esté en uso y que los esquemas de datos estén sincronizados.
+
+### 2. Mejorar la guía para la depuración de errores de validación de Pydantic en scripts de prueba:
+Cuando un endpoint de API devuelve un error 400 (Bad Request) o 422 (Unprocessable Entity) debido a problemas de validación de Pydantic, o cuando hay **inconsistencias en el formato de datos (ej. símbolos de trading, fechas) entre el frontend, el backend y las APIs externas**, examine cuidadosamente el campo `detail` de la respuesta JSON. Preste especial atención a los campos `loc` (ubicación del error en el payload) y `msg` (mensaje de error específico). Ajuste el payload de su script de prueba o solicitud de API de forma incremental, asegurándose de que los datos enviados coincidan con el esquema Pydantic esperado por el backend. Si es necesario, consulte directamente el modelo Pydantic relevante en el código fuente del backend (ej. `src/ultibot_backend/core/domain_models/trading_strategy_models.py` para estrategias) para entender los campos requeridos y sus tipos. **Considere también la implementación de tests de integración específicos para la consistencia del formato de datos.**

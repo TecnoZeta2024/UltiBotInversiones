@@ -466,6 +466,24 @@ class UserConfiguration(BaseModel):
             raise ValueError(f'{info.field_name} IDs must be unique')
         return v
 
+    @field_validator('favorite_pairs', mode='before')
+    @classmethod
+    def normalize_favorite_pairs(cls, v: Optional[List[str]]) -> Optional[List[str]]:
+        """Normalize favorite trading pairs to remove '/' and ',' and convert to uppercase."""
+        if v is None:
+            return None
+        return [cls._normalize_symbol_for_storage(pair) for pair in v]
+
+    @staticmethod
+    def _normalize_symbol_for_storage(symbol: str) -> str:
+        """Helper to normalize symbol for storage (removes '/' and ',' and converts to uppercase)."""
+        if not symbol:
+            raise ValueError("Symbol cannot be empty.")
+        normalized = symbol.replace("/", "").replace(",", "").upper()
+        if not normalized.isalnum():
+            raise ValueError(f"Invalid symbol for storage: {symbol}")
+        return normalized
+
     def get_ai_configuration_by_id(self, config_id: str) -> Optional[AIStrategyConfiguration]:
         """Get AI strategy configuration by ID.
         
@@ -503,7 +521,7 @@ class UserConfiguration(BaseModel):
             if ai_config and ai_config.confidence_thresholds:
                 return ai_config.confidence_thresholds
         
-        # Acceder a través del alias si se usa, o directamente si Pydantic lo maneja
+        # Acceder a través del alias si se usa, o o directamente si Pydantic lo maneja
         return self.ai_analysis_confidence_thresholds
 
 

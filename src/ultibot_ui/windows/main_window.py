@@ -35,12 +35,14 @@ class MainWindow(QtWidgets.QMainWindow, BaseMainWindow):
     def __init__(
         self,
         api_client: UltiBotAPIClient,
+        main_event_loop: asyncio.AbstractEventLoop, # Añadir main_event_loop
         parent: Optional[QtWidgets.QWidget] = None,
     ):
         """Inicializa la ventana principal."""
         super().__init__(parent)
         self.user_id: Optional[UUID] = None # Se inicializará asíncronamente
         self.api_client = api_client # Guardar la instancia de api_client
+        self.main_event_loop = main_event_loop # Guardar la referencia al bucle de eventos
         self.api_base_url = self.api_client.base_url # Usar la base_url del cliente inyectado
         
         self.active_threads: List[QtCore.QThread] = []
@@ -63,35 +65,38 @@ class MainWindow(QtWidgets.QMainWindow, BaseMainWindow):
         main_layout.setSpacing(0)
         
         # Las vistas se inicializarán sin user_id, se actualizarán después
-        self._setup_central_content(main_layout)
+        self._setup_central_content(main_layout, main_event_loop) # Pasar main_event_loop
         
         self.setCentralWidget(self._central_content_widget)
 
         self._log_debug("MainWindow inicializada y visible.")
         self.status_bar.showMessage("Ventana principal desplegada correctamente.")
-        self.showEvent = self.post_show_initialization # Conectar el evento showEvent
+        # La conexión de showEvent a post_show_initialization se manejará en main.py
 
-    def post_show_initialization(self, event: QtGui.QShowEvent):
+    async def post_show_initialization(self, event: QtGui.QShowEvent):
         """
         Método llamado después de que la ventana principal se muestra.
         Aquí se inicializan los componentes que dependen de que la UI esté lista.
         """
         logger.info("MainWindow: Post-show initialization started.")
         # Desconectar para evitar llamadas múltiples si la ventana se muestra varias veces
-        self.showEvent = lambda e: None 
+        # self.showEvent = lambda e: None # Esto se maneja en main.py
 
         # Cargar la configuración del usuario si aún no se ha hecho
         if not self.user_id:
-            self.fetch_initial_user_configuration_async() # Llamar al método público renombrado
+            await self.fetch_initial_user_configuration_async() # Llamar al método público renombrado y esperar
 
         # Inicializar datos de las vistas que lo necesiten
+        # Asumimos que initialize_view_data y initialize_async_components son ahora corutinas
+        # o que manejan su propia asincronía internamente de forma segura.
+        # Si no son corutinas, se llamarán directamente.
         self.strategies_view.initialize_view_data()
         self.terminal_view.initialize_view_data()
-        self.dashboard_view.initialize_async_components() # Asumiendo que DashboardView tiene un método similar
+        self.dashboard_view.initialize_async_components() 
         # Otras vistas que necesiten inicialización tardía...
 
         logger.info("MainWindow: Post-show initialization finished.")
-        super().showEvent(event) # Llamar al showEvent original
+        # super().showEvent(event) # No llamar aquí, ya que el evento original no se pasa directamente
 
     def set_user_configuration(self, user_id: UUID, user_config: UserConfiguration):
         """Actualiza la ventana principal con la configuración del usuario."""
@@ -189,7 +194,7 @@ class MainWindow(QtWidgets.QMainWindow, BaseMainWindow):
         self.addDockWidget(QtCore.Qt.DockWidgetArea.BottomDockWidgetArea, self.log_dock_widget)
         self.log_dock_widget.setVisible(False) # Oculto por defecto
 
-    def _setup_central_content(self, main_layout: QtWidgets.QHBoxLayout):
+    def _setup_central_content(self, main_layout: QtWidgets.QHBoxLayout, main_event_loop: asyncio.AbstractEventLoop):
         """Configura el contenido central con navegación y vistas."""
         self.sidebar = SidebarNavigationWidget()
         self.sidebar.setFixedWidth(200)
@@ -203,44 +208,52 @@ class MainWindow(QtWidgets.QMainWindow, BaseMainWindow):
         # user_id se pasará después con set_user_configuration
         self.dashboard_view = DashboardView(
             api_client=self.api_client,
-            main_window=self
+            main_window=self,
+            main_event_loop=main_event_loop # Pasar el bucle de eventos
         )
         self.stacked_widget.addWidget(self.dashboard_view)
 
         self.market_data_widget = MarketDataWidget(
             user_id=self.user_id, # user_id se establecerá después
             api_client=self.api_client,
-            main_window=self
+            main_window=self, # Pasar la referencia a main_window
+            main_event_loop=main_event_loop # Pasar el bucle de eventos
         )
         self.stacked_widget.addWidget(self.market_data_widget)
 
         self.opportunities_view = OpportunitiesView(
             api_client=self.api_client,
-            main_window=self
+            main_window=self # Pasar la referencia a main_window
         )
         self.stacked_widget.addWidget(self.opportunities_view)
 
-        self.strategies_view = StrategiesView(api_client=self.api_client, parent=self)
+        self.strategies_view = StrategiesView(
+            api_client=self.api_client,
+            parent=self
+        )
         self.stacked_widget.addWidget(self.strategies_view)
 
         self.portfolio_view = PortfolioView(
-            api_client=self.api_client
+            api_client=self.api_client,
+            main_window=self # Pasar la referencia a main_window
         )
         self.stacked_widget.addWidget(self.portfolio_view)
 
         self.history_view = HistoryView(
             api_client=self.api_client,
-            main_window=self
+            main_window=self # Pasar la referencia a main_window
         )
         self.stacked_widget.addWidget(self.history_view)
 
         self.orders_view = OrdersView(
             api_client=self.api_client,
-            main_window=self
+            main_window=self # Pasar la referencia a main_window
         )
         self.stacked_widget.addWidget(self.orders_view)
 
-        self.settings_view = SettingsView(api_client=self.api_client)
+        self.settings_view = SettingsView(
+            api_client=self.api_client
+        )
         self.stacked_widget.addWidget(self.settings_view)
 
         self.terminal_view = TradingTerminalView(
@@ -262,39 +275,67 @@ class MainWindow(QtWidgets.QMainWindow, BaseMainWindow):
         self._setup_shortcuts()
 
         # Setup strategy service
-        self.strategy_service = UIStrategyService(api_client=self.api_client)
-        self.strategy_service = UIStrategyService(api_client=self.api_client) # Mover inicialización aquí
+        self.strategy_service = UIStrategyService(api_client=self.api_client) # Inicialización única
         self.strategy_service.strategies_updated.connect(self.strategies_view.update_strategies)
         self.strategy_service.error_occurred.connect(self._handle_service_error)
         
         self._log_debug("Central widget y vistas configuradas.")
 
-    def fetch_initial_user_configuration_async(self):
+    async def fetch_initial_user_configuration_async(self) -> UserConfiguration:
         """
         Obtiene la configuración inicial del usuario de forma asíncrona.
         Este método se llama si la configuración no se cargó antes.
         """
         logger.info("Fetching initial user configuration asynchronously (from MainWindow)...")
+        
+        app_instance = QtWidgets.QApplication.instance()
+        if not app_instance:
+            logger.error("MainWindow: No se encontró la instancia de QApplication para obtener el bucle de eventos principal.")
+            raise RuntimeError("No se pudo obtener la instancia de QApplication.")
+            
+        main_event_loop = app_instance.property("main_event_loop")
+        if not main_event_loop:
+            logger.error("MainWindow: No se encontró el bucle de eventos principal de qasync.")
+            raise RuntimeError("Bucle de eventos principal no disponible.")
+        future = main_event_loop.create_future()
+
         def coroutine_factory(api_client: UltiBotAPIClient):
             return api_client.get_user_configuration()
 
-        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory)
+        worker = ApiWorker(api_client=self.api_client, main_event_loop=main_event_loop, coroutine_factory=coroutine_factory)
         thread = QtCore.QThread()
         thread.setObjectName("InitialConfigWorkerThread")
         worker.moveToThread(thread)
 
-        worker.result_ready.connect(lambda config_dict: self._on_initial_config_ready(config_dict))
-        worker.error_occurred.connect(lambda msg: self._on_initial_config_error(msg))
+        def _on_result(result):
+            if not future.done():
+                main_event_loop.call_soon_threadsafe(future.set_result, result)
+        def _on_error(error_msg):
+            if not future.done():
+                main_event_loop.call_soon_threadsafe(future.set_exception, Exception(error_msg))
+
+        worker.result_ready.connect(_on_result)
+        worker.error_occurred.connect(_on_error)
         
         thread.started.connect(worker.run)
         
-        worker.result_ready.connect(worker.deleteLater)
-        worker.error_occurred.connect(worker.deleteLater)
         worker.finished.connect(thread.quit)
         thread.finished.connect(thread.deleteLater)
         
         self.add_thread(thread)
         thread.start()
+        
+        try:
+            config_dict = await future
+            user_config = UserConfiguration.model_validate(config_dict)
+            user_id = UUID(user_config.user_id)
+            logger.info(f"Configuration received and validated for user ID: {user_id}. Updating UI.")
+            self.set_user_configuration(user_id, user_config)
+            return user_config
+        except Exception as e:
+            logger.critical(f"Error validating initial configuration or fetching: {e}", exc_info=True)
+            self.show_error_message(f"Error al cargar configuración inicial: {e}")
+            raise # Re-lanzar la excepción para que el llamador pueda manejarla
 
     @QtCore.Slot(object)
     def _on_initial_config_ready(self, config_dict: dict):

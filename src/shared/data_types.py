@@ -32,6 +32,7 @@ from ultibot_backend.core.domain_models.user_configuration_models import (
     CloudSyncPreferences,
     ConfidenceThresholds as AIAnalysisConfidenceThresholds,
 )
+from ultibot_backend.core.domain_models.opportunity_models import Opportunity, AIAnalysis, OpportunityStatus, SourceType as OpportunitySourceType # Importar Opportunity y AIAnalysis del backend
 
 
 class Kline(BaseModel):
@@ -209,69 +210,6 @@ class Notification(BaseModel):
         arbitrary_types_allowed=True
     )
 
-class OpportunitySourceType(str, Enum):
-    MCP_SIGNAL = "mcp_signal"
-    MANUAL_ENTRY = "manual_entry"
-    AI_GENERATED = "ai_generated"
-    STRATEGY_TRIGGER = "strategy_trigger"
-
-class OpportunityStatus(str, Enum):
-    NEW = "new"
-    PENDING_AI_ANALYSIS = "pending_ai_analysis"
-    AI_ANALYSIS_IN_PROGRESS = "ai_analysis_in_progress"
-    AI_ANALYSIS_COMPLETE = "ai_analysis_complete"
-    AI_ANALYSIS_FAILED = "ai_analysis_failed"
-    REJECTED_BY_AI = "rejected_by_ai"
-    PENDING_EXECUTION = "pending_execution"
-    EXECUTING = "executing"
-    EXECUTED_PARTIALLY = "executed_partially"
-    EXECUTED_FULLY = "executed_fully"
-    EXECUTION_FAILED = "execution_failed"
-    EXPIRED = "expired"
-    CANCELLED = "cancelled"
-    COMPLETED_PROFIT = "completed_profit"
-    COMPLETED_LOSS = "completed_loss"
-    COMPLETED_BREAKEVEN = "completed_breakeven"
-    PENDING_USER_CONFIRMATION_REAL = "pending_user_confirmation_real"
-    CONVERTED_TO_TRADE_REAL = "converted_to_trade_real"
-
-class AIAnalysis(BaseModel):
-    calculatedConfidence: Optional[float] = Field(None, description="Nivel de confianza numérico (0.0 a 1.0) de la IA.")
-    suggestedAction: Optional[str] = Field(None, description="Dirección sugerida por la IA (ej. 'BUY', 'SELL', 'HOLD', 'REJECT').")
-    reasoning_ai: Optional[str] = Field(None, description="Justificación del análisis de la IA.")
-    rawAiOutput: Optional[str] = Field(None, description="Salida cruda completa del modelo de IA.")
-    dataVerification: Optional[Dict[str, Any]] = Field(None, description="Resultados de la verificación de datos de activos.")
-    ai_model_used: Optional[str] = Field(None, description="Nombre del modelo de IA utilizado para el análisis.")
-
-class Opportunity(BaseModel):
-    id: UUID = Field(default_factory=uuid4)
-    user_id: UUID
-    source_type: OpportunitySourceType
-    source_name: Optional[str] = None
-    source_data: Optional[str] = None
-    status: OpportunityStatus = OpportunityStatus.NEW
-    status_reason: Optional[str] = None
-    symbol: Optional[str] = None
-    asset_type: Optional[str] = None
-    exchange: Optional[str] = None
-    predicted_direction: Optional[str] = None
-    predicted_price_target: Optional[float] = None
-    predicted_stop_loss: Optional[float] = None
-    prediction_timeframe: Optional[str] = None
-    ai_analysis: Optional[AIAnalysis] = None
-    confidence_score: Optional[float] = None
-    suggested_action: Optional[str] = None
-    ai_model_used: Optional[str] = None
-    executed_at: Optional[datetime] = None
-    executed_price: Optional[float] = None
-    executed_quantity: Optional[float] = None
-    related_order_id: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
-    expires_at: Optional[datetime] = None
-
-    model_config = ConfigDict(use_enum_values=True)
-
 class PerformanceMetrics(BaseModel):
     total_trades: int = Field(0, description="Número total de operaciones cerradas")
     winning_trades: int = Field(0, description="Número de operaciones con ganancia")
@@ -307,9 +245,9 @@ __all__ = [
     "Trade",
     "TradeOrderDetails",
     "OrderCategory",
-    "OrderType", # Añadido a __all__
-    "OrderStatus", # Añadido a __all__
-    "PositionStatus", # Añadido a __all__
+    "OrderType",
+    "OrderStatus",
+    "PositionStatus",
     "Kline",
     "MarketData",
     "Ticker",
@@ -335,9 +273,8 @@ __all__ = [
     "NotificationAction",
     "Notification",
     "OpportunitySourceType",
-    "OpportunityStatus",
     "AIAnalysis",
-    "Opportunity",
+    "Opportunity", # Exportar Opportunity del backend
     "PerformanceMetrics",
     "ConfirmRealTradeRequest",
     "CapitalManagementStatus",

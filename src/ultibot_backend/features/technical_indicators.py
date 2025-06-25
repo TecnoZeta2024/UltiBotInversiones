@@ -2,7 +2,7 @@ import pandas as pd
 from typing import List, Optional
 from decimal import Decimal
 
-from src.ultibot_backend.core.domain_models.market_data_models import MarketDataORM
+from ultibot_backend.core.domain_models.market_data_models import MarketDataORM
 
 def calculate_sma(data: List[MarketDataORM], window: int) -> List[Optional[Decimal]]:
     """

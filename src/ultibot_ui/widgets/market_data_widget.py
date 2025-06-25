@@ -26,9 +26,9 @@ from ultibot_ui.models import BaseMainWindow # Importar BaseMainWindow
 logger = logging.getLogger(__name__)
 
 ALL_AVAILABLE_PAIRS_EXAMPLE = [
-    "BTC/USDT", "ETH/USDT", "ADA/USDT", "XRP/USDT", "SOL/USDT", 
-    "DOT/USDT", "DOGE/USDT", "SHIB/USDT", "MATIC/USDT", "LTC/USDT",
-    "BNB/USDT", "LINK/USDT", "AVAX/USDT", "TRX/USDT", "ATOM/USDT"
+    "BTCUSDT", "ETHUSDT", "ADAUSDT", "XRPUSDT", "SOLUSDT", 
+    "DOTUSDT", "DOGEUSDT", "SHIBUSDT", "MATICUSDT", "LTCUSDT",
+    "BNBUSDT", "LINKUSDT", "AVAXUSDT", "TRXUSDT", "ATOMUSDT"
 ]
 
 class PairConfigurationDialog(QDialog):
@@ -86,11 +86,12 @@ class MarketDataWidget(QWidget):
     config_saved = pyqtSignal(UserConfiguration)
     market_data_api_error = pyqtSignal(str)
     
-    def __init__(self, user_id: Optional[UUID], api_client: UltiBotAPIClient, main_window: Optional[BaseMainWindow], parent: Optional[QWidget] = None):
+    def __init__(self, user_id: Optional[UUID], api_client: UltiBotAPIClient, main_window: Optional[BaseMainWindow], main_event_loop: asyncio.AbstractEventLoop, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.user_id = user_id
         self.api_client = api_client
         self.main_window = main_window # Guardar referencia a MainWindow
+        self.main_event_loop = main_event_loop # Guardar la referencia al bucle de eventos
         self.selected_pairs: List[str] = [] 
         self.all_available_pairs: List[str] = [] 
         # self.active_api_workers ya no es necesario si MainWindow gestiona los hilos
@@ -105,10 +106,14 @@ class MarketDataWidget(QWidget):
         self.load_initial_configuration()
 
     def _run_api_worker_and_await_result(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine]) -> asyncio.Future:
-        qasync_loop = asyncio.get_event_loop()
-        future = qasync_loop.create_future()
+        # Usar self.main_event_loop que ya se pasó al constructor
+        if not self.main_event_loop:
+            logger.error("MarketDataWidget: El bucle de eventos principal no está disponible.")
+            raise RuntimeError("Bucle de eventos principal no disponible.")
 
-        worker = ApiWorker(coroutine_factory=coroutine_factory, api_client=self.api_client)
+        future = self.main_event_loop.create_future()
+
+        worker = ApiWorker(coroutine_factory=coroutine_factory, api_client=self.api_client, main_event_loop=self.main_event_loop)
         thread = QThread()
         # Añadir el hilo a la ventana principal para su seguimiento, si main_window existe
         if self.main_window:
@@ -118,10 +123,10 @@ class MarketDataWidget(QWidget):
 
         def _on_result(result):
             if not future.done():
-                qasync_loop.call_soon_threadsafe(future.set_result, result)
+                self.main_event_loop.call_soon_threadsafe(future.set_result, result)
         def _on_error(error_msg):
             if not future.done():
-                qasync_loop.call_soon_threadsafe(future.set_exception, Exception(error_msg))
+                self.main_event_loop.call_soon_threadsafe(future.set_exception, Exception(error_msg))
         
         worker.result_ready.connect(_on_result)
         worker.error_occurred.connect(_on_error)
@@ -166,7 +171,9 @@ class MarketDataWidget(QWidget):
         self.tickers_timer.timeout.connect(self.update_tickers_data)
 
     def _handle_user_config_result(self, config: UserConfiguration):
-        self.selected_pairs = config.favorite_pairs or ["BTC/USDT", "ETH/USDT"]
+        # Normalizar los favorite_pairs a un formato sin barra si vienen con ella
+        normalized_favorite_pairs = [pair.replace("/", "") for pair in (config.favorite_pairs or ["BTCUSDT", "ETHUSDT"])]
+        self.selected_pairs = normalized_favorite_pairs
         self.all_available_pairs = ALL_AVAILABLE_PAIRS_EXAMPLE
         
         update_interval_seconds = 30
@@ -335,7 +342,7 @@ if __name__ == '__main__':
         test_user_id = UUID("123e4567-e89b-12d3-a456-426614174000")
         mock_api_client = MockAPIClient(base_url="http://mock")
         # Pasar None para main_window en el contexto de prueba
-        widget = MarketDataWidget(user_id=test_user_id, api_client=mock_api_client, main_window=None)
+        widget = MarketDataWidget(user_id=test_user_id, api_client=mock_api_client, main_window=None, main_event_loop=loop)
         
         widget.load_initial_configuration()
         widget.show()

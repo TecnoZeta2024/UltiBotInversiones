@@ -365,7 +365,7 @@ class SupabasePersistenceService(IPersistenceService):
                 user_id=strategy_config.user_id,
                 data=strategy_config.model_dump_json(),
                 config_name=strategy_config.config_name,
-                base_strategy_type=strategy_config.base_strategy_type.value,
+                base_strategy_type=strategy_config.base_strategy_type,
                 is_active_paper_mode=strategy_config.is_active_paper_mode,
                 is_active_real_mode=strategy_config.is_active_real_mode,
                 created_at=strategy_config.created_at,

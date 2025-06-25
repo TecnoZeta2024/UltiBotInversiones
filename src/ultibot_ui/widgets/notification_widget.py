@@ -54,9 +54,16 @@ class NotificationWidget(QWidget):
 
         self._is_fetching_notifications = True
         
+        main_event_loop = QApplication.instance().property("main_event_loop")
+        if not main_event_loop:
+            print("NotificationWidget: No se pudo obtener el bucle de eventos principal de QApplication.")
+            self._is_fetching_notifications = False
+            return
+
         worker = ApiWorker(
             api_client=self.api_client, # Pasar api_client
-            coroutine_factory=lambda client: client.get_notification_history(limit=20)
+            coroutine_factory=lambda client: client.get_notification_history(limit=20),
+            main_event_loop=main_event_loop
         )
         thread = QThread()
         

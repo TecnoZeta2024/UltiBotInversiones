@@ -1,3 +1,4 @@
+from PySide6 import QtWidgets # Importar QtWidgets completo
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QLineEdit, QPushButton, QGroupBox, QDoubleSpinBox, QMessageBox
 from PySide6.QtCore import Qt, Signal as pyqtSignal, QTimer, QThread
 import logging
@@ -99,7 +100,24 @@ class SettingsView(QWidget):
         self._load_real_trading_status()
 
     def _start_api_worker(self, coroutine_factory, on_success, on_error):
-        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory) # Pasar api_client
+        # Obtener el bucle de eventos principal de la aplicación
+        app_instance = QtWidgets.QApplication.instance()
+        if not app_instance:
+            logger.error("SettingsView: No se encontró la instancia de QApplication para ApiWorker.")
+            on_error("Error interno: No se pudo obtener la instancia de la aplicación.")
+            return
+            
+        main_event_loop = app_instance.property("main_event_loop")
+        if not main_event_loop:
+            logger.error("SettingsView: No se encontró el bucle de eventos principal de qasync para ApiWorker.")
+            on_error("Error interno: Bucle de eventos principal no disponible.")
+            return
+
+        worker = ApiWorker(
+            api_client=self.api_client,
+            main_event_loop=main_event_loop, # Pasar el bucle de eventos
+            coroutine_factory=coroutine_factory
+        )
         thread = QThread()
         self.active_threads.append(thread)
         worker.moveToThread(thread)

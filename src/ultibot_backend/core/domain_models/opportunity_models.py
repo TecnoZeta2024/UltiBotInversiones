@@ -291,6 +291,7 @@ class Opportunity(BaseModel):
     id: Optional[str] = Field(None, description="Unique identifier")
     user_id: str = Field(..., description="User identifier")
     strategy_id: Optional[UUID] = Field(None, description="ID of the strategy associated with this opportunity")
+    exchange: Optional[str] = Field(None, description="Exchange where the opportunity was detected (e.g., 'BINANCE')") # Añadir este campo
     
     symbol: str = Field(..., description="Trading symbol (e.g., 'BTC/USDT')")
     detected_at: datetime = Field(..., description="When opportunity was detected")

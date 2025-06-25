@@ -3,7 +3,7 @@ import logging
 from PySide6.QtCore import QThread, Slot
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QTableWidget, 
                                QHeaderView, QTableWidgetItem, QLineEdit, 
-                               QComboBox, QHBoxLayout, QMessageBox) # Importar QMessageBox
+                               QComboBox, QHBoxLayout, QMessageBox, QApplication) # Importar QApplication
 from typing import Optional
 from uuid import UUID
 
@@ -84,7 +84,20 @@ class OrdersView(QWidget):
             return
 
         self.worker_thread = QThread()
-        self.orders_worker = OrdersWorker(api_client, self.user_id) # Pasar user_id
+        # Obtener el bucle de eventos principal de la aplicación
+        app_instance = QApplication.instance()
+        if not app_instance:
+            logger.error("OrdersView: No se encontró la instancia de QApplication para OrdersWorker.")
+            self._on_error("Error interno: No se pudo obtener la instancia de la aplicación.")
+            return
+            
+        main_event_loop = app_instance.property("main_event_loop")
+        if not main_event_loop:
+            logger.error("OrdersView: No se encontró el bucle de eventos principal de qasync para OrdersWorker.")
+            self._on_error("Error interno: Bucle de eventos principal no disponible.")
+            return
+
+        self.orders_worker = OrdersWorker(api_client, self.user_id, main_event_loop) # Eliminar el parent para permitir moveToThread
         self.orders_worker.moveToThread(self.worker_thread)
 
         # Conectar señales y slots

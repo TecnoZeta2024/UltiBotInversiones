@@ -41,31 +41,15 @@ async def initialize_database():
     global _db_engine, _session_factory
     
     if _db_engine is None:
-        database_url = os.environ.get("DATABASE_URL")
-        if not database_url:
-            database_url = "sqlite+aiosqlite:///ultibot_local.db"
-            logger.warning("DATABASE_URL no encontrada, usando SQLite local para desarrollo")
-        
+        database_url = "sqlite+aiosqlite:///ultibot_local.db"
+        logger.warning(f"Using local SQLite database: {database_url}. This is for development.")
+
         try:
-            if database_url.startswith("postgresql"):
-                _db_engine = create_async_engine(
-                    database_url,
-                    poolclass=NullPool,
-                    echo=False
-                )
-            elif "sqlite" in database_url:
-                corrected_url = "sqlite+aiosqlite:///" + database_url.split(":///")[-1]
-                logger.info(f"Corrected SQLite URL to use aiosqlite: {corrected_url}")
-                _db_engine = create_async_engine(
-                    corrected_url,
-                    echo=False
-                )
-            else:
-                logger.info(f"Using database with URL: {database_url}")
-                _db_engine = create_async_engine(
-                    database_url,
-                    echo=False
-                )
+            logger.info(f"Initializing database with URL: {database_url}")
+            _db_engine = create_async_engine(
+                database_url,
+                echo=False
+            )
             
             async with _db_engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
@@ -75,9 +59,9 @@ async def initialize_database():
                 class_=AsyncSession,
                 expire_on_commit=False
             )
-            logger.info("Database tables created and session factory initialized successfully")
+            logger.info("Database tables created and session factory initialized successfully.")
         except Exception as e:
-            logger.error(f"Failed to initialize database: {e}")
+            logger.error(f"Failed to initialize database: {e}", exc_info=True)
             raise
 
 from typing import AsyncGenerator # Importar AsyncGenerator

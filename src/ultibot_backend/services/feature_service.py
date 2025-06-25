@@ -1,8 +1,8 @@
 import pandas as pd
 from typing import List, Dict, Any
 
-from src.ultibot_backend.core.domain_models.market_data_models import MarketDataORM
-from src.ultibot_backend.features import technical_indicators
+from ultibot_backend.core.domain_models.market_data_models import MarketDataORM
+from ultibot_backend.features import technical_indicators
 
 class FeatureService:
     """

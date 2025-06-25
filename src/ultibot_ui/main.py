@@ -91,18 +91,18 @@ async def _main_async(app: QtWidgets.QApplication):
         await api_client.initialize_client() # Inicializar el cliente httpx aquí
 
         # Crear y mostrar la ventana principal inmediatamente
-        main_window = MainWindow(api_client=api_client)
+        main_event_loop = app.property("main_event_loop") # Obtener el bucle de eventos
+        main_window = MainWindow(api_client=api_client, main_event_loop=main_event_loop) # Pasar el bucle de eventos
         main_window.show()
         logger.info("Main window created and shown (loading configuration asynchronously).")
 
         # Cargar la configuración del usuario directamente sin el diálogo de login
         try:
             logger.info("Fetching initial user configuration asynchronously...")
-            user_config_dict = await api_client.get_user_configuration()
-            user_config = UserConfiguration.model_validate(user_config_dict)
+            # Ahora fetch_initial_user_configuration_async es una corutina y se espera
+            user_config = await main_window.fetch_initial_user_configuration_async()
             user_id = UUID(user_config.user_id)
-            logger.info(f"Configuration received and validated for user ID: {user_id}. Updating UI.")
-            main_window.set_user_configuration(user_id, user_config)
+            logger.info(f"Configuration received and validated for user ID: {user_id}. UI updated by MainWindow.")
             
         except APIError as e:
             logger.critical(f"Failed to fetch initial configuration: {e}. Application may not function correctly.")
@@ -159,8 +159,8 @@ def main():
                 show_event = QtGui.QShowEvent() # El tipo de evento Show es el predeterminado
                 # Usar cast para ayudar a Pylance a reconocer el tipo de main_window_ref
                 main_window_casted = cast(MainWindow, main_window_ref)
-                # Usar QTimer.singleShot para diferir la llamada a la siguiente iteración del bucle de eventos
-                QtCore.QTimer.singleShot(0, lambda: main_window_casted.post_show_initialization(show_event))
+                # Usar QTimer.singleShot para diferir la programación de la corutina como una tarea
+                QtCore.QTimer.singleShot(0, lambda: loop.create_task(main_window_casted.post_show_initialization(show_event)))
 
         def cleanup_slot():
             """Slot para ejecutar la limpieza de recursos en el event loop existente."""

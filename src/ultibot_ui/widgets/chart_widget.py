@@ -26,10 +26,11 @@ class ChartWidget(QtWidgets.QWidget):
     candlestick_data_fetched = QtCore.Signal(list)
     api_error_occurred = QtCore.Signal(str)
     
-    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent: Optional[QtWidgets.QWidget] = None):
+    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, main_event_loop: asyncio.AbstractEventLoop, parent: Optional[QtWidgets.QWidget] = None):
         super().__init__(parent)
         self.api_client = api_client # Usar la instancia de api_client
         self.main_window = main_window
+        self.main_event_loop = main_event_loop # Guardar la referencia al bucle de eventos
         self.current_symbol: Optional[str] = None
         self.current_interval: Optional[str] = "1h"
         self.candlestick_data: List[Kline] = []
@@ -108,10 +109,22 @@ class ChartWidget(QtWidgets.QWidget):
                 self.chart_area.setText("Error: Símbolo o intervalo no definidos.")
                 return
 
+            # Obtener el bucle de eventos principal de la aplicación
+            app_instance = QtWidgets.QApplication.instance()
+            if not app_instance:
+                logger.error("ChartWidget: No se encontró la instancia de QApplication para ApiWorker.")
+                self.api_error_occurred.emit("Error interno: No se pudo obtener la instancia de la aplicación.")
+                return
+            
+            main_event_loop = app_instance.property("main_event_loop")
+            if not main_event_loop:
+                logger.error("ChartWidget: No se encontró el bucle de eventos principal de qasync para ApiWorker.")
+                self.api_error_occurred.emit("Error interno: Bucle de eventos principal no disponible.")
+                return
+
         # Usar el cliente API real para obtener datos
-        async def get_mock_data(api_client):
+        async def get_ohlcv_data_coro(api_client: UltiBotAPIClient):
             logger.info(f"Obteniendo datos reales para {current_symbol} - {current_interval}")
-            await asyncio.sleep(0.5)
             return await api_client.get_ohlcv_data(
                 symbol=current_symbol,
                 timeframe=current_interval,
@@ -119,10 +132,12 @@ class ChartWidget(QtWidgets.QWidget):
             )
 
         worker = ApiWorker(
-            api_client=self.api_client, # Pasar api_client
-            coroutine_factory=get_mock_data
+            api_client=self.api_client,
+            main_event_loop=self.main_event_loop, # Pasar el bucle de eventos
+            coroutine_factory=get_ohlcv_data_coro
         )
         thread = QtCore.QThread()
+        thread.setObjectName(f"ChartWorkerThread_{current_symbol}_{current_interval}")
         self.main_window.add_thread(thread)
 
         worker.moveToThread(thread)
@@ -292,11 +307,14 @@ if __name__ == '__main__':
             return [Kline(**d) for d in sample_data]
 
     mock_api_client_instance = MockAPIClient(base_url="http://mock-api")
-    chart_widget = ChartWidget(api_client=mock_api_client_instance, main_window=mock_main_window)
+    
+    event_loop = qasync.QEventLoop(app)
+    asyncio.set_event_loop(event_loop)
+    app.setProperty("main_event_loop", event_loop) # Establecer el bucle de eventos para el mock
+
+    chart_widget = ChartWidget(api_client=mock_api_client_instance, main_window=mock_main_window, main_event_loop=event_loop)
     main_window_widget.setCentralWidget(chart_widget)
     main_window_widget.show()
 
-    event_loop = qasync.QEventLoop(app)
-    asyncio.set_event_loop(event_loop)
     with event_loop:
         sys.exit(app.exec_())

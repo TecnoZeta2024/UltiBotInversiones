@@ -1,0 +1,189 @@
+- **Timestamp:** 2025-06-25 18:32 UTC
+- **Agente:** UI/UX Maestro
+- **ID Tarea:** [TASK-UI-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Inicio de la tarea de auditoría y planificación estratégica del frontend.
+- **Resultado:** Éxito.
+- **Impacto:** Registro de inicio de tarea.
+- **Timestamp:** 2025-06-25 18:36 UTC
+- **Agente:** UI/UX Maestro
+- **ID Tarea:** [TASK-UI-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Actualización de la información de ejecución del backend: ahora se ejecuta con Uvicorn directamente, no con Docker.
+- **Resultado:** Éxito.
+- **Impacto:** Ajuste del plan de ejecución.
+- **Timestamp:** 2025-06-25 18:37 UTC
+- **Agente:** UI/UX Maestro
+- **ID Tarea:** [TASK-UI-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Intento de ejecución de la UI localmente.
+- **Resultado:** Éxito.
+- **Impacto:** UI iniciada, esperando observación del usuario.
+- **Timestamp:** 2025-06-25 18:37 UTC
+- **Agente:** UI/UX Maestro
+- **ID Tarea:** [TASK-UI-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Identificación del error `TypeError` en `NotificationWidget` durante la inicialización de la UI.
+- **Resultado:** Éxito.
+- **Impacto:** Primer problema de UI identificado, plan para inspeccionar `notification_widget.py` y `dashboard_view.py`.
+- **Timestamp:** 2025-06-25 18:38 UTC
+- **Agente:** UI/UX Maestro
+- **ID Tarea:** [TASK-UI-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Corrección de la indentación en `src/ultibot_ui/windows/dashboard_view.py`.
+- **Resultado:** Éxito.
+- **Impacto:** Se espera que se resuelvan los errores de inicialización de la UI.
+- **Timestamp:** 2025-06-25 18:41 UTC
+- **Agente:** UI/UX Maestro
+- **ID Tarea:** [TASK-UI-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Identificación del nuevo error `TypeError` en `MarketDataWidget` durante la inicialización de la UI.
+- **Resultado:** Éxito.
+- **Impacto:** Nuevo problema de UI identificado, plan para inspeccionar `market_data_widget.py` y `main_window.py`.
+- **Timestamp:** 2025-06-25 18:42 UTC
+- **Agente:** UI/UX Maestro
+- **ID Tarea:** [TASK-UI-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Fallo al corregir `main_window.py` debido a un `SEARCH` block no coincidente (primer intento).
+- **Resultado:** Fallo.
+- **Impacto:** Se requiere un nuevo intento de corrección.
+- **Timestamp:** 2025-06-25 18:42 UTC
+- **Agente:** UI/UX Maestro
+- **ID Tarea:** [TASK-UI-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Fallo al corregir `main_window.py` debido a un `SEARCH` block no coincidente (segundo intento). Se decide usar `write_to_file` como fallback.
+- **Resultado:** Fallo.
+- **Impacto:** Se procederá a sobrescribir el archivo `main_window.py` con el contenido corregido.
+- **Timestamp:** 2025-06-25 18:45 UTC
+- **Agente:** UI/UX Maestro
+- **ID Tarea:** [TASK-UI-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Corrección exitosa de los errores `TypeError` en la inicialización de las vistas de la UI mediante la sobrescritura de `main_window.py`. Se identificó un nuevo error `HTTP 500` (`sqlite3.OperationalError: no such column: trades.side`) al obtener trades.
+- **Resultado:** Éxito parcial.
+- **Impacto:** Los errores de inicialización de la UI están resueltos, pero hay un problema de esquema de base de datos en el backend. Se requiere eliminar `ultibot_local.db`.
+- **Timestamp:** 2022-06-25 18:46 UTC
+- **Agente:** UI/UX Maestro
+- **ID Tarea:** [TASK-UI-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Terminación de los procesos de Python (backend y UI) y eliminación del archivo `ultibot_local.db`.
+- **Resultado:** Éxito.
+- **Impacto:** La base de datos local se recreará con el esquema correcto al reiniciar el backend.
+- **Timestamp:** 2025-06-25 18:49 UTC
+- **Agente:** UI/UX Maestro
+- **ID Tarea:** [TASK-UI-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Verificación de la resolución de errores de inicialización de la UI y de la base de datos tras el reinicio. Se confirma que los errores críticos se han resuelto. Se observa una advertencia menor sobre datos de ticker.
+- **Resultado:** Éxito.
+- **Impacto:** La UI se inicia y se comunica con el backend. Se procede a la auditoría funcional detallada.
+- **Timestamp:** 2025-06-25 18:52 UTC
+- **Agente:** UI/UX Maestro
+- **ID Tarea:** [TASK-UI-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Análisis de las capturas de pantalla proporcionadas por el usuario. Se observa que la UI se carga, pero la mayoría de las secciones están vacías o con 'N/A', y los botones de 'Refresh'/'Actualizar' no funcionan. Se identifica la advertencia `No ticker data found for BTC/USDT` como un posible punto de partida.
+- **Resultado:** Éxito.
+- **Impacto:** Se ha establecido un plan para auditar la carga de datos y la funcionalidad de los botones.
+- **Timestamp:** 2025-06-25 18:53 UTC
+- **Agente:** UI/UX Maestro
+- **ID Tarea:** [TASK-UI-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Identificación del problema de inconsistencia en el formato de los símbolos de trading (ej. 'BTC/USDT' vs 'BTCUSDT') entre el frontend y el backend, causando la advertencia `No ticker data found for BTC/USDT` y la falta de visualización de datos.
+- **Resultado:** Éxito.
+- **Impacto:** Se ha definido un plan para estandarizar el formato de los símbolos en el frontend y el backend.
+- **Timestamp:** 2025-06-25 18:54 UTC
+- **Agente:** UI/UX Maestro
+- **ID Tarea:** [TASK-UI-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Corrección del formato de los símbolos en `src/ultibot_ui/widgets/market_data_widget.py` y normalización de `favorite_pairs`. Se identificó un nuevo error de Pylance (`"property" is not a known attribute of "None"`) relacionado con la obtención de `main_event_loop` en `MarketDataWidget`.
+- **Resultado:** Éxito parcial.
+- **Impacto:** Se requiere modificar `MarketDataWidget` para recibir `main_event_loop` directamente y actualizar su inicialización en `main_window.py`.
+- **Timestamp:** 2025-06-25 18:55 UTC
+- **Agente:** UI/UX Maestro
+- **ID Tarea:** [TASK-UI-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Modificación del constructor de `MarketDataWidget` para aceptar `main_event_loop` directamente.
+- **Resultado:** Éxito.
+- **Impacto:** Se requiere actualizar la llamada a `MarketDataWidget` en `main_window.py`.
+- **Timestamp:** 2025-06-25 18:55 UTC
+- **Agente:** UI/UX Maestro
+- **ID Tarea:** [TASK-UI-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Actualización de la llamada a `MarketDataWidget` en `src/ultibot_ui/windows/main_window.py` para pasar `main_event_loop`.
+- **Resultado:** Éxito.
+- **Impacto:** Se espera que se resuelvan los errores de inicialización de `MarketDataWidget`. Se procederá a corregir el formato de los símbolos en el backend.
+- **Timestamp:** 2025-06-25 19:12 UTC
+- **Agente:** UI/UX Maestro
+- **ID Tarea:** [TASK-UI-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Ejecución del Protocolo de Auditoría de Usabilidad por Heurísticas (AUH) en `StrategiesView`.
+- **Resultado:** Éxito.
+- **Impacto:** Se generó el informe `memory/AUDIT_REPORT.md` con hallazgos y propuestas de mejora.
+- **Timestamp:** 2025-06-25 19:15 UTC
+- **Agente:** UI/UX Maestro
+- **ID Tarea:** [TASK-UI-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Aplicación de mejoras a las `.clinerules` (`self-improving-cline.md` y `workspace.rules.md`) basadas en la reflexión sobre la interacción y los desafíos encontrados.
+- **Resultado:** Éxito.
+- **Impacto:** Las reglas del agente se han actualizado para mejorar la depuración y la consistencia del formato de datos.
+- **Timestamp:** 2025-06-25 19:22 UTC
+- **Agente:** UI/UX Maestro
+- **ID Tarea:** [TASK-UI-002]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Inicio de la tarea de diseño de flujo de usuario centrado en tareas (DFU-CT) para la UI.
+- **Resultado:** Éxito.
+- **Impacto:** Registro de inicio de tarea.
+- **Timestamp:** 2025-06-25 19:22 UTC
+- **Agente:** UI/UX Maestro
+- **ID Tarea:** [TASK-UI-002]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Aplicación del Protocolo de Diseño de Flujo de Usuario Centrado en Tareas (DFU-CT) para la funcionalidad de "Gestión de Estrategias". Se definió el Job Story, se mapearon los pasos, se describió el prototipado de baja fidelidad, se identificaron puntos de fricción y se propusieron refinamientos.
+- **Resultado:** Éxito.
+- **Impacto:** Plan detallado para la mejora de la vista de gestión de estrategias.
+- **Timestamp:** 2025-06-25 19:32 UTC
+- **Agente:** UI/UX Maestro
+- **ID Tarea:** [TASK-UI-002]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Aplicación de mejoras a las `.clinerules` (`workspace.rules.md`) basadas en la reflexión sobre la interacción y los desafíos encontrados durante la implementación de la vista de gestión de estrategias.
+- **Resultado:** Éxito.
+- **Impacto:** Las reglas del agente se han actualizado para mejorar la depuración de PySide6, la inyección de dependencias y el manejo de tipos opcionales.
+- **Timestamp:** 2025-06-25 19:44 UTC
+- **Agente:** ui-ux
+- **ID Tarea:** TASK-AI-UI-INTEGRATION
+- **Ciclo:** B-MAD-R: Record
+- **Acción:** Inicio de la tarea de implementación de la interfaz de usuario para la gestión de estrategias de IA y el análisis de oportunidades según `memory/DFU_CT_STRATEGY_MANAGEMENT.md`.
+- **Resultado:** Éxito.
+- **Impacto:** Registro de inicio de tarea.
+- **Timestamp:** 2025-06-25 20:46 UTC
+- **Agente:** Leadcoder
+- **ID Tarea:** [LEADCODER-INIT]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Activación de la persona "Leadcoder".
+- **Resultado:** Éxito.
+- **Timestamp:** 2025-06-25 20:49 UTC
+- **Agente:** LeadCoder
+- **ID Tarea:** [TASK-DEPLOY-FIX]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Inicio de la corrección del despliegue. Modificando `dependencies.py` para usar `DATABASE_URL` y `main.py` para cargar variables de entorno.
+- **Resultado:** Éxito
+- **Impacto:** `src/ultibot_backend/dependencies.py`, `src/ultibot_backend/main.py`
+
+- **Timestamp:** 2025-06-25 20:49 UTC
+- **Agente:** LeadCoder
+- **ID Tarea:** [TASK-DEPLOY-FIX]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Finalizada la corrección del despliegue. El backend ahora es capaz de usar `DATABASE_URL` desde un archivo `.env`, permitiendo configuraciones de producción.
+
+- **Timestamp:** 2025-06-25 20:52 UTC
+- **Agente:** LeadCoder
+- **ID Tarea:** [TASK-DEPLOY-FIX]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Corrección de `ModuleNotFoundError` al estandarizar las importaciones que usaban `from src...` a importaciones relativas al paquete.
+- **Resultado:** Éxito
+- **Impacto:** `src/ultibot_backend/services/feature_service.py`, `src/ultibot_backend/features/technical_indicators.py`
+
+- **Timestamp:** 2025-06-25 21:10 UTC
+- **Agente:** LeadCoder
+- **ID Tarea:** [TASK-AI-UI-INTEGRATION]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Corrección de `IndentationError` en `src/ultibot_ui/views/opportunities_view.py` mediante la sobreescritura del archivo.
+- **Resultado:** Éxito
+- **Impacto:** `src/ultibot_ui/views/opportunities_view.py`

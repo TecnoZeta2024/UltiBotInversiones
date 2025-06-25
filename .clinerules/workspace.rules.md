@@ -21,7 +21,8 @@
 ### **1. 𝐁lueprint (Diseño y Plan)**
 *   **Reformular el Objetivo:** ¿Cuál es el resultado final deseado?
 *   **Definir el "Porqué":** ¿Cómo contribuye este objetivo a la Misión Principal?
-*   **Plan de Acción:** Desglosa el objetivo en una lista de tareas (checklist) en `TASKLIST.md`.
+*   **Plan de Acción:** Desglosa el objetivo en una lista de tareas (checklist) en `memory/TASKLIST.md`.
+*   **Clarificación de Artefactos:** Si la solicitud es ambigua sobre el tipo de resultado (ej. "¿código o documentación?"), prioriza la creación de artefactos conceptuales (Markdown, diagramas) antes de escribir código funcional. Para tareas de "auditoría" o "análisis", el resultado por defecto DEBE ser la documentación en `memory/`. Si la duda persiste, pregunta al usuario para confirmar el tipo de entregable deseado.
 
 ### **2. 𝐌easure (Medición y Criterios)**
 *   **Definir el Éxito:** ¿Cómo sabremos que la tarea está completa y bien hecha?
@@ -52,10 +53,10 @@
 
 ### **3.2. Workflow de Ejecución del SOA (Ciclo de Ejecución Supervisada)**
 1.  **Interceptación de Tarea:** El SOA recibe la solicitud del usuario.
-2.  **Pre-Registro (Invocando PTC):** El SOA realiza la primera entrada de auditoría en `PROJECT_LOG.md` para registrar el inicio de la tarea.
+2.  **(Invocando **4.1. **MANDATORIO** Protocolo de Trazabilidad y Contexto (PTC) - **OBLIGATORIO**): El SOA realiza las primeras acciones fusionando la solicitud del usuario con el flujo del protocolo (PTC), por ejemplo: "entrada de auditoría en `memory/PROJECT_LOG.md` para registrar el inicio de la tarea".
 3.  **Delegación de Lógica:** El SOA activa a la persona especialista relevante y le instruye que genere únicamente el "payload" de la solución (ej. el código a escribir, el análisis a presentar), pero sin ejecutar la acción final.
 4.  **Recepción y Ejecución:** El SOA recibe el payload de la persona y es el único responsable de ejecutar la herramienta final (ej. `write_to_file`, `execute_command`).
-5.  **Post-Registro (Invocando PTC):** El SOA realiza la segunda entrada en `PROJECT_LOG.md` para registrar el resultado y el impacto de la acción completada.
+5.  **Post-Registro (Invocando PTC):** El SOA realiza la segunda entrada en `memory/PROJECT_LOG.md` para registrar el resultado y el impacto de la acción completada.
 6.  **Respuesta al Usuario:** El SOA presenta el resultado final al usuario.
 
 ### **3.3. Comandos Globales Disponibles**
@@ -70,17 +71,12 @@
 # -----------------------------------------------------------------
 # La obediencia a estos protocolos es estricta y jerárquica.
 
-### **4.1. Protocolos de Emergencia (DEFCON)**
-*   **DEFCON 1 (Suite de Tests Rota):** STOP. `pytest --collect-only -q`. Isolate. Fix one by one. Validate.
-*   **DEFCON 2 (Errores AsyncIO Múltiples):** RESTART. `poetry env remove --all && poetry install`. Verify.
-*   **DEFCON 3 (Fixtures Rotas):** BACKUP. REVERT. INCREMENTAL. VALIDATE.
-
-### **4.2. Protocolo de Trazabilidad y Contexto (PTC) - OBLIGATORIO**
-*   **Objetivo:** Mantener un registro centralizado, cronológico y auditable de todas las acciones en `PROJECT_LOG.md`.
+### **4.1. **MANDATORIO** Protocolo de Trazabilidad y Contexto (PTC) - **OBLIGATORIO**
+*   **Objetivo:** Mantener un registro centralizado, cronológico y auditable de todas las acciones en `memory/PROJECT_LOG.md`.
 *   **Invocador:** Este protocolo es invocado **exclusivamente por el Orquestador de Agentes (SOA)** como parte del Ciclo de Ejecución Supervisada.
 *   **Workflow:**
-    1.  **Al inicio de CADA tarea:** El SOA lee `PROJECT_LOG.md` para obtener contexto.
-    2.  **Durante la ejecución de la tarea:** El SOA añade entradas de pre y post-registro a `PROJECT_LOG.md` usando la plantilla unificada.
+    1.  **Al inicio de CADA tarea:** El SOA lee `memory/PROJECT_LOG.md`, `memory/CONTEXT.md` y `memory/KNOWLEDGE_BASE.md` para obtener contexto.
+    2.  **Durante la ejecución de la tarea:** El SOA añade entradas de pre y post-registro a `memory/PROJECT_LOG.md` usando la plantilla unificada, y actualiza `memory/CONTEXT.md` y `memory/TASKLIST.md` según sea necesario.
 *   **Plantilla de Registro Unificada:**
     ```markdown
     - **Timestamp:** YYYY-MM-DD HH:MM UTC
@@ -91,6 +87,13 @@
     - **Resultado:** [Éxito/Fallo y observación clave]
     - **Impacto:** [Archivos modificados, estado del sistema]
     ```
+
+### **4.2. Protocolos de Emergencia (DEFCON)**
+*   **DEFCON 1 (Suite de Tests Rota):** STOP. `pytest --collect-only -q`. Isolate. Fix one by one. Validate.
+*   **DEFCON 2 (Errores AsyncIO Múltiples):** RESTART. `poetry env remove --all && poetry install`. Verify.
+*   **DEFCON 3 (Fixtures Rotas):** BACKUP. REVERT. INCREMENTAL. VALIDATE.
+
+
 
 ### **4.3. Sistema de Resolución Segmentada de Tests (SRST)**
 *   **Principio:** Un error a la vez, un módulo a la vez, un fix a la vez.
@@ -160,6 +163,7 @@ Esta guía establece los principios no negociables de ingeniería de software qu
 - **Cohesión Lógica:** **DEBES** agrupar la funcionalidad relacionada. Cada módulo debe tener un propósito claro y enfocado.
 - **Encapsulación:** **DEBES** ocultar los detalles de implementación detrás de interfaces bien definidas. Minimiza la visibilidad de clases, métodos y variables.
 - **Gestión de Dependencias:** **DEBES** controlar las dependencias entre módulos. Usa inyección de dependencias para mantener los componentes débilmente acoplados.
+- **Principio de Contexto Suficiente (PCS):** Al pasar datos entre componentes (ej. de una vista a un diálogo), **DEBES** asegurar que el objeto pasado contenga todo el contexto necesario para que el componente receptor realice todas sus acciones previstas. Evita pasar solo subconjuntos de datos si el contexto completo (ej. el objeto `Opportunity` entero en lugar de solo el `AIAnalysis`) es necesario para operaciones posteriores como "re-analizar" o "ejecutar".
 
 ### **2.3. Gestión de la Deuda Técnica**
 - **Regla del Boy Scout:** **DEBES** dejar el código más limpio de lo que lo encontraste. Realiza pequeñas mejoras cada vez que trabajes en un área.
@@ -183,6 +187,22 @@ Esta guía establece los principios no negociables de ingeniería de software qu
 - **Estándares de Codificación:** **DEBES** establecer y hacer cumplir convenciones de codificación consistentes (ej. a través de `.pylintrc`).
 - **Revisiones de Código:** **DEBES** implementar un proceso de revisión de código enfocado en la corrección, mantenibilidad y compartición de conocimiento.
 - **Desarrollo Guiado por Pruebas (TDD):** **DEBES** escribir pruebas antes de implementar la funcionalidad para asegurar que el código sea comprobable y cumpla con los requisitos.
+- **Validación de API con Tests de Integración:** Para la validación de payloads de API y la lógica de negocio del backend, prioriza la escritura de tests de integración utilizando frameworks como `pytest` y clientes HTTP asíncronos (ej. `httpx`). Estos tests pueden ejecutarse contra una base de datos en memoria o un entorno de test controlado, proporcionando un feedback más rápido y fiable que la ejecución manual de scripts contra un servidor en vivo, y reduciendo la necesidad de reinicios constantes del servidor de desarrollo. **Asegúrate de incluir tests específicos para la consistencia del formato de datos (ej. símbolos de trading, fechas) entre el frontend, el backend y las APIs externas.**
+
+### 3.3.4. Depuración de Errores de Type Hinting en PySide6 (Pylance)
+Cuando se encuentren errores de Pylance relacionados con atributos de clases de PySide6 (ej. `Cannot access attribute "Accepted" for class "type[QDialog]"`, `Cannot access attribute "Yes" for class "type[QMessageBox]"`), y se haya verificado que la sintaxis es correcta según la documentación de PySide6 (ej. `QDialog.Accepted`, `QMessageBox.StandardButton.Yes`), se debe considerar que estos pueden ser falsos positivos del analizador estático. En tales casos, se recomienda:
+1.  Verificar la documentación oficial de PySide6 para la sintaxis correcta.
+2.  Si la sintaxis es correcta, ignorar la advertencia de Pylance si el código es funcional y no hay errores de ejecución.
+3.  Considerar un reinicio del servidor de lenguaje de Python o del entorno de desarrollo si las advertencias persisten y son molestas.
+
+### 1.1.8. Consistencia en la Inyección de Dependencias y Firmas de Corutinas
+Para garantizar la claridad y reducir errores de tipo, se DEBE mantener una estricta consistencia en la inyección de dependencias y las firmas de las funciones asíncronas (corutinas) y sus fábricas.
+-   Si un servicio (ej. `UIStrategyService`) encapsula un cliente API (`api_client`), sus métodos asíncronos NO DEBEN requerir que el `api_client` se les pase como argumento, sino que deben usar `self.api_client`.
+-   Las fábricas de corutinas (`coroutine_factory`) pasadas a `ApiWorker` DEBEN adherirse a la firma `Callable[[UltiBotAPIClient], Coroutine]`, incluso si la corutina subyacente no utiliza el `api_client` directamente (en cuyo caso, el argumento puede ser ignorado en la lambda).
+-   Asegurar que los objetos que requieren un `asyncio.AbstractEventLoop` lo reciban directamente en su constructor (inyección de dependencia) en lugar de intentar acceder a él a través de objetos anidados (ej. `main_window.main_event_loop`).
+
+### 2.1.6. Manejo Explícito de Tipos Opcionales (Optional)
+Al extraer valores de diccionarios o modelos que pueden ser `None` (ej. `dict.get('key')` o campos `Optional[str]`), se DEBE realizar una verificación explícita de `None` antes de usar el valor en contextos que requieran un tipo no-`None` (ej. `str`). Si el valor es `None` y es crítico, se DEBE manejar el caso (ej. con un `QMessageBox.critical` o lanzando una excepción) o convertirlo explícitamente al tipo esperado (ej. `str(value)`) si se garantiza que no será `None` en ese punto lógico.
 
 ---
 

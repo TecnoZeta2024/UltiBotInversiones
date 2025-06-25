@@ -22,9 +22,11 @@ class ApiWorker(QtCore.QObject):
 
     def __init__(self,
                  api_client: UltiBotAPIClient,
+                 main_event_loop: asyncio.AbstractEventLoop, # Añadir main_event_loop
                  coroutine_factory: Optional[Callable[[UltiBotAPIClient], Coroutine]] = None):
         super().__init__()
         self.api_client = api_client
+        self.main_event_loop = main_event_loop # Guardar la referencia al bucle de eventos
         self.coroutine_factory = coroutine_factory
         self._task: Optional[asyncio.Task] = None # Usar asyncio.Task
         logger.debug(f"ApiWorker initialized with api_client: {api_client}, coroutine_factory: {'set' if coroutine_factory else 'not set'}")
@@ -43,11 +45,16 @@ class ApiWorker(QtCore.QObject):
             self.finished.emit()
             return
 
+        if not self.main_event_loop:
+            logger.error("ApiWorker: main_event_loop not set. Cannot schedule task.")
+            self.error_occurred.emit("Error interno del Worker: Bucle de eventos no disponible.")
+            self.finished.emit()
+            return
+
         try:
             coroutine = self.coroutine_factory(self.api_client)
-            # Obtener el bucle de eventos principal y programar la corutina en él
-            main_loop = asyncio.get_event_loop()
-            self._task = cast(asyncio.Task, asyncio.run_coroutine_threadsafe(coroutine, main_loop)) # Cast a asyncio.Task
+            # Usar el bucle de eventos pasado directamente
+            self._task = cast(asyncio.Task, asyncio.run_coroutine_threadsafe(coroutine, self.main_event_loop)) # Cast a asyncio.Task
             self._task.add_done_callback(self._on_task_done)
             # self._task es un asyncio.Future aquí, no un Task, por lo que no tiene get_name().
             # El nombre se maneja correctamente en _on_task_done.
@@ -174,10 +181,11 @@ class PerformanceWorker(QtCore.QObject):
     performance_data_ready = QtCore.Signal(dict)
     error_occurred = QtCore.Signal(str)
 
-    def __init__(self, api_client: UltiBotAPIClient, user_id: UUID, parent=None):
+    def __init__(self, api_client: UltiBotAPIClient, user_id: UUID, main_event_loop: asyncio.AbstractEventLoop, parent=None):
         super().__init__(parent)
         self.api_client = api_client
         self.user_id = user_id
+        self.main_event_loop = main_event_loop # Guardar la referencia al bucle de eventos
         self._task: Optional[asyncio.Task] = None # Usar asyncio.Task
 
     async def _fetch_performance_data(self):
@@ -251,10 +259,15 @@ class PerformanceWorker(QtCore.QObject):
         """
         logger.debug("PerformanceWorker: run method started in thread %s.", QtCore.QThread.currentThread().objectName() or str(QtCore.QThread.currentThread()))
         
+        if not self.main_event_loop:
+            logger.error("PerformanceWorker: No se encontró el bucle de eventos principal. No se puede programar la tarea.")
+            self.error_occurred.emit("Error interno del Worker: Bucle de eventos no disponible.")
+            self.finished.emit()
+            return
+
         try:
             coroutine = self._fetch_performance_data()
-            main_loop = asyncio.get_event_loop()
-            self._task = cast(asyncio.Task, asyncio.run_coroutine_threadsafe(coroutine, main_loop)) # Cast a asyncio.Task
+            self._task = cast(asyncio.Task, asyncio.run_coroutine_threadsafe(coroutine, self.main_event_loop)) # Usar el bucle de eventos pasado
             self._task.add_done_callback(self._on_task_done)
             logger.debug("PerformanceWorker: Coroutine scheduled on the main event loop.")
         except Exception as e:
@@ -286,10 +299,11 @@ class OrdersWorker(QtCore.QObject):
     orders_ready = QtCore.Signal(list)
     error_occurred = QtCore.Signal(str)
 
-    def __init__(self, api_client: UltiBotAPIClient, user_id: UUID, parent=None):
+    def __init__(self, api_client: UltiBotAPIClient, user_id: UUID, main_event_loop: asyncio.AbstractEventLoop, parent=None):
         super().__init__(parent)
         self.api_client = api_client
         self.user_id = user_id
+        self.main_event_loop = main_event_loop # Guardar la referencia al bucle de eventos
         self._task: Optional[asyncio.Task] = None # Usar asyncio.Task
 
     async def _fetch_orders(self):
@@ -307,10 +321,15 @@ class OrdersWorker(QtCore.QObject):
         """
         logger.debug("OrdersWorker: run method started in thread %s.", QtCore.QThread.currentThread().objectName() or str(QtCore.QThread.currentThread()))
         
+        if not self.main_event_loop:
+            logger.error("OrdersWorker: No se encontró el bucle de eventos principal. No se puede programar la tarea.")
+            self.error_occurred.emit("Error interno del Worker: Bucle de eventos no disponible.")
+            self.finished.emit()
+            return
+
         try:
             coroutine = self._fetch_orders()
-            main_loop = asyncio.get_event_loop()
-            self._task = cast(asyncio.Task, asyncio.run_coroutine_threadsafe(coroutine, main_loop)) # Cast a asyncio.Task
+            self._task = cast(asyncio.Task, asyncio.run_coroutine_threadsafe(coroutine, self.main_event_loop)) # Usar el bucle de eventos pasado
             self._task.add_done_callback(self._on_task_done)
             logger.debug("OrdersWorker: Coroutine scheduled on the main event loop.")
         except Exception as e:

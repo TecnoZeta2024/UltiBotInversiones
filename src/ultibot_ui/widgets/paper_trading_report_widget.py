@@ -10,7 +10,7 @@ from uuid import UUID
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
     QLabel, QComboBox, QDateEdit, QPushButton, QGroupBox, QGridLayout,
-    QHeaderView, QMessageBox, QProgressBar, QSplitter
+    QHeaderView, QMessageBox, QProgressBar, QSplitter, QApplication # Importar QApplication
 )
 from PySide6.QtCore import Qt, QDate, QThread
 from PySide6.QtGui import QFont, QColor
@@ -20,6 +20,8 @@ from ultibot_ui.services.api_client import UltiBotAPIClient
 from shared.data_types import Trade, PerformanceMetrics
 from ultibot_ui.workers import ApiWorker
 from ultibot_ui.models import BaseMainWindow
+
+logger = logging.getLogger(__name__)
 
 logger = logging.getLogger(__name__)
 
@@ -197,7 +199,19 @@ class PaperTradingReportWidget(QWidget):
         self.load_trades()
 
     def _start_api_worker(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine], on_success, on_error):
-        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory)
+        app_instance = QApplication.instance()
+        if not app_instance:
+            logger.error("PaperTradingReportWidget: No se encontró la instancia de QApplication para obtener el bucle de eventos principal.")
+            self.show_error_message("Error interno: No se pudo obtener la instancia de la aplicación.")
+            return
+            
+        main_event_loop = app_instance.property("main_event_loop")
+        if not main_event_loop:
+            logger.error("PaperTradingReportWidget: No se encontró el bucle de eventos principal de qasync.")
+            self.show_error_message("Error interno: Bucle de eventos principal no disponible.")
+            return
+
+        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory, main_event_loop=main_event_loop)
         thread = QThread()
         worker.moveToThread(thread)
 
