@@ -2,9 +2,9 @@
 Widget para mostrar el desempeño de las estrategias en una tabla.
 """
 import logging
-from PyQt5.QtWidgets import QTableView, QWidget, QVBoxLayout, QHeaderView
-from PyQt5.QtCore import Qt, QAbstractTableModel, QModelIndex
-from PyQt5.QtGui import QColor, QBrush # Importar QColor y QBrush
+from PySide6.QtWidgets import QTableView, QWidget, QVBoxLayout, QHeaderView
+from PySide6.QtCore import Qt, QAbstractTableModel, QModelIndex
+from PySide6.QtGui import QColor, QBrush
 from typing import List, Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
@@ -115,7 +115,7 @@ class StrategyPerformanceTableView(QWidget):
         self._model.update_data(data)
 
 if __name__ == '__main__':
-    from PyQt5.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
     import sys
 
     app = QApplication(sys.argv)

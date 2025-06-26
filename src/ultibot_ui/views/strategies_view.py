@@ -23,13 +23,13 @@ from ultibot_ui.services.ui_strategy_service import UIStrategyService
 logger = logging.getLogger(__name__)
 
 class StrategiesView(QWidget):
-    def __init__(self, api_client: UltiBotAPIClient, main_event_loop: asyncio.AbstractEventLoop, parent=None):
+    def __init__(self, api_client: UltiBotAPIClient, main_event_loop: asyncio.AbstractEventLoop, main_window: BaseMainWindow, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.setWindowTitle("Trading Strategies")
         self.api_client = api_client
         self.main_event_loop = main_event_loop
         self.strategy_service = UIStrategyService(api_client)
-        self.main_window: Optional[BaseMainWindow] = None
+        self.main_window = main_window # Asignar main_window
 
         self._layout = QVBoxLayout(self)
         
@@ -133,9 +133,7 @@ class StrategiesView(QWidget):
         button.setEnabled(False)
         button.setText("Actualizando...")
 
-        self.main_event_loop.call_soon_threadsafe(
-            lambda: asyncio.ensure_future(self._toggle_strategy_async(strategy_id, new_status, button))
-        )
+        self.main_event_loop.create_task(self._toggle_strategy_async(strategy_id, new_status, button))
 
     async def _toggle_strategy_async(self, strategy_id: str, new_status: bool, button: QPushButton):
         try:
@@ -161,12 +159,10 @@ class StrategiesView(QWidget):
         strategy_id = strategy.get('id', '-')
         QMessageBox.information(self, "Detalles de Estrategia", f"Nombre: {name}\nID: {strategy_id}\n(Más detalles próximamente)")
 
-    def initialize_view_data(self):
+    async def initialize_view_data(self):
         """Loads strategies data asynchronously."""
         logger.info("StrategiesView: Initializing view data (loading strategies)...")
-        self.main_event_loop.call_soon_threadsafe(
-            lambda: asyncio.ensure_future(self._load_strategies_async())
-        )
+        await self._load_strategies_async()
 
     async def _load_strategies_async(self):
         try:

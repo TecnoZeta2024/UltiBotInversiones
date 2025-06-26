@@ -196,3 +196,44 @@ class StrategyConfigORM(Base):
 
     def __repr__(self):
         return f"<StrategyConfigORM(id='{self.id}', config_name='{self.config_name}', user_id='{self.user_id}')>"
+
+class MarketDataORM(Base):
+    __tablename__ = 'market_data'
+
+    id: Mapped[PythonUUID] = mapped_column(GUID(), primary_key=True, default=uuid4)
+    symbol: Mapped[str] = mapped_column(String, nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    open: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
+    high: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
+    low: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
+    close: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
+    volume: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
+
+    __table_args__ = (
+        Index('ix_market_data_symbol_timestamp', 'symbol', 'timestamp', unique=True),
+    )
+
+    def __repr__(self):
+        return f"<MarketDataORM(symbol='{self.symbol}', timestamp='{self.timestamp}')>"
+
+class NotificationORM(Base):
+    __tablename__ = 'notifications'
+
+    id: Mapped[PythonUUID] = mapped_column(GUID(), primary_key=True, default=uuid4)
+    user_id: Mapped[PythonUUID] = mapped_column(GUID(), nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())  # pylint: disable=not-callable
+    type: Mapped[str] = mapped_column(String, nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False)
+    related_entity_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    related_entity_type: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+
+    __table_args__ = (
+        Index('ix_notifications_user_id', 'user_id'),
+        Index('ix_notifications_timestamp', 'timestamp'),
+        Index('ix_notifications_type', 'type'),
+        Index('ix_notifications_is_read', 'is_read'),
+    )
+
+    def __repr__(self):
+        return f"<NotificationORM(id='{self.id}', type='{self.type}', user_id='{self.user_id}')>"

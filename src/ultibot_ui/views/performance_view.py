@@ -1,38 +1,26 @@
 import logging
-from PySide6.QtCore import QThread
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox
-from PySide6.QtCharts import QChartView, QChart, QLineSeries, QBarSeries, QBarSet
-from PySide6.QtGui import QPainter
-
-from ultibot_ui.workers import PerformanceWorker
-from ultibot_ui.services.api_client import UltiBotAPIClient
-
-logger = logging.getLogger(__name__)
-
-import logging
-import logging
-from PySide6.QtCore import QThread
+import asyncio
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QMessageBox
 from PySide6.QtCharts import QChartView, QChart, QLineSeries, QBarSeries, QBarSet
 from PySide6.QtGui import QPainter
 from typing import Optional
 from uuid import UUID
 
-from ultibot_ui.workers import PerformanceWorker
+from ultibot_ui.workers import fetch_performance_data
 from ultibot_ui.services.api_client import UltiBotAPIClient
-from ultibot_ui.models import BaseMainWindow # Importar BaseMainWindow
+from ultibot_ui.models import BaseMainWindow
 
 logger = logging.getLogger(__name__)
 
 class PerformanceView(QWidget):
-    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent=None):
+    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, main_event_loop: asyncio.AbstractEventLoop, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Global Performance")
-        self.user_id: Optional[UUID] = None # Se inicializará asíncronamente
+        self.user_id: Optional[UUID] = None
         self.api_client = api_client
-        self.main_window = main_window # Guardar referencia a MainWindow
-        self.worker_thread: Optional[QThread] = None
-        self.worker: Optional[PerformanceWorker] = None
+        self.main_window = main_window
+        self.main_event_loop = main_event_loop
+        self.load_performance_task: Optional[asyncio.Task] = None
         
         self._layout = QVBoxLayout(self)
         
@@ -61,15 +49,14 @@ class PerformanceView(QWidget):
         self._setup_portfolio_chart([])
         self._setup_pnl_chart([])
         
-        # No llamar a load_performance_data aquí, se llamará después de set_user_id
-        
         logger.info("PerformanceView initialized.")
 
     def set_user_id(self, user_id: UUID):
-        """Establece el user_id y activa la carga de datos de rendimiento."""
+        """Establece el user_id y actualiza los widgets dependientes."""
         self.user_id = user_id
-        logger.info(f"PerformanceView: User ID set to {user_id}. Loading performance data.")
-        self.load_performance_data()
+        logger.info(f"PerformanceView: User ID set to {user_id}.")
+        # La carga inicial de datos ahora se maneja en initialize_view_data,
+        # que es llamado por MainWindow.
 
     def _setup_metrics(self, metrics: dict):
         """Creates and returns a layout with key performance metrics."""
@@ -144,33 +131,27 @@ class PerformanceView(QWidget):
 
         self.pnl_chart_view.setChart(chart)
 
-    def load_performance_data(self):
-        """Initializes and runs the worker to load performance data."""
+    async def initialize_view_data(self):
+        """Carga los datos de rendimiento de forma asíncrona."""
         if self.user_id is None:
             logger.warning("PerformanceView: user_id no está disponible. No se pueden cargar los datos de rendimiento.")
             QMessageBox.warning(self, "Error", "Configuración de usuario no cargada. No se pueden mostrar los datos de rendimiento.")
             return
 
-        logger.info("Starting PerformanceWorker...")
-        self.worker_thread = QThread()
-        self.worker = PerformanceWorker(self.api_client, self.user_id) # Pasar user_id
-        self.worker.moveToThread(self.worker_thread)
+        if self.load_performance_task and not self.load_performance_task.done():
+            logger.info("Performance data loading task is already running.")
+            return
 
-        self.worker_thread.started.connect(self.worker.run)
-        self.worker.performance_data_ready.connect(self.update_performance_data)
-        self.worker.error_occurred.connect(self.on_worker_error)
-        
-        # Conectar la señal finished del worker para que el hilo se cierre
-        self.worker.finished.connect(self.worker_thread.quit)
-        
-        # Conectar la señal finished del hilo para limpiar el worker y el hilo
-        self.worker_thread.finished.connect(self.worker.deleteLater)
-        self.worker_thread.finished.connect(self.worker_thread.deleteLater)
+        logger.info("Creating asyncio task to fetch performance data.")
+        self.load_performance_task = self.main_event_loop.create_task(self._load_performance_data_async())
 
-        # Añadir el hilo a la ventana principal para su seguimiento
-        self.main_window.add_thread(self.worker_thread)
-        
-        self.worker_thread.start()
+    async def _load_performance_data_async(self):
+        try:
+            data = await fetch_performance_data(self.api_client)
+            self.update_performance_data(data)
+        except Exception as e:
+            logger.error(f"Failed to load performance data: {e}", exc_info=True)
+            self.on_worker_error(f"No se pudieron cargar los datos de rendimiento: {e}")
 
     def update_performance_data(self, data: dict):
         """Slot to update the UI with data from the worker."""
@@ -184,17 +165,15 @@ class PerformanceView(QWidget):
 
     def on_worker_error(self, error_message: str):
         """Handles errors reported by the worker."""
-        logger.error(f"An error occurred in PerformanceWorker: {error_message}")
+        logger.error(f"An error occurred in PerformanceView: {error_message}")
         QMessageBox.critical(self, "Error", f"Failed to load performance data:\n{error_message}")
 
     def cleanup(self):
-        """Detiene el worker de rendimiento y limpia los recursos."""
+        """Cancela la tarea de carga de rendimiento si se está ejecutando."""
         logger.info("PerformanceView: Iniciando limpieza de tareas.")
-        if self.worker_thread and self.worker_thread.isRunning():
-            logger.info("PerformanceView: Solicitando detención del worker de rendimiento.")
-            self.worker_thread.quit()
-            if not self.worker_thread.wait(5000): # Esperar hasta 5 segundos
-                logger.warning("PerformanceView: El hilo del worker de rendimiento no terminó correctamente.")
+        if self.load_performance_task and not self.load_performance_task.done():
+            self.load_performance_task.cancel()
+            logger.info("Performance data loading task cancelled.")
         
         # Limpiar los gráficos
         if self.portfolio_chart_view.chart():
@@ -208,6 +187,5 @@ class PerformanceView(QWidget):
                 item = self.metrics_layout.takeAt(0)
                 if item.widget():
                     item.widget().deleteLater()
-            # No eliminar el layout en sí, ya que es parte del layout principal de la vista
         
         logger.info("PerformanceView: Limpieza completada.")

@@ -80,12 +80,10 @@ class DashboardView(QWidget):
         notification_layout.addWidget(self.notification_widget)
         self.main_layout.addWidget(notification_card)
 
-    def initialize_async_components(self):
+    async def initialize_async_components(self):
         """Inicia la carga de datos asíncrona para los componentes del dashboard."""
         logger.info("DashboardView: initialize_async_components INVOCADO")
-        self.main_event_loop.call_soon_threadsafe(
-            lambda: asyncio.ensure_future(self._initialize_async())
-        )
+        await self._initialize_async()
 
     async def _initialize_async(self):
         """Corutina que carga los datos iniciales."""
@@ -93,11 +91,11 @@ class DashboardView(QWidget):
         try:
             trades_data = await self.api_client.get_trades(trading_mode="both")
             trades = [Trade.model_validate(t) for t in trades_data]
-            self._on_performance_loaded(trades)
+            await self._on_performance_loaded(trades)
         except Exception as e:
-            self._on_load_error("desempeño de estrategias")(e)
+            await self._on_load_error("desempeño de estrategias")(e)
 
-    def _check_initialization_complete(self):
+    async def _check_initialization_complete(self):
         """Verifica si todas las tareas de inicialización han finalizado."""
         self._pending_tasks -= 1
         if self._pending_tasks <= 0 and not self._is_initialized:
@@ -107,19 +105,19 @@ class DashboardView(QWidget):
             
             # Iniciar actualizaciones de widgets clave después de la inicialización
             self.portfolio_widget.start_updates()
-            self.chart_widget.start_updates()
+            await self.chart_widget.start_updates()
             self.notification_widget.start_updates()
 
-    def _on_performance_loaded(self, trades: List[Trade]):
+    async def _on_performance_loaded(self, trades: List[Trade]):
         """Maneja la carga exitosa de datos de desempeño."""
         logger.info(f"DashboardView: {len(trades)} trades cargados para el análisis de desempeño.")
-        self._check_initialization_complete()
+        await self._check_initialization_complete()
 
-    def _on_load_error(self, component_name: str) -> Callable[[Exception], None]:
+    def _on_load_error(self, component_name: str) -> Callable[[Exception], Coroutine[Any, Any, None]]:
         """Crea un manejador de errores para un componente específico."""
-        def handler(error: Exception):
+        async def handler(error: Exception):
             logger.error(f"DashboardView: Error al cargar {component_name}: {error}", exc_info=True)
-            self._check_initialization_complete()
+            await self._check_initialization_complete()
         return handler
 
     def cleanup(self):

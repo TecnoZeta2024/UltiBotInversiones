@@ -35,10 +35,11 @@ class OpportunitiesView(QWidget):
         # No llamar a _load_initial_data aquí, se llamará después de set_user_id
 
     def set_user_id(self, user_id: UUID):
-        """Establece el user_id y activa la carga inicial de datos."""
+        """Establece el user_id y actualiza los widgets dependientes."""
         self.user_id = user_id
-        logger.info(f"OpportunitiesView: User ID set to {user_id}. Loading initial data.")
-        self._load_initial_data()
+        logger.info(f"OpportunitiesView: User ID set to {user_id}.")
+        # La carga inicial de datos ahora se maneja en initialize_view_data,
+        # que es llamado por MainWindow.
 
     def _setup_ui(self):
         main_layout = QVBoxLayout(self)
@@ -69,7 +70,7 @@ class OpportunitiesView(QWidget):
         controls_layout.addStretch()
         self.refresh_button = QPushButton("Refresh Opportunities")
         self.refresh_button.setObjectName("refreshButton")
-        self.refresh_button.clicked.connect(self._fetch_opportunities)
+        self.refresh_button.clicked.connect(lambda: self.main_event_loop.create_task(self._fetch_opportunities_async()))
         controls_layout.addWidget(self.refresh_button)
 
         self.last_updated_label = QLabel("Last updated: --")
@@ -103,12 +104,13 @@ class OpportunitiesView(QWidget):
 
         self._auto_refresh_timer = QTimer(self)
         self._auto_refresh_timer.setInterval(30_000)
-        self._auto_refresh_timer.timeout.connect(self._fetch_opportunities)
+        self._auto_refresh_timer.timeout.connect(lambda: self.main_event_loop.create_task(self._fetch_opportunities_async()))
         self._auto_refresh_timer.start()
 
-    def _load_initial_data(self):
-        logger.info("OpportunitiesView: _load_initial_data called.")
-        QTimer.singleShot(100, self._fetch_opportunities)
+    async def initialize_view_data(self):
+        """Inicia la carga de datos asíncrona para la vista de oportunidades."""
+        logger.info("OpportunitiesView: initialize_view_data called.")
+        await self._fetch_opportunities_async()
 
     def _apply_shadow_effect(self, widget: QWidget, color_hex: str = "#000000", blur_radius: int = 10, x_offset: int = 0, y_offset: int = 1):
         shadow = QGraphicsDropShadowEffect(self)
@@ -117,12 +119,14 @@ class OpportunitiesView(QWidget):
         shadow.setOffset(x_offset, y_offset)
         widget.setGraphicsEffect(shadow)
 
-    def _fetch_opportunities(self):
-        logger.info("Fetching Gemini IA opportunities.")
-        self.status_label.setText("Loading opportunities...")
-        self.refresh_button.setEnabled(False)
-        self.opportunities_table.setRowCount(0)
-        self.main_event_loop.call_soon_threadsafe(self._fetch_opportunities_async)
+    # Este método ya no es necesario ya que las llamadas se hacen directamente a _fetch_opportunities_async
+    # desde los conectores de los botones y el timer.
+    # def _fetch_opportunities(self):
+    #     logger.info("Fetching Gemini IA opportunities.")
+    #     self.status_label.setText("Loading opportunities...")
+    #     self.refresh_button.setEnabled(False)
+    #     self.opportunities_table.setRowCount(0)
+    #     self.main_event_loop.create_task(self._fetch_opportunities_async())
 
     async def _fetch_opportunities_async(self):
         try:
@@ -239,7 +243,7 @@ class OpportunitiesView(QWidget):
             sender_button.setEnabled(False)
             sender_button.setText("Analizando...")
 
-        self.main_event_loop.call_soon_threadsafe(self._analyze_opportunity_async, opportunity)
+        self.main_event_loop.create_task(self._analyze_opportunity_async(opportunity))
 
     async def _analyze_opportunity_async(self, opportunity: Opportunity):
         # TODO: [LEADCODER-REFACTOR] La funcionalidad de análisis de IA está deshabilitada temporalmente.
@@ -280,7 +284,7 @@ class OpportunitiesView(QWidget):
 
         # TODO: Determinar el modo de trading (papel/real) desde la configuración global de la UI
         trading_mode = "paper" # Por ahora, se usa 'paper' por defecto
-        self.main_event_loop.call_soon_threadsafe(self._execute_trade_async, opportunity, trading_mode)
+        self.main_event_loop.create_task(self._execute_trade_async(opportunity, trading_mode))
 
     async def _execute_trade_async(self, opportunity: Opportunity, trading_mode: str):
         # TODO: [LEADCODER-REFACTOR] La funcionalidad de confirmación de trades está deshabilitada temporalmente.
@@ -314,12 +318,12 @@ class OpportunitiesView(QWidget):
         logger.info(f"Trade execution successful: {result}")
         trade_id = result.get("id", "N/A")
         QMessageBox.information(self, "Trade Executed", f"Trade executed successfully.\nTrade ID: {trade_id}")
-        self._fetch_opportunities()
+        self.main_event_loop.create_task(self._fetch_opportunities_async())
 
     def _handle_execute_trade_error(self, error_message: str):
         logger.error(f"Error during trade execution: {error_message}")
         QMessageBox.critical(self, "Trade Execution Error", f"Could not execute trade.\nDetails: {error_message}")
-        self._fetch_opportunities()
+        self.main_event_loop.create_task(self._fetch_opportunities_async())
 
     def _handle_ai_analysis_result(self, result: dict):
         """Este método ahora es un manejador de éxito genérico que abre el diálogo."""
@@ -329,14 +333,14 @@ class OpportunitiesView(QWidget):
             # Esta ruta es ahora manejada directamente en la función de éxito de _analyze_opportunity_with_ai
             logger.info(f"AI analysis completed for opportunity: {analysis_model.analysis_id}")
             QMessageBox.information(self, "Análisis de IA Completado", "El análisis de IA se ha completado con éxito. La tabla se refrescará.")
-            self._fetch_opportunities()
+            self.main_event_loop.create_task(self._fetch_opportunities_async())
         except Exception as e:
             self._handle_ai_analysis_error(f"Error al procesar el resultado del análisis: {e}")
 
     def _handle_ai_analysis_error(self, error_message: str):
         logger.error(f"Error during AI analysis: {error_message}")
         QMessageBox.warning(self, "AI Analysis Error", f"Could not complete AI analysis.\nDetails: {error_message}")
-        self._fetch_opportunities() # Refresh the table to re-enable buttons
+        self.main_event_loop.create_task(self._fetch_opportunities_async()) # Refresh the table to re-enable buttons
 
     def _handle_opportunities_error(self, error_message: str):
         logger.error(f"Error fetching opportunities: {error_message}")

@@ -374,9 +374,9 @@ class Opportunity(BaseModel):
     
     def get_effective_confidence(self) -> Optional[float]:
         """Get effective confidence from AI analysis or source."""
-        if self.ai_analysis and self.ai_analysis.calculated_confidence is not None:
+        if self.ai_analysis is not None and self.ai_analysis.calculated_confidence is not None:
             return self.ai_analysis.calculated_confidence
-        elif self.initial_signal and self.initial_signal.confidence_source is not None:
+        elif self.initial_signal is not None and self.initial_signal.confidence_source is not None:
             return self.initial_signal.confidence_source
         return None
     
@@ -406,3 +406,14 @@ class Opportunity(BaseModel):
         )
         
         self.investigation_details.investigation_notes.append(investigation_note)
+
+class AIAnalysisRequest(BaseModel):
+    """Request model for AI analysis."""
+    opportunities: List[Opportunity] = Field(..., description="List of opportunities for AI analysis")
+    # Puedes añadir otros campos si el request de IA necesita más contexto, como user_id, etc.
+
+class AIAnalysisResponse(BaseModel):
+    """Response model for AI analysis."""
+    opportunities: List[Opportunity] = Field(..., description="List of opportunities after AI analysis")
+    message: Optional[str] = Field(None, description="Optional message about the analysis result")
+    # Puedes añadir otros campos como un ID de transacción, estado de procesamiento, etc.

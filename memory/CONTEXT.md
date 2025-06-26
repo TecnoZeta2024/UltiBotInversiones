@@ -1,23 +1,20 @@
 # CONTEXTO ACTIVO DEL SISTEMA
-- **Última Actualización:** 2025-06-26 00:26 UTC
-- **Agente Responsable:** ui-ux-maestro
+- **Última Actualización:** 2025-06-26 10:51 UTC
+- **Agente Responsable:** Tejedor
 - **Estado del Despliegue Backend:** local (uvicorn)
-- **Última Migración de BD:** N/A
-- **Rama Git Activa:** N/A
-- **Observación Crítica:** Se ha completado una refactorización masiva de la capa de la interfaz de usuario (`ultibot_ui`) para corregir un fallo sistémico en la inyección de dependencias. El `main_event_loop` de `qasync` ahora se pasa explícitamente a todos los widgets y vistas desde `MainWindow`, restaurando la capacidad de realizar operaciones asíncronas. La arquitectura de la UI es ahora consistente y robusta, eliminando la dependencia de acceder a la instancia global de `QApplication` para obtener el bucle de eventos.
+- **Observación Crítica:** Se ha completado una refactorización masiva de la arquitectura de comunicación entre el frontend (`ultibot_ui`) y el backend. El cambio fundamental resuelve problemas sistémicos de asincronía y simplifica drásticamente la mantenibilidad del código.
 
-## Resumen de la Refactorización de la UI (TASK-UI-AUDIT-001)
+## Resumen de la Refactorización de Comunicación (TASK-UI-REFACTOR-001 & 002)
 ### Problema Resuelto:
-- **Fallo de Operaciones Asíncronas:** Los componentes de la UI no podían ejecutar tareas en segundo plano (como refrescar datos) porque no tenían una referencia al bucle de eventos de `asyncio` (`main_event_loop`).
+- **Complejidad y Fragilidad:** El antiguo patrón `ApiWorker` actuaba como un intermediario opaco para las llamadas a la API, dificultando la depuración y el manejo de estados asíncronos.
+- **Fallo de Operaciones Asíncronas:** La incorrecta gestión del bucle de eventos de asyncio impedía que los componentes de la UI realizaran tareas en segundo plano de forma fiable.
 
-### Archivos Modificados:
-- `src/ultibot_ui/widgets/paper_trading_report_widget.py`
-- `src/ultibot_ui/views/orders_view.py`
-- `src/ultibot_ui/windows/settings_view.py`
-- `src/ultibot_ui/views/trading_terminal_view.py`
-- `src/ultibot_ui/windows/main_window.py` (verificado y ya correcto)
+### La Nueva Arquitectura:
+1.  **Eliminación del Anti-Patrón `ApiWorker`:** La clase `ApiWorker` ha sido completamente eliminada de la base de código de la UI.
+2.  **Comunicación Directa y Asíncrona:** Todas las llamadas a la API desde la UI ahora se realizan directamente utilizando el singleton `UltiBotAPIClient`. Las corutinas de este cliente se ejecutan como tareas independientes y seguras a través de `asyncio.create_task(api_client.method(...))`.
+3.  **Inyección de Dependencias Corregida:** El `main_event_loop` de `qasync` ahora se pasa explícitamente a todos los widgets y vistas desde `MainWindow`, garantizando que todos los componentes tengan acceso al bucle de eventos correcto para sus operaciones asíncronas.
 
 ### Estado Actual:
-- La cadena de dependencias para el `main_event_loop` está completa y es explícita.
-- Se espera que la funcionalidad de la UI que depende de operaciones asíncronas (feeds de precios, carga de datos, etc.) esté ahora operativa.
-- El siguiente paso es una validación funcional completa de la aplicación.
+- La arquitectura de comunicación es ahora más simple, directa y robusta.
+- Se alinea con las mejores prácticas de programación asíncrona en Python y PyQt.
+- El siguiente paso es una validación funcional completa para asegurar que todos los componentes de la UI operan correctamente bajo el nuevo modelo.

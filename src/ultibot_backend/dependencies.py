@@ -41,14 +41,21 @@ async def initialize_database():
     global _db_engine, _session_factory
     
     if _db_engine is None:
-        database_url = "sqlite+aiosqlite:///ultibot_local.db"
-        logger.warning(f"Using local SQLite database: {database_url}. This is for development.")
+        # Usar la URL de la base de datos de las variables de entorno
+        database_url = os.environ.get("DATABASE_URL")
+        if not database_url:
+            # Fallback a SQLite si no se proporciona DATABASE_URL (ej. para pruebas locales sin Docker)
+            database_url = "sqlite+aiosqlite:///ultibot_local.db"
+            logger.warning(f"DATABASE_URL no encontrada en el entorno. Usando SQLite local: {database_url}")
+        else:
+            logger.info(f"Usando DATABASE_URL del entorno: {database_url}")
 
         try:
             logger.info(f"Initializing database with URL: {database_url}")
             _db_engine = create_async_engine(
                 database_url,
-                echo=False
+                echo=False,
+                poolclass=NullPool if "sqlite" in database_url else None # Usar NullPool para SQLite
             )
             
             async with _db_engine.begin() as conn:

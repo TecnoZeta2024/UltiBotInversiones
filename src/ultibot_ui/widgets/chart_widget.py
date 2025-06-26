@@ -73,17 +73,18 @@ class ChartWidget(QtWidgets.QWidget):
         self.setStyleSheet("background-color: #1e1e1e; color: #cccccc;")
 
         self.current_symbol = self.symbol_combo.currentText()
-        self.load_chart_data()
+        # Iniciar la carga de datos del gráfico como una tarea asíncrona
+        self.main_event_loop.create_task(self.load_chart_data())
 
     def _on_symbol_changed(self, index: int):
         self.current_symbol = self.symbol_combo.currentText()
         self.symbol_selected.emit(self.current_symbol)
-        self.load_chart_data()
+        self.main_event_loop.create_task(self.load_chart_data())
 
     def _on_interval_changed(self, index: int):
         self.current_interval = self.interval_combo.currentText()
         self.interval_selected.emit(self.current_interval)
-        self.load_chart_data()
+        self.main_event_loop.create_task(self.load_chart_data())
 
     def set_candlestick_data(self, data: List[Kline]):
         self.candlestick_data = data
@@ -95,13 +96,11 @@ class ChartWidget(QtWidgets.QWidget):
         if isinstance(self.chart_area, QtWidgets.QLabel):
             self.chart_area.setText(f"Error API: {message}")
 
-    def load_chart_data(self):
+    async def load_chart_data(self):
         if self.current_symbol and self.current_interval:
             self.chart_area.setText(f"Cargando datos para {self.current_symbol} ({self.current_interval})...")
             logger.info(f"Solicitando datos para {self.current_symbol} - {self.current_interval}")
-            self.main_event_loop.call_soon_threadsafe(
-                lambda: asyncio.ensure_future(self._load_chart_data_async())
-            )
+            await self._load_chart_data_async()
 
     async def _load_chart_data_async(self):
         if not self.current_symbol or not self.current_interval:
@@ -225,9 +224,9 @@ class ChartWidget(QtWidgets.QWidget):
             logger.critical(f"Error al renderizar el gráfico: {e}", exc_info=True)
 
 
-    def start_updates(self):
+    async def start_updates(self):
         """Inicia la carga inicial de datos del gráfico."""
-        self.load_chart_data()
+        await self.load_chart_data()
         # No hay un temporizador de actualización continua para el gráfico,
         # ya que se actualiza al cambiar símbolo/intervalo o al ser solicitado.
 

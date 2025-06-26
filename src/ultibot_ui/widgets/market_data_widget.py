@@ -101,7 +101,8 @@ class MarketDataWidget(QWidget):
         self.tickers_data_fetched.connect(self._handle_tickers_data_result)
         self.config_saved.connect(self._handle_config_saved_result)
         self.market_data_api_error.connect(self._handle_market_data_api_error)
-        self.load_initial_configuration()
+        # La inicialización ahora es controlada por el componente padre (ej. MainWindow)
+        # self.load_initial_configuration()
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
@@ -152,11 +153,16 @@ class MarketDataWidget(QWidget):
         logger.info(f"Configuración cargada: Pares seleccionados: {self.selected_pairs}, Intervalo de actualización: {update_interval_ms}ms")
         self.update_tickers_data()
 
-    def load_initial_configuration(self):
-        logger.info("Cargando configuración inicial para MarketDataWidget...")
-        self.main_event_loop.call_soon_threadsafe(
-            lambda: asyncio.ensure_future(self._load_initial_configuration_async())
-        )
+    async def initialize_widget_data(self):
+        """
+        Inicia la carga de datos iniciales para este widget de forma asíncrona.
+        Este método debe ser awaitable por el componente padre después de la inicialización.
+        """
+        logger.info("Iniciando la carga de datos asíncrona para MarketDataWidget...")
+        if self.main_event_loop and self.main_event_loop.is_running():
+            await self._load_initial_configuration_async()
+        else:
+            logger.error("No se puede iniciar la carga de datos: el bucle de eventos no está disponible o no está en ejecución.")
 
     async def _load_initial_configuration_async(self):
         try:
@@ -200,9 +206,7 @@ class MarketDataWidget(QWidget):
     def update_tickers_data(self):
         if not self.selected_pairs:
             return
-        self.main_event_loop.call_soon_threadsafe(
-            lambda: asyncio.ensure_future(self._update_tickers_data_async())
-        )
+        self.main_event_loop.create_task(self._update_tickers_data_async())
 
     async def _update_tickers_data_async(self):
         try:
@@ -224,9 +228,7 @@ class MarketDataWidget(QWidget):
         logger.info("Configuración de MarketDataWidget guardada exitosamente.")
 
     def save_widget_configuration(self):
-        self.main_event_loop.call_soon_threadsafe(
-            lambda: asyncio.ensure_future(self._save_widget_configuration_async())
-        )
+        self.main_event_loop.create_task(self._save_widget_configuration_async())
 
     async def _save_widget_configuration_async(self):
         try:
@@ -308,9 +310,9 @@ if __name__ == '__main__':
         # Pasar None para main_window en el contexto de prueba
         widget = MarketDataWidget(user_id=test_user_id, api_client=mock_api_client, main_window=None, main_event_loop=loop)
         
-        widget.load_initial_configuration()
+        await widget.initialize_widget_data() # Ahora es awaitable
         widget.show()
-        pass
+        # No es necesario 'pass' aquí
 
     if __name__ == "__main__":
         try:

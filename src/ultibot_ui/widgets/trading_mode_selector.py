@@ -4,12 +4,12 @@ Provides a visual control to switch between paper and real trading modes.
 """
 import logging
 from typing import Optional
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QComboBox, 
     QFrame, QButtonGroup, QRadioButton, QToolTip
 )
-from PyQt5.QtCore import Qt, pyqtSignal, QTimer
-from PyQt5.QtGui import QFont, QPalette, QColor
+from PySide6.QtCore import Qt, Signal, QTimer
+from PySide6.QtGui import QFont, QPalette, QColor
 
 from ultibot_ui.services.trading_mode_state import (
     get_trading_mode_manager, TradingModeStateManager, TradingModeEnum, TradingMode
@@ -25,7 +25,7 @@ class TradingModeSelector(QWidget):
     """
     
     # Signal emitted when user changes trading mode
-    mode_changed = pyqtSignal(str)
+    mode_changed = Signal(str)
     
     def __init__(self, style: str = "toggle", parent: Optional[QWidget] = None):
         """
@@ -36,7 +36,7 @@ class TradingModeSelector(QWidget):
             parent: Parent widget
         """
         super().__init__(parent)
-        self.style = style
+        self._widget_style = style # Cambiado de self.style a self._widget_style
         self.state_manager: TradingModeStateManager = get_trading_mode_manager()
         
         # UI components
@@ -52,7 +52,7 @@ class TradingModeSelector(QWidget):
         self.connect_signals()
         self.update_display()
         
-        logger.info(f"TradingModeSelector initialized with style: {style}")
+        logger.info(f"TradingModeSelector initialized with style: {self._widget_style}") # Usar _widget_style
     
     def init_ui(self):
         """Initialize the user interface based on the selected style."""
@@ -62,7 +62,7 @@ class TradingModeSelector(QWidget):
         
         # Main container frame
         container = QFrame()
-        container.setFrameStyle(QFrame.StyledPanel)
+        container.setFrameStyle(QFrame.Shape.StyledPanel) # Cambiado a QFrame.Shape.StyledPanel
         container.setStyleSheet("""
             QFrame {
                 border: 1px solid #444;
@@ -87,14 +87,14 @@ class TradingModeSelector(QWidget):
         container_layout.addWidget(self.status_indicator)
         
         # Style-specific widgets
-        if self.style == "toggle":
+        if self._widget_style == "toggle": # Usar _widget_style
             self._init_toggle_style(container_layout)
-        elif self.style == "dropdown":
+        elif self._widget_style == "dropdown": # Usar _widget_style
             self._init_dropdown_style(container_layout)
-        elif self.style == "radio":
+        elif self._widget_style == "radio": # Usar _widget_style
             self._init_radio_style(container_layout)
         else:
-            logger.warning(f"Unknown style: {self.style}, defaulting to toggle")
+            logger.warning(f"Unknown style: {self._widget_style}, defaulting to toggle") # Usar _widget_style
             self._init_toggle_style(container_layout)
         
         layout.addWidget(container)
@@ -268,7 +268,7 @@ class TradingModeSelector(QWidget):
             self.status_indicator.setToolTip(f"Current mode: {mode_info['display_name']}")
         
         # Update style-specific displays
-        if self.style == "toggle" and self.toggle_button:
+        if self._widget_style == "toggle" and self.toggle_button: # Usar _widget_style
             self.toggle_button.setText(f"{mode_info['icon']} {mode_info['display_name']}")
             self.toggle_button.setStyleSheet(f"""
                 QPushButton {{
@@ -289,14 +289,14 @@ class TradingModeSelector(QWidget):
                 }}
             """)
         
-        elif self.style == "dropdown" and self.mode_combo:
+        elif self._widget_style == "dropdown" and self.mode_combo: # Usar _widget_style
             # Find and select the correct index
             for i in range(self.mode_combo.count()):
                 if self.mode_combo.itemData(i) == current_mode:
                     self.mode_combo.setCurrentIndex(i)
                     break
         
-        elif self.style == "radio":
+        elif self._widget_style == "radio": # Usar _widget_style
             if current_mode == "paper" and self.paper_radio:
                 self.paper_radio.setChecked(True)
             elif current_mode == "real" and self.real_radio:
@@ -309,20 +309,20 @@ class TradingModeSelector(QWidget):
         Args:
             modes: List of enabled modes ('paper' and/or 'real')
         """
-        if self.style == "dropdown" and self.mode_combo:
+        if self._widget_style == "dropdown" and self.mode_combo: # Usar _widget_style
             # Update combo box items
             self.mode_combo.clear()
             for mode_enum in TradingModeEnum:
                 if mode_enum.value in modes:
                     self.mode_combo.addItem(f"{mode_enum.icon} {mode_enum.display_name}", mode_enum.value)
         
-        elif self.style == "radio":
+        elif self._widget_style == "radio": # Usar _widget_style
             if self.paper_radio:
                 self.paper_radio.setEnabled("paper" in modes)
             if self.real_radio:
                 self.real_radio.setEnabled("real" in modes)
         
-        elif self.style == "toggle" and self.toggle_button:
+        elif self._widget_style == "toggle" and self.toggle_button: # Usar _widget_style
             # For toggle, if only one mode is enabled, disable the toggle
             self.toggle_button.setEnabled(len(modes) > 1)
         
@@ -383,4 +383,3 @@ class TradingModeStatusBar(QWidget):
                 background-color: {mode_info['color']};
             }}
         """)
-

@@ -25,7 +25,7 @@ os.makedirs(LOGS_DIR, exist_ok=True)
 LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
-    "formatters": {"default": {"format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"}},
+    "formatters": {"default": {"format": "%(asctime)s - %(name)s - %(levelname)s - [%(threadName)s] - %(module)s.py:%(lineno)d - %(message)s"}},
     "handlers": {
         "console": {"class": "logging.StreamHandler", "formatter": "default", "stream": "ext://sys.stdout"},
         "file": {
@@ -41,11 +41,12 @@ LOGGING_CONFIG = {
         "httpx": {"handlers": ["console", "file"], "level": "INFO"},
         "src.ultibot_ui": {"handlers": ["console", "file"], "level": "DEBUG", "propagate": False},
         "ultibot_backend": {"handlers": ["console", "file"], "level": "DEBUG", "propagate": False},
-        "qasync": {"handlers": ["console", "file"], "level": "DEBUG", "propagate": False},
+        "qasync": {"handlers": ["console", "file"], "level": "INFO", "propagate": False},
     },
     "root": {"level": "DEBUG", "handlers": ["console", "file"]},
 }
 
+# Aplicar la configuración de logging inmediatamente
 dictConfig(LOGGING_CONFIG)
 logger = logging.getLogger(__name__)
 
@@ -66,7 +67,7 @@ class UltiBotApplication(QtWidgets.QApplication):
         """Carga la hoja de estilos QSS."""
         stylesheet_path = os.path.join(os.path.dirname(__file__), "assets", "style.qss")
         try:
-            with open(stylesheet_path, "r") as f:
+            with open(stylesheet_path, "r", encoding="utf-8") as f:
                 self.setStyleSheet(f.read())
             logger.info("Stylesheet loaded successfully.")
         except FileNotFoundError:
@@ -74,115 +75,137 @@ class UltiBotApplication(QtWidgets.QApplication):
 
     async def initialize_async(self):
         """
-        Realiza la inicialización asíncrona de la aplicación de forma controlada y secuencial.
+        Realiza la inicialización asíncrona de la aplicación.
+        Este método se ejecuta como una tarea dentro del bucle de eventos de qasync.
         """
-        logger.info("Starting asynchronous initialization...")
-
-        # 1. Configurar el bucle de eventos asíncrono con qasync
-        self.main_event_loop = qasync.QEventLoop(self)
-        asyncio.set_event_loop(self.main_event_loop)
-        logger.info("QEventLoop initialized and set.")
-
-        # 2. Cargar la hoja de estilos
-        self.load_stylesheet()
-
-        # 3. Inicializar el cliente API
-        logger.info("Initializing API client...")
-        self.api_client = UltiBotAPIClient(base_url=app_config.BACKEND_API_URL)
-        await self.api_client.initialize_client()
-        logger.info("API client initialized.")
-
-        # 4. Crear la ventana principal con las dependencias listas
-        logger.info("Creating MainWindow...")
-        self.main_window = MainWindow(api_client=self.api_client, main_event_loop=self.main_event_loop)
-        logger.info("MainWindow created.")
-
-        # 5. Cargar la configuración inicial del usuario
         try:
+            logger.info("Asynchronous initialization started.")
+
+            # 1. Cargar la hoja de estilos
+            self.load_stylesheet()
+
+            # 2. Inicializar el cliente API
+            logger.info("Initializing API client...")
+            self.api_client = UltiBotAPIClient(base_url=app_config.BACKEND_API_URL)
+            await self.api_client.initialize_client()
+            logger.info("API client initialized.")
+
+            # 3. Crear la ventana principal con las dependencias listas
+            logger.info("Creating MainWindow...")
+            if not self.main_event_loop:
+                raise RuntimeError("Main event loop not available for MainWindow.")
+            self.main_window = MainWindow(api_client=self.api_client, main_event_loop=self.main_event_loop)
+            logger.info("MainWindow created.")
+
+            # 4. Cargar la configuración inicial del usuario
             logger.info("Fetching initial user configuration...")
             await self.main_window.fetch_initial_user_configuration_async()
             logger.info("Initial user configuration fetched and applied successfully.")
+            
+            # 5. Mostrar la ventana principal
+            logger.info("Initialization complete. Showing MainWindow.")
+            self.main_window.show()
+            
+            # 6. Llamar a la inicialización post-show de forma segura
+            await self.main_window.post_show_initialization()
+
         except APIError as e:
             logger.critical(f"Failed to fetch initial configuration: {e}. Application may not function correctly.")
             if self.main_window:
                 self.main_window.show_error_message(f"Error al cargar configuración inicial: {e}")
+            else:
+                # Si la ventana principal no se pudo crear, salimos
+                self.exit(1)
         except Exception as e:
-            logger.critical(f"An unexpected error occurred during configuration fetch: {e}", exc_info=True)
+            logger.critical(f"An unexpected error occurred during initialization: {e}", exc_info=True)
             if self.main_window:
                 self.main_window.show_error_message(f"Error inesperado: {e}")
+            else:
+                self.exit(1)
+
+    async def cleanup_async(self):
+        """
+        Realiza una limpieza asíncrona de todos los recursos pendientes.
+        """
+        logger.info("Async cleanup process started...")
         
-        # 6. Mostrar la ventana principal solo después de que todo esté listo
-        if self.main_window:
-            logger.info("Initialization complete. Showing MainWindow.")
-            self.main_window.show()
-            # Llamar a la inicialización post-show de forma segura
-            await self.main_window.post_show_initialization()
-        else:
-            logger.critical("MainWindow not created due to an error. Application cannot start.")
-            self.exit(1)
+        # 1. Cancelar todas las tareas pendientes de asyncio
+        if self.main_event_loop:
+            try:
+                # Intentar obtener todas las tareas asociadas a nuestro bucle
+                # Filtrar la tarea actual para evitar cancelarse a sí misma
+                tasks = [t for t in asyncio.all_tasks(loop=self.main_event_loop) if t is not asyncio.current_task()]
+                if tasks:
+                    logger.info(f"Cancelling {len(tasks)} outstanding tasks.")
+                    for task in tasks:
+                        task.cancel()
+                    
+                    # Esperar a que todas las tareas se cancelen
+                    # return_exceptions=True permite que gather no falle si una tarea ya está cancelada o falla
+                    await asyncio.gather(*tasks, return_exceptions=True)
+                    logger.info("All outstanding tasks have been cancelled.")
+            except RuntimeError as e:
+                logger.warning(f"Could not cancel outstanding tasks during cleanup: {e}. Event loop might be closing.")
+            except Exception as e:
+                logger.error(f"Unexpected error during task cancellation: {e}", exc_info=True)
+
+        # 2. Cerrar el cliente API de forma segura
+        if self.api_client:
+            logger.info("Closing API client.")
+            try:
+                await self.api_client.close()
+                logger.info("API client closed.")
+            except Exception as e:
+                logger.error(f"Error closing API client: {e}", exc_info=True)
+            
+        logger.info("Async cleanup finished.")
 
     @QtCore.Slot()
     def cleanup(self):
         """
-        Limpia los recursos de la aplicación de forma segura al cerrar.
-        Este slot es llamado por la señal aboutToQuit.
+        Slot síncrono que inicia el proceso de limpieza asíncrono.
         """
-        logger.info("Cleanup process started...")
-        if self.main_window:
-            self.main_window.cleanup()
+        logger.info("Cleanup process triggered by aboutToQuit signal.")
+        if self.main_event_loop and self.main_event_loop.is_running():
+            # Creamos una tarea para la limpieza, pero no la esperamos aquí
+            # para no bloquear el hilo de la GUI. El bucle de qasync se encargará de ella.
+            asyncio.create_task(self.cleanup_async())
+        else:
+            logger.warning("Could not schedule async cleanup: no running event loop.")
 
-        if self.api_client and self.main_event_loop:
-            logger.info("Scheduling API client cleanup task.")
-            # Ejecutar la limpieza del cliente en el bucle de eventos
-            future = asyncio.run_coroutine_threadsafe(self.api_client.close(), self.main_event_loop)
-            try:
-                # Esperar a que la limpieza finalice
-                future.result(timeout=5)
-                logger.info("API client cleanup finished.")
-            except Exception as e:
-                logger.error(f"Error during API client cleanup: {e}")
-        
-        logger.info("Application cleanup finished.")
-
-    def run(self):
-        """Inicia el bucle de eventos de la aplicación."""
-        if not self.main_event_loop:
-            logger.critical("Event loop not initialized. Cannot run the application.")
-            return 1  # Devuelve un código de error
-        
-        exit_code = 0
-        logger.info("Starting application event loop.")
-        try:
-            # El bucle de eventos ya está configurado, solo necesitamos ejecutarlo.
-            self.exec()
-        except KeyboardInterrupt:
-            logger.info("Application interrupted by user.")
-        except Exception as e:
-            logger.critical(f"Unhandled exception during app execution: {e}", exc_info=True)
-            exit_code = 1
-        finally:
-            logger.info("Application event loop has stopped.")
-        return exit_code
-
-
-def main():
-    """Punto de entrada principal para la aplicación de UI."""
-    # QApplication debe ser instanciado primero
-    app = UltiBotApplication(sys.argv)
-    
-    # El bucle de eventos se configura dentro de initialize_async
-    # y se ejecuta con app.run()
+async def main(app: UltiBotApplication):
+    """Punto de entrada principal y asíncrono para la aplicación de UI."""
+    # Asignar el bucle de eventos actual a la aplicación para que los componentes internos puedan usarlo.
     try:
-        # Usamos asyncio.run para manejar el ciclo de vida de la corutina de inicialización
-        asyncio.run(app.initialize_async())
+        # Usamos `cast` para asegurar al type checker que el bucle en ejecución es del tipo esperado.
+        app.main_event_loop = cast(qasync.QEventLoop, asyncio.get_running_loop())
+    except RuntimeError:
+        logger.critical("No running event loop found.")
+        app.exit(1)
+        return
+
+    try:
+        # La inicialización asíncrona ahora se espera directamente.
+        # Esto asegura que cualquier excepción aquí sea capturada.
+        await app.initialize_async()
         
-        # Iniciar la ejecución de la aplicación
-        exit_code = app.run()
-        sys.exit(exit_code)
+        # Si la inicialización es exitosa, la ventana se habrá mostrado.
+        # El bucle de eventos de la aplicación ya está en marcha por qasync.
+        logger.info("Application initialized successfully and is running.")
 
     except Exception as e:
         logger.critical(f"Fatal error during application startup: {e}", exc_info=True)
-        sys.exit(1)
+        # Aquí se podría mostrar un diálogo de error nativo si Qt ya está cargado.
+        app.exit(1)
 
 if __name__ == "__main__":
-    main()
+    # Se crea la instancia de la aplicación UNA SOLA VEZ, antes de que qasync tome el control.
+    app = UltiBotApplication(sys.argv)
+    try:
+        # qasync.run envuelve la ejecución de la aplicación y el bucle de eventos.
+        # Le pasamos la instancia de la app a nuestra corrutina main.
+        qasync.run(main(app))
+    except Exception as e:
+        # Captura final para errores que podrían ocurrir fuera del bucle principal.
+        logger.critical(f"A critical error forced the application to close: {e}", exc_info=True)
+        sys.exit(1)

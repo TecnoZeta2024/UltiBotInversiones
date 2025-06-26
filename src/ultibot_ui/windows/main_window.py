@@ -44,7 +44,7 @@ class MainWindow(QtWidgets.QMainWindow, BaseMainWindow):
         self.main_event_loop = main_event_loop # Guardar la referencia al bucle de eventos
         self.api_base_url = self.api_client.base_url # Usar la base_url del cliente inyectado
         
-        self.active_threads: List[QtCore.QThread] = []
+        # self.active_threads: List[QtCore.QThread] = [] # Ya no se gestionan hilos QThread directamente
 
         self.setWindowTitle("UltiBotInversiones")
         self.setGeometry(100, 100, 1280, 720) # Geometría por defecto
@@ -87,12 +87,27 @@ class MainWindow(QtWidgets.QMainWindow, BaseMainWindow):
             # La carga de configuración ahora es responsabilidad del flujo de arranque principal.
             # Si es necesario, se puede añadir un reintento aquí, pero idealmente no debería ocurrir.
 
-        # Inicializar datos de las vistas que lo necesiten.
+        # Inicializar datos de las vistas que lo necesiten, de forma secuencial y controlada.
         # Estas llamadas ahora pueden asumir que `user_id` y `api_client` están disponibles.
-        self.strategies_view.initialize_view_data()
-        self.terminal_view.initialize_view_data()
-        self.dashboard_view.initialize_async_components()
-        # Otras vistas que necesiten inicialización tardía...
+        logger.info("Initializing data for all views sequentially...")
+        # Inicializar datos de las vistas que lo necesiten, de forma secuencial y controlada.
+        # Estas llamadas ahora pueden asumir que `user_id` y `api_client` están disponibles.
+        # Se asume que estos métodos inician tareas asíncronas y son awaitable, o que manejan su propia concurrencia.
+        # Si un método no es awaitable, se debe envolver en asyncio.create_task y luego await.
+        # Para simplificar, se asume que initialize_widget_data y initialize_view_data son corutinas.
+        
+        # Nota: Si initialize_widget_data o initialize_view_data no son corutinas,
+        # se debería cambiar su implementación para que lo sean, o envolverlas así:
+        # await asyncio.create_task(self.market_data_widget.initialize_widget_data())
+        
+        # Ejecución secuencial para evitar condiciones de carrera iniciales
+        await self.market_data_widget.initialize_widget_data()
+        await self.portfolio_view.initialize_widget_data()
+        await self.strategies_view.initialize_view_data()
+        await self.terminal_view.initialize_view_data()
+        await self.dashboard_view.initialize_async_components()
+        # Las vistas como OrdersView, HistoryView, etc., cargan datos al hacerse visibles,
+        # lo cual es un patrón aceptable y no necesita orquestación aquí.
 
         logger.info("MainWindow: Post-show initialization finished.")
 
@@ -104,7 +119,7 @@ class MainWindow(QtWidgets.QMainWindow, BaseMainWindow):
 
         # Actualizar las vistas con el user_id una vez que esté disponible
         self.dashboard_view.set_user_id(user_id)
-        self.market_data_widget.load_initial_configuration() # Cargar configuración inicial de MarketDataWidget
+        # self.market_data_widget.load_initial_configuration() # Esto ahora se llama desde post_show_initialization
         self.opportunities_view.set_user_id(user_id)
         self.portfolio_view.set_user_id(user_id)
         self.history_view.set_user_id(user_id)
@@ -117,16 +132,6 @@ class MainWindow(QtWidgets.QMainWindow, BaseMainWindow):
     def show_error_message(self, message: str):
         """Muestra un diálogo de error al usuario."""
         self._show_error_message(message) # Reutilizar el método privado existente
-
-    def add_thread(self, thread: QtCore.QThread):
-        """Añade un hilo a la lista de hilos activos para su seguimiento."""
-        self.active_threads.append(thread)
-        thread.finished.connect(lambda: self.remove_thread(thread))
-
-    def remove_thread(self, thread: QtCore.QThread):
-        """Elimina un hilo de la lista de hilos activos."""
-        if thread in self.active_threads:
-            self.active_threads.remove(thread)
 
     def _create_menu_bar(self) -> QtWidgets.QMenuBar:
         """Crea y devuelve la barra de menú principal."""
@@ -229,6 +234,7 @@ class MainWindow(QtWidgets.QMainWindow, BaseMainWindow):
         self.strategies_view = StrategiesView(
             api_client=self.api_client,
             main_event_loop=main_event_loop, # Inyectar el bucle de eventos
+            main_window=self, # Pasar la referencia a main_window
             parent=self
         )
         self.stacked_widget.addWidget(self.strategies_view)
@@ -310,24 +316,6 @@ class MainWindow(QtWidgets.QMainWindow, BaseMainWindow):
             # No relanzar la excepción para permitir que la UI se inicie en un estado de error
             return None
 
-    @QtCore.Slot(object)
-    def _on_initial_config_ready(self, config_dict: dict):
-        """Maneja la configuración inicial del usuario una vez que está lista."""
-        try:
-            user_config = UserConfiguration.model_validate(config_dict)
-            user_id = UUID(user_config.user_id)
-            logger.info(f"Configuration received and validated for user ID: {user_id}. Updating UI.")
-            self.set_user_configuration(user_id, user_config)
-        except Exception as e:
-            logger.critical(f"Error validating initial configuration: {e}", exc_info=True)
-            self.show_error_message(f"Error al validar configuración inicial: {e}")
-
-    @QtCore.Slot(str)
-    def _on_initial_config_error(self, error_message: str):
-        """Maneja errores al obtener la configuración inicial del usuario."""
-        logger.critical(f"Failed to fetch initial configuration: {error_message}. Application may not function correctly.")
-        self.show_error_message(f"Error al cargar configuración inicial: {error_message}")
-
     def _setup_shortcuts(self):
         """Configura los atajos de teclado para la navegación."""
         for view_name, view_info in self.view_map.items():
@@ -354,28 +342,15 @@ class MainWindow(QtWidgets.QMainWindow, BaseMainWindow):
 
     def cleanup(self):
         """Limpia los recursos de la ventana, asegurando el orden correcto de detención."""
-        self._log_debug(f"Cleaning up MainWindow resources. Stopping {len(self.active_threads)} active threads...")
+        self._log_debug("Cleaning up MainWindow resources.")
 
-        for view_widget in [self.dashboard_view, self.opportunities_view, self.strategies_view, self.portfolio_view, self.history_view, self.settings_view, self.terminal_view]:
+        for view_widget in [self.dashboard_view, self.opportunities_view, self.strategies_view, self.portfolio_view, self.history_view, self.settings_view, self.terminal_view, self.market_data_widget, self.orders_view]: # Añadir market_data_widget y orders_view
             if hasattr(view_widget, "cleanup"):
                 try:
                     view_widget.cleanup()
                 except Exception as e:
                     logger.error(f"Error during cleanup of {view_widget.__class__.__name__}: {e}", exc_info=True)
-
-        for thread in self.active_threads[:]: 
-            if thread.isRunning():
-                logger.info(f"MainWindow: Quitting and waiting for thread {thread.objectName() or 'unnamed'}...")
-                thread.quit()
-                if not thread.wait(5000):
-                    logger.warning(f"MainWindow: Thread {thread.objectName() or 'unnamed'} did not terminate gracefully.")
-            try:
-                thread.finished.disconnect()
-            except TypeError:
-                pass
-            thread.deleteLater()
         
-        self.active_threads.clear()
         self._log_debug("MainWindow cleanup finished.")
 
     def closeEvent(self, event):

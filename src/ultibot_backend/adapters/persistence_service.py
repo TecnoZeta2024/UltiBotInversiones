@@ -1,4 +1,4 @@
-import logging # Importar logging
+import logging
 from sqlalchemy.ext.asyncio import AsyncSession, AsyncEngine, async_sessionmaker
 from sqlalchemy.sql import text, select, update, delete
 from sqlalchemy.dialects import postgresql
@@ -10,15 +10,15 @@ from decimal import Decimal
 import json
 from pydantic import BaseModel
 
-logger = logging.getLogger(__name__) # Configurar logger
+logger = logging.getLogger(__name__)
 
 from shared.data_types import MarketData
 from ..core.ports.persistence_service import IPersistenceService
-from ..core.domain_models.trade_models import Trade, PositionStatus, TradeMode # Importar TradeMode
+from ..core.domain_models.trade_models import Trade, PositionStatus, TradeMode
 from ..core.domain_models.user_configuration_models import UserConfiguration, NotificationPreference, RiskProfile, Theme, AIStrategyConfiguration, MCPServerPreference, DashboardLayoutProfile, CloudSyncPreferences, ConfidenceThresholds
 from ..core.domain_models.opportunity_models import OpportunityStatus, Opportunity, InitialSignal, AIAnalysis, SourceType
 from ..core.domain_models.trading_strategy_models import TradingStrategyConfig, BaseStrategyType
-from ..core.domain_models.orm_models import TradeORM, UserConfigurationORM, PortfolioSnapshotORM, OpportunityORM, StrategyConfigORM
+from ..core.domain_models.orm_models import TradeORM, UserConfigurationORM, PortfolioSnapshotORM, OpportunityORM, StrategyConfigORM, MarketDataORM
 import asyncpg
 
 class SupabasePersistenceService(IPersistenceService):
@@ -111,7 +111,7 @@ class SupabasePersistenceService(IPersistenceService):
     async def execute(self, query: LiteralString, params: Optional[Dict[str, Any]] = None) -> None:
         async with self._get_session() as session:
             await session.execute(text(query), params)
-            if self._async_session_factory: # Solo hacer commit si la sesión es gestionada por el servicio
+            if self._async_session_factory:
                 await session.commit()
 
     async def upsert(self, table_name: str, data: Dict[str, Any], on_conflict: List[str]) -> None:
@@ -129,26 +129,48 @@ class SupabasePersistenceService(IPersistenceService):
         """
         async with self._get_session() as session:
             await session.execute(text(query), data)
-            if self._async_session_factory: # Solo hacer commit si la sesión es gestionada por el servicio
+            if self._async_session_factory:
                 await session.commit()
 
     async def upsert_all(self, items: List[BaseModel]) -> None:
         if not items:
             return
 
-        # Asumimos que todos los items son del mismo tipo y para la misma tabla.
-        # Esta es una implementación simplificada. Una real podría necesitar más lógica.
         model_type = type(items[0])
-        table_name = model_type.__name__.lower() + "s" # Asunción simple
-        if model_type == MarketData:
-            table_name = "market_data"
-            on_conflict = ["symbol", "timestamp"]
-        else:
-            # Lógica de fallback o error si el tipo no es esperado
+        
+        MODEL_TO_TABLE_MAP = {
+            MarketData: ("market_data", ["symbol", "timestamp"]),
+            MarketDataORM: ("market_data", ["symbol", "timestamp"]),
+        }
+
+        if model_type not in MODEL_TO_TABLE_MAP:
             logger.error(f"Tipo de modelo no soportado para upsert_all: {model_type}")
             return
 
-        data_list = [item.model_dump(mode='json') for item in items]
+        table_name, on_conflict = MODEL_TO_TABLE_MAP[model_type]
+
+        data_list = []
+        for item in items:
+            if isinstance(item, BaseModel):
+                item_data = item.model_dump(mode='json')
+            elif isinstance(item, MarketDataORM):
+                # Convertir MarketDataORM a un diccionario manualmente
+                item_data = {
+                    "id": str(item.id) if item.id is not None else str(uuid4()), # Asegurar UUID
+                    "symbol": item.symbol,
+                    "timestamp": item.timestamp.isoformat(),
+                    "open": str(item.open),
+                    "high": str(item.high),
+                    "low": str(item.low),
+                    "close": str(item.close),
+                    "volume": str(item.volume),
+                }
+            else:
+                logger.error(f"Tipo de elemento inesperado en upsert_all: {type(item)}")
+                return
+            
+            logger.debug(f"Preparando para upsert: id={item_data.get('id')}, symbol={item_data.get('symbol')}, timestamp={item_data.get('timestamp')}")
+            data_list.append(item_data)
 
         if not data_list:
             return
@@ -168,6 +190,7 @@ class SupabasePersistenceService(IPersistenceService):
             SET {update_placeholders};
         """
         
+        logger.debug(f"Ejecutando upsert_all para tabla: {table_name} con {len(data_list)} elementos. Query: {query}")
         async with self._get_session() as session:
             await session.execute(text(query), data_list)
             if self._async_session_factory:
@@ -264,17 +287,16 @@ class SupabasePersistenceService(IPersistenceService):
                 position_status=trade.positionStatus,
                 mode=trade.mode,
                 symbol=trade.symbol,
-                side=trade.side.value, # Asegurar que el valor del enum se pase como string
+                side=trade.side.value,
                 created_at=trade.created_at,
                 updated_at=trade.updated_at,
                 closed_at=trade.closed_at
             )
             session.add(trade_orm)
-            if self._async_session_factory: # Solo hacer commit si la sesión es gestionada por el servicio
+            if self._async_session_factory:
                 await session.commit()
-                await session.refresh(trade_orm) # Refresh solo si se hizo commit
+                await session.refresh(trade_orm)
             else:
-                # Si no hay commit, la instancia ya está en la sesión y no necesita refresh inmediato
                 pass 
 
     async def execute_raw_sql(self, query: LiteralString, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
@@ -291,7 +313,6 @@ class SupabasePersistenceService(IPersistenceService):
             existing_config = result.scalars().first()
 
             if existing_config:
-                # Update existing configuration
                 existing_config.telegram_chat_id = user_config.telegram_chat_id
                 existing_config.notification_preferences = self._pydantic_to_json_string(user_config.notification_preferences)
                 existing_config.enable_telegram_notifications = user_config.enable_telegram_notifications if user_config.enable_telegram_notifications is not None else False
@@ -301,7 +322,6 @@ class SupabasePersistenceService(IPersistenceService):
                 existing_config.watchlists = self._pydantic_to_json_string(user_config.watchlists)
                 existing_config.favorite_pairs = self._pydantic_to_json_string(user_config.favorite_pairs)
                 
-                # Robust handling of enums
                 if user_config.risk_profile:
                     existing_config.risk_profile = user_config.risk_profile.value if isinstance(user_config.risk_profile, RiskProfile) else user_config.risk_profile
                 else:
@@ -324,7 +344,6 @@ class SupabasePersistenceService(IPersistenceService):
                 existing_config.cloud_sync_preferences = self._pydantic_to_json_string(user_config.cloud_sync_preferences)
                 existing_config.updated_at = datetime.now(timezone.utc)
             else:
-                # Create new configuration
                 new_config_orm = UserConfigurationORM(
                     id=user_config.id if user_config.id is not None else uuid4(),
                     user_id=user_config.user_id,
@@ -356,7 +375,7 @@ class SupabasePersistenceService(IPersistenceService):
                 )
                 session.add(new_config_orm)
             
-            if self._async_session_factory: # Solo hacer commit si la sesión es gestionada por el servicio
+            if self._async_session_factory:
                 await session.commit()
 
     async def upsert_strategy_config(self, strategy_config: TradingStrategyConfig) -> None:
@@ -373,7 +392,7 @@ class SupabasePersistenceService(IPersistenceService):
                 updated_at=strategy_config.updated_at
             )
             await session.merge(strategy_orm)
-            if self._async_session_factory: # Solo hacer commit si la sesión es gestionada por el servicio
+            if self._async_session_factory:
                 await session.commit()
 
     async def get_strategy_config_by_id(self, strategy_id: UUID, user_id: UUID) -> Optional[TradingStrategyConfig]:
@@ -387,13 +406,11 @@ class SupabasePersistenceService(IPersistenceService):
             strategy_orm = result.scalars().first()
             if strategy_orm:
                 strategy_data = json.loads(cast(str, strategy_orm.data))
-                # Asegurar que los campos del ORM se usen para la construcción del modelo Pydantic
-                # y que los tipos sean correctos (UUID a str, datetime a isoformat, Enum a valor)
                 strategy_data.update({
                     "id": str(strategy_orm.id),
                     "user_id": str(strategy_orm.user_id),
                     "config_name": strategy_orm.config_name,
-                    "base_strategy_type": BaseStrategyType(strategy_orm.base_strategy_type), # Convertir a Enum
+                    "base_strategy_type": BaseStrategyType(strategy_orm.base_strategy_type),
                     "is_active_paper_mode": strategy_orm.is_active_paper_mode,
                     "is_active_real_mode": strategy_orm.is_active_real_mode,
                     "created_at": strategy_orm.created_at,
@@ -415,7 +432,7 @@ class SupabasePersistenceService(IPersistenceService):
                     "id": str(strategy_orm.id),
                     "user_id": str(strategy_orm.user_id),
                     "config_name": strategy_orm.config_name,
-                    "base_strategy_type": BaseStrategyType(strategy_orm.base_strategy_type), # Convertir a Enum
+                    "base_strategy_type": BaseStrategyType(strategy_orm.base_strategy_type),
                     "is_active_paper_mode": strategy_orm.is_active_paper_mode,
                     "is_active_real_mode": strategy_orm.is_active_real_mode,
                     "created_at": strategy_orm.created_at,
@@ -431,7 +448,7 @@ class SupabasePersistenceService(IPersistenceService):
                 StrategyConfigORM.user_id == user_id
             )
             result = await session.execute(stmt)
-            if self._async_session_factory: # Solo hacer commit si la sesión es gestionada por el servicio
+            if self._async_session_factory:
                 await session.commit()
             return result.rowcount > 0
 
@@ -448,7 +465,7 @@ class SupabasePersistenceService(IPersistenceService):
                 )
             )
             await session.execute(stmt)
-            if self._async_session_factory: # Solo hacer commit si la sesión es gestionada por el servicio
+            if self._async_session_factory:
                 await session.commit()
 
     async def get_opportunity_by_id(self, opportunity_id: UUID) -> Optional[Opportunity]:
@@ -516,22 +533,21 @@ class SupabasePersistenceService(IPersistenceService):
             for trade_orm in trade_orms:
                 try:
                     trade_data_from_json = json.loads(cast(str, trade_orm.data))
-                    logger.debug(f"get_closed_trades - trade_orm.data: {trade_orm.data}") # Debugging
-                    logger.debug(f"get_closed_trades - trade_data_from_json: {trade_data_from_json}") # Debugging
+                    logger.debug(f"get_closed_trades - trade_orm.data: {trade_orm.data}")
+                    logger.debug(f"get_closed_trades - trade_data_from_json: {trade_data_from_json}")
 
-                    # Asegurar que pnl_usd se convierta a Decimal si viene como float o str del JSON
                     if "pnl_usd" in trade_data_from_json and not isinstance(trade_data_from_json["pnl_usd"], Decimal):
                         try:
                             trade_data_from_json["pnl_usd"] = Decimal(str(trade_data_from_json["pnl_usd"]))
                         except Exception:
                             logger.warning(f"No se pudo convertir pnl_usd a Decimal: {trade_data_from_json['pnl_usd']}")
-                            trade_data_from_json["pnl_usd"] = None # O manejar como error
+                            trade_data_from_json["pnl_usd"] = None
 
                     full_trade_data = {
                         "id": trade_orm.id,
                         "user_id": trade_orm.user_id,
-                        "positionStatus": trade_orm.position_status, # Mantener como str
-                        "mode": trade_orm.mode, # Mantener como str
+                        "positionStatus": trade_orm.position_status,
+                        "mode": trade_orm.mode,
                         "symbol": trade_orm.symbol,
                         "created_at": trade_orm.created_at,
                         "updated_at": trade_orm.updated_at,
@@ -586,13 +602,13 @@ class SupabasePersistenceService(IPersistenceService):
             for trade_orm_instance in trade_orms:
                 try:
                     trade_data = json.loads(cast(str, trade_orm_instance.data))
-                    logger.debug(f"get_trades_with_filters - trade_orm_instance.data: {trade_orm_instance.data}") # Debugging
-                    logger.debug(f"get_trades_with_filters - trade_data: {trade_data}") # Debugging
+                    logger.debug(f"get_trades_with_filters - trade_orm_instance.data: {trade_orm_instance.data}")
+                    logger.debug(f"get_trades_with_filters - trade_data: {trade_data}")
                     trade_data.update({
                         "id": str(trade_orm_instance.id),
                         "user_id": str(trade_orm_instance.user_id),
-                        "positionStatus": trade_orm_instance.position_status, # Mantener como str
-                        "mode": trade_orm_instance.mode, # Mantener como str
+                        "positionStatus": trade_orm_instance.position_status,
+                        "mode": trade_orm_instance.mode,
                         "symbol": trade_orm_instance.symbol,
                         "created_at": trade_orm_instance.created_at.isoformat(),
                         "updated_at": trade_orm_instance.updated_at.isoformat(),

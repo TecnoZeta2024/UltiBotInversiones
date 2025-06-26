@@ -95,11 +95,9 @@ class StrategyManagementView(QWidget):
     def on_strategy_selection_changed(self):
         self.update_action_buttons_state()
 
-    def load_strategies(self):
+    async def initialize_view_data(self):
         self.status_label.setText("Cargando estrategias...")
-        self.main_event_loop.call_soon_threadsafe(
-            lambda: asyncio.ensure_future(self._load_strategies_async())
-        )
+        await self._load_strategies_async()
 
     async def _load_strategies_async(self):
         try:
@@ -215,15 +213,13 @@ class StrategyManagementView(QWidget):
 
     def execute_strategy_action(self, coroutine_factory: Callable[[], Coroutine], action_type: str, success_callback: Optional[Callable] = None):
         self.status_label.setText(f"Intentando {action_type} estrategia...")
-        self.main_event_loop.call_soon_threadsafe(
-            lambda: asyncio.ensure_future(self._execute_strategy_action_async(coroutine_factory, action_type, success_callback))
-        )
+        self.main_event_loop.create_task(self._execute_strategy_action_async(coroutine_factory, action_type, success_callback))
 
     async def _execute_strategy_action_async(self, coroutine_factory: Callable[[], Coroutine], action_type: str, success_callback: Optional[Callable] = None):
         try:
             result = await coroutine_factory()
             self.status_label.setText(f"Estrategia {action_type} exitosamente.")
-            self.load_strategies()  # Recargar la lista de estrategias
+            await self.initialize_view_data()  # Recargar la lista de estrategias
             if success_callback:
                 success_callback(result)
         except Exception as e:

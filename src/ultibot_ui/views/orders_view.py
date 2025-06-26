@@ -4,10 +4,9 @@ from PySide6.QtCore import Slot
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QTableWidget, 
                                QHeaderView, QTableWidgetItem, QLineEdit, 
                                QComboBox, QHBoxLayout, QMessageBox)
-from typing import Optional
+from typing import Optional, List, Dict, Any # Importar List, Dict, Any
 from uuid import UUID
 
-from ultibot_ui.workers import fetch_orders
 from ultibot_ui.services.api_client import UltiBotAPIClient
 from ultibot_ui.models import BaseMainWindow # Importar BaseMainWindow
 
@@ -44,10 +43,11 @@ class OrdersView(QWidget):
         logger.info("OrdersView initialized.")
 
     def set_user_id(self, user_id: UUID):
-        """Establece el user_id y activa la carga de órdenes."""
+        """Establece el user_id y actualiza los widgets dependientes."""
         self.user_id = user_id
-        logger.info(f"OrdersView: User ID set to {user_id}. Triggering order load.")
-        self.load_orders()
+        logger.info(f"OrdersView: User ID set to {user_id}.")
+        # La carga inicial de datos ahora se maneja en initialize_view_data,
+        # que es llamado por MainWindow.
 
     def _setup_filters(self):
         """Configura los widgets de filtrado."""
@@ -77,8 +77,8 @@ class OrdersView(QWidget):
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         self.orders_table.setSortingEnabled(True)
 
-    def load_orders(self):
-        """Crea una tarea para cargar las órdenes de forma asíncrona."""
+    async def initialize_view_data(self):
+        """Carga las órdenes de forma asíncrona."""
         if self.user_id is None:
             logger.warning("Cannot load orders, user_id is not set.")
             return
@@ -89,10 +89,7 @@ class OrdersView(QWidget):
 
         logger.info("Creating asyncio task to fetch orders.")
         
-        def schedule_load():
-            self.load_orders_task = asyncio.ensure_future(self._load_orders_async())
-        
-        self.main_event_loop.call_soon_threadsafe(schedule_load)
+        self.load_orders_task = self.main_event_loop.create_task(self._load_orders_async())
 
     async def _load_orders_async(self):
         """Carga las órdenes desde la API y actualiza la tabla."""
@@ -101,14 +98,16 @@ class OrdersView(QWidget):
             return
         
         try:
-            orders = await fetch_orders(self.api_client)
+            # Obtener órdenes cerradas de paper trading.
+            # Asumimos que el user_id se maneja a través de la autenticación en el backend.
+            orders = await self.api_client.get_trades(trading_mode='paper', status='closed', limit=500)
             self.update_orders_table(orders)
         except Exception as e:
             logger.error(f"Failed to load orders: {e}", exc_info=True)
             self._on_error(f"No se pudieron cargar las órdenes: {e}")
 
     @Slot(list)
-    def update_orders_table(self, orders: list):
+    def update_orders_table(self, orders: List[Dict[str, Any]]):
         """Puebla la tabla con los datos de las órdenes."""
         logger.info(f"Actualizando tabla de órdenes con {len(orders)} órdenes.")
         self.all_orders = orders  # Guardar la lista completa
@@ -117,13 +116,14 @@ class OrdersView(QWidget):
 
         for row, order in enumerate(self.all_orders):
             self.orders_table.insertRow(row)
-            self.orders_table.setItem(row, 0, QTableWidgetItem(order.get('date', '')))
-            self.orders_table.setItem(row, 1, QTableWidgetItem(order.get('symbol', '')))
-            self.orders_table.setItem(row, 2, QTableWidgetItem(order.get('type', '')))
-            self.orders_table.setItem(row, 3, QTableWidgetItem(order.get('side', '')))
-            self.orders_table.setItem(row, 4, QTableWidgetItem(str(order.get('price', 0.0))))
-            self.orders_table.setItem(row, 5, QTableWidgetItem(str(order.get('amount', 0.0))))
-            self.orders_table.setItem(row, 6, QTableWidgetItem(order.get('status', '')))
+            # Asegurarse de que las claves existen y los tipos son correctos
+            self.orders_table.setItem(row, 0, QTableWidgetItem(order.get('closed_at', '') or '')) # Usar closed_at para fecha
+            self.orders_table.setItem(row, 1, QTableWidgetItem(order.get('symbol', '') or ''))
+            self.orders_table.setItem(row, 2, QTableWidgetItem(order.get('trade_type', '') or '')) # Usar trade_type
+            self.orders_table.setItem(row, 3, QTableWidgetItem(order.get('side', '') or ''))
+            self.orders_table.setItem(row, 4, QTableWidgetItem(str(order.get('executed_price', 0.0) or 0.0))) # Usar executed_price
+            self.orders_table.setItem(row, 5, QTableWidgetItem(str(order.get('executed_quantity', 0.0) or 0.0))) # Usar executed_quantity
+            self.orders_table.setItem(row, 6, QTableWidgetItem(order.get('status', '') or ''))
         
         self.orders_table.setSortingEnabled(True)
         logger.info("Tabla de órdenes actualizada.")

@@ -8,11 +8,11 @@ class UIMarketDataService:
     def __init__(self, api_client: UltiBotAPIClient):
         self.api_client = api_client
 
-    async def fetch_portfolio_summary(self, user_id: UUID, trading_mode: str) -> Optional[PortfolioSnapshot]:
+    async def fetch_portfolio_summary(self, user_id: UUID) -> Optional[PortfolioSnapshot]:
         """
-        Fetches the portfolio summary for a given user and trading mode.
+        Fetches the portfolio summary for a given user.
         """
-        snapshot_data = await self.api_client.get_portfolio_snapshot(user_id, trading_mode)
+        snapshot_data = await self.api_client.get_portfolio_snapshot(user_id)
         if snapshot_data:
             return PortfolioSnapshot.model_validate(snapshot_data)
         return None

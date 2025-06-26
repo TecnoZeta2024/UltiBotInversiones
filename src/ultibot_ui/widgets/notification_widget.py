@@ -51,7 +51,7 @@ class NotificationWidget(QWidget):
     def _fetch_notifications(self):
         if self._is_fetching_notifications:
             return
-        self.main_event_loop.call_soon_threadsafe(self._fetch_notifications_async)
+        self.main_event_loop.create_task(self._fetch_notifications_async())
 
     async def _fetch_notifications_async(self):
         if self._is_fetching_notifications:
@@ -331,8 +331,10 @@ if __name__ == '__main__':
             print(f"MockMainWindow: Thread '{thread.objectName()}' added for tracking.")
 
     mock_main_window = MockMainWindow()
+    # Obtener el bucle de eventos actual para pasarlo al widget
+    current_event_loop = asyncio.get_event_loop()
 
-    notification_widget = NotificationWidget(MockUltiBotAPIClient(base_url="http://mock"), mock_main_window) # Pasar base_url
+    notification_widget = NotificationWidget(MockUltiBotAPIClient(base_url="http://mock"), mock_main_window, current_event_loop) # Pasar base_url y el bucle de eventos
     notification_widget.set_user_id(test_user_id) # Establecer user_id
     main_layout.addWidget(notification_widget)
     

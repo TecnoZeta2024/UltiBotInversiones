@@ -3,7 +3,7 @@ from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushBu
 from PySide6.QtCore import Qt, Signal as pyqtSignal, QRunnable, QThreadPool, QObject
 from ultibot_backend.core.domain_models.opportunity_models import Opportunity, OpportunityStatus, AIAnalysis
 from PySide6.QtGui import QFont, QColor, QPalette
-from typing import Any
+from typing import Any, Optional, Callable, Coroutine # Importar Callable, Coroutine, Optional
 import asyncio
 
 from shared.data_types import Opportunity, OpportunityStatus
@@ -21,27 +21,23 @@ class WorkerSignals(QObject):
 
 class Worker(QRunnable):
     """
-    Worker para ejecutar una función asíncrona en un hilo separado.
+    Worker para ejecutar una función asíncrona en el bucle de eventos principal.
     """
-    def __init__(self, fn, *args, **kwargs):
+    def __init__(self, fn: Callable[..., Coroutine[Any, Any, Any]], main_event_loop: asyncio.AbstractEventLoop, *args: Any, **kwargs: Any):
         super().__init__()
         self.fn = fn
         self.args = args
         self.kwargs = kwargs
         self.signals = WorkerSignals()
+        self.main_event_loop = main_event_loop
 
     def run(self):
         """
-        Inicializa el bucle de eventos de asyncio y ejecuta la corrutina.
+        Programa la corrutina en el bucle de eventos principal y espera su resultado.
         """
+        future = asyncio.run_coroutine_threadsafe(self.fn(*self.args, **self.kwargs), self.main_event_loop)
         try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        try:
-            result = loop.run_until_complete(self.fn(*self.args, **self.kwargs))
+            result = future.result() # Espera a que la corrutina termine
             self.signals.result.emit(result)
         except Exception as e:
             logger.error(f"Error en worker asíncrono: {e}", exc_info=True)
@@ -57,10 +53,11 @@ class RealTradeConfirmationDialog(QDialog):
     trade_confirmed = pyqtSignal(str) # Emite el opportunity_id al confirmar
     trade_cancelled = pyqtSignal(str) # Emite el opportunity_id al cancelar
 
-    def __init__(self, opportunity: Opportunity, api_client: UltiBotAPIClient, parent: QWidget = None):
+    def __init__(self, opportunity: Opportunity, api_client: UltiBotAPIClient, main_event_loop: asyncio.AbstractEventLoop, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.opportunity = opportunity
         self.api_client = api_client
+        self.main_event_loop = main_event_loop # Guardar la referencia al bucle de eventos
         self.user_id = opportunity.user_id # Asumimos que el user_id está en la oportunidad
         self.setWindowTitle("Confirmación de Operación REAL")
         self.setModal(True)
@@ -220,7 +217,7 @@ class RealTradeConfirmationDialog(QDialog):
         self.loading_indicator.show()
         logger.info(f"Usuario confirmó operación real para oportunidad {self.opportunity.id}. Iniciando worker.")
 
-        worker = Worker(self._on_confirm_async)
+        worker = Worker(self._on_confirm_async, self.main_event_loop)
         worker.signals.result.connect(self._handle_confirm_result)
         worker.signals.error.connect(self._handle_confirm_error)
         worker.signals.finished.connect(self._handle_confirm_finished)

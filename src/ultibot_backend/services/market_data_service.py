@@ -4,7 +4,8 @@ from typing import List, Optional, Dict, Set, Callable, Any
 from uuid import UUID
 from fastapi import Depends
 
-from shared.data_types import AssetBalance, ServiceName, BinanceConnectionStatus, MarketData
+from shared.data_types import AssetBalance, ServiceName, BinanceConnectionStatus
+from ultibot_backend.core.domain_models.market_data_models import MarketDataORM
 from ultibot_backend.adapters.binance_adapter import BinanceAdapter
 from ultibot_backend.services.credential_service import CredentialService
 from ultibot_backend.core.ports.persistence_service import IPersistenceService
@@ -267,14 +268,16 @@ class MarketDataService:
                     "taker_buy_quote_asset_volume": float(kline[10])
                 }
                 processed_data.append(kline_dict)
+
+                close_price = float(kline[4])
                 
-                market_data_to_save.append(MarketData(
+                market_data_to_save.append(MarketDataORM(
                     symbol=symbol,
                     timestamp=datetime.fromtimestamp(kline[0] / 1000, tz=timezone.utc),
                     open=float(kline[1]),
                     high=float(kline[2]),
                     low=float(kline[3]),
-                    close=float(kline[4]),
+                    close=close_price,
                     volume=float(kline[5])
                 ))
 

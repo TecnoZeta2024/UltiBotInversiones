@@ -50,13 +50,13 @@ class TradingTerminalView(QWidget):
         
         logger.info("TradingTerminalView initialized.")
 
-    def initialize_view_data(self):
+    async def initialize_view_data(self):
         """
-        Initializes and runs the worker to load price feed data asynchronously
-        on a dedicated QThread. This method is called after MainWindow is fully
-        initialized and visible.
+        Initializes and runs the worker to load price feed data asynchronously.
+        This method is called after MainWindow is fully initialized and visible.
         """
         logger.info("TradingTerminalView: Initializing view data (starting price feed)...")
+        # start_price_feed ya crea una tarea, no necesita await aquí directamente
         self.start_price_feed(self.symbol_combo.currentText())
 
     def _setup_trading_controls(self):
@@ -151,12 +151,9 @@ class TradingTerminalView(QWidget):
             QMessageBox.critical(self, "Error de Inicialización", "El bucle de eventos principal no está disponible.")
             return
 
-        def schedule_feed():
-            self.price_feed_task = asyncio.ensure_future(
-                price_feed_manager(self.api_client, symbol, self._update_price_chart)
-            )
-        
-        self.main_event_loop.call_soon_threadsafe(schedule_feed)
+        self.price_feed_task = self.main_event_loop.create_task(
+            price_feed_manager(self.api_client, symbol, self._update_price_chart)
+        )
         logger.info(f"Price feed task created for {symbol}.")
 
     @Slot(dict)
@@ -225,9 +222,7 @@ class TradingTerminalView(QWidget):
         if price:
             order_data["price"] = price
 
-        self.main_event_loop.call_soon_threadsafe(
-            lambda: asyncio.ensure_future(self._execute_order_async(order_data))
-        )
+        self.main_event_loop.create_task(self._execute_order_async(order_data))
 
     async def _execute_order_async(self, order_data: dict):
         """Ejecuta la creación de la orden como una tarea asíncrona."""

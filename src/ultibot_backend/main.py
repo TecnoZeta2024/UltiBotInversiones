@@ -4,7 +4,7 @@ import os
 import sys
 from contextlib import asynccontextmanager
 from logging.config import dictConfig
-from typing import Any
+from typing import Any, Union
 
 # Solución para Windows ProactorEventLoop con psycopg/asyncio
 if sys.platform == "win32":
@@ -13,6 +13,8 @@ if sys.platform == "win32":
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.routing import APIRoute
+from starlette.routing import BaseRoute # Importar BaseRoute desde starlette
 
 from ultibot_backend.api.v1.endpoints import (
     config, market_data, notifications, opportunities,
@@ -72,7 +74,8 @@ LOGGING_CONFIG = {
     },
 }
 
-dictConfig(LOGGING_CONFIG)
+# La configuración de logging se aplicará dentro del lifespan
+# para evitar condiciones de carrera durante la importación.
 logger = logging.getLogger("ultibot_backend")
 # --- Fin de la Nueva Configuración de Logging ---
 
@@ -83,6 +86,10 @@ async def lifespan(app: FastAPI):
     Context manager para manejar el ciclo de vida de la aplicación.
     Crea y gestiona una única instancia del DependencyContainer.
     """
+    # Configurar el logging aquí para asegurar que se hace una sola vez
+    # y en el momento adecuado.
+    dictConfig(LOGGING_CONFIG)
+    
     logger.info("Iniciando UltiBot Backend (lifespan)...")
     
     # Instanciar el contenedor directamente aquí
@@ -163,11 +170,20 @@ def create_app() -> FastAPI:
     app_instance.include_router(portfolio.router, prefix=f"{api_prefix}/portfolio", tags=["portfolio"])
     app_instance.include_router(trades.router, prefix=f"{api_prefix}/trades", tags=["trades"])
     app_instance.include_router(performance.router, prefix=f"{api_prefix}/performance", tags=["performance"])
-    app_instance.include_router(opportunities.router, prefix=f"{api_prefix}/opportunities", tags=["opportunities"])
+    app_instance.include_router(opportunities.router, prefix=api_prefix, tags=["opportunities"])
     app_instance.include_router(trading.router, prefix=f"{api_prefix}/trading", tags=["trading"])
     app_instance.include_router(market_data.router, prefix=f"{api_prefix}/market", tags=["market_data"])
     logger.info("Todos los routers han sido registrados.")
 
+    # Imprimir todas las rutas registradas para depuración
+    logger.info("Rutas registradas en FastAPI:")
+    for route in app_instance.routes:
+        if isinstance(route, APIRoute):
+            methods = ", ".join(route.methods) if route.methods else "ANY"
+            logger.info(f"  - Path: {route.path}, Name: {route.name}, Methods: [{methods}]")
+        else:
+            logger.info(f"  - Ruta no APIRoute (Tipo: {type(route).__name__})")
+            
     @app_instance.get("/health", tags=["health"])
     async def health_check():
         """Endpoint de salud con validaciones de dependencias críticas"""
@@ -220,3 +236,14 @@ def create_app() -> FastAPI:
 # Crear la instancia global de la aplicación para la ejecución normal (no para tests)
 app = create_app()
 logger.info("Instancia global de la aplicación creada.")
+
+if __name__ == "__main__":
+    import uvicorn
+    logger.info("Iniciando servidor Uvicorn desde el punto de entrada principal...")
+    uvicorn.run(
+        "ultibot_backend.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=False,
+        log_level="info"
+    )

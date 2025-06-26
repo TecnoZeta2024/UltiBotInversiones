@@ -280,9 +280,7 @@ class OrderFormWidget(QtWidgets.QWidget):
             if reply != QtWidgets.QMessageBox.StandardButton.Yes:
                 return
         
-        self.main_event_loop.call_soon_threadsafe(
-            lambda: asyncio.ensure_future(self._execute_order_async())
-        )
+        self.main_event_loop.create_task(self._execute_order_async())
         
     async def _execute_order_async(self):
         order_data = self._get_order_data()

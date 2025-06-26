@@ -216,7 +216,7 @@ class PortfolioWidget(QtWidgets.QWidget):
             self.last_updated_label.setText("Esperando configuración de usuario...")
             return
         
-        self.main_event_loop.call_soon_threadsafe(self._update_data_async)
+        self.main_event_loop.create_task(self._update_data_async())
 
     async def _update_data_async(self):
         current_mode = self.trading_mode_manager.current_mode

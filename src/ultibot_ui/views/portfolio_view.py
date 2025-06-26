@@ -35,15 +35,20 @@ class PortfolioView(QWidget):
         # No llamar a _fetch_portfolio_data aquí, esperar a que se establezca el user_id
 
     def set_user_id(self, user_id: UUID):
-        """Establece el ID de usuario y activa la carga inicial de datos."""
+        """Establece el ID de usuario para el widget."""
         if self.user_id is None:
             self.user_id = user_id
-            logger.info(f"PortfolioView: User ID set to {user_id}. Triggering initial data fetch.")
-            # Usar QTimer para asegurar que la carga se inicie en el hilo de la UI
-            QTimer.singleShot(0, self._fetch_portfolio_data)
+            logger.info(f"PortfolioView: User ID set to {user_id}.")
         else:
             logger.warning(f"PortfolioView: User ID already set. Ignoring new value {user_id}.")
-            pass # Añadir pass para el bloque else vacío
+
+    async def initialize_widget_data(self):
+        """
+        Inicia la carga de datos iniciales para este widget de forma asíncrona.
+        Este método debe ser awaitable por el componente padre después de la inicialización.
+        """
+        logger.info("Iniciando la carga de datos asíncrona para PortfolioView...")
+        await self._fetch_portfolio_data_async()
 
     def _setup_ui(self):
         main_layout = QVBoxLayout(self)
@@ -62,7 +67,7 @@ class PortfolioView(QWidget):
         header_layout.addWidget(self.mode_indicator_label)
 
         self.refresh_button = QPushButton("Refresh Portfolio")
-        self.refresh_button.clicked.connect(self._fetch_portfolio_data)
+        self.refresh_button.clicked.connect(self._on_refresh_button_clicked)
         header_layout.addWidget(self.refresh_button)
         main_layout.addLayout(header_layout)
 
@@ -128,23 +133,21 @@ class PortfolioView(QWidget):
     def _on_trading_mode_changed(self, new_mode: str):
         logger.info(f"PortfolioView: Trading mode changed to {new_mode}. Refreshing data.")
         self._update_mode_indicator_label()
-        self._fetch_portfolio_data()
+        self._on_refresh_button_clicked()
 
-    def _fetch_portfolio_data(self):
-        """Schedules the asynchronous fetching of portfolio data."""
+    def _on_refresh_button_clicked(self):
+        """Handles the refresh button click by scheduling the asynchronous data fetch."""
         if not self.user_id:
-            logger.warning("PortfolioView: _fetch_portfolio_data called without user_id. Aborting.")
+            logger.warning("PortfolioView: _on_refresh_button_clicked called without user_id. Aborting.")
             self.status_label.setText("Error: User ID not set.")
             return
 
-        logger.info("PortfolioView: Scheduling portfolio snapshot fetch.")
+        logger.info("PortfolioView: Scheduling portfolio snapshot fetch via refresh button.")
         self.status_label.setText(f"Loading portfolio data ({self.trading_mode_manager.current_mode.title()})...")
         self.refresh_button.setEnabled(False)
         self.assets_table.setRowCount(0)
 
-        self.main_event_loop.call_soon_threadsafe(
-            lambda: asyncio.ensure_future(self._fetch_portfolio_data_async())
-        )
+        self.main_event_loop.create_task(self._fetch_portfolio_data_async())
 
     async def _fetch_portfolio_data_async(self):
         """Performs the asynchronous fetching of portfolio data."""
@@ -153,7 +156,7 @@ class PortfolioView(QWidget):
             return
         try:
             portfolio_snapshot_data = await self.api_client.get_portfolio_snapshot(
-                user_id=self.user_id, trading_mode=self.trading_mode_manager.current_mode
+                user_id=self.user_id
             )
             self._handle_portfolio_result(portfolio_snapshot_data)
         except Exception as e:
@@ -337,16 +340,20 @@ if __name__ == '__main__':
 
     mock_main_window = MockMainWindow()
 
-    view = PortfolioView(
-        api_client=mock_api_client,
-        main_window=mock_main_window,
-        main_event_loop=loop
-    )
-    # Establecer el user_id para el test
-    view.set_user_id(UUID("00000000-0000-0000-0000-000000000000"))
-    view.setWindowTitle("Portfolio View - Test")
-    view.setGeometry(100, 100, 1000, 700)
-    view.show()
+    async def main():
+        view = PortfolioView(
+            api_client=mock_api_client,
+            main_window=mock_main_window,
+            main_event_loop=loop
+        )
+        # Establecer el user_id y luego inicializar los datos para el test
+        view.set_user_id(UUID("00000000-0000-0000-0000-000000000000"))
+        await view.initialize_widget_data() # Ahora es awaitable
+        view.setWindowTitle("Portfolio View - Test")
+        view.setGeometry(100, 100, 1000, 700)
+        view.show()
 
-    with loop:
-        loop.run_forever()
+        with loop:
+            await loop.run_forever()
+
+    asyncio.run(main())

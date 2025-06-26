@@ -10,11 +10,11 @@ from uuid import UUID
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem,
     QLabel, QComboBox, QDateEdit, QPushButton, QGroupBox, QGridLayout,
-    QHeaderView, QMessageBox, QProgressBar, QSplitter, QApplication # Importar QApplication
+    QHeaderView, QMessageBox, QProgressBar, QSplitter, QApplication
 )
-from PySide6.QtCore import Qt, QDate
+from PySide6.QtCore import Qt, QDate, QTimer, Signal as pyqtSignal
 from PySide6.QtGui import QFont, QColor
-from decimal import Decimal # Importar Decimal
+from decimal import Decimal
 
 from ultibot_ui.services.api_client import UltiBotAPIClient
 from shared.data_types import Trade, PerformanceMetrics
@@ -29,23 +29,20 @@ class PaperTradingReportWidget(QWidget):
     
     def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, main_event_loop: asyncio.AbstractEventLoop, parent=None):
         super().__init__(parent)
-        self.user_id: Optional[UUID] = None # Se inicializará asíncronamente
+        self.user_id: Optional[UUID] = None
         self.api_client = api_client
         self.main_window = main_window
-        self.main_event_loop = main_event_loop # Inyectar el bucle de eventos
+        self.main_event_loop = main_event_loop
         self.current_trades_data: List[Trade] = []
         self.current_metrics_data: Optional[PerformanceMetrics] = None
         
         self.setup_ui()
         self.connect_signals()
         
-        # No llamar a load_data aquí, se llamará después de set_user_id
-        
     def set_user_id(self, user_id: UUID):
-        """Establece el user_id y activa la carga de datos."""
+        """Establece el user_id y actualiza los widgets dependientes."""
         self.user_id = user_id
-        logger.info(f"PaperTradingReportWidget: User ID set to {user_id}. Loading data.")
-        self.load_data()
+        logger.info(f"PaperTradingReportWidget: User ID set to {user_id}.")
 
     def setup_ui(self):
         """Configura la interfaz de usuario."""
@@ -180,7 +177,7 @@ class PaperTradingReportWidget(QWidget):
         
     def connect_signals(self):
         """Conecta las señales de la UI."""
-        self.apply_filters_btn.clicked.connect(self.apply_filters)
+        self.apply_filters_btn.clicked.connect(self.load_data)
         self.refresh_btn.clicked.connect(self.load_data)
         
     def apply_filters(self):
@@ -188,15 +185,16 @@ class PaperTradingReportWidget(QWidget):
         self.load_data()
         
     def load_data(self):
-        """Carga tanto las métricas como los trades de forma asíncrona."""
+        """
+        Inicia la carga de datos de forma asíncrona.
+        Este método es síncrono y programa la corutina _load_data_async.
+        """
         if self.user_id is None:
             logger.warning("PaperTradingReportWidget: user_id no está disponible. No se pueden cargar los datos.")
             self.show_error_message("Error: Configuración de usuario no cargada. Intente reiniciar la aplicación.")
             return
         
-        self.main_event_loop.call_soon_threadsafe(
-            lambda: asyncio.ensure_future(self._load_data_async())
-        )
+        asyncio.create_task(self._load_data_async())
 
     async def _load_data_async(self):
         """
@@ -210,21 +208,20 @@ class PaperTradingReportWidget(QWidget):
             
             logger.info(f"Cargando datos de trades con filtros: {params}")
             
-            response = await self.api_client.get_paper_trading_history(
+            response = await self.api_client.get_trades(
+                trading_mode="paper",
                 symbol=params.get('symbol_filter'),
-                start_date=params.get('date_from'),
-                end_date=params.get('date_to'),
+                date_from=params.get('date_from'),
+                date_to=params.get('date_to'),
                 limit=params.get('limit', 500),
                 offset=params.get('offset', 0)
             )
             
-            trades_data = response.get("trades", [])
+            trades_data = response
             
-            # Convertir los datos crudos a modelos Pydantic una sola vez
             trades = [Trade.model_validate(t) for t in trades_data]
             logger.info(f"Trades cargados y validados: {len(trades)} trades")
 
-            # Procesar y mostrar los datos
             self._calculate_and_display_metrics(trades)
             self.on_trades_loaded(trades)
             
@@ -294,10 +291,10 @@ class PaperTradingReportWidget(QWidget):
             avg_pnl_per_trade=avg_pnl_per_trade,
             best_trade_pnl=best_trade_pnl if best_trade_pnl != Decimal('-999999999.0') else Decimal('0.0'),
             worst_trade_pnl=worst_trade_pnl if worst_trade_pnl != Decimal('999999999.0') else Decimal('0.0'),
-            best_trade_symbol=None, # Añadir valores por defecto
-            worst_trade_symbol=None, # Añadir valores por defecto
-            period_start=None, # Añadir valores por defecto
-            period_end=None, # Añadir valores por defecto
+            best_trade_symbol=None,
+            worst_trade_symbol=None,
+            period_start=None,
+            period_end=None,
             total_volume_traded=total_volume_traded
         )
         
