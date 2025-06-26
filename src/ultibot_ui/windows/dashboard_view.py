@@ -57,7 +57,7 @@ class DashboardView(QWidget):
         # Crear widgets sin user_id inicial, se establecerá después
         self.portfolio_widget = PortfolioWidget(self.api_client, self.main_window, self.main_event_loop, self) # Pasar api_client y main_event_loop
         self.chart_widget = ChartWidget(self.api_client, self.main_window, self.main_event_loop, self) # Pasar api_client y main_event_loop
-        self.notification_widget = NotificationWidget(self.api_client, self.main_window, self) # Pasar api_client y main_window
+        self.notification_widget = NotificationWidget(self.api_client, self.main_window, self.main_event_loop, self) # Pasar api_client, main_window y main_event_loop
 
         # Crear tarjeta para el Portfolio
         portfolio_card = QFrame()
@@ -83,7 +83,9 @@ class DashboardView(QWidget):
     def initialize_async_components(self):
         """Inicia la carga de datos asíncrona para los componentes del dashboard."""
         logger.info("DashboardView: initialize_async_components INVOCADO")
-        asyncio.create_task(self._initialize_async())
+        self.main_event_loop.call_soon_threadsafe(
+            lambda: asyncio.ensure_future(self._initialize_async())
+        )
 
     async def _initialize_async(self):
         """Corutina que carga los datos iniciales."""

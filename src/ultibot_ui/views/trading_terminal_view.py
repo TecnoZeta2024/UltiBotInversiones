@@ -151,9 +151,12 @@ class TradingTerminalView(QWidget):
             QMessageBox.critical(self, "Error de Inicialización", "El bucle de eventos principal no está disponible.")
             return
 
-        self.price_feed_task = asyncio.create_task(
-            price_feed_manager(self.api_client, symbol, self._update_price_chart)
-        )
+        def schedule_feed():
+            self.price_feed_task = asyncio.ensure_future(
+                price_feed_manager(self.api_client, symbol, self._update_price_chart)
+            )
+        
+        self.main_event_loop.call_soon_threadsafe(schedule_feed)
         logger.info(f"Price feed task created for {symbol}.")
 
     @Slot(dict)
@@ -222,7 +225,9 @@ class TradingTerminalView(QWidget):
         if price:
             order_data["price"] = price
 
-        asyncio.create_task(self._execute_order_async(order_data))
+        self.main_event_loop.call_soon_threadsafe(
+            lambda: asyncio.ensure_future(self._execute_order_async(order_data))
+        )
 
     async def _execute_order_async(self, order_data: dict):
         """Ejecuta la creación de la orden como una tarea asíncrona."""

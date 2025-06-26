@@ -99,7 +99,9 @@ class ChartWidget(QtWidgets.QWidget):
         if self.current_symbol and self.current_interval:
             self.chart_area.setText(f"Cargando datos para {self.current_symbol} ({self.current_interval})...")
             logger.info(f"Solicitando datos para {self.current_symbol} - {self.current_interval}")
-            asyncio.create_task(self._load_chart_data_async())
+            self.main_event_loop.call_soon_threadsafe(
+                lambda: asyncio.ensure_future(self._load_chart_data_async())
+            )
 
     async def _load_chart_data_async(self):
         if not self.current_symbol or not self.current_interval:

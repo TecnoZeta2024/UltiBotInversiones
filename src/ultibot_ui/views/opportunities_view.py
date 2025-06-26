@@ -10,13 +10,14 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QTimer, QDateTime
 from PySide6.QtGui import QColor
-
 from ultibot_backend.core.domain_models.opportunity_models import Opportunity, AIAnalysis, OpportunityStatus
 from ultibot_backend.core.domain_models.user_configuration_models import AIStrategyConfiguration
 from ultibot_backend.core.domain_models.trading_strategy_models import TradingStrategyConfig
 from ultibot_ui.models import BaseMainWindow
 from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
 from ultibot_ui.dialogs.ai_analysis_dialog import AIAnalysisDialog # Nueva importación para el diálogo de análisis de IA
+
+logger = logging.getLogger(__name__)
 
 logger = logging.getLogger(__name__)
 
@@ -121,7 +122,7 @@ class OpportunitiesView(QWidget):
         self.status_label.setText("Loading opportunities...")
         self.refresh_button.setEnabled(False)
         self.opportunities_table.setRowCount(0)
-        asyncio.create_task(self._fetch_opportunities_async())
+        self.main_event_loop.call_soon_threadsafe(self._fetch_opportunities_async)
 
     async def _fetch_opportunities_async(self):
         try:
@@ -238,7 +239,7 @@ class OpportunitiesView(QWidget):
             sender_button.setEnabled(False)
             sender_button.setText("Analizando...")
 
-        asyncio.create_task(self._analyze_opportunity_async(opportunity))
+        self.main_event_loop.call_soon_threadsafe(self._analyze_opportunity_async, opportunity)
 
     async def _analyze_opportunity_async(self, opportunity: Opportunity):
         # TODO: [LEADCODER-REFACTOR] La funcionalidad de análisis de IA está deshabilitada temporalmente.
@@ -279,7 +280,7 @@ class OpportunitiesView(QWidget):
 
         # TODO: Determinar el modo de trading (papel/real) desde la configuración global de la UI
         trading_mode = "paper" # Por ahora, se usa 'paper' por defecto
-        asyncio.create_task(self._execute_trade_async(opportunity, trading_mode))
+        self.main_event_loop.call_soon_threadsafe(self._execute_trade_async, opportunity, trading_mode)
 
     async def _execute_trade_async(self, opportunity: Opportunity, trading_mode: str):
         # TODO: [LEADCODER-REFACTOR] La funcionalidad de confirmación de trades está deshabilitada temporalmente.

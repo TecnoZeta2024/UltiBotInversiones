@@ -88,7 +88,11 @@ class OrdersView(QWidget):
             return
 
         logger.info("Creating asyncio task to fetch orders.")
-        self.load_orders_task = asyncio.create_task(self._load_orders_async())
+        
+        def schedule_load():
+            self.load_orders_task = asyncio.ensure_future(self._load_orders_async())
+        
+        self.main_event_loop.call_soon_threadsafe(schedule_load)
 
     async def _load_orders_async(self):
         """Carga las órdenes desde la API y actualiza la tabla."""
@@ -97,7 +101,7 @@ class OrdersView(QWidget):
             return
         
         try:
-            orders = await fetch_orders(self.api_client, self.user_id)
+            orders = await fetch_orders(self.api_client)
             self.update_orders_table(orders)
         except Exception as e:
             logger.error(f"Failed to load orders: {e}", exc_info=True)

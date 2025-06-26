@@ -21,11 +21,12 @@ class NotificationWidget(QWidget):
     notification_dismissed = pyqtSignal(str)
     all_notifications_read = pyqtSignal()
 
-    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent: Optional[QWidget] = None):
+    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, main_event_loop: asyncio.AbstractEventLoop, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.api_client = api_client # Usar la instancia de api_client
         self.user_id: Optional[UUID] = None # Se inicializará asíncronamente
         self.main_window = main_window
+        self.main_event_loop = main_event_loop # Inyectar el bucle de eventos
         self.notifications: List[Notification] = []
         self._is_fetching_notifications = False
         self.update_timer: Optional[QTimer] = None
@@ -50,7 +51,7 @@ class NotificationWidget(QWidget):
     def _fetch_notifications(self):
         if self._is_fetching_notifications:
             return
-        asyncio.create_task(self._fetch_notifications_async())
+        self.main_event_loop.call_soon_threadsafe(self._fetch_notifications_async)
 
     async def _fetch_notifications_async(self):
         if self._is_fetching_notifications:

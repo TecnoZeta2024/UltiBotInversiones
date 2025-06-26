@@ -133,7 +133,7 @@ class UltiBotAPIClient:
 
     async def get_user_configuration(self) -> Dict[str, Any]:
         logger.info("Obteniendo configuración de usuario.")
-        return await self._make_request("GET", "/api/v1/config/user")
+        return await self._make_request("GET", "/api/v1/config")
 
     async def get_portfolio_snapshot(self, user_id: UUID, trading_mode: str) -> Dict[str, Any]:
         logger.info(f"Obteniendo snapshot del portafolio para {user_id}, modo: {trading_mode}")
@@ -148,7 +148,7 @@ class UltiBotAPIClient:
 
     async def get_ohlcv_data(self, symbol: str, timeframe: str, limit: int = 100) -> List[Dict[str, Any]]:
         params = {"symbol": symbol, "interval": timeframe, "limit": limit}
-        return await self._make_request("GET", "/api/v1/market/ohlcv", params=params)
+        return await self._make_request("GET", "/api/v1/market/klines", params=params)
 
     async def get_strategies(self) -> Dict[str, Any]:
         """Obtiene la lista de estrategias de trading configuradas."""
@@ -157,6 +157,20 @@ class UltiBotAPIClient:
 
     async def get_ai_opportunities(self) -> List[Dict[str, Any]]:
         return await self._make_request("GET", "/api/v1/opportunities/real-trading-candidates")
+
+    async def get_paper_trading_history(self, symbol: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None, limit: int = 100, offset: int = 0) -> Dict[str, Any]:
+        """Obtiene el historial de operaciones de Paper Trading cerradas."""
+        logger.info("Obteniendo historial de paper trading.")
+        params = {
+            "symbol": symbol,
+            "start_date": start_date,
+            "end_date": end_date,
+            "limit": limit,
+            "offset": offset
+        }
+        # Eliminar parámetros None para evitar que se envíen en la URL
+        params = {k: v for k, v in params.items() if v is not None}
+        return await self._make_request("GET", "/api/v1/trades/history/paper", params=params)
 
     # TODO: [LEADCODER-REFACTOR] Este endpoint no existe en el backend.
     # async def analyze_opportunity_with_ai(self, user_id: str, opportunity_id: str) -> Dict[str, Any]:
@@ -204,9 +218,10 @@ class UltiBotAPIClient:
     async def get_open_trades_by_mode(self, user_id: UUID, trading_mode: str) -> List[Dict[str, Any]]:
         """Obtiene las operaciones abiertas filtradas por modo de trading."""
         logger.info(f"Obteniendo trades abiertos para {user_id} en modo {trading_mode}.")
+        # El user_id se maneja en el backend a través de get_app_settings().FIXED_USER_ID
         return await self._make_request(
             "GET",
-            f"/api/v1/trades/trades/{user_id}/open",
+            "/api/v1/trades/open",
             params={"trading_mode": trading_mode}
         )
 

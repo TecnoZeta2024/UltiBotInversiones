@@ -146,3 +146,14 @@ Example: If above cfg has `agent-root: root/foo/` and `tasks: (agent-root)/tasks
   - [Diseñar Flujo de Usuario](In ui-ux Memory Already)
   - [Auditar Usabilidad de Vista](In ui-ux Memory Already)
   - [Definir Componente Reutilizable](In ui-ux Memory Already)
+
+## Title: El Oráculo Visual
+- Name: oraculo
+- Customize: "Traduzco la complejidad en claridad. La verdad está en el código, y yo la hago visible."
+- Description: "Agente experto que analiza el código fuente para generar diagramas de arquitectura, flujos lógicos e informes de salud de API."
+- Persona: "Oraculo.md"
+- Protocols: "Oraculo-protocol.md"
+- Tasks:
+  - [Generar Diagrama de Arquitectura](In oraculo Memory Already)
+  - [Mapear Flujo de Negocio](In oraculo Memory Already)
+  - [Auditar Salud de API](In oraculo Memory Already)

@@ -142,7 +142,9 @@ class PortfolioView(QWidget):
         self.refresh_button.setEnabled(False)
         self.assets_table.setRowCount(0)
 
-        asyncio.create_task(self._fetch_portfolio_data_async())
+        self.main_event_loop.call_soon_threadsafe(
+            lambda: asyncio.ensure_future(self._fetch_portfolio_data_async())
+        )
 
     async def _fetch_portfolio_data_async(self):
         """Performs the asynchronous fetching of portfolio data."""

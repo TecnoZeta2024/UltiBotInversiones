@@ -96,8 +96,8 @@ class SettingsView(QWidget):
 
     def _load_initial_data(self):
         logger.info("SettingsView: Iniciando carga de datos iniciales (_load_initial_data).")
-        asyncio.create_task(self._load_config_async())
-        asyncio.create_task(self._load_real_trading_status_async())
+        self.main_event_loop.call_soon_threadsafe(lambda: asyncio.ensure_future(self._load_config_async()))
+        self.main_event_loop.call_soon_threadsafe(lambda: asyncio.ensure_future(self._load_real_trading_status_async()))
 
     async def _load_config_async(self):
         logger.info("SettingsView: Solicitando configuración de usuario general.")
@@ -180,7 +180,7 @@ class SettingsView(QWidget):
         self.real_trading_mode_status_changed.emit(is_active, executed_count, limit)
 
     def _handle_save_button_clicked(self):
-        asyncio.create_task(self._save_config_async())
+        self.main_event_loop.call_soon_threadsafe(lambda: asyncio.ensure_future(self._save_config_async()))
 
     async def _save_config_async(self):
         if not self.current_config:
@@ -237,7 +237,7 @@ class SettingsView(QWidget):
 
         if reply == QMessageBox.StandardButton.Yes:
             logger.info("SettingsView: Solicitando activar modo de operativa real.")
-            asyncio.create_task(self._activate_real_trading_async())
+            self.main_event_loop.call_soon_threadsafe(lambda: asyncio.ensure_future(self._activate_real_trading_async()))
         else:
             self.real_trading_checkbox.setChecked(False)
             logger.info("SettingsView: Activación del modo real cancelada por el usuario.")
@@ -252,7 +252,7 @@ class SettingsView(QWidget):
     def _handle_activate_real_trading_result(self, result: Any):
         QMessageBox.information(self, "Éxito", "Modo de Operativa Real Limitada activado.")
         logger.info("SettingsView: Modo de operativa real activado. Recargando estado.")
-        asyncio.create_task(self._load_real_trading_status_async())
+        self.main_event_loop.call_soon_threadsafe(lambda: asyncio.ensure_future(self._load_real_trading_status_async()))
 
     def _handle_activate_real_trading_error(self, error_message: str):
         logger.error(f"Error al activar el modo de operativa real: {error_message}")
@@ -261,7 +261,7 @@ class SettingsView(QWidget):
 
     def _deactivate_real_trading_mode(self):
         logger.info("SettingsView: Solicitando desactivar modo de operativa real.")
-        asyncio.create_task(self._deactivate_real_trading_async())
+        self.main_event_loop.call_soon_threadsafe(lambda: asyncio.ensure_future(self._deactivate_real_trading_async()))
 
     async def _deactivate_real_trading_async(self):
         try:
@@ -273,7 +273,7 @@ class SettingsView(QWidget):
     def _handle_deactivate_real_trading_result(self, result: Any):
         QMessageBox.information(self, "Éxito", "Modo de Operativa Real Limitada desactivado.")
         logger.info("SettingsView: Modo de operativa real desactivado. Recargando estado.")
-        asyncio.create_task(self._load_real_trading_status_async())
+        self.main_event_loop.call_soon_threadsafe(lambda: asyncio.ensure_future(self._load_real_trading_status_async()))
 
     def _handle_deactivate_real_trading_error(self, error_message: str):
         logger.error(f"Error al desactivar el modo de operativa real: {error_message}")

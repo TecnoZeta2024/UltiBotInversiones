@@ -133,7 +133,9 @@ class StrategiesView(QWidget):
         button.setEnabled(False)
         button.setText("Actualizando...")
 
-        asyncio.create_task(self._toggle_strategy_async(strategy_id, new_status, button))
+        self.main_event_loop.call_soon_threadsafe(
+            lambda: asyncio.ensure_future(self._toggle_strategy_async(strategy_id, new_status, button))
+        )
 
     async def _toggle_strategy_async(self, strategy_id: str, new_status: bool, button: QPushButton):
         try:
@@ -162,7 +164,9 @@ class StrategiesView(QWidget):
     def initialize_view_data(self):
         """Loads strategies data asynchronously."""
         logger.info("StrategiesView: Initializing view data (loading strategies)...")
-        asyncio.create_task(self._load_strategies_async())
+        self.main_event_loop.call_soon_threadsafe(
+            lambda: asyncio.ensure_future(self._load_strategies_async())
+        )
 
     async def _load_strategies_async(self):
         try:

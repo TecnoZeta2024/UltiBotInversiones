@@ -11,6 +11,8 @@ from ultibot_backend.core.domain_models.user_configuration_models import (
     Theme,
     RealTradingSettings,
     ConfidenceThresholds,
+    RiskProfileSettings,
+    CloudSyncPreferences,
 )
 from shared.data_types import ServiceName
 from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
@@ -61,31 +63,24 @@ class ConfigurationService:
     async def _load_config_from_db(self, user_id: Optional[str] = None) -> UserConfiguration:
         target_user_id = user_id if user_id else str(self._user_id)
         try:
-            config_data = await self.persistence_service.get_user_configuration(user_id=target_user_id)
+            # 1. Intentar obtener la configuración existente.
+            existing_config = await self.persistence_service.get_user_configuration(user_id=target_user_id)
             
-            if config_data:
-                try:
-                    # Si hay datos, intentar validarlos y cargarlos.
-                    # El validador en el modelo Pydantic se encargará de los campos JSON.
-                    user_config = config_data
-                    logger.info(f"Configuración de usuario cargada exitosamente para el user_id: {target_user_id}")
-                    return user_config
-                except Exception as e_load:
-                    # Si la validación falla, es un problema serio. Loguear y caer a default.
-                    logger.error(f"Error al validar la configuración existente para el user_id {target_user_id}: {e_load}", exc_info=True)
-                    logger.warning("Se utilizará una configuración por defecto en memoria debido a un error de validación.")
-                    return self.get_default_configuration()
+            if existing_config:
+                logger.info(f"Configuración de usuario cargada exitosamente desde la BD para el user_id: {target_user_id}")
+                return existing_config
 
-            # Si no se encontró config_data en la BD, crear y guardar una por defecto.
+            # 2. Si no existe, crear y guardar una configuración por defecto.
             logger.info(f"No se encontró configuración para el user_id {target_user_id}. Creando y guardando configuración por defecto.")
             default_config = self.get_default_configuration()
+            # La función save_user_configuration ya maneja el upsert.
             await self.save_user_configuration(default_config)
             return default_config
 
         except Exception as e:
-            logger.error(f"Error crítico irrecuperable en _load_config_from_db para el user_id {target_user_id}: {e}", exc_info=True)
-            # Como último recurso, devolver una configuración por defecto en memoria si todo falla.
-            logger.warning("Se utilizará una configuración por defecto en memoria debido a un error crítico.")
+            # 3. Si ocurre cualquier otro error, loguear y devolver una config en memoria.
+            logger.error(f"Error crítico al cargar o crear la configuración para el user_id {target_user_id}: {e}", exc_info=True)
+            logger.warning("Se utilizará una configuración por defecto en memoria como último recurso.")
             return self.get_default_configuration()
 
     async def get_user_configuration(self, user_id: Optional[str] = None) -> UserConfiguration:
@@ -121,31 +116,25 @@ class ConfigurationService:
             raise ConfigurationError("No se pudo guardar la configuración.") from e
 
     def get_default_configuration(self) -> UserConfiguration:
+        now = datetime.now(timezone.utc)
         return UserConfiguration(
             id=str(uuid4()),
             user_id=str(self._user_id),
-            telegram_chat_id=None,
-            paper_trading_assets=None,
-            risk_profile=RiskProfile.MODERATE,
-            risk_profile_settings=None,
-            dashboard_layout_profiles=None,
-            active_dashboard_layout_profile_id=None,
-            dashboard_layout_config=None,
-            cloud_sync_preferences=None,
-            selected_theme=Theme.DARK,
-            enable_telegram_notifications=False,
-            default_paper_trading_capital=Decimal("10000.0"),
-            paper_trading_active=True,
-            ai_analysis_confidence_thresholds=ConfidenceThresholds(
-                paper_trading=0.7,
-                real_trading=0.8
-            ),
-            favorite_pairs=["BTCUSDT", "ETHUSDT", "BNBUSDT"],
-            notification_preferences=[],
+            telegramChatId=None,
+            notificationPreferences=[],
+            enableTelegramNotifications=False,
+            defaultPaperTradingCapital=Decimal("10000.0"),
+            paperTradingActive=True,
+            paperTradingAssets=[],
             watchlists=[],
-            ai_strategy_configurations=[],
-            mcp_server_preferences=[],
-            real_trading_settings=RealTradingSettings(
+            favoritePairs=["BTCUSDT", "ETHUSDT", "BNBUSDT"],
+            riskProfile=RiskProfile.MODERATE,
+            riskProfileSettings=RiskProfileSettings(
+                daily_capital_risk_percentage=0.01,
+                per_trade_capital_risk_percentage=0.005,
+                max_drawdown_percentage=0.10
+            ),
+            realTradingSettings=RealTradingSettings(
                 real_trading_mode_active=False,
                 real_trades_executed_count=0,
                 max_concurrent_operations=None,
@@ -154,8 +143,21 @@ class ConfigurationService:
                 asset_specific_stop_loss=None,
                 auto_pause_trading_conditions=None,
                 daily_capital_risked_usd=Decimal("0.0"),
-                last_daily_reset=datetime.now(timezone.utc)
-            )
+                last_daily_reset=now
+            ),
+            aiStrategyConfigurations=[],
+            aiAnalysisConfidenceThresholds=ConfidenceThresholds(
+                paper_trading=0.7,
+                real_trading=0.85
+            ),
+            mcpServerPreferences=[],
+            selectedTheme=Theme.DARK,
+            dashboardLayoutProfiles={},
+            activeDashboardLayoutProfileId=None,
+            dashboardLayoutConfig={},
+            cloudSyncPreferences=CloudSyncPreferences(is_enabled=False, last_successful_sync=None),
+            createdAt=now,
+            updatedAt=now
         )
 
     def is_paper_trading_mode_active(self) -> bool:

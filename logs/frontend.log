@@ -1,260 +1,692 @@
-2025-06-26 00:17:54,358 - httpcore.connection - DEBUG - connect_tcp.started host='127.0.0.1' port=8000 local_address=None timeout=30.0 socket_options=None
-2025-06-26 00:17:56,401 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
-2025-06-26 00:17:56,403 - ultibot_ui.services.api_client - WARNING - Error de red para GET http://127.0.0.1:8000/api/v1/market/ohlcv: All connection attempts failed. Re-lanzando para posible reintento.
-2025-06-26 00:17:56,403 - ultibot_ui.widgets.chart_widget - ERROR - Error al cargar datos del gráfico: RetryError[<Future at 0x232ae69a3d0 state=finished raised ConnectError>]
+2025-06-26 00:57:28,955 - ultibot_ui.views.trading_terminal_view - INFO - TradingTerminalView: Cleanup initiated.
+2025-06-26 00:57:28,955 - ultibot_ui.views.trading_terminal_view - INFO - TradingTerminalView: Cleanup finished.
+2025-06-26 00:57:28,955 - ultibot_ui.windows.main_window - INFO - MainWindow cleanup finished.
+2025-06-26 00:57:28,972 - __main__ - INFO - Cleanup process started...
+2025-06-26 00:57:28,972 - ultibot_ui.windows.main_window - INFO - Cleaning up MainWindow resources. Stopping 0 active threads...
+2025-06-26 00:57:28,972 - ultibot_ui.windows.dashboard_view - INFO - DashboardView: Iniciando limpieza de tareas.
+2025-06-26 00:57:28,972 - ultibot_ui.widgets.portfolio_widget - INFO - PortfolioWidget: Iniciando limpieza.
+2025-06-26 00:57:28,972 - ultibot_ui.widgets.portfolio_widget - INFO - PortfolioWidget: Limpieza completada.
+2025-06-26 00:57:28,972 - ultibot_ui.widgets.chart_widget - INFO - ChartWidget: Limpieza completada.
+2025-06-26 00:57:28,972 - ultibot_ui.windows.dashboard_view - INFO - DashboardView: Limpieza completada.
+2025-06-26 00:57:28,972 - ultibot_ui.views.opportunities_view - INFO - Cleaning up OpportunitiesView...
+2025-06-26 00:57:28,972 - ultibot_ui.views.opportunities_view - INFO - OpportunitiesView cleanup finished.
+2025-06-26 00:57:28,972 - ultibot_ui.views.portfolio_view - INFO - PortfolioView: Cleaning up...
+2025-06-26 00:57:28,998 - ultibot_ui.views.portfolio_view - INFO - PortfolioView: Cleanup finished.
+2025-06-26 00:57:29,000 - ultibot_ui.widgets.paper_trading_report_widget - INFO - PaperTradingReportWidget cleanup: No hay acciones que tomar.
+2025-06-26 00:57:29,000 - ultibot_ui.windows.history_view - INFO - HistoryView cleanup completado
+2025-06-26 00:57:29,001 - ultibot_ui.windows.settings_view - INFO - SettingsView: Cleanup called.
+2025-06-26 00:57:29,001 - ultibot_ui.views.trading_terminal_view - INFO - TradingTerminalView: Cleanup initiated.
+2025-06-26 00:57:29,002 - ultibot_ui.views.trading_terminal_view - INFO - TradingTerminalView: Cleanup finished.
+2025-06-26 00:57:29,002 - ultibot_ui.windows.main_window - INFO - MainWindow cleanup finished.
+2025-06-26 00:57:29,002 - __main__ - INFO - Scheduling API client cleanup task.
+2025-06-26 00:57:34,012 - __main__ - ERROR - Error during API client cleanup: 
+2025-06-26 00:57:34,013 - __main__ - INFO - Application cleanup finished.
+2025-06-26 00:57:34,013 - __main__ - INFO - Application event loop has stopped.
+2025-06-26 00:57:34,133 - qasync._windows._IocpProactor - DEBUG - Closing
+2025-06-26 00:57:34,133 - qasync._windows._IocpProactor - DEBUG - Closing
+2025-06-26 00:58:54,068 - ultibot_backend - INFO - [MainThread] - main.py:104 - Apagando UltiBot Backend (lifespan)...
+2025-06-26 00:58:54,068 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:189 - Shutting down dependency container...
+2025-06-26 00:58:54,073 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:40 - Redis client closed.
+2025-06-26 00:58:54,073 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:196 - Dependency container shut down.
+2025-06-26 00:58:54,073 - ultibot_backend - INFO - [MainThread] - main.py:107 - Recursos liberados y aplicación apagada (lifespan).
+2025-06-26 00:59:01,267 - ultibot_backend - INFO - [MainThread] - main.py:115 - Creando nueva instancia de FastAPI...
+2025-06-26 00:59:01,267 - ultibot_backend - INFO - [MainThread] - main.py:158 - Registrando routers de la API...
+2025-06-26 00:59:01,290 - ultibot_backend - INFO - [MainThread] - main.py:169 - Todos los routers han sido registrados.
+2025-06-26 00:59:01,290 - ultibot_backend - INFO - [MainThread] - main.py:222 - Instancia global de la aplicación creada.
+2025-06-26 00:59:01,290 - ultibot_backend - INFO - [MainThread] - main.py:86 - Iniciando UltiBot Backend (lifespan)...
+2025-06-26 00:59:01,290 - ultibot_backend - INFO - [MainThread] - main.py:91 - DependencyContainer adjuntado a app.state: True
+2025-06-26 00:59:01,290 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:106 - Initializing dependency container...
+2025-06-26 00:59:01,290 - ultibot_backend.dependencies - WARNING - [MainThread] - dependencies.py:45 - Using local SQLite database: sqlite+aiosqlite:///ultibot_local.db. This is for development.
+2025-06-26 00:59:01,290 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:48 - Initializing database with URL: sqlite+aiosqlite:///ultibot_local.db
+2025-06-26 00:59:01,337 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:62 - Database tables created and session factory initialized successfully.
+2025-06-26 00:59:01,507 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:12 - RedisCache initialized with URL: redis://localhost:6379/0
+2025-06-26 00:59:01,507 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:18 - Redis client created.
+2025-06-26 00:59:01,687 - ultibot_backend.services.order_execution_service - INFO - [MainThread] - order_execution_service.py:343 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-26 00:59:01,687 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:30 - CredentialService __init__ intentando obtener encryption_key de AppSettings: Presente
+2025-06-26 00:59:01,697 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:36 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-26 00:59:01,697 - ultibot_backend.services.unified_order_execution_service - INFO - [MainThread] - unified_order_execution_service.py:28 - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-26 00:59:01,739 - ultibot_backend.services.ai_orchestrator_service - INFO - [MainThread] - ai_orchestrator_service.py:144 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
+2025-06-26 00:59:01,739 - ultibot_backend.services.performance_service - INFO - [MainThread] - performance_service.py:29 - PerformanceService initialized. PersistenceService instance: <ultibot_backend.adapters.persistence_service.SupabasePersistenceService object at 0x0000029061B9F3D0>
+2025-06-26 00:59:01,740 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:186 - Dependency container initialized successfully.
+2025-06-26 00:59:01,740 - ultibot_backend - INFO - [MainThread] - main.py:95 - Contenedor de dependencias inicializado en lifespan.
+2025-06-26 00:59:01,740 - ultibot_backend - INFO - [MainThread] - main.py:101 - Aplicación iniciada correctamente (lifespan).
+2025-06-26 00:59:06,429 - ultibot_backend - INFO - [MainThread] - main.py:115 - Creando nueva instancia de FastAPI...
+2025-06-26 00:59:06,430 - ultibot_backend - INFO - [MainThread] - main.py:158 - Registrando routers de la API...
+2025-06-26 00:59:06,450 - ultibot_backend - INFO - [MainThread] - main.py:169 - Todos los routers han sido registrados.
+2025-06-26 00:59:06,451 - ultibot_backend - INFO - [MainThread] - main.py:222 - Instancia global de la aplicación creada.
+2025-06-26 00:59:06,453 - ultibot_backend - INFO - [MainThread] - main.py:86 - Iniciando UltiBot Backend (lifespan)...
+2025-06-26 00:59:06,453 - ultibot_backend - INFO - [MainThread] - main.py:91 - DependencyContainer adjuntado a app.state: True
+2025-06-26 00:59:06,454 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:106 - Initializing dependency container...
+2025-06-26 00:59:06,454 - ultibot_backend.dependencies - WARNING - [MainThread] - dependencies.py:45 - Using local SQLite database: sqlite+aiosqlite:///ultibot_local.db. This is for development.
+2025-06-26 00:59:06,454 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:48 - Initializing database with URL: sqlite+aiosqlite:///ultibot_local.db
+2025-06-26 00:59:06,510 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:62 - Database tables created and session factory initialized successfully.
+2025-06-26 00:59:06,700 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:12 - RedisCache initialized with URL: redis://localhost:6379/0
+2025-06-26 00:59:06,701 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:18 - Redis client created.
+2025-06-26 00:59:06,877 - ultibot_backend.services.order_execution_service - INFO - [MainThread] - order_execution_service.py:343 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-26 00:59:06,887 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:30 - CredentialService __init__ intentando obtener encryption_key de AppSettings: Presente
+2025-06-26 00:59:06,889 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:36 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-26 00:59:06,889 - ultibot_backend.services.unified_order_execution_service - INFO - [MainThread] - unified_order_execution_service.py:28 - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-26 00:59:06,903 - ultibot_backend.services.ai_orchestrator_service - INFO - [MainThread] - ai_orchestrator_service.py:144 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
+2025-06-26 00:59:06,903 - ultibot_backend.services.performance_service - INFO - [MainThread] - performance_service.py:29 - PerformanceService initialized. PersistenceService instance: <ultibot_backend.adapters.persistence_service.SupabasePersistenceService object at 0x000002CA5B57E750>
+2025-06-26 00:59:06,904 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:186 - Dependency container initialized successfully.
+2025-06-26 00:59:06,904 - ultibot_backend - INFO - [MainThread] - main.py:95 - Contenedor de dependencias inicializado en lifespan.
+2025-06-26 00:59:06,904 - ultibot_backend - INFO - [MainThread] - main.py:101 - Aplicación iniciada correctamente (lifespan).
+2025-06-26 00:59:11,587 - ultibot_backend - INFO - [MainThread] - main.py:115 - Creando nueva instancia de FastAPI...
+2025-06-26 00:59:11,587 - ultibot_backend - INFO - [MainThread] - main.py:158 - Registrando routers de la API...
+2025-06-26 00:59:11,608 - ultibot_backend - INFO - [MainThread] - main.py:169 - Todos los routers han sido registrados.
+2025-06-26 00:59:11,608 - ultibot_backend - INFO - [MainThread] - main.py:222 - Instancia global de la aplicación creada.
+2025-06-26 00:59:11,609 - ultibot_backend - INFO - [MainThread] - main.py:86 - Iniciando UltiBot Backend (lifespan)...
+2025-06-26 00:59:11,610 - ultibot_backend - INFO - [MainThread] - main.py:91 - DependencyContainer adjuntado a app.state: True
+2025-06-26 00:59:11,610 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:106 - Initializing dependency container...
+2025-06-26 00:59:11,610 - ultibot_backend.dependencies - WARNING - [MainThread] - dependencies.py:45 - Using local SQLite database: sqlite+aiosqlite:///ultibot_local.db. This is for development.
+2025-06-26 00:59:11,611 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:48 - Initializing database with URL: sqlite+aiosqlite:///ultibot_local.db
+2025-06-26 00:59:11,654 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:62 - Database tables created and session factory initialized successfully.
+2025-06-26 00:59:11,832 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:12 - RedisCache initialized with URL: redis://localhost:6379/0
+2025-06-26 00:59:11,832 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:18 - Redis client created.
+2025-06-26 00:59:12,011 - ultibot_backend.services.order_execution_service - INFO - [MainThread] - order_execution_service.py:343 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-26 00:59:12,011 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:30 - CredentialService __init__ intentando obtener encryption_key de AppSettings: Presente
+2025-06-26 00:59:12,011 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:36 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-26 00:59:12,011 - ultibot_backend.services.unified_order_execution_service - INFO - [MainThread] - unified_order_execution_service.py:28 - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-26 00:59:12,028 - ultibot_backend.services.ai_orchestrator_service - INFO - [MainThread] - ai_orchestrator_service.py:144 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
+2025-06-26 00:59:12,029 - ultibot_backend.services.performance_service - INFO - [MainThread] - performance_service.py:29 - PerformanceService initialized. PersistenceService instance: <ultibot_backend.adapters.persistence_service.SupabasePersistenceService object at 0x000001CA15E3D050>
+2025-06-26 00:59:12,029 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:186 - Dependency container initialized successfully.
+2025-06-26 00:59:12,030 - ultibot_backend - INFO - [MainThread] - main.py:95 - Contenedor de dependencias inicializado en lifespan.
+2025-06-26 00:59:12,030 - ultibot_backend - INFO - [MainThread] - main.py:101 - Aplicación iniciada correctamente (lifespan).
+2025-06-26 01:00:23,295 - ultibot_backend - INFO - [MainThread] - main.py:104 - Apagando UltiBot Backend (lifespan)...
+2025-06-26 01:00:23,295 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:189 - Shutting down dependency container...
+2025-06-26 01:00:23,295 - ultibot_backend - INFO - [MainThread] - main.py:104 - Apagando UltiBot Backend (lifespan)...
+2025-06-26 01:00:23,296 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:189 - Shutting down dependency container...
+2025-06-26 01:00:23,300 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:40 - Redis client closed.
+2025-06-26 01:00:23,300 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:196 - Dependency container shut down.
+2025-06-26 01:00:23,301 - ultibot_backend - INFO - [MainThread] - main.py:107 - Recursos liberados y aplicación apagada (lifespan).
+2025-06-26 01:00:23,301 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:40 - Redis client closed.
+2025-06-26 01:00:23,301 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:196 - Dependency container shut down.
+2025-06-26 01:00:23,301 - ultibot_backend - INFO - [MainThread] - main.py:107 - Recursos liberados y aplicación apagada (lifespan).
+2025-06-26 01:00:28,061 - ultibot_backend - INFO - [MainThread] - main.py:115 - Creando nueva instancia de FastAPI...
+2025-06-26 01:00:28,061 - ultibot_backend - INFO - [MainThread] - main.py:158 - Registrando routers de la API...
+2025-06-26 01:00:28,066 - ultibot_backend - INFO - [MainThread] - main.py:115 - Creando nueva instancia de FastAPI...
+2025-06-26 01:00:28,066 - ultibot_backend - INFO - [MainThread] - main.py:158 - Registrando routers de la API...
+2025-06-26 01:00:28,084 - ultibot_backend - INFO - [MainThread] - main.py:169 - Todos los routers han sido registrados.
+2025-06-26 01:00:28,084 - ultibot_backend - INFO - [MainThread] - main.py:222 - Instancia global de la aplicación creada.
+2025-06-26 01:00:28,085 - ultibot_backend - INFO - [MainThread] - main.py:169 - Todos los routers han sido registrados.
+2025-06-26 01:00:28,086 - ultibot_backend - INFO - [MainThread] - main.py:86 - Iniciando UltiBot Backend (lifespan)...
+2025-06-26 01:00:28,086 - ultibot_backend - INFO - [MainThread] - main.py:222 - Instancia global de la aplicación creada.
+2025-06-26 01:00:28,086 - ultibot_backend - INFO - [MainThread] - main.py:91 - DependencyContainer adjuntado a app.state: True
+2025-06-26 01:00:28,086 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:106 - Initializing dependency container...
+2025-06-26 01:00:28,087 - ultibot_backend.dependencies - WARNING - [MainThread] - dependencies.py:45 - Using local SQLite database: sqlite+aiosqlite:///ultibot_local.db. This is for development.
+2025-06-26 01:00:28,087 - ultibot_backend - INFO - [MainThread] - main.py:86 - Iniciando UltiBot Backend (lifespan)...
+2025-06-26 01:00:28,087 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:48 - Initializing database with URL: sqlite+aiosqlite:///ultibot_local.db
+2025-06-26 01:00:28,088 - ultibot_backend - INFO - [MainThread] - main.py:91 - DependencyContainer adjuntado a app.state: True
+2025-06-26 01:00:28,088 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:106 - Initializing dependency container...
+2025-06-26 01:00:28,088 - ultibot_backend.dependencies - WARNING - [MainThread] - dependencies.py:45 - Using local SQLite database: sqlite+aiosqlite:///ultibot_local.db. This is for development.
+2025-06-26 01:00:28,089 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:48 - Initializing database with URL: sqlite+aiosqlite:///ultibot_local.db
+2025-06-26 01:00:28,132 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:62 - Database tables created and session factory initialized successfully.
+2025-06-26 01:00:28,132 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:62 - Database tables created and session factory initialized successfully.
+2025-06-26 01:00:28,396 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:12 - RedisCache initialized with URL: redis://localhost:6379/0
+2025-06-26 01:00:28,396 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:18 - Redis client created.
+2025-06-26 01:00:28,401 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:12 - RedisCache initialized with URL: redis://localhost:6379/0
+2025-06-26 01:00:28,401 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:18 - Redis client created.
+2025-06-26 01:00:28,672 - ultibot_backend.services.order_execution_service - INFO - [MainThread] - order_execution_service.py:343 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-26 01:00:28,676 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:30 - CredentialService __init__ intentando obtener encryption_key de AppSettings: Presente
+2025-06-26 01:00:28,676 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:36 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-26 01:00:28,676 - ultibot_backend.services.unified_order_execution_service - INFO - [MainThread] - unified_order_execution_service.py:28 - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-26 01:00:28,681 - ultibot_backend.services.order_execution_service - INFO - [MainThread] - order_execution_service.py:343 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-26 01:00:28,689 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:30 - CredentialService __init__ intentando obtener encryption_key de AppSettings: Presente
+2025-06-26 01:00:28,689 - ultibot_backend.services.ai_orchestrator_service - INFO - [MainThread] - ai_orchestrator_service.py:144 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
+2025-06-26 01:00:28,689 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:36 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-26 01:00:28,690 - ultibot_backend.services.performance_service - INFO - [MainThread] - performance_service.py:29 - PerformanceService initialized. PersistenceService instance: <ultibot_backend.adapters.persistence_service.SupabasePersistenceService object at 0x000001BED77B4B90>
+2025-06-26 01:00:28,690 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:186 - Dependency container initialized successfully.
+2025-06-26 01:00:28,690 - ultibot_backend.services.unified_order_execution_service - INFO - [MainThread] - unified_order_execution_service.py:28 - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-26 01:00:28,691 - ultibot_backend - INFO - [MainThread] - main.py:95 - Contenedor de dependencias inicializado en lifespan.
+2025-06-26 01:00:28,691 - ultibot_backend - INFO - [MainThread] - main.py:101 - Aplicación iniciada correctamente (lifespan).
+2025-06-26 01:00:28,703 - ultibot_backend.services.ai_orchestrator_service - INFO - [MainThread] - ai_orchestrator_service.py:144 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
+2025-06-26 01:00:28,703 - ultibot_backend.services.performance_service - INFO - [MainThread] - performance_service.py:29 - PerformanceService initialized. PersistenceService instance: <ultibot_backend.adapters.persistence_service.SupabasePersistenceService object at 0x00000243D989B510>
+2025-06-26 01:00:28,704 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:186 - Dependency container initialized successfully.
+2025-06-26 01:00:28,704 - ultibot_backend - INFO - [MainThread] - main.py:95 - Contenedor de dependencias inicializado en lifespan.
+2025-06-26 01:00:28,704 - ultibot_backend - INFO - [MainThread] - main.py:101 - Aplicación iniciada correctamente (lifespan).
+2025-06-26 01:00:33,431 - ultibot_backend - INFO - [MainThread] - main.py:115 - Creando nueva instancia de FastAPI...
+2025-06-26 01:00:33,432 - ultibot_backend - INFO - [MainThread] - main.py:158 - Registrando routers de la API...
+2025-06-26 01:00:33,434 - ultibot_backend - INFO - [MainThread] - main.py:115 - Creando nueva instancia de FastAPI...
+2025-06-26 01:00:33,435 - ultibot_backend - INFO - [MainThread] - main.py:158 - Registrando routers de la API...
+2025-06-26 01:00:33,454 - ultibot_backend - INFO - [MainThread] - main.py:169 - Todos los routers han sido registrados.
+2025-06-26 01:00:33,455 - ultibot_backend - INFO - [MainThread] - main.py:222 - Instancia global de la aplicación creada.
+2025-06-26 01:00:33,455 - ultibot_backend - INFO - [MainThread] - main.py:169 - Todos los routers han sido registrados.
+2025-06-26 01:00:33,456 - ultibot_backend - INFO - [MainThread] - main.py:222 - Instancia global de la aplicación creada.
+2025-06-26 01:00:33,456 - ultibot_backend - INFO - [MainThread] - main.py:86 - Iniciando UltiBot Backend (lifespan)...
+2025-06-26 01:00:33,456 - ultibot_backend - INFO - [MainThread] - main.py:91 - DependencyContainer adjuntado a app.state: True
+2025-06-26 01:00:33,457 - ultibot_backend - INFO - [MainThread] - main.py:86 - Iniciando UltiBot Backend (lifespan)...
+2025-06-26 01:00:33,457 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:106 - Initializing dependency container...
+2025-06-26 01:00:33,458 - ultibot_backend - INFO - [MainThread] - main.py:91 - DependencyContainer adjuntado a app.state: True
+2025-06-26 01:00:33,458 - ultibot_backend.dependencies - WARNING - [MainThread] - dependencies.py:45 - Using local SQLite database: sqlite+aiosqlite:///ultibot_local.db. This is for development.
+2025-06-26 01:00:33,458 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:106 - Initializing dependency container...
+2025-06-26 01:00:33,458 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:48 - Initializing database with URL: sqlite+aiosqlite:///ultibot_local.db
+2025-06-26 01:00:33,458 - ultibot_backend.dependencies - WARNING - [MainThread] - dependencies.py:45 - Using local SQLite database: sqlite+aiosqlite:///ultibot_local.db. This is for development.
+2025-06-26 01:00:33,459 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:48 - Initializing database with URL: sqlite+aiosqlite:///ultibot_local.db
+2025-06-26 01:00:33,506 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:62 - Database tables created and session factory initialized successfully.
+2025-06-26 01:00:33,509 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:62 - Database tables created and session factory initialized successfully.
+2025-06-26 01:00:33,786 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:12 - RedisCache initialized with URL: redis://localhost:6379/0
+2025-06-26 01:00:33,786 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:18 - Redis client created.
+2025-06-26 01:00:33,807 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:12 - RedisCache initialized with URL: redis://localhost:6379/0
+2025-06-26 01:00:33,808 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:18 - Redis client created.
+2025-06-26 01:00:34,075 - ultibot_backend.services.order_execution_service - INFO - [MainThread] - order_execution_service.py:343 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-26 01:00:34,081 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:30 - CredentialService __init__ intentando obtener encryption_key de AppSettings: Presente
+2025-06-26 01:00:34,081 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:36 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-26 01:00:34,081 - ultibot_backend.services.unified_order_execution_service - INFO - [MainThread] - unified_order_execution_service.py:28 - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-26 01:00:34,095 - ultibot_backend.services.order_execution_service - INFO - [MainThread] - order_execution_service.py:343 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-26 01:00:34,097 - ultibot_backend.services.ai_orchestrator_service - INFO - [MainThread] - ai_orchestrator_service.py:144 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
+2025-06-26 01:00:34,097 - ultibot_backend.services.performance_service - INFO - [MainThread] - performance_service.py:29 - PerformanceService initialized. PersistenceService instance: <ultibot_backend.adapters.persistence_service.SupabasePersistenceService object at 0x00000172B1724050>
+2025-06-26 01:00:34,098 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:186 - Dependency container initialized successfully.
+2025-06-26 01:00:34,098 - ultibot_backend - INFO - [MainThread] - main.py:95 - Contenedor de dependencias inicializado en lifespan.
+2025-06-26 01:00:34,098 - ultibot_backend - INFO - [MainThread] - main.py:101 - Aplicación iniciada correctamente (lifespan).
+2025-06-26 01:00:34,099 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:30 - CredentialService __init__ intentando obtener encryption_key de AppSettings: Presente
+2025-06-26 01:00:34,099 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:36 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-26 01:00:34,101 - ultibot_backend.services.unified_order_execution_service - INFO - [MainThread] - unified_order_execution_service.py:28 - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-26 01:00:34,113 - ultibot_backend.services.ai_orchestrator_service - INFO - [MainThread] - ai_orchestrator_service.py:144 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
+2025-06-26 01:00:34,114 - ultibot_backend.services.performance_service - INFO - [MainThread] - performance_service.py:29 - PerformanceService initialized. PersistenceService instance: <ultibot_backend.adapters.persistence_service.SupabasePersistenceService object at 0x0000025C8FD82590>
+2025-06-26 01:00:34,114 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:186 - Dependency container initialized successfully.
+2025-06-26 01:00:34,114 - ultibot_backend - INFO - [MainThread] - main.py:95 - Contenedor de dependencias inicializado en lifespan.
+2025-06-26 01:00:34,115 - ultibot_backend - INFO - [MainThread] - main.py:101 - Aplicación iniciada correctamente (lifespan).
+2025-06-26 01:01:06,225 - ultibot_backend - INFO - [MainThread] - main.py:104 - Apagando UltiBot Backend (lifespan)...
+2025-06-26 01:01:06,225 - ultibot_backend - INFO - [MainThread] - main.py:104 - Apagando UltiBot Backend (lifespan)...
+2025-06-26 01:01:06,226 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:189 - Shutting down dependency container...
+2025-06-26 01:01:06,226 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:189 - Shutting down dependency container...
+2025-06-26 01:01:06,230 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:40 - Redis client closed.
+2025-06-26 01:01:06,230 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:40 - Redis client closed.
+2025-06-26 01:01:06,231 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:196 - Dependency container shut down.
+2025-06-26 01:01:06,231 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:196 - Dependency container shut down.
+2025-06-26 01:01:06,231 - ultibot_backend - INFO - [MainThread] - main.py:107 - Recursos liberados y aplicación apagada (lifespan).
+2025-06-26 01:01:06,231 - ultibot_backend - INFO - [MainThread] - main.py:107 - Recursos liberados y aplicación apagada (lifespan).
+2025-06-26 01:01:11,047 - ultibot_backend - INFO - [MainThread] - main.py:115 - Creando nueva instancia de FastAPI...
+2025-06-26 01:01:11,047 - ultibot_backend - INFO - [MainThread] - main.py:158 - Registrando routers de la API...
+2025-06-26 01:01:11,047 - ultibot_backend - INFO - [MainThread] - main.py:115 - Creando nueva instancia de FastAPI...
+2025-06-26 01:01:11,047 - ultibot_backend - INFO - [MainThread] - main.py:158 - Registrando routers de la API...
+2025-06-26 01:01:11,066 - ultibot_backend - INFO - [MainThread] - main.py:169 - Todos los routers han sido registrados.
+2025-06-26 01:01:11,066 - ultibot_backend - INFO - [MainThread] - main.py:222 - Instancia global de la aplicación creada.
+2025-06-26 01:01:11,069 - ultibot_backend - INFO - [MainThread] - main.py:86 - Iniciando UltiBot Backend (lifespan)...
+2025-06-26 01:01:11,069 - ultibot_backend - INFO - [MainThread] - main.py:169 - Todos los routers han sido registrados.
+2025-06-26 01:01:11,069 - ultibot_backend - INFO - [MainThread] - main.py:91 - DependencyContainer adjuntado a app.state: True
+2025-06-26 01:01:11,069 - ultibot_backend - INFO - [MainThread] - main.py:222 - Instancia global de la aplicación creada.
+2025-06-26 01:01:11,069 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:106 - Initializing dependency container...
+2025-06-26 01:01:11,070 - ultibot_backend.dependencies - WARNING - [MainThread] - dependencies.py:45 - Using local SQLite database: sqlite+aiosqlite:///ultibot_local.db. This is for development.
+2025-06-26 01:01:11,070 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:48 - Initializing database with URL: sqlite+aiosqlite:///ultibot_local.db
+2025-06-26 01:01:11,071 - ultibot_backend - INFO - [MainThread] - main.py:86 - Iniciando UltiBot Backend (lifespan)...
+2025-06-26 01:01:11,071 - ultibot_backend - INFO - [MainThread] - main.py:91 - DependencyContainer adjuntado a app.state: True
+2025-06-26 01:01:11,071 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:106 - Initializing dependency container...
+2025-06-26 01:01:11,072 - ultibot_backend.dependencies - WARNING - [MainThread] - dependencies.py:45 - Using local SQLite database: sqlite+aiosqlite:///ultibot_local.db. This is for development.
+2025-06-26 01:01:11,072 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:48 - Initializing database with URL: sqlite+aiosqlite:///ultibot_local.db
+2025-06-26 01:01:11,114 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:62 - Database tables created and session factory initialized successfully.
+2025-06-26 01:01:11,118 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:62 - Database tables created and session factory initialized successfully.
+2025-06-26 01:01:11,375 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:12 - RedisCache initialized with URL: redis://localhost:6379/0
+2025-06-26 01:01:11,375 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:18 - Redis client created.
+2025-06-26 01:01:11,375 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:12 - RedisCache initialized with URL: redis://localhost:6379/0
+2025-06-26 01:01:11,375 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:18 - Redis client created.
+2025-06-26 01:01:11,633 - ultibot_backend.services.order_execution_service - INFO - [MainThread] - order_execution_service.py:343 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-26 01:01:11,638 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:30 - CredentialService __init__ intentando obtener encryption_key de AppSettings: Presente
+2025-06-26 01:01:11,638 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:36 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-26 01:01:11,638 - ultibot_backend.services.unified_order_execution_service - INFO - [MainThread] - unified_order_execution_service.py:28 - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-26 01:01:11,642 - ultibot_backend.services.order_execution_service - INFO - [MainThread] - order_execution_service.py:343 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-26 01:01:11,645 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:30 - CredentialService __init__ intentando obtener encryption_key de AppSettings: Presente
+2025-06-26 01:01:11,646 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:36 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-26 01:01:11,646 - ultibot_backend.services.unified_order_execution_service - INFO - [MainThread] - unified_order_execution_service.py:28 - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-26 01:01:11,653 - ultibot_backend.services.ai_orchestrator_service - INFO - [MainThread] - ai_orchestrator_service.py:144 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
+2025-06-26 01:01:11,653 - ultibot_backend.services.performance_service - INFO - [MainThread] - performance_service.py:29 - PerformanceService initialized. PersistenceService instance: <ultibot_backend.adapters.persistence_service.SupabasePersistenceService object at 0x0000020442759AD0>
+2025-06-26 01:01:11,653 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:186 - Dependency container initialized successfully.
+2025-06-26 01:01:11,653 - ultibot_backend - INFO - [MainThread] - main.py:95 - Contenedor de dependencias inicializado en lifespan.
+2025-06-26 01:01:11,653 - ultibot_backend - INFO - [MainThread] - main.py:101 - Aplicación iniciada correctamente (lifespan).
+2025-06-26 01:01:11,658 - ultibot_backend.services.ai_orchestrator_service - INFO - [MainThread] - ai_orchestrator_service.py:144 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
+2025-06-26 01:01:11,658 - ultibot_backend.services.performance_service - INFO - [MainThread] - performance_service.py:29 - PerformanceService initialized. PersistenceService instance: <ultibot_backend.adapters.persistence_service.SupabasePersistenceService object at 0x000002A5979573D0>
+2025-06-26 01:01:11,659 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:186 - Dependency container initialized successfully.
+2025-06-26 01:01:11,659 - ultibot_backend - INFO - [MainThread] - main.py:95 - Contenedor de dependencias inicializado en lifespan.
+2025-06-26 01:01:11,660 - ultibot_backend - INFO - [MainThread] - main.py:101 - Aplicación iniciada correctamente (lifespan).
+2025-06-26 01:01:16,393 - ultibot_backend - INFO - [MainThread] - main.py:115 - Creando nueva instancia de FastAPI...
+2025-06-26 01:01:16,393 - ultibot_backend - INFO - [MainThread] - main.py:158 - Registrando routers de la API...
+2025-06-26 01:01:16,415 - ultibot_backend - INFO - [MainThread] - main.py:169 - Todos los routers han sido registrados.
+2025-06-26 01:01:16,416 - ultibot_backend - INFO - [MainThread] - main.py:222 - Instancia global de la aplicación creada.
+2025-06-26 01:01:16,417 - ultibot_backend - INFO - [MainThread] - main.py:86 - Iniciando UltiBot Backend (lifespan)...
+2025-06-26 01:01:16,417 - ultibot_backend - INFO - [MainThread] - main.py:91 - DependencyContainer adjuntado a app.state: True
+2025-06-26 01:01:16,417 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:106 - Initializing dependency container...
+2025-06-26 01:01:16,417 - ultibot_backend.dependencies - WARNING - [MainThread] - dependencies.py:45 - Using local SQLite database: sqlite+aiosqlite:///ultibot_local.db. This is for development.
+2025-06-26 01:01:16,418 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:48 - Initializing database with URL: sqlite+aiosqlite:///ultibot_local.db
+2025-06-26 01:01:16,430 - ultibot_backend - INFO - [MainThread] - main.py:115 - Creando nueva instancia de FastAPI...
+2025-06-26 01:01:16,430 - ultibot_backend - INFO - [MainThread] - main.py:158 - Registrando routers de la API...
+2025-06-26 01:01:16,448 - ultibot_backend - INFO - [MainThread] - main.py:169 - Todos los routers han sido registrados.
+2025-06-26 01:01:16,449 - ultibot_backend - INFO - [MainThread] - main.py:222 - Instancia global de la aplicación creada.
+2025-06-26 01:01:16,450 - ultibot_backend - INFO - [MainThread] - main.py:86 - Iniciando UltiBot Backend (lifespan)...
+2025-06-26 01:01:16,451 - ultibot_backend - INFO - [MainThread] - main.py:91 - DependencyContainer adjuntado a app.state: True
+2025-06-26 01:01:16,451 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:106 - Initializing dependency container...
+2025-06-26 01:01:16,451 - ultibot_backend.dependencies - WARNING - [MainThread] - dependencies.py:45 - Using local SQLite database: sqlite+aiosqlite:///ultibot_local.db. This is for development.
+2025-06-26 01:01:16,451 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:48 - Initializing database with URL: sqlite+aiosqlite:///ultibot_local.db
+2025-06-26 01:01:16,458 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:62 - Database tables created and session factory initialized successfully.
+2025-06-26 01:01:16,493 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:62 - Database tables created and session factory initialized successfully.
+2025-06-26 01:01:16,711 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:12 - RedisCache initialized with URL: redis://localhost:6379/0
+2025-06-26 01:01:16,712 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:18 - Redis client created.
+2025-06-26 01:01:16,773 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:12 - RedisCache initialized with URL: redis://localhost:6379/0
+2025-06-26 01:01:16,773 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:18 - Redis client created.
+2025-06-26 01:01:16,968 - ultibot_backend.services.order_execution_service - INFO - [MainThread] - order_execution_service.py:343 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-26 01:01:16,975 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:30 - CredentialService __init__ intentando obtener encryption_key de AppSettings: Presente
+2025-06-26 01:01:16,976 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:36 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-26 01:01:16,976 - ultibot_backend.services.unified_order_execution_service - INFO - [MainThread] - unified_order_execution_service.py:28 - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-26 01:01:16,988 - ultibot_backend.services.ai_orchestrator_service - INFO - [MainThread] - ai_orchestrator_service.py:144 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
+2025-06-26 01:01:16,989 - ultibot_backend.services.performance_service - INFO - [MainThread] - performance_service.py:29 - PerformanceService initialized. PersistenceService instance: <ultibot_backend.adapters.persistence_service.SupabasePersistenceService object at 0x0000025FC357B550>
+2025-06-26 01:01:16,989 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:186 - Dependency container initialized successfully.
+2025-06-26 01:01:16,990 - ultibot_backend - INFO - [MainThread] - main.py:95 - Contenedor de dependencias inicializado en lifespan.
+2025-06-26 01:01:16,990 - ultibot_backend - INFO - [MainThread] - main.py:101 - Aplicación iniciada correctamente (lifespan).
+2025-06-26 01:01:17,019 - ultibot_backend.services.order_execution_service - INFO - [MainThread] - order_execution_service.py:343 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-26 01:01:17,022 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:30 - CredentialService __init__ intentando obtener encryption_key de AppSettings: Presente
+2025-06-26 01:01:17,023 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:36 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-26 01:01:17,023 - ultibot_backend.services.unified_order_execution_service - INFO - [MainThread] - unified_order_execution_service.py:28 - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-26 01:01:17,036 - ultibot_backend.services.ai_orchestrator_service - INFO - [MainThread] - ai_orchestrator_service.py:144 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
+2025-06-26 01:01:17,037 - ultibot_backend.services.performance_service - INFO - [MainThread] - performance_service.py:29 - PerformanceService initialized. PersistenceService instance: <ultibot_backend.adapters.persistence_service.SupabasePersistenceService object at 0x00000282A4804D50>
+2025-06-26 01:01:17,037 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:186 - Dependency container initialized successfully.
+2025-06-26 01:01:17,037 - ultibot_backend - INFO - [MainThread] - main.py:95 - Contenedor de dependencias inicializado en lifespan.
+2025-06-26 01:01:17,038 - ultibot_backend - INFO - [MainThread] - main.py:101 - Aplicación iniciada correctamente (lifespan).
+2025-06-26 01:01:21,645 - ultibot_backend - INFO - [MainThread] - main.py:115 - Creando nueva instancia de FastAPI...
+2025-06-26 01:01:21,645 - ultibot_backend - INFO - [MainThread] - main.py:158 - Registrando routers de la API...
+2025-06-26 01:01:21,670 - ultibot_backend - INFO - [MainThread] - main.py:169 - Todos los routers han sido registrados.
+2025-06-26 01:01:21,671 - ultibot_backend - INFO - [MainThread] - main.py:222 - Instancia global de la aplicación creada.
+2025-06-26 01:01:21,672 - ultibot_backend - INFO - [MainThread] - main.py:86 - Iniciando UltiBot Backend (lifespan)...
+2025-06-26 01:01:21,672 - ultibot_backend - INFO - [MainThread] - main.py:91 - DependencyContainer adjuntado a app.state: True
+2025-06-26 01:01:21,672 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:106 - Initializing dependency container...
+2025-06-26 01:01:21,673 - ultibot_backend.dependencies - WARNING - [MainThread] - dependencies.py:45 - Using local SQLite database: sqlite+aiosqlite:///ultibot_local.db. This is for development.
+2025-06-26 01:01:21,673 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:48 - Initializing database with URL: sqlite+aiosqlite:///ultibot_local.db
+2025-06-26 01:01:21,685 - ultibot_backend - INFO - [MainThread] - main.py:115 - Creando nueva instancia de FastAPI...
+2025-06-26 01:01:21,686 - ultibot_backend - INFO - [MainThread] - main.py:158 - Registrando routers de la API...
+2025-06-26 01:01:21,706 - ultibot_backend - INFO - [MainThread] - main.py:169 - Todos los routers han sido registrados.
+2025-06-26 01:01:21,706 - ultibot_backend - INFO - [MainThread] - main.py:222 - Instancia global de la aplicación creada.
+2025-06-26 01:01:21,707 - ultibot_backend - INFO - [MainThread] - main.py:86 - Iniciando UltiBot Backend (lifespan)...
+2025-06-26 01:01:21,708 - ultibot_backend - INFO - [MainThread] - main.py:91 - DependencyContainer adjuntado a app.state: True
+2025-06-26 01:01:21,708 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:106 - Initializing dependency container...
+2025-06-26 01:01:21,708 - ultibot_backend.dependencies - WARNING - [MainThread] - dependencies.py:45 - Using local SQLite database: sqlite+aiosqlite:///ultibot_local.db. This is for development.
+2025-06-26 01:01:21,709 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:48 - Initializing database with URL: sqlite+aiosqlite:///ultibot_local.db
+2025-06-26 01:01:21,716 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:62 - Database tables created and session factory initialized successfully.
+2025-06-26 01:01:21,748 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:62 - Database tables created and session factory initialized successfully.
+2025-06-26 01:01:21,988 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:12 - RedisCache initialized with URL: redis://localhost:6379/0
+2025-06-26 01:01:21,988 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:18 - Redis client created.
+2025-06-26 01:01:22,027 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:12 - RedisCache initialized with URL: redis://localhost:6379/0
+2025-06-26 01:01:22,028 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:18 - Redis client created.
+2025-06-26 01:01:22,253 - ultibot_backend.services.order_execution_service - INFO - [MainThread] - order_execution_service.py:343 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-26 01:01:22,259 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:30 - CredentialService __init__ intentando obtener encryption_key de AppSettings: Presente
+2025-06-26 01:01:22,259 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:36 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-26 01:01:22,260 - ultibot_backend.services.unified_order_execution_service - INFO - [MainThread] - unified_order_execution_service.py:28 - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-26 01:01:22,272 - ultibot_backend.services.ai_orchestrator_service - INFO - [MainThread] - ai_orchestrator_service.py:144 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
+2025-06-26 01:01:22,273 - ultibot_backend.services.performance_service - INFO - [MainThread] - performance_service.py:29 - PerformanceService initialized. PersistenceService instance: <ultibot_backend.adapters.persistence_service.SupabasePersistenceService object at 0x000001E4C35073D0>
+2025-06-26 01:01:22,274 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:186 - Dependency container initialized successfully.
+2025-06-26 01:01:22,274 - ultibot_backend - INFO - [MainThread] - main.py:95 - Contenedor de dependencias inicializado en lifespan.
+2025-06-26 01:01:22,275 - ultibot_backend - INFO - [MainThread] - main.py:101 - Aplicación iniciada correctamente (lifespan).
+2025-06-26 01:01:22,278 - ultibot_backend.services.order_execution_service - INFO - [MainThread] - order_execution_service.py:343 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-26 01:01:22,282 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:30 - CredentialService __init__ intentando obtener encryption_key de AppSettings: Presente
+2025-06-26 01:01:22,282 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:36 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-26 01:01:22,283 - ultibot_backend.services.unified_order_execution_service - INFO - [MainThread] - unified_order_execution_service.py:28 - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-26 01:01:22,295 - ultibot_backend.services.ai_orchestrator_service - INFO - [MainThread] - ai_orchestrator_service.py:144 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
+2025-06-26 01:01:22,296 - ultibot_backend.services.performance_service - INFO - [MainThread] - performance_service.py:29 - PerformanceService initialized. PersistenceService instance: <ultibot_backend.adapters.persistence_service.SupabasePersistenceService object at 0x000002DBEEBA8910>
+2025-06-26 01:01:22,296 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:186 - Dependency container initialized successfully.
+2025-06-26 01:01:22,296 - ultibot_backend - INFO - [MainThread] - main.py:95 - Contenedor de dependencias inicializado en lifespan.
+2025-06-26 01:01:22,297 - ultibot_backend - INFO - [MainThread] - main.py:101 - Aplicación iniciada correctamente (lifespan).
+2025-06-26 01:01:56,227 - asyncio - DEBUG - Using selector: SelectSelector
+2025-06-26 01:01:56,227 - __main__ - INFO - Starting asynchronous initialization...
+2025-06-26 01:01:56,227 - asyncio - DEBUG - Using proactor: _IocpProactor
+2025-06-26 01:01:56,227 - __main__ - INFO - QEventLoop initialized and set.
+2025-06-26 01:01:56,243 - __main__ - INFO - Stylesheet loaded successfully.
+2025-06-26 01:01:56,243 - __main__ - INFO - Initializing API client...
+2025-06-26 01:01:56,244 - ultibot_ui.services.api_client - DEBUG - APIClient singleton: base URL establecida en http://127.0.0.1:8000
+2025-06-26 01:01:56,420 - ultibot_ui.services.api_client - DEBUG - APIClient httpx client inicializado con base URL: http://127.0.0.1:8000
+2025-06-26 01:01:56,420 - __main__ - INFO - API client initialized.
+2025-06-26 01:01:56,420 - __main__ - INFO - Creating MainWindow...
+2025-06-26 01:01:56,465 - ultibot_ui.services.trading_mode_state - INFO - TradingModeStateManager initialized with mode: paper
+2025-06-26 01:01:56,465 - ultibot_ui.services.trading_mode_state - INFO - Created global trading mode state manager
+2025-06-26 01:01:58,395 - ultibot_ui.widgets.portfolio_widget - INFO - Timer de actualización del portafolio iniciado.
+2025-06-26 01:01:58,395 - ultibot_ui.widgets.chart_widget - INFO - Solicitando datos para BTCUSDT - 1h
+2025-06-26 01:01:58,425 - ultibot_ui.widgets.market_data_widget - INFO - Cargando configuración inicial para MarketDataWidget...
+2025-06-26 01:01:58,427 - ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: __init__ called.
+2025-06-26 01:01:58,427 - ultibot_ui.views.opportunities_view - DEBUG - OpportunitiesView initialized.
+2025-06-26 01:01:58,463 - ultibot_ui.windows.history_view - INFO - HistoryView inicializada.
+2025-06-26 01:01:58,470 - ultibot_ui.views.orders_view - INFO - OrdersView initialized.
+2025-06-26 01:01:58,479 - ultibot_ui.views.trading_terminal_view - INFO - Price chart initialized for TradingTerminalView.
+2025-06-26 01:01:58,479 - ultibot_ui.views.trading_terminal_view - INFO - TradingTerminalView initialized.
+2025-06-26 01:01:58,479 - ultibot_ui.windows.main_window - INFO - Central widget y vistas configuradas.
+2025-06-26 01:01:58,501 - ultibot_ui.windows.main_window - INFO - MainWindow inicializada y visible.
+2025-06-26 01:01:58,501 - __main__ - INFO - MainWindow created.
+2025-06-26 01:01:58,502 - __main__ - INFO - Fetching initial user configuration...
+2025-06-26 01:01:58,502 - ultibot_ui.windows.main_window - INFO - Fetching initial user configuration directly...
+2025-06-26 01:01:58,502 - ultibot_ui.services.api_client - INFO - Obteniendo configuración de usuario.
+2025-06-26 01:01:58,502 - ultibot_ui.services.api_client - DEBUG - APIClient httpx client ya está inicializado.
+2025-06-26 01:01:58,503 - ultibot_ui.services.api_client - DEBUG - APIClient: _make_request invocado para GET /api/v1/config
+2025-06-26 01:01:58,689 - httpcore.connection - DEBUG - connect_tcp.started host='127.0.0.1' port=8000 local_address=None timeout=30.0 socket_options=None
+2025-06-26 01:01:58,700 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x00000237E84BD510>
+2025-06-26 01:01:58,700 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-06-26 01:01:58,702 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-06-26 01:01:58,703 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-06-26 01:01:58,703 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-06-26 01:01:58,703 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-06-26 01:01:58,706 - ultibot_backend - INFO - [MainThread] - main.py:127 - Middleware: Solicitud entrante: GET /api/v1/config
+2025-06-26 01:01:58,718 - ultibot_backend.services.config_service - INFO - [MainThread] - config_service.py:70 - Configuración de usuario cargada exitosamente desde la BD para el user_id: 00000000-0000-0000-0000-000000000001
+2025-06-26 01:01:58,718 - ultibot_backend - INFO - [MainThread] - main.py:129 - Middleware: Solicitud procesada: GET /api/v1/config - Status: 200
+2025-06-26 01:01:58,720 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Thu, 26 Jun 2025 05:01:58 GMT'), (b'server', b'uvicorn'), (b'content-length', b'1204'), (b'content-type', b'application/json')])
+2025-06-26 01:01:58,721 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/config "HTTP/1.1 200 OK"
+2025-06-26 01:01:58,721 - httpx - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/config "HTTP/1.1 200 OK"
+2025-06-26 01:01:58,721 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-06-26 01:01:58,722 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-06-26 01:01:58,722 - httpcore.http11 - DEBUG - response_closed.started
+2025-06-26 01:01:58,722 - httpcore.http11 - DEBUG - response_closed.complete
+2025-06-26 01:01:58,722 - ultibot_ui.services.api_client - INFO - HTTP Request: GET http://127.0.0.1:8000/api/v1/config "HTTP/HTTP/1.1 200 OK"
+2025-06-26 01:01:58,723 - ultibot_ui.services.api_client - DEBUG - Response content (processed): {'id': '2b6569a6-aad3-4fd1-8b0f-eeb29ec3841f', 'userId': '00000000-0000-0000-0000-000000000001', 'telegramChatId': None, 'notificationPreferences': [], 'enableTelegramNotifications': False, 'defaultPaperTradingCapital': '10000.00000000', 'paperTradingActive': True, 'paperTradingAssets': None, 'watchlists': [], 'favoritePairs': ['BTCUSDT', 'ETHUSDT', 'BNBUSDT'], 'riskProfile': 'moderate', 'riskProfileSettings': {'daily_capital_risk_percentage': 0.01, 'per_trade_capital_risk_percentage': 0.005, 'max_drawdown_percentage': 0.1}, 'realTradingSettings': {'real_trading_mode_active': False, 'real_trades_executed_count': 0, 'max_concurrent_operations': None, 'daily_loss_limit_absolute': None, 'daily_profit_target_absolute': None, 'asset_specific_stop_loss': None, 'auto_pause_trading_conditions': None, 'daily_capital_risked_usd': '0.0', 'last_daily_reset': '2025-06-26T04:38:13.871825Z'}, 'aiStrategyConfigurations': None, 'aiAnalysisConfidenceThresholds': {'paper_trading': 0.7, 'real_trading': 0.8}, 'mcpServerPreferences': [], 'selectedTheme': 'dark', 'dashboardLayoutProfiles': None, 'activeDashboardLayoutProfileId': None, 'dashboardLayoutConfig': None, 'cloudSyncPreferences': None, 'createdAt': '2025-06-26T04:38:13.876394', 'updatedAt': '2025-06-26T04:38:13.876394'}
+2025-06-26 01:01:58,723 - ultibot_ui.windows.main_window - INFO - Configuration received and validated for user ID: 00000000-0000-0000-0000-000000000001. Updating UI.
+2025-06-26 01:01:58,723 - ultibot_ui.windows.main_window - INFO - User configuration set for ID: 00000000-0000-0000-0000-000000000001
+2025-06-26 01:01:58,724 - ultibot_ui.windows.dashboard_view - INFO - DashboardView: User ID set to 00000000-0000-0000-0000-000000000001. Initializing async components.
+2025-06-26 01:01:58,724 - ultibot_ui.widgets.portfolio_widget - INFO - PortfolioWidget: User ID set to 00000000-0000-0000-0000-000000000001. Starting updates.
+2025-06-26 01:01:58,728 - ultibot_ui.widgets.market_data_widget - INFO - Cargando configuración inicial para MarketDataWidget...
+2025-06-26 01:01:58,729 - ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: User ID set to 00000000-0000-0000-0000-000000000001. Loading initial data.
+2025-06-26 01:01:58,729 - ultibot_ui.views.opportunities_view - INFO - OpportunitiesView: _load_initial_data called.
+2025-06-26 01:01:58,729 - ultibot_ui.views.portfolio_view - INFO - PortfolioView: User ID set to 00000000-0000-0000-0000-000000000001. Triggering initial data fetch.
+2025-06-26 01:01:58,730 - ultibot_ui.windows.history_view - INFO - HistoryView: User ID set to 00000000-0000-0000-0000-000000000001. Loading data.
+2025-06-26 01:01:58,731 - ultibot_ui.widgets.paper_trading_report_widget - INFO - PaperTradingReportWidget: User ID set to 00000000-0000-0000-0000-000000000001. Loading data.
+2025-06-26 01:01:58,731 - ultibot_ui.views.orders_view - INFO - OrdersView: User ID set to 00000000-0000-0000-0000-000000000001. Triggering order load.
+2025-06-26 01:01:58,731 - ultibot_ui.views.orders_view - INFO - Creating asyncio task to fetch orders.
+2025-06-26 01:01:58,731 - ultibot_ui.windows.settings_view - INFO - SettingsView: User ID set to 00000000-0000-0000-0000-000000000001. Loading initial data.
+2025-06-26 01:01:58,731 - ultibot_ui.windows.settings_view - INFO - SettingsView: Iniciando carga de datos iniciales (_load_initial_data).
+2025-06-26 01:01:58,731 - __main__ - INFO - Initial user configuration fetched and applied successfully.
+2025-06-26 01:01:58,732 - __main__ - INFO - Initialization complete. Showing MainWindow.
+2025-06-26 01:01:58,848 - ultibot_ui.windows.main_window - INFO - MainWindow: Post-show initialization started.
+2025-06-26 01:01:58,848 - ultibot_ui.views.strategies_view - INFO - StrategiesView: Initializing view data (loading strategies)...
+2025-06-26 01:01:58,848 - ultibot_ui.views.trading_terminal_view - INFO - TradingTerminalView: Initializing view data (starting price feed)...
+2025-06-26 01:01:58,848 - ultibot_ui.views.trading_terminal_view - INFO - Price feed task created for BTC/USDT.
+2025-06-26 01:01:58,848 - ultibot_ui.windows.dashboard_view - INFO - DashboardView: initialize_async_components INVOCADO
+2025-06-26 01:01:58,848 - ultibot_ui.windows.main_window - INFO - MainWindow: Post-show initialization finished.
+2025-06-26 01:01:58,848 - __main__ - INFO - Starting application event loop.
+2025-06-26 01:01:58,848 - qasync._QEventLoop - ERROR - Exception in callback ChartWidget.load_chart_data.<locals>.<lambda>() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\chart_widget.py:103
+handle: <Handle ChartWidget.load_chart_data.<locals>.<lambda>() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\chart_widget.py:103>
 Traceback (most recent call last):
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_transports\default.py", line 72, in map_httpcore_exceptions
-    yield
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_transports\default.py", line 377, in handle_async_request
-    resp = await self._pool.handle_async_request(req)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpcore\_async\connection_pool.py", line 256, in handle_async_request
-    raise exc from None
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpcore\_async\connection_pool.py", line 236, in handle_async_request
-    response = await connection.handle_async_request(
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpcore\_async\connection.py", line 101, in handle_async_request
-    raise exc
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpcore\_async\connection.py", line 78, in handle_async_request
-    stream = await self._connect(request)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpcore\_async\connection.py", line 124, in _connect
-    stream = await self._network_backend.connect_tcp(**kwargs)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpcore\_backends\auto.py", line 31, in connect_tcp
-    return await self._backend.connect_tcp(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpcore\_backends\anyio.py", line 113, in connect_tcp
-    with map_exceptions(exc_map):
-  File "C:\Program Files\Python311\Lib\contextlib.py", line 158, in __exit__
-    self.gen.throw(typ, value, traceback)
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpcore\_exceptions.py", line 14, in map_exceptions
-    raise to_exc(exc) from exc
-httpcore.ConnectError: All connection attempts failed
-
-The above exception was the direct cause of the following exception:
-
+  File "C:\Program Files\Python311\Lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\chart_widget.py", line 103, in <lambda>
+    lambda: asyncio.ensure_future(self._load_chart_data_async())
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\tasks.py", line 659, in ensure_future
+    return _ensure_future(coro_or_future, loop=loop)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\tasks.py", line 678, in _ensure_future
+    loop = events._get_event_loop(stacklevel=4)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\events.py", line 677, in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+RuntimeError: There is no current event loop in thread 'MainThread'.
+2025-06-26 01:01:58,865 - qasync._QEventLoop - ERROR - Exception in callback MarketDataWidget.load_initial_configuration.<locals>.<lambda>() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\market_data_widget.py:158
+handle: <Handle MarketDataWidget.load_initial_configuration.<locals>.<lambda>() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\market_data_widget.py:158>
 Traceback (most recent call last):
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 114, in __call__
-    result = await fn(*args, **kwargs)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 104, in _make_request
-    response = await self._client.request(method, endpoint, **kwargs)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_client.py", line 1585, in request
-    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_client.py", line 1674, in send
-    response = await self._send_handling_auth(
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_client.py", line 1702, in _send_handling_auth
-    response = await self._send_handling_redirects(
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_client.py", line 1739, in _send_handling_redirects
-    response = await self._send_single_request(request)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_client.py", line 1776, in _send_single_request
-    response = await transport.handle_async_request(request)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_transports\default.py", line 376, in handle_async_request
-    with map_httpcore_exceptions():
-  File "C:\Program Files\Python311\Lib\contextlib.py", line 158, in __exit__
-    self.gen.throw(typ, value, traceback)
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_transports\default.py", line 89, in map_httpcore_exceptions
-    raise mapped_exc(message) from exc
-httpx.ConnectError: All connection attempts failed
-
-The above exception was the direct cause of the following exception:
-
+  File "C:\Program Files\Python311\Lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\market_data_widget.py", line 158, in <lambda>
+    lambda: asyncio.ensure_future(self._load_initial_configuration_async())
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\tasks.py", line 659, in ensure_future
+    return _ensure_future(coro_or_future, loop=loop)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\tasks.py", line 678, in _ensure_future
+    loop = events._get_event_loop(stacklevel=4)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\events.py", line 677, in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+RuntimeError: There is no current event loop in thread 'MainThread'.
+2025-06-26 01:01:58,869 - qasync._QEventLoop - ERROR - Exception in callback MarketDataWidget.load_initial_configuration.<locals>.<lambda>() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\market_data_widget.py:158
+handle: <Handle MarketDataWidget.load_initial_configuration.<locals>.<lambda>() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\market_data_widget.py:158>
 Traceback (most recent call last):
-  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\chart_widget.py", line 111, in _load_chart_data_async
-    data = await self.api_client.get_ohlcv_data(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 151, in get_ohlcv_data
-    return await self._make_request("GET", "/api/v1/market/ohlcv", params=params)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 189, in async_wrapped
-    return await copy(fn, *args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 111, in __call__
-    do = await self.iter(retry_state=retry_state)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 153, in iter
-    result = await action(retry_state)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\tenacity\_utils.py", line 99, in inner
-    return call(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\tenacity\__init__.py", line 421, in exc_check
-    raise retry_exc from fut.exception()
-tenacity.RetryError: RetryError[<Future at 0x232ae69a3d0 state=finished raised ConnectError>]
-2025-06-26 00:17:56,410 - ultibot_ui.widgets.chart_widget - ERROR - Error de API en ChartWidget: RetryError[<Future at 0x232ae69a3d0 state=finished raised ConnectError>]
-2025-06-26 00:17:56,411 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
-2025-06-26 00:17:56,411 - ultibot_ui.services.api_client - WARNING - Error de red para GET http://127.0.0.1:8000/api/v1/config/user: All connection attempts failed. Re-lanzando para posible reintento.
-2025-06-26 00:17:56,411 - ultibot_ui.windows.main_window - CRITICAL - Error validating or fetching initial configuration: RetryError[<Future at 0x232ae69acd0 state=finished raised ConnectError>]
+  File "C:\Program Files\Python311\Lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\market_data_widget.py", line 158, in <lambda>
+    lambda: asyncio.ensure_future(self._load_initial_configuration_async())
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\tasks.py", line 659, in ensure_future
+    return _ensure_future(coro_or_future, loop=loop)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\tasks.py", line 678, in _ensure_future
+    loop = events._get_event_loop(stacklevel=4)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\events.py", line 677, in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+RuntimeError: There is no current event loop in thread 'MainThread'.
+2025-06-26 01:01:58,870 - ultibot_ui.views.portfolio_view - INFO - PortfolioView: Scheduling portfolio snapshot fetch.
+2025-06-26 01:01:58,871 - qasync._QEventLoop - ERROR - Exception in callback PaperTradingReportWidget.load_data.<locals>.<lambda>() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\paper_trading_report_widget.py:198
+handle: <Handle PaperTradingReportWidget.load_data.<locals>.<lambda>() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\paper_trading_report_widget.py:198>
 Traceback (most recent call last):
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_transports\default.py", line 72, in map_httpcore_exceptions
-    yield
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_transports\default.py", line 377, in handle_async_request
-    resp = await self._pool.handle_async_request(req)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpcore\_async\connection_pool.py", line 256, in handle_async_request
-    raise exc from None
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpcore\_async\connection_pool.py", line 236, in handle_async_request
-    response = await connection.handle_async_request(
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpcore\_async\connection.py", line 101, in handle_async_request
-    raise exc
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpcore\_async\connection.py", line 78, in handle_async_request
-    stream = await self._connect(request)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpcore\_async\connection.py", line 124, in _connect
-    stream = await self._network_backend.connect_tcp(**kwargs)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpcore\_backends\auto.py", line 31, in connect_tcp
-    return await self._backend.connect_tcp(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpcore\_backends\anyio.py", line 113, in connect_tcp
-    with map_exceptions(exc_map):
-  File "C:\Program Files\Python311\Lib\contextlib.py", line 158, in __exit__
-    self.gen.throw(typ, value, traceback)
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpcore\_exceptions.py", line 14, in map_exceptions
-    raise to_exc(exc) from exc
-httpcore.ConnectError: All connection attempts failed
-
-The above exception was the direct cause of the following exception:
-
+  File "C:\Program Files\Python311\Lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\paper_trading_report_widget.py", line 198, in <lambda>
+    lambda: asyncio.ensure_future(self._load_data_async())
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\tasks.py", line 659, in ensure_future
+    return _ensure_future(coro_or_future, loop=loop)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\tasks.py", line 678, in _ensure_future
+    loop = events._get_event_loop(stacklevel=4)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\events.py", line 677, in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+RuntimeError: There is no current event loop in thread 'MainThread'.
+2025-06-26 01:01:58,871 - qasync._QEventLoop - ERROR - Exception in callback PaperTradingReportWidget.load_data.<locals>.<lambda>() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\paper_trading_report_widget.py:198
+handle: <Handle PaperTradingReportWidget.load_data.<locals>.<lambda>() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\paper_trading_report_widget.py:198>
 Traceback (most recent call last):
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 114, in __call__
-    result = await fn(*args, **kwargs)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 104, in _make_request
-    response = await self._client.request(method, endpoint, **kwargs)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_client.py", line 1585, in request
-    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_client.py", line 1674, in send
-    response = await self._send_handling_auth(
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_client.py", line 1702, in _send_handling_auth
-    response = await self._send_handling_redirects(
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_client.py", line 1739, in _send_handling_redirects
-    response = await self._send_single_request(request)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_client.py", line 1776, in _send_single_request
-    response = await transport.handle_async_request(request)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_transports\default.py", line 376, in handle_async_request
-    with map_httpcore_exceptions():
-  File "C:\Program Files\Python311\Lib\contextlib.py", line 158, in __exit__
-    self.gen.throw(typ, value, traceback)
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\httpx\_transports\default.py", line 89, in map_httpcore_exceptions
-    raise mapped_exc(message) from exc
-httpx.ConnectError: All connection attempts failed
-
-The above exception was the direct cause of the following exception:
-
+  File "C:\Program Files\Python311\Lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\widgets\paper_trading_report_widget.py", line 198, in <lambda>
+    lambda: asyncio.ensure_future(self._load_data_async())
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\tasks.py", line 659, in ensure_future
+    return _ensure_future(coro_or_future, loop=loop)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\tasks.py", line 678, in _ensure_future
+    loop = events._get_event_loop(stacklevel=4)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\events.py", line 677, in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+RuntimeError: There is no current event loop in thread 'MainThread'.
+2025-06-26 01:01:58,872 - qasync._QEventLoop - ERROR - Exception in callback OrdersView.load_orders.<locals>.schedule_load() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\views\orders_view.py:92
+handle: <Handle OrdersView.load_orders.<locals>.schedule_load() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\views\orders_view.py:92>
 Traceback (most recent call last):
-  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\windows\main_window.py", line 296, in fetch_initial_user_configuration_async
-    config_dict = await self.api_client.get_user_configuration()
-                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\services\api_client.py", line 136, in get_user_configuration
-    return await self._make_request("GET", "/api/v1/config/user")
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 189, in async_wrapped
-    return await copy(fn, *args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 111, in __call__
-    do = await self.iter(retry_state=retry_state)
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\tenacity\asyncio\__init__.py", line 153, in iter
-    result = await action(retry_state)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\tenacity\_utils.py", line 99, in inner
-    return call(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\tenacity\__init__.py", line 421, in exc_check
-    raise retry_exc from fut.exception()
-tenacity.RetryError: RetryError[<Future at 0x232ae69acd0 state=finished raised ConnectError>]
-2025-06-26 00:17:56,523 - ultibot_ui.widgets.portfolio_widget - WARNING - PortfolioWidget: user_id no está disponible. No se puede actualizar el portafolio.
-2025-06-26 00:18:00,995 - ultibot_ui.widgets.portfolio_widget - WARNING - PortfolioWidget: user_id no está disponible. No se puede actualizar el portafolio.
-2025-06-26 00:18:01,042 - ultibot_ui.views.opportunities_view - INFO - Fetching Gemini IA opportunities.
-2025-06-26 00:18:01,773 - __main__ - INFO - Initial user configuration fetched and applied successfully.
-2025-06-26 00:18:01,774 - __main__ - INFO - Initialization complete. Showing MainWindow.
-2025-06-26 00:18:01,801 - ultibot_ui.windows.main_window - INFO - MainWindow: Post-show initialization started.
-2025-06-26 00:18:01,801 - ultibot_ui.windows.main_window - WARNING - Post-show initialization called without a user_id. Some views may not initialize correctly.
-2025-06-26 00:18:01,802 - ultibot_ui.views.strategies_view - INFO - StrategiesView: Initializing view data (loading strategies)...
-2025-06-26 00:18:01,802 - ultibot_ui.views.trading_terminal_view - INFO - TradingTerminalView: Initializing view data (starting price feed)...
-2025-06-26 00:18:01,802 - ultibot_ui.views.trading_terminal_view - INFO - Price feed task created for BTC/USDT.
-2025-06-26 00:18:01,803 - ultibot_ui.windows.dashboard_view - INFO - DashboardView: initialize_async_components INVOCADO
-2025-06-26 00:18:01,803 - ultibot_ui.windows.main_window - INFO - MainWindow: Post-show initialization finished.
-2025-06-26 00:18:01,803 - httpcore.connection - DEBUG - connect_tcp.failed exception=ConnectError(OSError('All connection attempts failed'))
-2025-06-26 00:18:01,805 - ultibot_ui.services.api_client - WARNING - Error de red para GET http://127.0.0.1:8000/api/v1/config/user: All connection attempts failed. Re-lanzando para posible reintento.
-2025-06-26 00:18:01,806 - ultibot_ui.widgets.market_data_widget - ERROR - MarketDataWidget: Error de API: RetryError[<Future at 0x2328f168290 state=finished raised ConnectError>]
-2025-06-26 00:18:04,652 - ultibot_ui.services.api_client - DEBUG - APIClient httpx client ya está inicializado.
-2025-06-26 00:18:04,652 - ultibot_ui.services.api_client - DEBUG - APIClient: _make_request invocado para GET /api/v1/opportunities/real-trading-candidates
-2025-06-26 00:18:04,652 - ultibot_ui.services.api_client - INFO - Obteniendo estrategias de trading.
-2025-06-26 00:18:04,653 - ultibot_ui.services.api_client - DEBUG - APIClient httpx client ya está inicializado.
-2025-06-26 00:18:04,654 - ultibot_ui.services.api_client - DEBUG - APIClient: _make_request invocado para GET /api/v1/strategies
-2025-06-26 00:18:04,655 - ultibot_ui.workers - INFO - Starting real-time price feed for BTC/USDT...
-2025-06-26 00:18:04,655 - ultibot_ui.services.api_client - INFO - Obteniendo datos de mercado para símbolos: ['BTC/USDT']
-2025-06-26 00:18:04,655 - ultibot_ui.services.api_client - DEBUG - APIClient httpx client ya está inicializado.
-2025-06-26 00:18:04,655 - ultibot_ui.services.api_client - DEBUG - APIClient: _make_request invocado para GET /api/v1/market/data
-2025-06-26 00:18:04,656 - ultibot_ui.services.api_client - INFO - Obteniendo trades, modo: both, filtros: {'trading_mode': 'both', 'limit': 100, 'offset': 0, 'status': 'open'}
-2025-06-26 00:18:04,657 - ultibot_ui.services.api_client - DEBUG - APIClient httpx client ya está inicializado.
-2025-06-26 00:18:04,657 - ultibot_ui.services.api_client - DEBUG - APIClient: _make_request invocado para GET /api/v1/trades
-2025-06-26 00:18:04,658 - ultibot_ui.workers - INFO - Price feed for BTC/USDT was cancelled.
-2025-06-26 00:18:04,659 - __main__ - INFO - Starting application event loop.
-2025-06-26 00:18:09,859 - ultibot_ui.windows.main_window - INFO - Cambiando a la vista: dashboard
-2025-06-26 00:18:10,501 - ultibot_ui.windows.main_window - INFO - Cambiando a la vista: terminal
-2025-06-26 00:18:11,171 - ultibot_ui.windows.main_window - INFO - Cambiando a la vista: opportunities
-2025-06-26 00:18:11,838 - ultibot_ui.windows.main_window - INFO - Cambiando a la vista: portfolio
-2025-06-26 00:18:12,312 - ultibot_ui.windows.main_window - INFO - Cambiando a la vista: strategies
-2025-06-26 00:18:12,716 - ultibot_ui.windows.main_window - INFO - Cambiando a la vista: history
-2025-06-26 00:18:13,279 - ultibot_ui.windows.main_window - INFO - Cambiando a la vista: settings
-2025-06-26 00:18:14,455 - ultibot_ui.windows.main_window - INFO - Cambiando a la vista: dashboard
-2025-06-26 00:18:15,996 - ultibot_ui.widgets.portfolio_widget - WARNING - PortfolioWidget: user_id no está disponible. No se puede actualizar el portafolio.
-2025-06-26 00:18:30,733 - ultibot_ui.windows.main_window - INFO - Cambiando a la vista: terminal
-2025-06-26 00:18:31,006 - ultibot_ui.widgets.portfolio_widget - WARNING - PortfolioWidget: user_id no está disponible. No se puede actualizar el portafolio.
-2025-06-26 00:18:31,052 - ultibot_ui.views.opportunities_view - INFO - Fetching Gemini IA opportunities.
-2025-06-26 00:18:33,524 - ultibot_ui.windows.main_window - INFO - Cleaning up MainWindow resources. Stopping 0 active threads...
-2025-06-26 00:18:33,524 - ultibot_ui.windows.dashboard_view - INFO - DashboardView: Iniciando limpieza de tareas.
-2025-06-26 00:18:33,524 - ultibot_ui.widgets.portfolio_widget - INFO - PortfolioWidget: Iniciando limpieza.
-2025-06-26 00:18:33,525 - ultibot_ui.widgets.portfolio_widget - INFO - PortfolioWidget: Limpieza completada.
-2025-06-26 00:18:33,525 - ultibot_ui.widgets.chart_widget - INFO - ChartWidget: Limpieza completada.
-2025-06-26 00:18:33,526 - ultibot_ui.windows.dashboard_view - INFO - DashboardView: Limpieza completada.
-2025-06-26 00:18:33,526 - ultibot_ui.views.opportunities_view - INFO - Cleaning up OpportunitiesView...
-2025-06-26 00:18:33,526 - ultibot_ui.views.opportunities_view - INFO - OpportunitiesView cleanup finished.
-2025-06-26 00:18:33,527 - ultibot_ui.views.portfolio_view - INFO - PortfolioView: Cleaning up...
-2025-06-26 00:18:33,527 - ultibot_ui.views.portfolio_view - INFO - PortfolioView: Cleanup finished.
-2025-06-26 00:18:33,527 - ultibot_ui.widgets.paper_trading_report_widget - INFO - PaperTradingReportWidget cleanup: No hay acciones que tomar.
-2025-06-26 00:18:33,527 - ultibot_ui.windows.history_view - INFO - HistoryView cleanup completado
-2025-06-26 00:18:33,529 - ultibot_ui.windows.settings_view - INFO - SettingsView: Cleanup called.
-2025-06-26 00:18:33,529 - ultibot_ui.views.trading_terminal_view - INFO - TradingTerminalView: Cleanup initiated.
-2025-06-26 00:18:33,529 - ultibot_ui.views.trading_terminal_view - INFO - TradingTerminalView: Cleanup finished.
-2025-06-26 00:18:33,530 - ultibot_ui.windows.main_window - INFO - MainWindow cleanup finished.
-2025-06-26 00:18:33,545 - __main__ - INFO - Cleanup process started...
-2025-06-26 00:18:33,545 - ultibot_ui.windows.main_window - INFO - Cleaning up MainWindow resources. Stopping 0 active threads...
-2025-06-26 00:18:33,546 - ultibot_ui.windows.dashboard_view - INFO - DashboardView: Iniciando limpieza de tareas.
-2025-06-26 00:18:33,546 - ultibot_ui.widgets.portfolio_widget - INFO - PortfolioWidget: Iniciando limpieza.
-2025-06-26 00:18:33,546 - ultibot_ui.widgets.portfolio_widget - INFO - PortfolioWidget: Limpieza completada.
-2025-06-26 00:18:33,547 - ultibot_ui.widgets.chart_widget - INFO - ChartWidget: Limpieza completada.
-2025-06-26 00:18:33,547 - ultibot_ui.windows.dashboard_view - INFO - DashboardView: Limpieza completada.
-2025-06-26 00:18:33,548 - ultibot_ui.views.opportunities_view - INFO - Cleaning up OpportunitiesView...
-2025-06-26 00:18:33,548 - ultibot_ui.views.opportunities_view - INFO - OpportunitiesView cleanup finished.
-2025-06-26 00:18:33,548 - ultibot_ui.views.portfolio_view - INFO - PortfolioView: Cleaning up...
-2025-06-26 00:18:33,549 - ultibot_ui.views.portfolio_view - INFO - PortfolioView: Cleanup finished.
-2025-06-26 00:18:33,549 - ultibot_ui.widgets.paper_trading_report_widget - INFO - PaperTradingReportWidget cleanup: No hay acciones que tomar.
-2025-06-26 00:18:33,550 - ultibot_ui.windows.history_view - INFO - HistoryView cleanup completado
-2025-06-26 00:18:33,550 - ultibot_ui.windows.settings_view - INFO - SettingsView: Cleanup called.
-2025-06-26 00:18:33,550 - ultibot_ui.views.trading_terminal_view - INFO - TradingTerminalView: Cleanup initiated.
-2025-06-26 00:18:33,550 - ultibot_ui.views.trading_terminal_view - INFO - TradingTerminalView: Cleanup finished.
-2025-06-26 00:18:33,552 - ultibot_ui.windows.main_window - INFO - MainWindow cleanup finished.
-2025-06-26 00:18:33,552 - __main__ - INFO - Scheduling API client cleanup task.
-2025-06-26 00:18:38,563 - __main__ - ERROR - Error during API client cleanup: 
-2025-06-26 00:18:38,563 - __main__ - INFO - Application cleanup finished.
-2025-06-26 00:18:38,563 - __main__ - INFO - Application event loop has stopped.
-2025-06-26 00:18:38,675 - qasync._windows._IocpProactor - DEBUG - Closing
-2025-06-26 00:18:38,677 - qasync._windows._IocpProactor - DEBUG - Closing
+  File "C:\Program Files\Python311\Lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\views\orders_view.py", line 93, in schedule_load
+    self.load_orders_task = asyncio.ensure_future(self._load_orders_async())
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\tasks.py", line 659, in ensure_future
+    return _ensure_future(coro_or_future, loop=loop)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\tasks.py", line 678, in _ensure_future
+    loop = events._get_event_loop(stacklevel=4)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\events.py", line 677, in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+RuntimeError: There is no current event loop in thread 'MainThread'.
+2025-06-26 01:01:58,873 - qasync._QEventLoop - ERROR - Exception in callback SettingsView._load_initial_data.<locals>.<lambda>() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\windows\settings_view.py:99
+handle: <Handle SettingsView._load_initial_data.<locals>.<lambda>() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\windows\settings_view.py:99>
+Traceback (most recent call last):
+  File "C:\Program Files\Python311\Lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\windows\settings_view.py", line 99, in <lambda>
+    self.main_event_loop.call_soon_threadsafe(lambda: asyncio.ensure_future(self._load_config_async()))
+                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\tasks.py", line 659, in ensure_future
+    return _ensure_future(coro_or_future, loop=loop)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\tasks.py", line 678, in _ensure_future
+    loop = events._get_event_loop(stacklevel=4)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\events.py", line 677, in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+RuntimeError: There is no current event loop in thread 'MainThread'.
+2025-06-26 01:01:58,874 - qasync._QEventLoop - ERROR - Exception in callback SettingsView._load_initial_data.<locals>.<lambda>() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\windows\settings_view.py:100
+handle: <Handle SettingsView._load_initial_data.<locals>.<lambda>() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\windows\settings_view.py:100>
+Traceback (most recent call last):
+  File "C:\Program Files\Python311\Lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\windows\settings_view.py", line 100, in <lambda>
+    self.main_event_loop.call_soon_threadsafe(lambda: asyncio.ensure_future(self._load_real_trading_status_async()))
+                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\tasks.py", line 659, in ensure_future
+    return _ensure_future(coro_or_future, loop=loop)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\tasks.py", line 678, in _ensure_future
+    loop = events._get_event_loop(stacklevel=4)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\events.py", line 677, in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+RuntimeError: There is no current event loop in thread 'MainThread'.
+2025-06-26 01:01:58,874 - qasync._QEventLoop - ERROR - Exception in callback StrategiesView.initialize_view_data.<locals>.<lambda>() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\views\strategies_view.py:168
+handle: <Handle StrategiesView.initialize_view_data.<locals>.<lambda>() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\views\strategies_view.py:168>
+Traceback (most recent call last):
+  File "C:\Program Files\Python311\Lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\views\strategies_view.py", line 168, in <lambda>
+    lambda: asyncio.ensure_future(self._load_strategies_async())
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\tasks.py", line 659, in ensure_future
+    return _ensure_future(coro_or_future, loop=loop)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\tasks.py", line 678, in _ensure_future
+    loop = events._get_event_loop(stacklevel=4)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\events.py", line 677, in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+RuntimeError: There is no current event loop in thread 'MainThread'.
+2025-06-26 01:01:58,875 - qasync._QEventLoop - ERROR - Exception in callback TradingTerminalView.start_price_feed.<locals>.schedule_feed() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\views\trading_terminal_view.py:154
+handle: <Handle TradingTerminalView.start_price_feed.<locals>.schedule_feed() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\views\trading_terminal_view.py:154>
+Traceback (most recent call last):
+  File "C:\Program Files\Python311\Lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\views\trading_terminal_view.py", line 155, in schedule_feed
+    self.price_feed_task = asyncio.ensure_future(
+                           ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\tasks.py", line 659, in ensure_future
+    return _ensure_future(coro_or_future, loop=loop)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\tasks.py", line 678, in _ensure_future
+    loop = events._get_event_loop(stacklevel=4)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\events.py", line 677, in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+RuntimeError: There is no current event loop in thread 'MainThread'.
+2025-06-26 01:01:58,876 - qasync._QEventLoop - ERROR - Exception in callback DashboardView.initialize_async_components.<locals>.<lambda>() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\windows\dashboard_view.py:87
+handle: <Handle DashboardView.initialize_async_components.<locals>.<lambda>() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\windows\dashboard_view.py:87>
+Traceback (most recent call last):
+  File "C:\Program Files\Python311\Lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\windows\dashboard_view.py", line 87, in <lambda>
+    lambda: asyncio.ensure_future(self._initialize_async())
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\tasks.py", line 659, in ensure_future
+    return _ensure_future(coro_or_future, loop=loop)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\tasks.py", line 678, in _ensure_future
+    loop = events._get_event_loop(stacklevel=4)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\events.py", line 677, in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+RuntimeError: There is no current event loop in thread 'MainThread'.
+2025-06-26 01:01:58,897 - ultibot_backend - INFO - [MainThread] - main.py:104 - Apagando UltiBot Backend (lifespan)...
+2025-06-26 01:01:58,897 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:189 - Shutting down dependency container...
+2025-06-26 01:01:58,898 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:40 - Redis client closed.
+2025-06-26 01:01:58,899 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:196 - Dependency container shut down.
+2025-06-26 01:01:58,899 - ultibot_backend - INFO - [MainThread] - main.py:107 - Recursos liberados y aplicación apagada (lifespan).
+2025-06-26 01:01:58,913 - ultibot_ui.views.opportunities_view - INFO - Fetching Gemini IA opportunities.
+2025-06-26 01:01:58,919 - qasync._QEventLoop - ERROR - Exception in callback PortfolioView._fetch_portfolio_data.<locals>.<lambda>() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\views\portfolio_view.py:146
+handle: <Handle PortfolioView._fetch_portfolio_data.<locals>.<lambda>() at C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\views\portfolio_view.py:146>
+Traceback (most recent call last):
+  File "C:\Program Files\Python311\Lib\asyncio\events.py", line 80, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Users\zamor\UltiBotInversiones\src\ultibot_ui\views\portfolio_view.py", line 146, in <lambda>
+    lambda: asyncio.ensure_future(self._fetch_portfolio_data_async())
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\tasks.py", line 659, in ensure_future
+    return _ensure_future(coro_or_future, loop=loop)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\tasks.py", line 678, in _ensure_future
+    loop = events._get_event_loop(stacklevel=4)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\asyncio\events.py", line 677, in get_event_loop
+    raise RuntimeError('There is no current event loop in thread %r.'
+RuntimeError: There is no current event loop in thread 'MainThread'.
+2025-06-26 01:02:03,450 - ultibot_backend - INFO - [MainThread] - main.py:115 - Creando nueva instancia de FastAPI...
+2025-06-26 01:02:03,450 - ultibot_backend - INFO - [MainThread] - main.py:158 - Registrando routers de la API...
+2025-06-26 01:02:03,469 - ultibot_backend - INFO - [MainThread] - main.py:169 - Todos los routers han sido registrados.
+2025-06-26 01:02:03,469 - ultibot_backend - INFO - [MainThread] - main.py:222 - Instancia global de la aplicación creada.
+2025-06-26 01:02:03,474 - ultibot_backend - INFO - [MainThread] - main.py:86 - Iniciando UltiBot Backend (lifespan)...
+2025-06-26 01:02:03,474 - ultibot_backend - INFO - [MainThread] - main.py:91 - DependencyContainer adjuntado a app.state: True
+2025-06-26 01:02:03,475 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:106 - Initializing dependency container...
+2025-06-26 01:02:03,475 - ultibot_backend.dependencies - WARNING - [MainThread] - dependencies.py:45 - Using local SQLite database: sqlite+aiosqlite:///ultibot_local.db. This is for development.
+2025-06-26 01:02:03,476 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:48 - Initializing database with URL: sqlite+aiosqlite:///ultibot_local.db
+2025-06-26 01:02:03,518 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:62 - Database tables created and session factory initialized successfully.
+2025-06-26 01:02:03,694 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:12 - RedisCache initialized with URL: redis://localhost:6379/0
+2025-06-26 01:02:03,695 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:18 - Redis client created.
+2025-06-26 01:02:03,870 - ultibot_backend.services.order_execution_service - INFO - [MainThread] - order_execution_service.py:343 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-26 01:02:03,875 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:30 - CredentialService __init__ intentando obtener encryption_key de AppSettings: Presente
+2025-06-26 01:02:03,875 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:36 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-26 01:02:03,878 - ultibot_backend.services.unified_order_execution_service - INFO - [MainThread] - unified_order_execution_service.py:28 - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-26 01:02:03,890 - ultibot_backend.services.ai_orchestrator_service - INFO - [MainThread] - ai_orchestrator_service.py:144 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
+2025-06-26 01:02:03,890 - ultibot_backend.services.performance_service - INFO - [MainThread] - performance_service.py:29 - PerformanceService initialized. PersistenceService instance: <ultibot_backend.adapters.persistence_service.SupabasePersistenceService object at 0x0000017C7D0C2150>
+2025-06-26 01:02:03,890 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:186 - Dependency container initialized successfully.
+2025-06-26 01:02:03,895 - ultibot_backend - INFO - [MainThread] - main.py:95 - Contenedor de dependencias inicializado en lifespan.
+2025-06-26 01:02:03,895 - ultibot_backend - INFO - [MainThread] - main.py:101 - Aplicación iniciada correctamente (lifespan).
+2025-06-26 01:02:08,401 - ultibot_backend - INFO - [MainThread] - main.py:115 - Creando nueva instancia de FastAPI...
+2025-06-26 01:02:08,402 - ultibot_backend - INFO - [MainThread] - main.py:158 - Registrando routers de la API...
+2025-06-26 01:02:08,423 - ultibot_backend - INFO - [MainThread] - main.py:169 - Todos los routers han sido registrados.
+2025-06-26 01:02:08,424 - ultibot_backend - INFO - [MainThread] - main.py:222 - Instancia global de la aplicación creada.
+2025-06-26 01:02:08,425 - ultibot_backend - INFO - [MainThread] - main.py:86 - Iniciando UltiBot Backend (lifespan)...
+2025-06-26 01:02:08,425 - ultibot_backend - INFO - [MainThread] - main.py:91 - DependencyContainer adjuntado a app.state: True
+2025-06-26 01:02:08,425 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:106 - Initializing dependency container...
+2025-06-26 01:02:08,426 - ultibot_backend.dependencies - WARNING - [MainThread] - dependencies.py:45 - Using local SQLite database: sqlite+aiosqlite:///ultibot_local.db. This is for development.
+2025-06-26 01:02:08,427 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:48 - Initializing database with URL: sqlite+aiosqlite:///ultibot_local.db
+2025-06-26 01:02:08,464 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:62 - Database tables created and session factory initialized successfully.
+2025-06-26 01:02:08,640 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:12 - RedisCache initialized with URL: redis://localhost:6379/0
+2025-06-26 01:02:08,640 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:18 - Redis client created.
+2025-06-26 01:02:08,815 - ultibot_backend.services.order_execution_service - INFO - [MainThread] - order_execution_service.py:343 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-26 01:02:08,820 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:30 - CredentialService __init__ intentando obtener encryption_key de AppSettings: Presente
+2025-06-26 01:02:08,820 - ultibot_backend.services.credential_service - INFO - [MainThread] - credential_service.py:36 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-26 01:02:08,820 - ultibot_backend.services.unified_order_execution_service - INFO - [MainThread] - unified_order_execution_service.py:28 - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-26 01:02:08,833 - ultibot_backend.services.ai_orchestrator_service - INFO - [MainThread] - ai_orchestrator_service.py:144 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
+2025-06-26 01:02:08,834 - ultibot_backend.services.performance_service - INFO - [MainThread] - performance_service.py:29 - PerformanceService initialized. PersistenceService instance: <ultibot_backend.adapters.persistence_service.SupabasePersistenceService object at 0x000001F43DBF4610>
+2025-06-26 01:02:08,834 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:186 - Dependency container initialized successfully.
+2025-06-26 01:02:08,835 - ultibot_backend - INFO - [MainThread] - main.py:95 - Contenedor de dependencias inicializado en lifespan.
+2025-06-26 01:02:08,835 - ultibot_backend - INFO - [MainThread] - main.py:101 - Aplicación iniciada correctamente (lifespan).
+2025-06-26 01:02:11,125 - ultibot_ui.windows.main_window - INFO - Cleaning up MainWindow resources. Stopping 0 active threads...
+2025-06-26 01:02:11,125 - ultibot_ui.windows.dashboard_view - INFO - DashboardView: Iniciando limpieza de tareas.
+2025-06-26 01:02:11,125 - ultibot_ui.widgets.portfolio_widget - INFO - PortfolioWidget: Iniciando limpieza.
+2025-06-26 01:02:11,125 - ultibot_ui.widgets.portfolio_widget - INFO - PortfolioWidget: Limpieza completada.
+2025-06-26 01:02:11,125 - ultibot_ui.widgets.chart_widget - INFO - ChartWidget: Limpieza completada.
+2025-06-26 01:02:11,129 - ultibot_ui.windows.dashboard_view - INFO - DashboardView: Limpieza completada.
+2025-06-26 01:02:11,130 - ultibot_ui.views.opportunities_view - INFO - Cleaning up OpportunitiesView...
+2025-06-26 01:02:11,130 - ultibot_ui.views.opportunities_view - INFO - OpportunitiesView cleanup finished.
+2025-06-26 01:02:11,130 - ultibot_ui.views.portfolio_view - INFO - PortfolioView: Cleaning up...
+2025-06-26 01:02:11,130 - ultibot_ui.views.portfolio_view - INFO - PortfolioView: Cleanup finished.
+2025-06-26 01:02:11,130 - ultibot_ui.widgets.paper_trading_report_widget - INFO - PaperTradingReportWidget cleanup: No hay acciones que tomar.
+2025-06-26 01:02:11,130 - ultibot_ui.windows.history_view - INFO - HistoryView cleanup completado
+2025-06-26 01:02:11,130 - ultibot_ui.windows.settings_view - INFO - SettingsView: Cleanup called.
+2025-06-26 01:02:11,132 - ultibot_ui.views.trading_terminal_view - INFO - TradingTerminalView: Cleanup initiated.
+2025-06-26 01:02:11,133 - ultibot_ui.views.trading_terminal_view - INFO - TradingTerminalView: Cleanup finished.
+2025-06-26 01:02:11,133 - ultibot_ui.windows.main_window - INFO - MainWindow cleanup finished.
+2025-06-26 01:02:11,138 - __main__ - INFO - Cleanup process started...
+2025-06-26 01:02:11,138 - ultibot_ui.windows.main_window - INFO - Cleaning up MainWindow resources. Stopping 0 active threads...
+2025-06-26 01:02:11,145 - ultibot_ui.windows.dashboard_view - INFO - DashboardView: Iniciando limpieza de tareas.
+2025-06-26 01:02:11,145 - ultibot_ui.widgets.portfolio_widget - INFO - PortfolioWidget: Iniciando limpieza.
+2025-06-26 01:02:11,145 - ultibot_ui.widgets.portfolio_widget - INFO - PortfolioWidget: Limpieza completada.
+2025-06-26 01:02:11,145 - ultibot_ui.widgets.chart_widget - INFO - ChartWidget: Limpieza completada.
+2025-06-26 01:02:11,146 - ultibot_ui.windows.dashboard_view - INFO - DashboardView: Limpieza completada.
+2025-06-26 01:02:11,146 - ultibot_ui.views.opportunities_view - INFO - Cleaning up OpportunitiesView...
+2025-06-26 01:02:11,148 - ultibot_ui.views.opportunities_view - INFO - OpportunitiesView cleanup finished.
+2025-06-26 01:02:11,148 - ultibot_ui.views.portfolio_view - INFO - PortfolioView: Cleaning up...
+2025-06-26 01:02:11,149 - ultibot_ui.views.portfolio_view - INFO - PortfolioView: Cleanup finished.
+2025-06-26 01:02:11,149 - ultibot_ui.widgets.paper_trading_report_widget - INFO - PaperTradingReportWidget cleanup: No hay acciones que tomar.
+2025-06-26 01:02:11,149 - ultibot_ui.windows.history_view - INFO - HistoryView cleanup completado
+2025-06-26 01:02:11,150 - ultibot_ui.windows.settings_view - INFO - SettingsView: Cleanup called.
+2025-06-26 01:02:11,150 - ultibot_ui.views.trading_terminal_view - INFO - TradingTerminalView: Cleanup initiated.
+2025-06-26 01:02:11,150 - ultibot_ui.views.trading_terminal_view - INFO - TradingTerminalView: Cleanup finished.
+2025-06-26 01:02:11,151 - ultibot_ui.windows.main_window - INFO - MainWindow cleanup finished.
+2025-06-26 01:02:11,151 - __main__ - INFO - Scheduling API client cleanup task.
+2025-06-26 01:02:16,161 - __main__ - ERROR - Error during API client cleanup: 
+2025-06-26 01:02:16,161 - __main__ - INFO - Application cleanup finished.
+2025-06-26 01:02:16,163 - __main__ - INFO - Application event loop has stopped.
+2025-06-26 01:02:16,269 - qasync._windows._IocpProactor - DEBUG - Closing
+2025-06-26 01:02:16,276 - qasync._windows._IocpProactor - DEBUG - Closing
+2025-06-26 01:02:23,383 - ultibot_backend - INFO - [MainThread] - main.py:104 - Apagando UltiBot Backend (lifespan)...
+2025-06-26 01:02:23,383 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:189 - Shutting down dependency container...
+2025-06-26 01:02:23,387 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:40 - Redis client closed.
+2025-06-26 01:02:23,388 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:196 - Dependency container shut down.
+2025-06-26 01:02:23,388 - ultibot_backend - INFO - [MainThread] - main.py:107 - Recursos liberados y aplicación apagada (lifespan).

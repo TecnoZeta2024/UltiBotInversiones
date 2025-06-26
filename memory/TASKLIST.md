@@ -1,5 +1,22 @@
 # Tasklist: UltiBotInversiones
 
+## [TASK-ORACLE-PACAPH-001] Protocolo de Auditoría de Contratos de API y Pruebas de Humo (PACAPH)
+
+- [ ] **Fase 1: Descubrimiento y Mapeo de Contratos (Blueprint)**
+  - [ ] Escanear `src/ultibot_backend/api/v1/` para identificar todos los archivos de routers.
+  - [ ] Inicializar el artefacto `memory/visuals/api_contract_health_report.md`.
+  - [ ] Para cada router, extraer: `Método HTTP`, `Ruta`, `Handler`, `Request Model`, `Response Model`.
+  - [ ] Poblar la tabla de contratos en el informe de salud.
+
+- [ ] **Fase 2: Generación de Informe (Assemble)**
+  - [ ] Analizar estáticamente los modelos Pydantic para cada endpoint.
+  - [ ] Documentar el "contrato" esperado para cada endpoint en el informe.
+  - [ ] *Nota: La ejecución de pruebas de humo dinámicas se marcará como un siguiente paso sugerido.*
+
+- [ ] **Fase 3: Documentación y Cierre (Decide & Record)**
+  - [ ] Aplicar el Protocolo de Generación de Documentación Técnica (PGDT) para enriquecer el informe.
+  - [ ] Actualizar `memory/visuals/dashboard.md` con un enlace al informe finalizado.
+
 ## [TASK-UI-REFACTOR-002] Refactorización Estratégica del Frontend
 
 - [x] **Fase 1: Mapeo de Interacciones (Completada)**

@@ -25,10 +25,11 @@ class OrderFormWidget(QtWidgets.QWidget):
     order_executed = QtCore.Signal(object)
     order_failed = QtCore.Signal(str)
     
-    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, parent: Optional[QtWidgets.QWidget] = None):
+    def __init__(self, user_id: UUID, api_client: UltiBotAPIClient, main_event_loop: asyncio.AbstractEventLoop, parent: Optional[QtWidgets.QWidget] = None):
         super().__init__(parent)
         self.user_id = user_id
         self.api_client = api_client
+        self.main_event_loop = main_event_loop
         
         self.trading_mode_manager: TradingModeStateManager = get_trading_mode_manager()
         self.trading_mode_manager.trading_mode_changed.connect(self._on_trading_mode_changed)
@@ -279,7 +280,9 @@ class OrderFormWidget(QtWidgets.QWidget):
             if reply != QtWidgets.QMessageBox.StandardButton.Yes:
                 return
         
-        asyncio.create_task(self._execute_order_async())
+        self.main_event_loop.call_soon_threadsafe(
+            lambda: asyncio.ensure_future(self._execute_order_async())
+        )
         
     async def _execute_order_async(self):
         order_data = self._get_order_data()

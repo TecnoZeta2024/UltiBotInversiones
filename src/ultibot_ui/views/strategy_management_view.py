@@ -97,7 +97,9 @@ class StrategyManagementView(QWidget):
 
     def load_strategies(self):
         self.status_label.setText("Cargando estrategias...")
-        asyncio.create_task(self._load_strategies_async())
+        self.main_event_loop.call_soon_threadsafe(
+            lambda: asyncio.ensure_future(self._load_strategies_async())
+        )
 
     async def _load_strategies_async(self):
         try:
@@ -213,7 +215,9 @@ class StrategyManagementView(QWidget):
 
     def execute_strategy_action(self, coroutine_factory: Callable[[], Coroutine], action_type: str, success_callback: Optional[Callable] = None):
         self.status_label.setText(f"Intentando {action_type} estrategia...")
-        asyncio.create_task(self._execute_strategy_action_async(coroutine_factory, action_type, success_callback))
+        self.main_event_loop.call_soon_threadsafe(
+            lambda: asyncio.ensure_future(self._execute_strategy_action_async(coroutine_factory, action_type, success_callback))
+        )
 
     async def _execute_strategy_action_async(self, coroutine_factory: Callable[[], Coroutine], action_type: str, success_callback: Optional[Callable] = None):
         try:

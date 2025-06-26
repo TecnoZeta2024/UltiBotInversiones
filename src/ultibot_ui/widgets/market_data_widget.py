@@ -154,7 +154,9 @@ class MarketDataWidget(QWidget):
 
     def load_initial_configuration(self):
         logger.info("Cargando configuración inicial para MarketDataWidget...")
-        asyncio.create_task(self._load_initial_configuration_async())
+        self.main_event_loop.call_soon_threadsafe(
+            lambda: asyncio.ensure_future(self._load_initial_configuration_async())
+        )
 
     async def _load_initial_configuration_async(self):
         try:
@@ -198,7 +200,9 @@ class MarketDataWidget(QWidget):
     def update_tickers_data(self):
         if not self.selected_pairs:
             return
-        asyncio.create_task(self._update_tickers_data_async())
+        self.main_event_loop.call_soon_threadsafe(
+            lambda: asyncio.ensure_future(self._update_tickers_data_async())
+        )
 
     async def _update_tickers_data_async(self):
         try:
@@ -220,7 +224,9 @@ class MarketDataWidget(QWidget):
         logger.info("Configuración de MarketDataWidget guardada exitosamente.")
 
     def save_widget_configuration(self):
-        asyncio.create_task(self._save_widget_configuration_async())
+        self.main_event_loop.call_soon_threadsafe(
+            lambda: asyncio.ensure_future(self._save_widget_configuration_async())
+        )
 
     async def _save_widget_configuration_async(self):
         try:
