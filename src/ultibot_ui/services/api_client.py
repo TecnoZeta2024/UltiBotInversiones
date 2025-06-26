@@ -133,7 +133,7 @@ class UltiBotAPIClient:
 
     async def get_user_configuration(self) -> Dict[str, Any]:
         logger.info("Obteniendo configuración de usuario.")
-        return await self._make_request("GET", "/api/v1/config")
+        return await self._make_request("GET", "/api/v1/config/user")
 
     async def get_portfolio_snapshot(self, user_id: UUID, trading_mode: str) -> Dict[str, Any]:
         logger.info(f"Obteniendo snapshot del portafolio para {user_id}, modo: {trading_mode}")
@@ -141,16 +141,14 @@ class UltiBotAPIClient:
         params = {"trading_mode": trading_mode}
         return await self._make_request("GET", endpoint, params=params)
 
-    async def get_trades(self, user_id: Optional[UUID] = None, trading_mode: str = 'paper', status: str = 'open', limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+    async def get_trades(self, trading_mode: str = 'paper', status: str = 'open', limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
         params = {"trading_mode": trading_mode, "limit": limit, "offset": offset, "status": status}
-        if user_id:
-            params["user_id"] = str(user_id)
         logger.info(f"Obteniendo trades, modo: {trading_mode}, filtros: {params}")
         return await self._make_request("GET", "/api/v1/trades", params=params)
 
     async def get_ohlcv_data(self, symbol: str, timeframe: str, limit: int = 100) -> List[Dict[str, Any]]:
         params = {"symbol": symbol, "interval": timeframe, "limit": limit}
-        return await self._make_request("GET", "/api/v1/market/klines", params=params)
+        return await self._make_request("GET", "/api/v1/market/ohlcv", params=params)
 
     async def get_strategies(self) -> Dict[str, Any]:
         """Obtiene la lista de estrategias de trading configuradas."""
@@ -158,33 +156,35 @@ class UltiBotAPIClient:
         return await self._make_request("GET", "/api/v1/strategies")
 
     async def get_ai_opportunities(self) -> List[Dict[str, Any]]:
-        return await self._make_request("GET", "/api/v1/opportunities/ai")
+        return await self._make_request("GET", "/api/v1/opportunities/real-trading-candidates")
 
-    async def analyze_opportunity_with_ai(self, user_id: str, opportunity_id: str) -> Dict[str, Any]:
-        """Solicita un análisis de IA para una oportunidad específica."""
-        logger.info(f"Solicitando análisis de IA para la oportunidad {opportunity_id} del usuario {user_id}.")
-        endpoint = f"/api/v1/opportunities/{opportunity_id}/analyze"
-        # El user_id se puede pasar en el cuerpo si es necesario para la lógica del backend
-        payload = {"user_id": user_id}
-        return await self._make_request("POST", endpoint, json=payload)
+    # TODO: [LEADCODER-REFACTOR] Este endpoint no existe en el backend.
+    # async def analyze_opportunity_with_ai(self, user_id: str, opportunity_id: str) -> Dict[str, Any]:
+    #     """Solicita un análisis de IA para una oportunidad específica."""
+    #     logger.info(f"Solicitando análisis de IA para la oportunidad {opportunity_id} del usuario {user_id}.")
+    #     endpoint = f"/api/v1/opportunities/{opportunity_id}/analyze"
+    #     # El user_id se puede pasar en el cuerpo si es necesario para la lógica del backend
+    #     payload = {"user_id": user_id}
+    #     return await self._make_request("POST", endpoint, json=payload)
 
-    async def confirm_real_trade_opportunity(self, opportunity_id: str) -> Dict[str, Any]:
-        """Confirma y ejecuta un trade en modo real basado en una oportunidad de IA."""
-        logger.info(f"Confirmando trade real para la oportunidad {opportunity_id}.")
-        endpoint = f"/api/v1/trading/real/confirm-opportunity/{opportunity_id}"
-        return await self._make_request("POST", endpoint)
+    # TODO: [LEADCODER-REFACTOR] Este endpoint no existe en el backend.
+    # async def confirm_real_trade_opportunity(self, opportunity_id: str) -> Dict[str, Any]:
+    #     """Confirma y ejecuta un trade en modo real basado en una oportunidad de IA."""
+    #     logger.info(f"Confirmando trade real para la oportunidad {opportunity_id}.")
+    #     endpoint = f"/api/v1/trading/real/confirm-opportunity/{opportunity_id}"
+    #     return await self._make_request("POST", endpoint)
 
     async def activate_strategy(self, strategy_id: str, trading_mode: str) -> Dict[str, Any]:
         """Activa una estrategia de trading."""
         logger.info(f"Activando estrategia {strategy_id} en modo {trading_mode}.")
         payload = {"trading_mode": trading_mode}
-        return await self._make_request("PATCH", f"/api/v1/strategies/{strategy_id}/activate", json=payload)
+        return await self._make_request("POST", f"/api/v1/strategies/{strategy_id}/activate", json=payload)
 
     async def deactivate_strategy(self, strategy_id: str, trading_mode: str) -> Dict[str, Any]:
         """Desactiva una estrategia de trading."""
         logger.info(f"Desactivando estrategia {strategy_id} en modo {trading_mode}.")
         payload = {"trading_mode": trading_mode}
-        return await self._make_request("PATCH", f"/api/v1/strategies/{strategy_id}/deactivate", json=payload)
+        return await self._make_request("POST", f"/api/v1/strategies/{strategy_id}/deactivate", json=payload)
 
     async def get_notification_history(self, limit: int = 50) -> List[Dict[str, Any]]:
         """Obtiene el historial de notificaciones."""
@@ -213,16 +213,14 @@ class UltiBotAPIClient:
     async def get_market_data(self, symbols: List[str]) -> List[Dict[str, Any]]:
         """Obtiene datos de mercado para una lista de símbolos."""
         logger.info(f"Obteniendo datos de mercado para símbolos: {symbols}")
-        # Asumiendo que el backend tiene un endpoint que acepta una lista de símbolos como query param o en el body
-        # Para GET, es mejor usar query params si la lista no es demasiado larga
         processed_symbols = [s.replace("/", "") for s in symbols]
         params = {"symbols": ",".join(processed_symbols)}
-        return await self._make_request("GET", "/api/v1/market/tickers", params=params)
+        return await self._make_request("GET", "/api/v1/market/data", params=params)
 
     async def update_user_configuration(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Actualiza la configuración del usuario."""
-        logger.info("Actualizando configuración de usuario con PATCH.")
-        return await self._make_request("PATCH", "/api/v1/config", json=config)
+        logger.info("Actualizando configuración de usuario con PUT.")
+        return await self._make_request("PUT", "/api/v1/config/user", json=config)
 
     async def create_strategy_config(self, strategy_data: Dict[str, Any]) -> Dict[str, Any]:
         """Crea una nueva configuración de estrategia."""
@@ -242,9 +240,9 @@ class UltiBotAPIClient:
     async def activate_real_trading_mode(self) -> Dict[str, Any]:
         """Activa el modo de operativa real en el backend."""
         logger.info("Enviando solicitud para activar el modo de operativa real.")
-        return await self._make_request("POST", "/api/v1/config/real-trading/activate")
+        return await self._make_request("POST", "/api/v1/trading/mode/activate")
 
     async def deactivate_real_trading_mode(self) -> Dict[str, Any]:
         """Desactiva el modo de operativa real en el backend."""
         logger.info("Enviando solicitud para desactivar el modo de operativa real.")
-        return await self._make_request("POST", "/api/v1/config/real-trading/deactivate")
+        return await self._make_request("POST", "/api/v1/trading/mode/deactivate")

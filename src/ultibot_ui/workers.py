@@ -50,10 +50,10 @@ async def fetch_strategies(api_client: UltiBotAPIClient) -> List[dict]:
     logger.info(f"Fetched {len(strategies)} strategies.")
     return strategies
 
-async def fetch_performance_data(api_client: UltiBotAPIClient, user_id: UUID) -> dict:
+async def fetch_performance_data(api_client: UltiBotAPIClient) -> dict:
     """Obtiene y calcula los datos de rendimiento desde la API."""
     logger.info("Fetching performance data from API...")
-    trades_data = await api_client.get_trades(user_id=user_id, trading_mode="paper", status="closed", limit=500)
+    trades_data = await api_client.get_trades(trading_mode="paper", status="closed", limit=500)
     trades = [Trade.model_validate(t) for t in trades_data]
 
     total_trades = len(trades)
@@ -106,10 +106,10 @@ async def fetch_performance_data(api_client: UltiBotAPIClient, user_id: UUID) ->
         "metrics": metrics.model_dump(mode='json')
     }
 
-async def fetch_orders(api_client: UltiBotAPIClient, user_id: UUID) -> List[dict]:
+async def fetch_orders(api_client: UltiBotAPIClient) -> List[dict]:
     """Obtiene el historial de órdenes desde la API."""
     logger.info("Fetching order history from API...")
-    orders = await api_client.get_trades(user_id=user_id, trading_mode="paper", limit=100)
+    orders = await api_client.get_trades(trading_mode="paper", limit=100)
     logger.info(f"Fetched {len(orders)} orders.")
     return orders
 

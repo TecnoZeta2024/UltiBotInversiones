@@ -203,23 +203,22 @@ class OpportunitiesView(QWidget):
 
             action_button = QPushButton("Analizar con IA")
             action_button.setObjectName("analyzeAIButton")
-            action_button.clicked.connect(lambda _, o=opp: self._analyze_opportunity_with_ai(o))
+            # TODO: [LEADCODER-REFACTOR] La funcionalidad de análisis de IA está deshabilitada temporalmente.
+            action_button.setEnabled(False)
+            action_button.setToolTip("Funcionalidad no disponible en el backend actual.")
+            # action_button.clicked.connect(lambda _, o=opp: self._analyze_opportunity_with_ai(o))
             
             if opp.ai_analysis:
                 action_button.setText("Ver Análisis IA")
-                action_button.clicked.disconnect() # Desconectar el análisis para reconectar a la vista
-                action_button.clicked.connect(lambda _, o=opp: self._show_ai_analysis_dialog(o))
+                # action_button.clicked.disconnect() 
+                # action_button.clicked.connect(lambda _, o=opp: self._show_ai_analysis_dialog(o))
             elif opp.status == OpportunityStatus.UNDER_AI_ANALYSIS:
-                action_button.setEnabled(False)
                 action_button.setText("Análisis en Curso")
             elif opp.status == OpportunityStatus.ERROR_IN_PROCESSING:
-                action_button.setEnabled(False)
                 action_button.setText("Análisis Fallido")
             elif opp.status == OpportunityStatus.PENDING_AI_ANALYSIS:
                 action_button.setText("Analizar con IA")
-                action_button.setEnabled(True)
             else: # Default case for other statuses
-                action_button.setEnabled(False)
                 action_button.setText("Acción No Disponible")
 
 
@@ -242,21 +241,24 @@ class OpportunitiesView(QWidget):
         asyncio.create_task(self._analyze_opportunity_async(opportunity))
 
     async def _analyze_opportunity_async(self, opportunity: Opportunity):
-        if not self.user_id or not opportunity.id:
-            self._handle_ai_analysis_error("User ID or Opportunity ID is missing.")
-            return
-        try:
-            result = await self.api_client.analyze_opportunity_with_ai(
-                user_id=str(self.user_id),
-                opportunity_id=str(opportunity.id)
-            )
-            analysis_model = AIAnalysis.model_validate(result)
-            temp_opportunity = opportunity.model_copy(deep=True)
-            temp_opportunity.ai_analysis = analysis_model
-            self._show_ai_analysis_dialog(temp_opportunity)
-            self._fetch_opportunities()
-        except Exception as e:
-            self._handle_ai_analysis_error(f"Error al procesar el resultado del análisis: {e}")
+        # TODO: [LEADCODER-REFACTOR] La funcionalidad de análisis de IA está deshabilitada temporalmente.
+        logger.warning("Llamada a _analyze_opportunity_async abortada ya que el endpoint no está implementado.")
+        self._handle_ai_analysis_error("Funcionalidad no disponible en el backend.")
+        # if not self.user_id or not opportunity.id:
+        #     self._handle_ai_analysis_error("User ID or Opportunity ID is missing.")
+        #     return
+        # try:
+        #     result = await self.api_client.analyze_opportunity_with_ai(
+        #         user_id=str(self.user_id),
+        #         opportunity_id=str(opportunity.id)
+        #     )
+        #     analysis_model = AIAnalysis.model_validate(result)
+        #     temp_opportunity = opportunity.model_copy(deep=True)
+        #     temp_opportunity.ai_analysis = analysis_model
+        #     self._show_ai_analysis_dialog(temp_opportunity)
+        #     self._fetch_opportunities()
+        # except Exception as e:
+        #     self._handle_ai_analysis_error(f"Error al procesar el resultado del análisis: {e}")
 
     def _show_ai_analysis_dialog(self, opportunity: Opportunity):
         if not opportunity.ai_analysis:
@@ -280,24 +282,27 @@ class OpportunitiesView(QWidget):
         asyncio.create_task(self._execute_trade_async(opportunity, trading_mode))
 
     async def _execute_trade_async(self, opportunity: Opportunity, trading_mode: str):
-        if not opportunity.id:
-            self._handle_execute_trade_error("Opportunity ID is missing.")
-            return
+        # TODO: [LEADCODER-REFACTOR] La funcionalidad de confirmación de trades está deshabilitada temporalmente.
+        logger.warning("Llamada a _execute_trade_async abortada ya que el endpoint no está implementado.")
+        self._handle_execute_trade_error("Funcionalidad no disponible en el backend.")
+        # if not opportunity.id:
+        #     self._handle_execute_trade_error("Opportunity ID is missing.")
+        #     return
         
-        # El `trading_mode` se infiere del endpoint del backend, que es para trades 'real'.
-        # La lógica de la UI puede querer diferenciar, pero la llamada a la API es específica.
-        logger.info(f"Executing REAL trade for opportunity {opportunity.id} via confirmation endpoint.")
+        # # El `trading_mode` se infiere del endpoint del backend, que es para trades 'real'.
+        # # La lógica de la UI puede querer diferenciar, pero la llamada a la API es específica.
+        # logger.info(f"Executing REAL trade for opportunity {opportunity.id} via confirmation endpoint.")
 
-        try:
-            # Usar el nuevo método unificado del API client
-            result = await self.api_client.confirm_real_trade_opportunity(
-                opportunity_id=str(opportunity.id)
-            )
-            self._handle_execute_trade_result(result)
-        except APIError as e:
-            self._handle_execute_trade_error(f"API Error ({e.status_code}): {e.message}")
-        except Exception as e:
-            self._handle_execute_trade_error(str(e))
+        # try:
+        #     # Usar el nuevo método unificado del API client
+        #     result = await self.api_client.confirm_real_trade_opportunity(
+        #         opportunity_id=str(opportunity.id)
+        #     )
+        #     self._handle_execute_trade_result(result)
+        # except APIError as e:
+        #     self._handle_execute_trade_error(f"API Error ({e.status_code}): {e.message}")
+        # except Exception as e:
+        #     self._handle_execute_trade_error(str(e))
 
     def _handle_reanalyze_request(self, opportunity: Opportunity):
         logger.info(f"Received request to re-analyze opportunity ID: {opportunity.id}")

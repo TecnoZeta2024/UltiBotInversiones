@@ -74,7 +74,7 @@
 - **Ciclo:** [B-MAD-R: Record]
 - **Acción:** Verificación de la resolución de errores de inicialización de la UI y de la base de datos tras el reinicio. Se confirma que los errores críticos se han resuelto. Se observa una advertencia menor sobre datos de ticker.
 - **Resultado:** Éxito.
-- **Impacto:** La UI se inicia y se comunica con el backend. Se procede a la auditoría funcional detallada.
+- **Impacto:** La UI se inicia y se comunica con el backend. Se procederá a la auditoría funcional detallada.
 - **Timestamp:** 2025-06-25 18:52 UTC
 - **Agente:** UI/UX Maestro
 - **ID Tarea:** [TASK-UI-001]
@@ -275,3 +275,17 @@
 - **Acción:** Modificación de la regla de traspaso de contexto en `.clinerules/Token-limit-300k.md`. El activador ahora es el límite de costo de $1.2000, se requiere registro de avance previo y un análisis holístico al iniciar la nueva tarea.
 - **Resultado:** Éxito
 - **Impacto:** `.clinerules/Token-limit-300k.md`
+- **Timestamp:** 2025-06-26 03:55 UTC
+- **Agente:** ui-ux
+- **ID Tarea:** [TASK-UI-REFACTOR-002]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Inicio de la tarea de análisis y planificación para la refactorización del frontend.
+- **Resultado:** Éxito.
+- **Impacto:** Registro de inicio de tarea.
+- **Timestamp:** 2025-06-26 04:10 UTC
+- **Agente:** Leadcoder
+- **ID Tarea:** [TASK-UI-REFACTOR-002]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Inicio de la refactorización del frontend para alinear con el backend según `memory/API_CONTRACT_MAP.md`.
+- **Resultado:** Éxito.
+- **Impacto:** Registro de inicio de tarea.
