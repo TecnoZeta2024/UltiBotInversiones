@@ -1,14 +1,14 @@
 from PySide6 import QtWidgets # Importar QtWidgets completo
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QLineEdit, QPushButton, QGroupBox, QDoubleSpinBox, QMessageBox
-from PySide6.QtCore import Qt, Signal as pyqtSignal, QTimer, QThread
+from PySide6.QtCore import Qt, Signal as pyqtSignal
 import logging
-from typing import Optional, Dict, Any, List, cast
+from typing import Optional, Dict, Any, cast
 from uuid import UUID
 import asyncio
 
 from ultibot_ui.services.api_client import UltiBotAPIClient
 from shared.data_types import UserConfiguration, RealTradingSettings
-from ultibot_ui.workers import ApiWorker
+from ultibot_ui import workers
 
 logger = logging.getLogger(__name__)
 
@@ -19,13 +19,13 @@ class SettingsView(QWidget):
     config_changed = pyqtSignal(UserConfiguration)
     real_trading_mode_status_changed = pyqtSignal(bool, int, int)
 
-    def __init__(self, api_client: UltiBotAPIClient, parent=None):
+    def __init__(self, api_client: UltiBotAPIClient, main_event_loop: asyncio.AbstractEventLoop, parent=None):
         super().__init__(parent)
         self.user_id: Optional[UUID] = None # Se inicializará asíncronamente
         self.api_client = api_client # Usar la instancia de api_client
+        self.main_event_loop = main_event_loop
         self.current_config: Optional[UserConfiguration] = None
         self.real_trading_status: Dict[str, Any] = {"isActive": False, "executedCount": 0, "limit": 5}
-        self.active_threads: List[QThread] = []
 
         self._setup_ui()
         # No llamar a _load_initial_data aquí, se llamará después de set_user_id
@@ -96,48 +96,16 @@ class SettingsView(QWidget):
 
     def _load_initial_data(self):
         logger.info("SettingsView: Iniciando carga de datos iniciales (_load_initial_data).")
-        self._load_config_into_ui()
-        self._load_real_trading_status()
+        asyncio.create_task(self._load_config_async())
+        asyncio.create_task(self._load_real_trading_status_async())
 
-    def _start_api_worker(self, coroutine_factory, on_success, on_error):
-        # Obtener el bucle de eventos principal de la aplicación
-        app_instance = QtWidgets.QApplication.instance()
-        if not app_instance:
-            logger.error("SettingsView: No se encontró la instancia de QApplication para ApiWorker.")
-            on_error("Error interno: No se pudo obtener la instancia de la aplicación.")
-            return
-            
-        main_event_loop = app_instance.property("main_event_loop")
-        if not main_event_loop:
-            logger.error("SettingsView: No se encontró el bucle de eventos principal de qasync para ApiWorker.")
-            on_error("Error interno: Bucle de eventos principal no disponible.")
-            return
-
-        worker = ApiWorker(
-            api_client=self.api_client,
-            main_event_loop=main_event_loop, # Pasar el bucle de eventos
-            coroutine_factory=coroutine_factory
-        )
-        thread = QThread()
-        self.active_threads.append(thread)
-        worker.moveToThread(thread)
-
-        worker.result_ready.connect(on_success)
-        worker.error_occurred.connect(on_error)
-        thread.started.connect(worker.run)
-        worker.result_ready.connect(thread.quit)
-        worker.error_occurred.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
-        # Conectar la señal finished del hilo para limpiar el worker y el hilo, y removerlo de la lista
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        thread.finished.connect(lambda: self.active_threads.remove(thread) if thread in self.active_threads else None)
-        thread.start()
-
-    def _load_config_into_ui(self):
+    async def _load_config_async(self):
         logger.info("SettingsView: Solicitando configuración de usuario general.")
-        coro_factory = lambda api_client: api_client.get_user_configuration()
-        self._start_api_worker(coro_factory, self._handle_load_config_result, self._handle_load_config_error)
+        try:
+            config_data = await workers.fetch_user_configuration(self.api_client)
+            self._handle_load_config_result(config_data)
+        except Exception as e:
+            self._handle_load_config_error(str(e))
 
     def _handle_load_config_result(self, config_data: Dict[str, Any]):
         try:
@@ -155,10 +123,13 @@ class SettingsView(QWidget):
         logger.error(f"Error al cargar la configuración general en SettingsView: {error_message}")
         QMessageBox.critical(self, "Error de Carga", f"No se pudo cargar la configuración general: {error_message}")
 
-    def _load_real_trading_status(self):
+    async def _load_real_trading_status_async(self):
         logger.info("SettingsView: Solicitando configuración de usuario para estado de operativa real.")
-        coro_factory = lambda api_client: api_client.get_user_configuration()
-        self._start_api_worker(coro_factory, self._handle_load_real_trading_status_result, self._handle_load_real_trading_status_error)
+        try:
+            config_data = await workers.fetch_user_configuration(self.api_client)
+            self._handle_load_real_trading_status_result(config_data)
+        except Exception as e:
+            self._handle_load_real_trading_status_error(str(e))
 
     def _handle_load_real_trading_status_result(self, config_data: Dict[str, Any]):
         try:
@@ -209,9 +180,9 @@ class SettingsView(QWidget):
         self.real_trading_mode_status_changed.emit(is_active, executed_count, limit)
 
     def _handle_save_button_clicked(self):
-        self._save_config()
+        asyncio.create_task(self._save_config_async())
 
-    def _save_config(self):
+    async def _save_config_async(self):
         if not self.current_config:
             logger.error("SettingsView: No hay configuración actual para guardar. Operación cancelada.")
             QMessageBox.critical(self, "Error", "No se pudo guardar: la configuración actual no está cargada. Espere a que finalice la carga inicial.")
@@ -225,12 +196,12 @@ class SettingsView(QWidget):
             updated_config_model = self.current_config.model_copy(update=updated_config_data)
             
             logger.info("SettingsView: Solicitando guardar configuración de usuario general.")
-            coro_factory = lambda api_client: api_client.update_user_configuration(updated_config_model.model_dump(mode='json', by_alias=True, exclude_none=True))
-            self._start_api_worker(coro_factory, lambda result: self._handle_save_config_result(result, updated_config_model), self._handle_save_config_error)
+            result = await workers.update_user_configuration(self.api_client, updated_config_model)
+            self._handle_save_config_result(result, updated_config_model)
 
         except Exception as e:
-            logger.error(f"Error al preparar los datos para guardar la configuración: {e}", exc_info=True)
-            QMessageBox.critical(self, "Error de Preparación", f"No se pudieron preparar los datos para guardar: {e}")
+            logger.error(f"Error al guardar la configuración: {e}", exc_info=True)
+            self._handle_save_config_error(str(e))
 
     def _handle_save_config_result(self, result: Any, updated_config_model: UserConfiguration):
         logger.info("Configuración de usuario general guardada exitosamente desde la UI de Settings.")
@@ -266,16 +237,22 @@ class SettingsView(QWidget):
 
         if reply == QMessageBox.StandardButton.Yes:
             logger.info("SettingsView: Solicitando activar modo de operativa real.")
-            coro_factory = lambda api_client: api_client.activate_real_trading_mode()
-            self._start_api_worker(coro_factory, self._handle_activate_real_trading_result, self._handle_activate_real_trading_error)
+            asyncio.create_task(self._activate_real_trading_async())
         else:
             self.real_trading_checkbox.setChecked(False)
             logger.info("SettingsView: Activación del modo real cancelada por el usuario.")
 
+    async def _activate_real_trading_async(self):
+        try:
+            result = await workers.activate_real_trading_mode(self.api_client)
+            self._handle_activate_real_trading_result(result)
+        except Exception as e:
+            self._handle_activate_real_trading_error(str(e))
+
     def _handle_activate_real_trading_result(self, result: Any):
         QMessageBox.information(self, "Éxito", "Modo de Operativa Real Limitada activado.")
         logger.info("SettingsView: Modo de operativa real activado. Recargando estado.")
-        self._load_real_trading_status()
+        asyncio.create_task(self._load_real_trading_status_async())
 
     def _handle_activate_real_trading_error(self, error_message: str):
         logger.error(f"Error al activar el modo de operativa real: {error_message}")
@@ -284,13 +261,19 @@ class SettingsView(QWidget):
 
     def _deactivate_real_trading_mode(self):
         logger.info("SettingsView: Solicitando desactivar modo de operativa real.")
-        coro_factory = lambda api_client: api_client.deactivate_real_trading_mode()
-        self._start_api_worker(coro_factory, self._handle_deactivate_real_trading_result, self._handle_deactivate_real_trading_error)
+        asyncio.create_task(self._deactivate_real_trading_async())
+
+    async def _deactivate_real_trading_async(self):
+        try:
+            result = await workers.deactivate_real_trading_mode(self.api_client)
+            self._handle_deactivate_real_trading_result(result)
+        except Exception as e:
+            self._handle_deactivate_real_trading_error(str(e))
 
     def _handle_deactivate_real_trading_result(self, result: Any):
         QMessageBox.information(self, "Éxito", "Modo de Operativa Real Limitada desactivado.")
         logger.info("SettingsView: Modo de operativa real desactivado. Recargando estado.")
-        self._load_real_trading_status()
+        asyncio.create_task(self._load_real_trading_status_async())
 
     def _handle_deactivate_real_trading_error(self, error_message: str):
         logger.error(f"Error al desactivar el modo de operativa real: {error_message}")
@@ -298,18 +281,5 @@ class SettingsView(QWidget):
         self.real_trading_checkbox.setChecked(True)
 
     def cleanup(self):
-        """Detiene todos los hilos activos gestionados por SettingsView."""
-        logger.info(f"SettingsView: Cleaning up. Stopping {len(self.active_threads)} active threads...")
-        for thread in self.active_threads[:]: # Iterar sobre una copia para permitir la modificación de la lista
-            if thread.isRunning():
-                logger.info(f"SettingsView: Quitting and waiting for thread {thread.objectName() or 'unnamed'}...")
-                thread.quit()
-                if not thread.wait(5000): # Esperar hasta 5 segundos
-                    logger.warning(f"SettingsView: Thread {thread.objectName() or 'unnamed'} did not terminate gracefully.")
-            try:
-                thread.finished.disconnect() # Desconectar para evitar errores si ya está desconectado
-            except TypeError:
-                pass
-            thread.deleteLater() # Asegurarse de que el objeto QThread sea eliminado
-        self.active_threads.clear()
-        logger.info("SettingsView: Cleanup complete.")
+        """Limpia los recursos. Actualmente no se necesita ninguna acción específica aquí."""
+        logger.info("SettingsView: Cleanup called.")

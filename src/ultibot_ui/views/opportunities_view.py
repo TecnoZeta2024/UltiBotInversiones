@@ -8,26 +8,26 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget, QTableWidgetItem,
     QHeaderView, QPushButton, QMessageBox, QAbstractItemView, QFrame, QGraphicsDropShadowEffect, QApplication
 )
-from PySide6.QtCore import Qt, QThread, QTimer, QDateTime
+from PySide6.QtCore import Qt, QTimer, QDateTime
 from PySide6.QtGui import QColor
 
 from ultibot_backend.core.domain_models.opportunity_models import Opportunity, AIAnalysis, OpportunityStatus
 from ultibot_backend.core.domain_models.user_configuration_models import AIStrategyConfiguration
 from ultibot_backend.core.domain_models.trading_strategy_models import TradingStrategyConfig
 from ultibot_ui.models import BaseMainWindow
-from ultibot_ui.workers import ApiWorker
-from ultibot_ui.services.api_client import UltiBotAPIClient
+from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
 from ultibot_ui.dialogs.ai_analysis_dialog import AIAnalysisDialog # Nueva importación para el diálogo de análisis de IA
 
 logger = logging.getLogger(__name__)
 
 class OpportunitiesView(QWidget):
-    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent=None):
+    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, main_event_loop: asyncio.AbstractEventLoop, parent=None):
         super().__init__(parent)
         logger.info("OpportunitiesView: __init__ called.")
         self.user_id: Optional[UUID] = None # Se inicializará asíncronamente
         self.api_client = api_client # Usar la instancia de api_client
         self.main_window = main_window
+        self.main_event_loop = main_event_loop # Inyectar el bucle de eventos
         logger.debug("OpportunitiesView initialized.")
 
         self._setup_ui()
@@ -121,51 +121,15 @@ class OpportunitiesView(QWidget):
         self.status_label.setText("Loading opportunities...")
         self.refresh_button.setEnabled(False)
         self.opportunities_table.setRowCount(0)
-        
-        coro_factory = lambda api_client: api_client.get_ai_opportunities()
-        self._start_api_worker(coro_factory, self._handle_opportunities_result, self._handle_opportunities_error)
+        asyncio.create_task(self._fetch_opportunities_async())
 
-    def _start_api_worker(self, 
-                          coroutine_factory: Callable[[UltiBotAPIClient], Coroutine],
-                          on_success: Callable[[Any], None],
-                          on_error: Callable[[str], None]):
-        logger.debug("Creating ApiWorker.")
-        
-        # Obtener el bucle de eventos principal de la aplicación
-        app_instance = QtWidgets.QApplication.instance()
-        if not app_instance:
-            logger.error("OpportunitiesView: No se encontró la instancia de QApplication para ApiWorker.")
-            on_error("Error interno: No se pudo obtener la instancia de la aplicación.")
-            return
-            
-        main_event_loop = app_instance.property("main_event_loop")
-        if not main_event_loop:
-            logger.error("OpportunitiesView: No se encontró el bucle de eventos principal de qasync para ApiWorker.")
-            on_error("Error interno: Bucle de eventos principal no disponible.")
-            return
-
-        worker = ApiWorker(
-            api_client=self.api_client,
-            main_event_loop=main_event_loop, # Pasar el bucle de eventos
-            coroutine_factory=coroutine_factory
-        )
-        thread = QThread()
-        thread.setObjectName("OpportunitiesApiWorkerThread")
-        self.main_window.add_thread(thread)
-        worker.moveToThread(thread)
-
-        worker.result_ready.connect(on_success)
-        worker.error_occurred.connect(on_error)
-        
-        # Conectar la señal finished del worker para que el hilo se cierre
-        worker.finished.connect(thread.quit)
-        
-        # Conectar la señal finished del hilo para limpiar el worker y el hilo
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        
-        thread.started.connect(worker.run)
-        thread.start()
+    async def _fetch_opportunities_async(self):
+        try:
+            opportunities_data = await self.api_client.get_ai_opportunities()
+            opportunities = [Opportunity.model_validate(o) for o in opportunities_data]
+            self._handle_opportunities_result(opportunities)
+        except Exception as e:
+            self._handle_opportunities_error(str(e))
 
     def _handle_opportunities_result(self, opportunities: List[Opportunity]):
         logger.info(f"Received {len(opportunities)} opportunities.")
@@ -275,25 +239,24 @@ class OpportunitiesView(QWidget):
             sender_button.setEnabled(False)
             sender_button.setText("Analizando...")
 
-        coro_factory = lambda api_client: api_client.analyze_opportunity_with_ai(
-            user_id=str(self.user_id),
-            opportunity_id=opportunity.id
-        )
-        
-        def handle_success(result: Dict[str, Any]):
-            try:
-                # El resultado es un dict, lo parseamos al modelo Pydantic
-                analysis_model = AIAnalysis.model_validate(result)
-                # Creamos un nuevo objeto Opportunity solo para el diálogo
-                # Esto es un poco hacky, pero evita modificar el estado de la tabla directamente
-                temp_opportunity = opportunity.model_copy(deep=True)
-                temp_opportunity.ai_analysis = analysis_model
-                self._show_ai_analysis_dialog(temp_opportunity)
-                self._fetch_opportunities() # Refrescar la tabla principal
-            except Exception as e:
-                self._handle_ai_analysis_error(f"Error al procesar el resultado del análisis: {e}")
+        asyncio.create_task(self._analyze_opportunity_async(opportunity))
 
-        self._start_api_worker(coro_factory, handle_success, self._handle_ai_analysis_error)
+    async def _analyze_opportunity_async(self, opportunity: Opportunity):
+        if not self.user_id or not opportunity.id:
+            self._handle_ai_analysis_error("User ID or Opportunity ID is missing.")
+            return
+        try:
+            result = await self.api_client.analyze_opportunity_with_ai(
+                user_id=str(self.user_id),
+                opportunity_id=str(opportunity.id)
+            )
+            analysis_model = AIAnalysis.model_validate(result)
+            temp_opportunity = opportunity.model_copy(deep=True)
+            temp_opportunity.ai_analysis = analysis_model
+            self._show_ai_analysis_dialog(temp_opportunity)
+            self._fetch_opportunities()
+        except Exception as e:
+            self._handle_ai_analysis_error(f"Error al procesar el resultado del análisis: {e}")
 
     def _show_ai_analysis_dialog(self, opportunity: Opportunity):
         if not opportunity.ai_analysis:
@@ -314,13 +277,27 @@ class OpportunitiesView(QWidget):
 
         # TODO: Determinar el modo de trading (papel/real) desde la configuración global de la UI
         trading_mode = "paper" # Por ahora, se usa 'paper' por defecto
+        asyncio.create_task(self._execute_trade_async(opportunity, trading_mode))
 
-        coro_factory = lambda api_client: api_client.execute_trade_from_opportunity(
-            user_id=str(self.user_id),
-            opportunity_id=opportunity.id,
-            trading_mode=trading_mode
-        )
-        self._start_api_worker(coro_factory, self._handle_execute_trade_result, self._handle_execute_trade_error)
+    async def _execute_trade_async(self, opportunity: Opportunity, trading_mode: str):
+        if not opportunity.id:
+            self._handle_execute_trade_error("Opportunity ID is missing.")
+            return
+        
+        # El `trading_mode` se infiere del endpoint del backend, que es para trades 'real'.
+        # La lógica de la UI puede querer diferenciar, pero la llamada a la API es específica.
+        logger.info(f"Executing REAL trade for opportunity {opportunity.id} via confirmation endpoint.")
+
+        try:
+            # Usar el nuevo método unificado del API client
+            result = await self.api_client.confirm_real_trade_opportunity(
+                opportunity_id=str(opportunity.id)
+            )
+            self._handle_execute_trade_result(result)
+        except APIError as e:
+            self._handle_execute_trade_error(f"API Error ({e.status_code}): {e.message}")
+        except Exception as e:
+            self._handle_execute_trade_error(str(e))
 
     def _handle_reanalyze_request(self, opportunity: Opportunity):
         logger.info(f"Received request to re-analyze opportunity ID: {opportunity.id}")

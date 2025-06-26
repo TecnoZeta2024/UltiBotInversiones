@@ -1,7 +1,7 @@
 """
 Widget para visualizar resultados y rendimiento del Paper Trading.
 """
-
+import asyncio
 import logging
 import datetime
 from typing import Optional, List, Dict, Any, Callable, Coroutine, cast
@@ -12,13 +12,12 @@ from PySide6.QtWidgets import (
     QLabel, QComboBox, QDateEdit, QPushButton, QGroupBox, QGridLayout,
     QHeaderView, QMessageBox, QProgressBar, QSplitter, QApplication # Importar QApplication
 )
-from PySide6.QtCore import Qt, QDate, QThread
+from PySide6.QtCore import Qt, QDate
 from PySide6.QtGui import QFont, QColor
 from decimal import Decimal # Importar Decimal
 
 from ultibot_ui.services.api_client import UltiBotAPIClient
 from shared.data_types import Trade, PerformanceMetrics
-from ultibot_ui.workers import ApiWorker
 from ultibot_ui.models import BaseMainWindow
 
 logger = logging.getLogger(__name__)
@@ -30,11 +29,12 @@ class PaperTradingReportWidget(QWidget):
     Widget principal para mostrar resultados y rendimiento del Paper Trading.
     """
     
-    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent=None):
+    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, main_event_loop: asyncio.AbstractEventLoop, parent=None):
         super().__init__(parent)
         self.user_id: Optional[UUID] = None # Se inicializará asíncronamente
         self.api_client = api_client
         self.main_window = main_window
+        self.main_event_loop = main_event_loop # Inyectar el bucle de eventos
         self.current_trades_data: List[Trade] = []
         self.current_metrics_data: Optional[PerformanceMetrics] = None
         
@@ -190,59 +190,41 @@ class PaperTradingReportWidget(QWidget):
         self.load_data()
         
     def load_data(self):
-        """Carga tanto las métricas como los trades."""
+        """Carga tanto las métricas como los trades de forma asíncrona."""
         if self.user_id is None:
             logger.warning("PaperTradingReportWidget: user_id no está disponible. No se pueden cargar los datos.")
             self.show_error_message("Error: Configuración de usuario no cargada. Intente reiniciar la aplicación.")
             return
-        self.load_metrics()
-        self.load_trades()
+        
+        asyncio.create_task(self._load_data_async())
 
-    def _start_api_worker(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine], on_success, on_error):
-        app_instance = QApplication.instance()
-        if not app_instance:
-            logger.error("PaperTradingReportWidget: No se encontró la instancia de QApplication para obtener el bucle de eventos principal.")
-            self.show_error_message("Error interno: No se pudo obtener la instancia de la aplicación.")
-            return
+    async def _load_data_async(self):
+        """
+        Corutina que obtiene los datos, calcula métricas y actualiza la UI.
+        """
+        self.show_loading(True)
+        try:
+            params = self.get_filters()
+            params['limit'] = 500
+            params['offset'] = 0
             
-        main_event_loop = app_instance.property("main_event_loop")
-        if not main_event_loop:
-            logger.error("PaperTradingReportWidget: No se encontró el bucle de eventos principal de qasync.")
-            self.show_error_message("Error interno: Bucle de eventos principal no disponible.")
-            return
-
-        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory, main_event_loop=main_event_loop)
-        thread = QThread()
-        worker.moveToThread(thread)
-
-        worker.result_ready.connect(on_success)
-        worker.error_occurred.connect(on_error)
-        thread.started.connect(worker.run)
-        worker.result_ready.connect(thread.quit)
-        worker.error_occurred.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        
-        self.main_window.add_thread(thread)
-        thread.start()
-        
-    def load_metrics(self):
-        """Carga las métricas de rendimiento."""
-        self.show_loading(True)
-        params = self.get_filters()
-        # Obtener todos los trades para el cálculo de métricas en el frontend
-        coro_factory = lambda client: client.get_trades(user_id=self.user_id, trading_mode="paper", status="closed", **params)
-        self._start_api_worker(coro_factory, self._calculate_and_display_metrics, self.on_error)
-        
-    def load_trades(self):
-        """Carga la lista de trades."""
-        self.show_loading(True)
-        params = self.get_filters()
-        params['limit'] = 500
-        params['offset'] = 0
-        # Obtener trades cerrados para la tabla
-        coro_factory = lambda client: client.get_trades(user_id=self.user_id, trading_mode="paper", status="closed", **params)
-        self._start_api_worker(coro_factory, self.on_trades_loaded, self.on_error)
+            logger.info(f"Cargando datos de trades con filtros: {params}")
+            trades_data = await self.api_client.get_trades(
+                user_id=self.user_id, 
+                trading_mode="paper", 
+                status="closed", 
+                **params
+            )
+            
+            # Una vez cargados los datos, se procesan para las métricas y la tabla.
+            self._calculate_and_display_metrics(trades_data)
+            self.on_trades_loaded(trades_data)
+            
+        except Exception as e:
+            logger.error(f"Error al cargar los datos del informe de paper trading: {e}", exc_info=True)
+            self.on_error(str(e))
+        finally:
+            self.show_loading(False)
 
     def get_filters(self) -> Dict[str, Any]:
         """Recopila los filtros de la UI."""

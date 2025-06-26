@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
     QPushButton, QApplication, QAbstractItemView, QSizePolicy
 )
-from PySide6.QtCore import Qt, Signal as pyqtSignal, QTimer, QThread, QObject
+from PySide6.QtCore import Qt, Signal as pyqtSignal, QTimer
 from PySide6.QtGui import QColor, QFont, QIcon
 from typing import List, Optional, Any, Dict # Importar Dict
 from datetime import datetime
@@ -13,7 +13,6 @@ from uuid import UUID, uuid4
 from shared.data_types import Notification, NotificationPriority
 from ultibot_ui.models import BaseMainWindow
 from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
-from ultibot_ui.workers import ApiWorker
 
 class NotificationWidget(QWidget):
     """
@@ -51,38 +50,19 @@ class NotificationWidget(QWidget):
     def _fetch_notifications(self):
         if self._is_fetching_notifications:
             return
+        asyncio.create_task(self._fetch_notifications_async())
 
-        self._is_fetching_notifications = True
-        
-        main_event_loop = QApplication.instance().property("main_event_loop")
-        if not main_event_loop:
-            print("NotificationWidget: No se pudo obtener el bucle de eventos principal de QApplication.")
-            self._is_fetching_notifications = False
+    async def _fetch_notifications_async(self):
+        if self._is_fetching_notifications:
             return
-
-        worker = ApiWorker(
-            api_client=self.api_client, # Pasar api_client
-            coroutine_factory=lambda client: client.get_notification_history(limit=20),
-            main_event_loop=main_event_loop
-        )
-        thread = QThread()
-        
-        worker.moveToThread(thread)
-
-        worker.result_ready.connect(self._handle_fetch_notifications_result)
-        worker.error_occurred.connect(self._handle_fetch_notifications_error)
-
-        thread.started.connect(worker.run)
-        
-        # Conectar la señal finished del worker para que el hilo se cierre
-        worker.finished.connect(thread.quit)
-        
-        # Conectar la señal finished del hilo para limpiar el worker y el hilo
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        
-        self.main_window.add_thread(thread)
-        thread.start()
+        self._is_fetching_notifications = True
+        try:
+            notifications_data = await self.api_client.get_notification_history(limit=20)
+            self._handle_fetch_notifications_result(notifications_data)
+        except Exception as e:
+            self._handle_fetch_notifications_error(e)
+        finally:
+            self._is_fetching_notifications = False
 
     def _handle_fetch_notifications_result(self, new_notifications_response: Any):
         try:
@@ -346,7 +326,7 @@ if __name__ == '__main__':
     test_user_id = uuid4()
     
     class MockMainWindow(BaseMainWindow):
-        def add_thread(self, thread: QThread):
+        def add_thread(self, thread): # No se necesita QThread aquí
             print(f"MockMainWindow: Thread '{thread.objectName()}' added for tracking.")
 
     mock_main_window = MockMainWindow()

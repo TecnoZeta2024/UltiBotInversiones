@@ -1,7 +1,8 @@
 import logging
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QWidget, QSpacerItem
-from PyQt5.QtCore import Qt, pyqtSignal, QRunnable, QThreadPool, QObject
-from PyQt5.QtGui import QFont, QColor, QPalette
+from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QWidget, QSpacerItem
+from PySide6.QtCore import Qt, Signal as pyqtSignal, QRunnable, QThreadPool, QObject
+from ultibot_backend.core.domain_models.opportunity_models import Opportunity, OpportunityStatus, AIAnalysis
+from PySide6.QtGui import QFont, QColor, QPalette
 from typing import Any
 import asyncio
 
@@ -64,7 +65,7 @@ class RealTradeConfirmationDialog(QDialog):
         self.setWindowTitle("Confirmación de Operación REAL")
         self.setModal(True)
         self.setMinimumWidth(500)
-        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint) # Eliminar botón de ayuda
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint) # Eliminar botón de ayuda
 
         self._setup_ui()
         self._populate_data()
@@ -77,20 +78,31 @@ class RealTradeConfirmationDialog(QDialog):
 
         # Título
         title_label = QLabel("¡ATENCIÓN! Confirmar Operación de Trading REAL")
-        title_label.setFont(QFont("Arial", 14, QFont.Bold))
-        title_label.setAlignment(Qt.AlignCenter)
+        title_label.setFont(QFont("Arial", 14, QFont.Weight.Bold))
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         main_layout.addWidget(title_label)
 
-        main_layout.addSpacerItem(QSpacerItem(20, 10, QSizePolicy.Minimum, QSizePolicy.Fixed))
+        main_layout.addSpacerItem(QSpacerItem(20, 10, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed))
 
         # Detalles de la operación
         details_layout = QVBoxLayout()
         details_layout.setSpacing(8)
 
         self._add_detail_row(details_layout, "Par de Trading:", self.opportunity.symbol)
-        self._add_detail_row(details_layout, "Dirección:", self.opportunity.ai_analysis.suggestedAction if self.opportunity.ai_analysis else "N/A")
-        self._add_detail_row(details_layout, "Confianza IA:", f"{self.opportunity.ai_analysis.calculatedConfidence:.2%}" if self.opportunity.ai_analysis and self.opportunity.ai_analysis.calculatedConfidence is not None else "N/A")
-        self._add_detail_row(details_layout, "Precio Estimado de Entrada:", f"{self.opportunity.predicted_price_target:.4f}" if self.opportunity.predicted_price_target is not None else "N/A")
+        suggested_action = "N/A"
+        if self.opportunity.ai_analysis and self.opportunity.ai_analysis.suggested_action:
+            suggested_action = self.opportunity.ai_analysis.suggested_action.value
+        self._add_detail_row(details_layout, "Dirección:", suggested_action)
+        
+        confidence_str = "N/A"
+        if self.opportunity.ai_analysis and self.opportunity.ai_analysis.calculated_confidence is not None:
+            confidence_str = f"{self.opportunity.ai_analysis.calculated_confidence:.2%}"
+        self._add_detail_row(details_layout, "Confianza IA:", confidence_str)
+
+        entry_price_str = "N/A"
+        if self.opportunity.initial_signal and self.opportunity.initial_signal.entry_price_target is not None:
+            entry_price_str = f"{self.opportunity.initial_signal.entry_price_target:.4f}"
+        self._add_detail_row(details_layout, "Precio Estimado de Entrada:", entry_price_str)
         
         # Placeholder para cantidad calculada (se llenará en _populate_data si es posible)
         self.calculated_quantity_label = QLabel("Calculando...")
@@ -106,16 +118,16 @@ class RealTradeConfirmationDialog(QDialog):
 
         main_layout.addLayout(details_layout)
 
-        main_layout.addSpacerItem(QSpacerItem(20, 15, QSizePolicy.Minimum, QSizePolicy.Fixed))
+        main_layout.addSpacerItem(QSpacerItem(20, 15, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed))
 
         # Mensaje de advertencia
         warning_label = QLabel("Esta operación utilizará FONDOS REALES. Asegúrese de comprender los riesgos.")
-        warning_label.setFont(QFont("Arial", 10, QFont.Bold))
+        warning_label.setFont(QFont("Arial", 10, QFont.Weight.Bold))
         warning_label.setStyleSheet("color: #FF6347;") # Tomato color for warning
-        warning_label.setAlignment(Qt.AlignCenter)
+        warning_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         main_layout.addWidget(warning_label)
 
-        main_layout.addSpacerItem(QSpacerItem(20, 15, QSizePolicy.Minimum, QSizePolicy.Fixed))
+        main_layout.addSpacerItem(QSpacerItem(20, 15, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed))
 
         # Botones de acción
         buttons_layout = QHBoxLayout()
@@ -134,7 +146,7 @@ class RealTradeConfirmationDialog(QDialog):
         main_layout.addLayout(buttons_layout)
 
         self.loading_indicator = QLabel("Procesando...")
-        self.loading_indicator.setAlignment(Qt.AlignCenter)
+        self.loading_indicator.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.loading_indicator.setStyleSheet("color: #17a2b8; font-weight: bold;") # Info color
         self.loading_indicator.hide()
         main_layout.addWidget(self.loading_indicator)
@@ -152,17 +164,15 @@ class RealTradeConfirmationDialog(QDialog):
         layout.addLayout(row_layout)
 
     def _populate_data(self):
-        if self.opportunity.executed_quantity is not None and self.opportunity.symbol is not None:
-            self.calculated_quantity_label.setText(f"{self.opportunity.executed_quantity:.8f} {self.opportunity.symbol.split('/')[0]}")
-        else:
-            self.calculated_quantity_label.setText("N/A (Calculado en Backend)")
-            logger.warning(f"Cantidad a operar o símbolo no disponible en la oportunidad {self.opportunity.id} para mostrar en el diálogo.")
+        # La cantidad no está en el modelo Opportunity, se calcula en el backend.
+        self.calculated_quantity_label.setText("N/A (Calculado en Backend)")
+        logger.warning(f"Cantidad a operar no disponible en la oportunidad {self.opportunity.id} para mostrar en el diálogo. Se determinará en el backend.")
 
     def _apply_styles(self):
         # Aplicar estilos generales del tema oscuro si QDarkStyleSheet está activo
         palette = self.palette()
-        palette.setColor(QPalette.Window, QColor("#2b2b2b")) # Fondo oscuro
-        palette.setColor(QPalette.WindowText, QColor("#ffffff")) # Texto blanco
+        palette.setColor(QPalette.ColorRole.Window, QColor("#2b2b2b")) # Fondo oscuro
+        palette.setColor(QPalette.ColorRole.WindowText, QColor("#ffffff")) # Texto blanco
         self.setPalette(palette)
 
         self.setStyleSheet("""
@@ -221,9 +231,11 @@ class RealTradeConfirmationDialog(QDialog):
         Función asíncrona que realiza la llamada a la API.
         Esta será ejecutada por el Worker.
         """
+        if not self.opportunity.id:
+            raise ValueError("ID de oportunidad no puede ser nulo para confirmar el trade.")
+            
         response = await self.api_client.confirm_real_trade_opportunity(
-            opportunity_id=self.opportunity.id,
-            user_id=self.user_id
+            opportunity_id=self.opportunity.id
         )
         return response
 
@@ -261,4 +273,3 @@ class RealTradeConfirmationDialog(QDialog):
             self.calculated_quantity_label.setText(f"{simulated_quantity:.8f} {self.opportunity.symbol.split('/')[0]}")
         else:
             self.calculated_quantity_label.setText(f"{simulated_quantity:.8f} N/A")
-

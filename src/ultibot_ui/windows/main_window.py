@@ -25,7 +25,6 @@ from ultibot_ui.views.orders_view import OrdersView # Importar OrdersView
 from ultibot_ui.views.portfolio_view import PortfolioView
 from ultibot_ui.views.trading_terminal_view import TradingTerminalView
 from ultibot_ui.widgets.market_data_widget import MarketDataWidget # Importar MarketDataWidget
-from ultibot_ui.workers import ApiWorker
 
 logger = logging.getLogger(__name__)
 
@@ -73,30 +72,29 @@ class MainWindow(QtWidgets.QMainWindow, BaseMainWindow):
         self.status_bar.showMessage("Ventana principal desplegada correctamente.")
         # La conexión de showEvent a post_show_initialization se manejará en main.py
 
-    async def post_show_initialization(self, event: QtGui.QShowEvent):
+    async def post_show_initialization(self):
         """
-        Método llamado después de que la ventana principal se muestra.
-        Aquí se inicializan los componentes que dependen de que la UI esté lista.
+        Inicializa componentes y carga datos después de que la ventana principal
+        ha sido creada y las dependencias principales están listas.
+        Este método es llamado programáticamente desde el flujo de inicialización principal.
         """
         logger.info("MainWindow: Post-show initialization started.")
-        # Desconectar para evitar llamadas múltiples si la ventana se muestra varias veces
-        # self.showEvent = lambda e: None # Esto se maneja en main.py
 
-        # Cargar la configuración del usuario si aún no se ha hecho
+        # La configuración del usuario ya se ha cargado en el flujo principal de `main.py`
+        # antes de que se muestre la ventana. Si `user_id` no está aquí, es un error.
         if not self.user_id:
-            await self.fetch_initial_user_configuration_async() # Llamar al método público renombrado y esperar
+            logger.warning("Post-show initialization called without a user_id. Some views may not initialize correctly.")
+            # La carga de configuración ahora es responsabilidad del flujo de arranque principal.
+            # Si es necesario, se puede añadir un reintento aquí, pero idealmente no debería ocurrir.
 
-        # Inicializar datos de las vistas que lo necesiten
-        # Asumimos que initialize_view_data y initialize_async_components son ahora corutinas
-        # o que manejan su propia asincronía internamente de forma segura.
-        # Si no son corutinas, se llamarán directamente.
+        # Inicializar datos de las vistas que lo necesiten.
+        # Estas llamadas ahora pueden asumir que `user_id` y `api_client` están disponibles.
         self.strategies_view.initialize_view_data()
         self.terminal_view.initialize_view_data()
-        self.dashboard_view.initialize_async_components() 
+        self.dashboard_view.initialize_async_components()
         # Otras vistas que necesiten inicialización tardía...
 
         logger.info("MainWindow: Post-show initialization finished.")
-        # super().showEvent(event) # No llamar aquí, ya que el evento original no se pasa directamente
 
     def set_user_configuration(self, user_id: UUID, user_config: UserConfiguration):
         """Actualiza la ventana principal con la configuración del usuario."""
@@ -223,42 +221,49 @@ class MainWindow(QtWidgets.QMainWindow, BaseMainWindow):
 
         self.opportunities_view = OpportunitiesView(
             api_client=self.api_client,
-            main_window=self # Pasar la referencia a main_window
+            main_window=self, # Pasar la referencia a main_window
+            main_event_loop=main_event_loop # Inyectar el bucle de eventos
         )
         self.stacked_widget.addWidget(self.opportunities_view)
 
         self.strategies_view = StrategiesView(
             api_client=self.api_client,
+            main_event_loop=main_event_loop, # Inyectar el bucle de eventos
             parent=self
         )
         self.stacked_widget.addWidget(self.strategies_view)
 
         self.portfolio_view = PortfolioView(
             api_client=self.api_client,
-            main_window=self # Pasar la referencia a main_window
+            main_window=self, # Pasar la referencia a main_window
+            main_event_loop=main_event_loop # Inyectar el bucle de eventos
         )
         self.stacked_widget.addWidget(self.portfolio_view)
 
         self.history_view = HistoryView(
             api_client=self.api_client,
-            main_window=self # Pasar la referencia a main_window
+            main_window=self, # Pasar la referencia a main_window
+            main_event_loop=main_event_loop # Inyectar el bucle de eventos
         )
         self.stacked_widget.addWidget(self.history_view)
 
         self.orders_view = OrdersView(
             api_client=self.api_client,
-            main_window=self # Pasar la referencia a main_window
+            main_window=self, # Pasar la referencia a main_window
+            main_event_loop=main_event_loop # Inyectar el bucle de eventos
         )
         self.stacked_widget.addWidget(self.orders_view)
 
         self.settings_view = SettingsView(
-            api_client=self.api_client
+            api_client=self.api_client,
+            main_event_loop=main_event_loop # Inyectar el bucle de eventos
         )
         self.stacked_widget.addWidget(self.settings_view)
 
         self.terminal_view = TradingTerminalView(
             api_client=self.api_client,
-            main_window=self # Pasar la referencia a main_window
+            main_window=self, # Pasar la referencia a main_window
+            main_event_loop=main_event_loop # Inyectar el bucle de eventos
         )
         self.stacked_widget.addWidget(self.terminal_view)
         # La señal thread_created ya no es necesaria, los hilos se añaden directamente en TradingTerminalView
@@ -281,61 +286,29 @@ class MainWindow(QtWidgets.QMainWindow, BaseMainWindow):
         
         self._log_debug("Central widget y vistas configuradas.")
 
-    async def fetch_initial_user_configuration_async(self) -> UserConfiguration:
+    async def fetch_initial_user_configuration_async(self) -> Optional[UserConfiguration]:
         """
-        Obtiene la configuración inicial del usuario de forma asíncrona.
-        Este método se llama si la configuración no se cargó antes.
+        Obtiene la configuración inicial del usuario directamente usando el cliente API.
+        Este método ahora es una corutina simple que se ejecuta en el bucle de eventos principal.
         """
-        logger.info("Fetching initial user configuration asynchronously (from MainWindow)...")
-        
-        app_instance = QtWidgets.QApplication.instance()
-        if not app_instance:
-            logger.error("MainWindow: No se encontró la instancia de QApplication para obtener el bucle de eventos principal.")
-            raise RuntimeError("No se pudo obtener la instancia de QApplication.")
-            
-        main_event_loop = app_instance.property("main_event_loop")
-        if not main_event_loop:
-            logger.error("MainWindow: No se encontró el bucle de eventos principal de qasync.")
-            raise RuntimeError("Bucle de eventos principal no disponible.")
-        future = main_event_loop.create_future()
-
-        def coroutine_factory(api_client: UltiBotAPIClient):
-            return api_client.get_user_configuration()
-
-        worker = ApiWorker(api_client=self.api_client, main_event_loop=main_event_loop, coroutine_factory=coroutine_factory)
-        thread = QtCore.QThread()
-        thread.setObjectName("InitialConfigWorkerThread")
-        worker.moveToThread(thread)
-
-        def _on_result(result):
-            if not future.done():
-                main_event_loop.call_soon_threadsafe(future.set_result, result)
-        def _on_error(error_msg):
-            if not future.done():
-                main_event_loop.call_soon_threadsafe(future.set_exception, Exception(error_msg))
-
-        worker.result_ready.connect(_on_result)
-        worker.error_occurred.connect(_on_error)
-        
-        thread.started.connect(worker.run)
-        
-        worker.finished.connect(thread.quit)
-        thread.finished.connect(thread.deleteLater)
-        
-        self.add_thread(thread)
-        thread.start()
-        
+        logger.info("Fetching initial user configuration directly...")
         try:
-            config_dict = await future
+            config_dict = await self.api_client.get_user_configuration()
             user_config = UserConfiguration.model_validate(config_dict)
             user_id = UUID(user_config.user_id)
+            
             logger.info(f"Configuration received and validated for user ID: {user_id}. Updating UI.")
             self.set_user_configuration(user_id, user_config)
             return user_config
+        except APIError as e:
+            logger.critical(f"API error fetching initial configuration: {e}", exc_info=True)
+            self.show_error_message(f"Error de API al cargar configuración: {e}")
+            return None
         except Exception as e:
-            logger.critical(f"Error validating initial configuration or fetching: {e}", exc_info=True)
-            self.show_error_message(f"Error al cargar configuración inicial: {e}")
-            raise # Re-lanzar la excepción para que el llamador pueda manejarla
+            logger.critical(f"Error validating or fetching initial configuration: {e}", exc_info=True)
+            self.show_error_message(f"Error al procesar configuración inicial: {e}")
+            # No relanzar la excepción para permitir que la UI se inicie en un estado de error
+            return None
 
     @QtCore.Slot(object)
     def _on_initial_config_ready(self, config_dict: dict):

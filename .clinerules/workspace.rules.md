@@ -102,29 +102,29 @@
 ### **4.4. Sistema de Optimización y Despliegue Robusto (SODR)**
 *   **Principio:** "Local-First". Entorno local, funcional, estable y sin costo.
 *   **Base de Datos:** `SQLite` para `dev-mode` y `paper-trading-mode`.
-*   **Automatización:** Inicio del sistema completo con una sola acción.
+*   **Automatización y Estandarización de Comandos:** Las operaciones críticas y recurrentes (ej. iniciar backend, iniciar UI, ejecutar todos los tests) **DEBEN** estar definidas como scripts en `pyproject.toml` (`[tool.poetry.scripts]`). Esto garantiza la descubribilidad, consistencia y facilidad de ejecución. El objetivo es poder iniciar el sistema completo con una o dos acciones predecibles.
 
 ### **4.5. Protocolos de Gobernanza del Sistema**
-*   **Manejo de Límite de Contexto:** Al alcanzar el límite de tokens, usa `new_task` con la plantilla de traspaso de contexto definida en `Token-limit-200k.md`.
+*   **Manejo de Límite de Contexto:** Al alcanzar el límite de tokens de `1.2000`, usa `new_task` con la plantilla de traspaso de contexto definida en `Budeget-1.2.md`.
 *   **Auto-Mejora y Reflexión:** Antes de `attempt_completion` en tareas complejas, ofrece reflexionar sobre la interacción para proponer mejoras a estas reglas, como se define en `self-improving-cline.md`.
+
+### **4.6. Protocolo de Auditoría de Contratos de API (PACA)**
+*   **Objetivo:** Realizar un análisis sistemático y exhaustivo de la coherencia entre las llamadas de un cliente (ej. frontend) y los endpoints de un servidor (ej. backend) para identificar discrepancias en rutas, métodos HTTP, y esquemas de datos (payloads/respuestas).
+*   **Activación:** Cuando se requiera una refactorización, integración o depuración de la comunicación entre dos sistemas desacoplados.
+*   **Workflow Algorítmico:**
+    1.  **Fase 1: Mapeo de Interacciones (Blueprint)**
+        *   **1.1. Identificar Puntos de Contacto:** Usar `search_files` para localizar todas las invocaciones al cliente API en la base de código del cliente (ej. `api_client\.` en el frontend).
+        *   **1.2. Crear Mapa de Contratos:** Generar un artefacto Markdown (ej. `memory/API_CONTRACT_MAP.md`) que tabule los hallazgos iniciales, incluyendo: `Componente Cliente`, `Método Invocado`, `Endpoint Esperado`.
+    2.  **Fase 2: Auditoría y Verificación (Measure)**
+        *   **2.1. Auditar Endpoints:** De forma iterativa para cada entrada del mapa, usar `read_file` para inspeccionar el archivo del router del backend correspondiente al `Endpoint Esperado`.
+        *   **2.2. Auditar Modelos:** Usar `read_file` para inspeccionar los modelos Pydantic (o equivalentes) de solicitud y respuesta que utiliza el endpoint.
+        *   **2.3. Registrar Discrepancias:** Usar `replace_in_file` para actualizar el mapa de contratos con los hallazgos precisos, detallando las desviaciones en rutas, métodos HTTP, y esquemas de datos en una sección de "Discrepancy Log".
+    3.  **Fase 3: Generar Plan de Acción (Assemble)**
+        *   **3.1. Sintetizar Hallazgos:** Una vez completada la auditoría, el `Discrepancy Log` se convierte en la base para un plan de acción.
+        *   **3.2. Actualizar `TASKLIST.md`:** Crear una nueva tarea o actualizar una existente con un checklist detallado de las acciones de refactorización requeridas (tanto en el cliente como en el servidor) para resolver cada discrepancia.
 
 # -----------------------------------------------------------------
 # 5. PROTOCOLOS DE AGENTES ESPECIALISTAS
-# -----------------------------------------------------------------
-# Los siguientes protocolos son "cajas de herramientas" específicas de un rol.
-# El SOA (sección 3) es responsable de cargar el protocolo relevante para la persona activa.
-# Estos no son universales, sino que definen la excelencia en un dominio específico.
-
-*   **Agente DevOps:** `devops-protocol.md`
-*   **Agente LeadCoder:** `lead-coder-protocol.md`
-*   **Agente Lead Data Scientist:** `lead-data-scientist-protocol.md`
-*   **Agente UI/UX Maestro:** `ui-ux-maestro-protocol.md`
-
-# -----------------------------------------------------------------
-# 6. GUÍA MAESTRA DE INGENIERÍA DE SOFTWARE
-# -----------------------------------------------------------------
-# Esta sección es la única fuente de verdad para los principios de
-# arquitectura, calidad de código y procesos de desarrollo.
 # Su contenido se extrae directamente de "Buen-codigo-IA.md".
 
 ## **PROPÓSITO**

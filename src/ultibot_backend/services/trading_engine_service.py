@@ -256,7 +256,7 @@ class TradingEngine:
             executed_order = await self.unified_order_execution_service.execute_market_order(
                 user_id=trade.user_id,
                 symbol=trade.symbol,
-                side=trade.side.upper(),
+                side=trade.side.value.upper(), # Asegurar que se use el valor string del enum
                 quantity=trade.entryOrder.requestedQuantity, # Mantener como Decimal
                 trading_mode="real",
                 api_key=api_key,
@@ -285,9 +285,9 @@ class TradingEngine:
             # Create OCO order for TSL/TP if applicable
             if trade.takeProfitPrice and trade.trailingStopActivationPrice:
                 try:
-                    if trade.side == TradeSide.BUY.value:
+                    if trade.side == TradeSide.BUY: # Comparar con el enum directamente
                         oco_side = TradeSide.SELL.value
-                    elif trade.side == TradeSide.SELL.value:
+                    elif trade.side == TradeSide.SELL: # Comparar con el enum directamente
                         oco_side = TradeSide.BUY.value
                     else:
                         logger.error(f"Unexpected trade side: {trade.side}")
@@ -362,7 +362,7 @@ class TradingEngine:
             logger.error(f"Failed to execute trade for opportunity {opportunity.id}: {e}", exc_info=True)
             trade.positionStatus = PositionStatus.ERROR
             trade.closingReason = str(e)
-            await self.persistence_service.upsert_trade(trade) # Pasar el objeto Trade directamente
+            await self.persistence_service.upsert_trade(trade) # The side is set in create_trade_from_decision
             await self.notification_service.send_real_trade_status_notification(
                 user_config=user_config,
                 message=f"Error al ejecutar trade para {opportunity.symbol}: {e}",
@@ -391,9 +391,17 @@ class TradingEngine:
             return None
 
         try:
-            trade_side = self._determine_trade_side_from_opportunity(opportunity)
+            trade_side_str = self._determine_trade_side_from_opportunity(opportunity)
             actual_trade_mode = TradeMode(decision.mode)
-            actual_trade_side = TradeSide(trade_side.lower())
+            
+            # Conversión explícita y validación
+            try:
+                actual_trade_side = TradeSide(trade_side_str.lower())
+            except ValueError:
+                logger.error(f"Valor inválido para TradeSide: '{trade_side_str}'")
+                raise ValueError(f"No se pudo determinar un lado de trade válido desde '{trade_side_str}'.")
+
+            logger.debug(f"Trade side determinado: {actual_trade_side.value}")
 
             params = decision.recommended_trade_params or {}
             tp_price_raw = params.get("take_profit_target")
@@ -522,6 +530,9 @@ class TradingEngine:
             fillTimestamp=None,
             rawResponse=None,
             ocoOrderListId=None,
+            price=None,
+            stopPrice=None,
+            timeInForce=None,
         )
 
     async def _update_opportunity_status(self, opportunity: Opportunity, status: OpportunityStatus, reason_code: str, reason_text: str) -> None:
@@ -541,12 +552,23 @@ class TradingEngine:
             logger.error(f"Failed to persist status update for opportunity {opportunity.id}: {e_persist}", exc_info=True)
 
     def _determine_trade_side_from_opportunity(self, opportunity: Opportunity) -> str:
+        """Determines the trade side from AI analysis or initial signal."""
+        if opportunity.ai_analysis and opportunity.ai_analysis.suggested_action:
+            action = opportunity.ai_analysis.suggested_action
+            if isinstance(action, SuggestedAction):
+                action = action.value
+            if action.lower() in ["buy", "long"]:
+                return "buy"
+            if action.lower() in ["sell", "short"]:
+                return "sell"
+
         if opportunity.initial_signal and hasattr(opportunity.initial_signal, 'direction_sought'):
             direction = opportunity.initial_signal.direction_sought
             if direction in ["buy", "long"]:
                 return "buy"
-            elif direction in ["sell", "short"]:
+            if direction in ["sell", "short"]:
                 return "sell"
+                
         logger.warning(f"Could not determine trade side from opportunity {opportunity.id}, defaulting to 'buy'")
         return "buy"
 

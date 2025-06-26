@@ -11,7 +11,6 @@ from PySide6 import QtWidgets, QtCore, QtGui
 from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
 from ultibot_ui.services.trading_mode_state import get_trading_mode_manager, TradingModeStateManager
 from shared.data_types import TradeOrderDetails
-from ultibot_ui.workers import ApiWorker
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +29,6 @@ class OrderFormWidget(QtWidgets.QWidget):
         super().__init__(parent)
         self.user_id = user_id
         self.api_client = api_client
-        self.active_api_workers = []
         
         self.trading_mode_manager: TradingModeStateManager = get_trading_mode_manager()
         self.trading_mode_manager.trading_mode_changed.connect(self._on_trading_mode_changed)
@@ -39,39 +37,6 @@ class OrderFormWidget(QtWidgets.QWidget):
         self._update_mode_display()
         
         logger.info("OrderFormWidget initialized")
-
-    def _run_api_worker_and_await_result(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine]) -> Any:
-        import qasync
-
-        qasync_loop = asyncio.get_event_loop()
-        future = qasync_loop.create_future()
-
-        worker = ApiWorker(coroutine_factory=coroutine_factory, api_client=self.api_client)
-        thread = QtCore.QThread()
-        self.active_api_workers.append((worker, thread))
-
-        worker.moveToThread(thread)
-
-        def _on_result(result):
-            if not future.done():
-                qasync_loop.call_soon_threadsafe(future.set_result, result)
-        def _on_error(error_msg):
-            if not future.done():
-                qasync_loop.call_soon_threadsafe(future.set_exception, Exception(error_msg))
-        
-        worker.result_ready.connect(_on_result)
-        worker.error_occurred.connect(_on_error)
-        
-        thread.started.connect(worker.run)
-
-        worker.result_ready.connect(thread.quit)
-        worker.error_occurred.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        thread.finished.connect(lambda: self.active_api_workers.remove((worker, thread)) if (worker, thread) in self.active_api_workers else None)
-
-        thread.start()
-        return future
 
     def init_ui(self):
         main_layout = QtWidgets.QVBoxLayout(self)
@@ -314,30 +279,19 @@ class OrderFormWidget(QtWidgets.QWidget):
             if reply != QtWidgets.QMessageBox.StandardButton.Yes:
                 return
         
+        asyncio.create_task(self._execute_order_async())
+        
+    async def _execute_order_async(self):
         order_data = self._get_order_data()
         
         self.progress_bar.setVisible(True)
         self.progress_bar.setRange(0, 0)
         self.execute_button.setEnabled(False)
         
-        self._run_api_worker_and_await_result(
-            lambda api_client: api_client.execute_market_order(
-                order_data={
-                    "symbol": order_data["symbol"],
-                    "side": order_data["side"],
-                    "quantity": order_data["quantity"],
-                    "trading_mode": order_data["trading_mode"],
-                    "api_key": order_data.get("api_key"),
-                    "api_secret": order_data.get("api_secret")
-                }
-            )
-        ).add_done_callback(self._handle_order_result_from_future)
-        
         logger.info(f"Ejecutando orden: {order_data}")
-
-    def _handle_order_result_from_future(self, future: asyncio.Future):
+        
         try:
-            result = future.result()
+            result = await self.api_client.execute_market_order(order_data)
             self._handle_order_result(result)
         except Exception as e:
             self._handle_order_error(str(e))
@@ -423,17 +377,4 @@ class OrderFormWidget(QtWidgets.QWidget):
         self._validate_form()
 
     def cleanup(self):
-        logger.info("OrderFormWidget: Iniciando limpieza de ApiWorkers activos.")
-        for worker, thread in list(self.active_api_workers):
-            if thread.isRunning():
-                logger.info(f"OrderFormWidget: Deteniendo ApiWorker en thread {thread.objectName()}...")
-                thread.quit()
-                if not thread.wait(2000):
-                    logger.warning(f"OrderFormWidget: Thread {thread.objectName()} no terminó a tiempo. Forzando terminación.")
-                    thread.terminate()
-                    thread.wait()
-            if (worker, thread) in self.active_api_workers:
-                self.active_api_workers.remove((worker, thread))
-                worker.deleteLater()
-                thread.deleteLater()
-        logger.info("OrderFormWidget: Limpieza de ApiWorkers completada.")
+        logger.info("OrderFormWidget: Cleanup called. No action needed.")

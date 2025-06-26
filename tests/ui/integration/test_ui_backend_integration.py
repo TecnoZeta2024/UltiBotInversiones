@@ -1,7 +1,8 @@
 import pytest
+import asyncio
 from unittest.mock import MagicMock, patch
-from uuid import uuid4
 from PySide6.QtCore import Qt, QObject, Signal
+from decimal import Decimal # Importar Decimal
 
 from src.ultibot_ui.windows.main_window import MainWindow
 from src.ultibot_ui.services.api_client import UltiBotAPIClient
@@ -14,33 +15,28 @@ MOCK_STRATEGIES_DATA = [
         "id": "strat_1",
         "name": "Momentum Breakout",
         "description": "A strategy that buys on strong upward movements.",
-        "active": True,
-        "created_at": "2025-01-15T10:00:00Z"
+        "is_active_paper_mode": True,
+        "is_active_real_mode": False,
+        "created_at": "2025-01-15T10:00:00Z",
+        "total_pnl": Decimal("123.45"), # Cambiado a Decimal
+        "number_of_trades": 10
     },
     {
         "id": "strat_2",
         "name": "Mean Reversion",
         "description": "A strategy that sells high and buys low.",
-        "active": False,
-        "created_at": "2025-01-16T11:30:00Z"
+        "is_active_paper_mode": False,
+        "is_active_real_mode": True,
+        "created_at": "2025-01-16T11:30:00Z",
+        "total_pnl": Decimal("-50.20"), # Cambiado a Decimal
+        "number_of_trades": 5
     }
 ]
 
 
-class MockStrategiesWorker(QObject):
-    """
-    A mock worker that inherits from QObject to provide real Qt signals,
-    which is necessary for qtbot.waitSignal to work correctly.
-    """
-    strategies_ready = Signal(list)
-    error_occurred = Signal(str)
-    finished = Signal()
-
-    def __init__(self, *args, **kwargs):
-        super().__init__()
-        # We can mock methods if we need to assert they were called
-        self.run = MagicMock()
-        self.start = MagicMock()
+class SignalEmitter(QObject):
+    """A simple QObject to emit signals for testing."""
+    data_ready = Signal(list)
 
 
 @pytest.fixture
@@ -53,57 +49,49 @@ def app(qtbot):
     def dummy_init(self, *args, **kwargs):
         QWidget.__init__(self)
         self.cleanup = lambda: None
+        # Prevent load_initial_configuration from being called in the mocked __init__
+        self.load_initial_configuration = lambda: None
 
-    # We patch the __init__ of other views to prevent side effects.
+    # We patch the __init__ of other views and problematic methods to prevent side effects.
     with patch('src.ultibot_ui.windows.main_window.DashboardView.__init__', side_effect=dummy_init, autospec=True), \
+         patch('src.ultibot_ui.windows.main_window.MarketDataWidget.__init__', side_effect=dummy_init, autospec=True), \
          patch('src.ultibot_ui.windows.main_window.OpportunitiesView.__init__', side_effect=dummy_init, autospec=True), \
          patch('src.ultibot_ui.windows.main_window.PortfolioView.__init__', side_effect=dummy_init, autospec=True), \
          patch('src.ultibot_ui.windows.main_window.HistoryView.__init__', side_effect=dummy_init, autospec=True), \
          patch('src.ultibot_ui.windows.main_window.SettingsView.__init__', side_effect=dummy_init, autospec=True), \
          patch('src.ultibot_ui.windows.main_window.TradingTerminalView.__init__', side_effect=dummy_init, autospec=True), \
-         patch('src.ultibot_ui.windows.main_window.UIStrategyService'), \
-         patch('src.ultibot_ui.windows.main_window.ApiWorker') as MockApiWorker, \
-         patch('src.ultibot_ui.views.strategies_view.StrategiesWorker') as MockStrategiesWorkerClass:
-
-        # Instantiate our custom mock worker
-        mock_strategies_worker_instance = MockStrategiesWorker()
-        # Configure the patch to return our custom mock instance
-        MockStrategiesWorkerClass.return_value = mock_strategies_worker_instance
-        
-        # Configure the mock for the ApiWorker created in MainWindow
-        mock_api_worker_instance = MockApiWorker.return_value
-        mock_api_worker_instance.error_occurred.connect(lambda x: print(f"MockApiWorker error: {x}"))
+         patch('src.ultibot_ui.windows.main_window.UIStrategyService'):
 
         mock_api_client = MagicMock(spec=UltiBotAPIClient)
-        mock_user_id = uuid4()
+        
+        # Provide a mock event loop, as MainWindow requires it.
+        mock_event_loop = MagicMock(spec=asyncio.AbstractEventLoop)
 
-        window = MainWindow(user_id=mock_user_id, api_client=mock_api_client)
+        window = MainWindow(api_client=mock_api_client, main_event_loop=mock_event_loop)
         qtbot.addWidget(window)
         window.show()
 
-        # Manually trigger the signal emission that the real worker would do.
-        # This simulates the worker finishing its job and sending the data to the view.
-        # We connect the signal from our mock worker to the actual slot in the view.
+        # Create a generic signal emitter to test the view's reaction to data.
+        emitter = SignalEmitter()
         strategies_view = window.strategies_view
-        mock_strategies_worker_instance.strategies_ready.connect(strategies_view.update_strategies)
+        emitter.data_ready.connect(strategies_view.update_strategies)
         
-        # We yield the window and the mock instance to check calls on it later.
-        yield window, mock_strategies_worker_instance
+        yield window, emitter
         
         window.close()
 
 def test_strategies_view_loads_data_correctly(qtbot, app):
     """
-    Test Case 1: Verify that the Strategies View correctly fetches and displays data.
+    Test Case 1: Verify that the Strategies View correctly displays data upon signal.
     
     Steps:
     1. Launch the main window.
     2. Navigate to the "Strategies" view.
-    3. Manually emit the signal from the mock worker to simulate data arrival.
+    3. Manually emit a signal with mock data.
     4. Check if the table in StrategiesView is populated with the correct number of rows.
     5. Verify the content of the first row to ensure data is mapped correctly.
     """
-    main_window, mock_strategies_worker_instance = app
+    main_window, emitter = app
     
     # 1. & 2. Navigate to the Strategies view by clicking the corresponding button
     sidebar = main_window.sidebar
@@ -111,10 +99,9 @@ def test_strategies_view_loads_data_correctly(qtbot, app):
     assert strategies_button is not None, "Could not find the strategies navigation button"
     qtbot.mouseClick(strategies_button, Qt.MouseButton.LeftButton)
 
-    # 3. Manually emit the signal from the mock worker with the mock data.
-    # qtbot.waitSignal will now work because our mock has a real Signal.
-    with qtbot.waitSignal(mock_strategies_worker_instance.strategies_ready, raising=True, timeout=2000):
-        mock_strategies_worker_instance.strategies_ready.emit(MOCK_STRATEGIES_DATA)
+    # 3. Manually emit the signal with the mock data.
+    with qtbot.waitSignal(emitter.data_ready, raising=True, timeout=2000):
+        emitter.data_ready.emit(MOCK_STRATEGIES_DATA)
 
     # 4. Check if the table is populated correctly
     strategies_view = main_window.strategies_view
@@ -122,7 +109,5 @@ def test_strategies_view_loads_data_correctly(qtbot, app):
 
     # 5. Verify the content of the first row
     assert strategies_view.strategies_table_widget.item(0, 0).text() == MOCK_STRATEGIES_DATA[0]["name"]
-    assert strategies_view.strategies_table_widget.item(0, 1).text() == "N/A"
-    assert strategies_view.strategies_table_widget.item(0, 2).text() == "N/A"
-
-    # The worker is created, but we control when its signal is emitted, so we don't check run()
+    assert strategies_view.strategies_table_widget.item(0, 1).text() == "Papel: Activa, Real: Inactiva"
+    assert strategies_view.strategies_table_widget.item(0, 2).text() == "123.45"

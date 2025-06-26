@@ -34,8 +34,8 @@ async def setup_trades(db_session: AsyncSession, trade_factory):
     for trade_data in sample_trades_data:
             await db_session.execute(
                 text("""
-                INSERT INTO trades (id, user_id, symbol, mode, position_status, data, created_at, updated_at, closed_at)
-                VALUES (:id, :user_id, :symbol, :mode, :position_status, :data, :created_at, :updated_at, :closed_at)
+                INSERT INTO trades (id, user_id, symbol, mode, position_status, data, created_at, updated_at, closed_at, side)
+                VALUES (:id, :user_id, :symbol, :mode, :position_status, :data, :created_at, :updated_at, :closed_at, :side)
 """),
                 trade_data
             )

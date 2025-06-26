@@ -1,26 +1,23 @@
 # CONTEXTO ACTIVO DEL SISTEMA
-- **Última Actualización:** 2025-06-25 18:25 UTC
-- **Agente Responsable:** leadcoder
+- **Última Actualización:** 2025-06-26 00:26 UTC
+- **Agente Responsable:** ui-ux-maestro
 - **Estado del Despliegue Backend:** local (uvicorn)
-- **Última Migración de BD:** N/A (por definir)
-- **Rama Git Activa:** N/A (por definir)
-- **Observación Crítica:** La auditoría de código ha revelado una arquitectura modular sólida y un buen uso de Pydantic y FastAPI. Sin embargo, se identificó una dependencia forzada a SQLite en desarrollo y algunas áreas de mejora en la gestión de dependencias y la configuración de pruebas.
+- **Última Migración de BD:** N/A
+- **Rama Git Activa:** N/A
+- **Observación Crítica:** Se ha completado una refactorización masiva de la capa de la interfaz de usuario (`ultibot_ui`) para corregir un fallo sistémico en la inyección de dependencias. El `main_event_loop` de `qasync` ahora se pasa explícitamente a todos los widgets y vistas desde `MainWindow`, restaurando la capacidad de realizar operaciones asíncronas. La arquitectura de la UI es ahora consistente y robusta, eliminando la dependencia de acceder a la instancia global de `QApplication` para obtener el bucle de eventos.
 
-## Resumen de la Auditoría de Código (TASK-003)
-### Fortalezas:
-- **Arquitectura Modular:** Clara separación de concerns (`backend`, `ui`, `shared`).
-- **Inyección de Dependencias:** Uso de `DependencyContainer` en el backend.
-- **Manejo de Errores Centralizado:** Manejadores de excepciones globales en `main.py` del backend.
-- **Configuración de Logging:** Logging robusto para backend y UI.
-- **Modelos de Dominio Fuertes:** Modelos Pydantic detallados con validadores de campo y uso de `Decimal`.
-- **Pruebas Existentes:** Presencia de pruebas unitarias y de integración.
-- **Infraestructura como Código (IaC):** Uso de `docker-compose.yml` y `Dockerfile`.
-- **Compatibilidad Windows:** Solución para el bucle de eventos de Windows.
+## Resumen de la Refactorización de la UI (TASK-UI-AUDIT-001)
+### Problema Resuelto:
+- **Fallo de Operaciones Asíncronas:** Los componentes de la UI no podían ejecutar tareas en segundo plano (como refrescar datos) porque no tenían una referencia al bucle de eventos de `asyncio` (`main_event_loop`).
 
-### Áreas de Mejora / Deuda Técnica:
-- **Forzado de SQLite:** La base de datos está forzada a SQLite local para depuración en `src/ultibot_backend/dependencies.py`, ignorando `DATABASE_URL`. Esto limita la flexibilidad para entornos de desarrollo/producción con bases de datos externas.
-- **Manejo de `UNKNOWN` en Estrategias:** La validación laxa para `BaseStrategyType.UNKNOWN` en `trading_strategy_models.py` podría permitir configuraciones de parámetros no validadas.
-- **Comentarios TODO:** Comentarios como `# Mover strategies arriba` en `src/ultibot_backend/main.py` indican tareas pendientes de refactorización.
-- **Contenedor Global de Contingencia:** El uso de `_global_container` en `src/ultibot_backend/dependencies.py` para tests sugiere inconsistencias en la inicialización de dependencias.
-- **Configuración de `PYTHONPATH` en Tests:** El uso de `sys.path.insert` en los tests es frágil; se prefiere configurar `PYTHONPATH` en el entorno de ejecución de tests.
-- **Uso de `model_construct` en Tests:** Eludir la validación de Pydantic con `model_construct` en tests, aunque útil para pruebas de errores, resalta la necesidad de un manejo robusto de tipos de estrategia no reconocidos en producción.
+### Archivos Modificados:
+- `src/ultibot_ui/widgets/paper_trading_report_widget.py`
+- `src/ultibot_ui/views/orders_view.py`
+- `src/ultibot_ui/windows/settings_view.py`
+- `src/ultibot_ui/views/trading_terminal_view.py`
+- `src/ultibot_ui/windows/main_window.py` (verificado y ya correcto)
+
+### Estado Actual:
+- La cadena de dependencias para el `main_event_loop` está completa y es explícita.
+- Se espera que la funcionalidad de la UI que depende de operaciones asíncronas (feeds de precios, carga de datos, etc.) esté ahora operativa.
+- El siguiente paso es una validación funcional completa de la aplicación.

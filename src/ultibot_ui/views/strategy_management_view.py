@@ -1,32 +1,23 @@
-from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
-    QPushButton, QMessageBox, QDialog # Importar QDialog
-)
-from PySide6.QtCore import QEventLoop, QTimer, QThread, Signal
 import asyncio
 import logging
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Callable, Coroutine
 
-from ultibot_ui.services.ui_strategy_service import UIStrategyService
-from ultibot_ui.workers import ApiWorker
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import (
+    QDialog,
+    QHBoxLayout,
+    QLabel,
+    QListWidget,
+    QListWidgetItem,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
+
+from ultibot_ui.dialogs.strategy_config_dialog import StrategyConfigDialog
 from ultibot_ui.models import BaseMainWindow
-from ultibot_ui.dialogs.strategy_config_dialog import StrategyConfigDialog
-
-logger = logging.getLogger(__name__)
-
-import asyncio
-import logging
-from typing import Optional, List, Dict, Any
-from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
-    QPushButton, QMessageBox, QDialog
-)
-from PySide6.QtCore import QThread, Signal
-
 from ultibot_ui.services.ui_strategy_service import UIStrategyService
-from ultibot_ui.workers import ApiWorker
-from ultibot_ui.models import BaseMainWindow # Mantener para type hinting de main_window
-from ultibot_ui.dialogs.strategy_config_dialog import StrategyConfigDialog
 
 logger = logging.getLogger(__name__)
 
@@ -36,12 +27,11 @@ class StrategyManagementView(QWidget):
     strategy_deleted = Signal(str)
     strategy_status_changed = Signal(str, bool)
 
-    def __init__(self, api_client, main_event_loop: asyncio.AbstractEventLoop, parent=None): # Recibir main_event_loop
+    def __init__(self, api_client, main_event_loop: asyncio.AbstractEventLoop, parent=None):
         super().__init__(parent)
         self.api_client = api_client
-        self.main_event_loop = main_event_loop # Almacenar main_event_loop
+        self.main_event_loop = main_event_loop
         self.strategy_service = UIStrategyService(api_client)
-        self.active_threads: List[QThread] = []
         self.main_window: Optional[BaseMainWindow] = None
         self.strategies_data: List[Dict[str, Any]] = []
         self.init_ui()
@@ -106,27 +96,16 @@ class StrategyManagementView(QWidget):
         self.update_action_buttons_state()
 
     def load_strategies(self):
-        # coroutine_factory debe aceptar api_client, aunque fetch_strategies no lo use directamente
-        # porque ApiWorker lo pasa.
-        coro_factory = lambda api_client: self.strategy_service.fetch_strategies()
-        
-        worker = ApiWorker(api_client=self.api_client, main_event_loop=self.main_event_loop, coroutine_factory=coro_factory)
-        thread = QThread()
-        thread.setObjectName("StrategyManagementWorkerThread")
-        worker.moveToThread(thread)
+        self.status_label.setText("Cargando estrategias...")
+        asyncio.create_task(self._load_strategies_async())
 
-        worker.result_ready.connect(self.display_strategies)
-        worker.error_occurred.connect(self.display_error)
-        
-        worker.finished.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        
-        self.active_threads.append(thread)
-        if self.main_window:
-            self.main_window.add_thread(thread)
-        
-        thread.start()
+    async def _load_strategies_async(self):
+        try:
+            strategies = await self.strategy_service.fetch_strategies()
+            self.display_strategies(strategies)
+        except Exception as e:
+            logger.error(f"Error loading strategies: {e}", exc_info=True)
+            self.display_error(str(e))
 
     def display_strategies(self, strategies: List[Dict[str, Any]]):
         self.strategy_list_widget.clear()
@@ -156,7 +135,7 @@ class StrategyManagementView(QWidget):
 
     def create_new_strategy(self):
         dialog = StrategyConfigDialog(self.api_client, parent=self)
-        if dialog.exec() == QDialog.Accepted:
+        if dialog.exec() == QDialog.DialogCode.Accepted:
             strategy_data = dialog.get_strategy_data()
             if strategy_data:
                 self.execute_strategy_action(
@@ -169,7 +148,7 @@ class StrategyManagementView(QWidget):
         selected_strategy = self.get_selected_strategy()
         if selected_strategy:
             dialog = StrategyConfigDialog(self.api_client, strategy_data=selected_strategy, parent=self)
-            if dialog.exec() == QDialog.Accepted:
+            if dialog.exec() == QDialog.DialogCode.Accepted:
                 updated_data = dialog.get_strategy_data()
                 if updated_data:
                     strategy_id = selected_strategy.get('id')
@@ -212,60 +191,42 @@ class StrategyManagementView(QWidget):
             if strategy_id is None:
                 QMessageBox.critical(self, "Error", "ID de estrategia no encontrado para cambiar el estado.")
                 return
-            current_status = selected_strategy.get('is_active', False)
+            
+            # Asumimos que el estado relevante es el de 'paper' por ahora, como en las otras vistas.
+            # TODO: La UI debería permitir elegir qué modo (paper/real) se quiere (des)activar.
+            current_status = selected_strategy.get('is_active_paper_mode', False)
             new_status = not current_status
             action_name = "activar" if new_status else "desactivar"
 
+            if new_status:
+                coroutine_factory = lambda: self.strategy_service.activate_strategy(str(strategy_id))
+            else:
+                coroutine_factory = lambda: self.strategy_service.deactivate_strategy(str(strategy_id))
+
             self.execute_strategy_action(
-                lambda: self.strategy_service.update_strategy_status(str(strategy_id), new_status),
+                coroutine_factory,
                 action_name,
                 lambda _: self.strategy_status_changed.emit(str(strategy_id), new_status)
             )
         else:
             QMessageBox.warning(self, "Advertencia", "Por favor, seleccione una estrategia para cambiar su estado.")
 
-    def execute_strategy_action(self, coroutine_func, action_type: str, success_callback=None):
+    def execute_strategy_action(self, coroutine_factory: Callable[[], Coroutine], action_type: str, success_callback: Optional[Callable] = None):
         self.status_label.setText(f"Intentando {action_type} estrategia...")
-        
-        worker = ApiWorker(api_client=self.api_client, main_event_loop=self.main_event_loop, coroutine_factory=lambda _: coroutine_func()) # Usar self.main_event_loop
-        thread = QThread()
-        thread.setObjectName(f"Strategy{action_type.capitalize()}WorkerThread")
-        worker.moveToThread(thread)
+        asyncio.create_task(self._execute_strategy_action_async(coroutine_factory, action_type, success_callback))
 
-        def on_success(result):
+    async def _execute_strategy_action_async(self, coroutine_factory: Callable[[], Coroutine], action_type: str, success_callback: Optional[Callable] = None):
+        try:
+            result = await coroutine_factory()
             self.status_label.setText(f"Estrategia {action_type} exitosamente.")
-            self.load_strategies()
+            self.load_strategies()  # Recargar la lista de estrategias
             if success_callback:
                 success_callback(result)
-
-        def on_error(error_msg):
+        except Exception as e:
+            logger.error(f"Error al {action_type} estrategia: {e}", exc_info=True)
+            error_msg = str(e)
             self.status_label.setText(f"Error al {action_type} estrategia: {error_msg}")
             QMessageBox.critical(self, f"Error al {action_type.capitalize()}", f"Error: {error_msg}")
 
-        worker.result_ready.connect(on_success)
-        worker.error_occurred.connect(on_error)
-        
-        worker.finished.connect(thread.quit)
-        thread.finished.connect(thread.deleteLater)
-        
-        self.active_threads.append(thread)
-        if self.main_window:
-            self.main_window.add_thread(thread)
-        
-        thread.start()
-
     def cleanup(self):
-        logger.info(f"StrategyManagementView: Cleaning up. Stopping {len(self.active_threads)} active threads...")
-        for thread in self.active_threads[:]:
-            if thread.isRunning():
-                logger.info(f"StrategyManagementView: Quitting and waiting for thread {thread.objectName() or 'unnamed'}...")
-                thread.quit()
-                if not thread.wait(5000):
-                    logger.warning(f"StrategyManagementView: Thread {thread.objectName() or 'unnamed'} did not terminate gracefully.")
-            try:
-                thread.finished.disconnect()
-            except TypeError:
-                pass
-            thread.deleteLater()
-        self.active_threads.clear()
-        logger.info("StrategyManagementView: Cleanup complete.")
+        logger.info("StrategyManagementView: Cleanup complete (no threads to manage).")

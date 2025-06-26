@@ -35,21 +35,21 @@ class UIConfigService:
         Uses cached data if available, otherwise fetches from API.
         For now, returns a dictionary. A Pydantic model can be used for validation/structure later.
         """
-        if not self.user_id:
-            # Or raise error, or handle anonymous users differently
-            print("Error: User ID not set in UIConfigService.")
-            return None
-
         if self.config_data: # Serve from cache if available
             return self.config_data
 
-        # Try fetching from API
-        config = await self.api_client.get_user_configuration(self.user_id)
-        if config:
-            self.config_data = config
-            # Optionally, save a local copy as well if hybrid approach is desired
-            # self._save_local_config_copy(config)
-            return config
+        try:
+            # Try fetching from API - user is identified by auth token in the backend
+            config = await self.api_client.get_user_configuration()
+            if config:
+                self.config_data = config
+                return config
+        except Exception as e:
+            print(f"Error loading configuration from API: {e}")
+            # Fallback logic can be added here if needed
+            return None
+
+        return None # Or return some default config object
 
         # Fallback: if API fails or returns nothing, could try loading a local copy
         # config = self._load_local_config_copy()
@@ -63,19 +63,17 @@ class UIConfigService:
 
     async def save_user_configuration(self, config_data: Dict[str, Any]) -> bool:
         """
-        Saves user configuration to the backend.
+        Saves user configuration to the backend using PATCH.
         Updates the in-memory cache on successful save.
         """
-        if not self.user_id:
-            print("Error: User ID not set in UIConfigService for saving.")
+        try:
+            # The user is identified by the auth token in the backend.
+            updated_config = await self.api_client.update_user_configuration(config_data)
+            self.config_data = updated_config  # Update cache with the response from the server
+            return True
+        except Exception as e:
+            print(f"Error saving user configuration: {e}")
             return False
-
-        success = await self.api_client.save_user_configuration(self.user_id, config_data)
-        if success:
-            self.config_data = config_data # Update cache
-            # Optionally, save a local copy as well
-            # self._save_local_config_copy(config_data)
-        return success
 
     # --- Methods for managing specific config items like favoritePairs ---
     # These can operate on the self.config_data cache, and rely on
@@ -143,4 +141,3 @@ class UIConfigService:
 #     favoritePairs: List[str] = DEFAULT_FAVORITE_PAIRS
 #     displaySettings: Optional[Dict[str, Any]] = None
 #     # ... other config fields
-

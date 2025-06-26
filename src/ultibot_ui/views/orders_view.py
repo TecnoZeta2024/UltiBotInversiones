@@ -1,13 +1,13 @@
 import logging
-import logging
-from PySide6.QtCore import QThread, Slot
+import asyncio
+from PySide6.QtCore import Slot
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QTableWidget, 
                                QHeaderView, QTableWidgetItem, QLineEdit, 
-                               QComboBox, QHBoxLayout, QMessageBox, QApplication) # Importar QApplication
+                               QComboBox, QHBoxLayout, QMessageBox)
 from typing import Optional
 from uuid import UUID
 
-from ultibot_ui.workers import OrdersWorker
+from ultibot_ui.workers import fetch_orders
 from ultibot_ui.services.api_client import UltiBotAPIClient
 from ultibot_ui.models import BaseMainWindow # Importar BaseMainWindow
 
@@ -15,15 +15,15 @@ logger = logging.getLogger(__name__)
 
 
 class OrdersView(QWidget):
-    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent=None):
+    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, main_event_loop: asyncio.AbstractEventLoop, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Historial de Órdenes")
         self.user_id: Optional[UUID] = None # Se inicializará asíncronamente
         self.api_client = api_client
         self.main_window = main_window # Guardar referencia a MainWindow
-        self.all_orders = []  # Para mantener una copia de todas las órdenes
-        self.worker_thread: Optional[QThread] = None
-        self.orders_worker: Optional[OrdersWorker] = None
+        self.main_event_loop = main_event_loop
+        self.all_orders = []
+        self.load_orders_task: Optional[asyncio.Task] = None
         
         self._layout = QVBoxLayout(self)
         
@@ -46,8 +46,8 @@ class OrdersView(QWidget):
     def set_user_id(self, user_id: UUID):
         """Establece el user_id y activa la carga de órdenes."""
         self.user_id = user_id
-        logger.info(f"OrdersView: User ID set to {user_id}. Setting up worker.")
-        self._setup_worker(self.api_client)
+        logger.info(f"OrdersView: User ID set to {user_id}. Triggering order load.")
+        self.load_orders()
 
     def _setup_filters(self):
         """Configura los widgets de filtrado."""
@@ -77,47 +77,31 @@ class OrdersView(QWidget):
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         self.orders_table.setSortingEnabled(True)
 
-    def _setup_worker(self, api_client: UltiBotAPIClient):
-        """Inicializa y conecta el worker de datos."""
+    def load_orders(self):
+        """Crea una tarea para cargar las órdenes de forma asíncrona."""
         if self.user_id is None:
-            logger.warning("OrdersView: user_id no está disponible. No se puede configurar el worker de órdenes.")
+            logger.warning("Cannot load orders, user_id is not set.")
             return
-
-        self.worker_thread = QThread()
-        # Obtener el bucle de eventos principal de la aplicación
-        app_instance = QApplication.instance()
-        if not app_instance:
-            logger.error("OrdersView: No se encontró la instancia de QApplication para OrdersWorker.")
-            self._on_error("Error interno: No se pudo obtener la instancia de la aplicación.")
-            return
-            
-        main_event_loop = app_instance.property("main_event_loop")
-        if not main_event_loop:
-            logger.error("OrdersView: No se encontró el bucle de eventos principal de qasync para OrdersWorker.")
-            self._on_error("Error interno: Bucle de eventos principal no disponible.")
-            return
-
-        self.orders_worker = OrdersWorker(api_client, self.user_id, main_event_loop) # Eliminar el parent para permitir moveToThread
-        self.orders_worker.moveToThread(self.worker_thread)
-
-        # Conectar señales y slots
-        self.worker_thread.started.connect(self.orders_worker.run)
-        # Conectar señales y slots
-        self.orders_worker.orders_ready.connect(self.update_orders_table)
-        self.orders_worker.error_occurred.connect(self._on_error)
         
-        # Conectar la señal finished del worker para que el hilo se cierre
-        self.orders_worker.finished.connect(self.worker_thread.quit)
+        if self.load_orders_task and not self.load_orders_task.done():
+            logger.info("Order loading task is already running.")
+            return
+
+        logger.info("Creating asyncio task to fetch orders.")
+        self.load_orders_task = asyncio.create_task(self._load_orders_async())
+
+    async def _load_orders_async(self):
+        """Carga las órdenes desde la API y actualiza la tabla."""
+        if not self.user_id:
+            logger.error("Cannot load orders: user_id is not set.")
+            return
         
-        # Conectar la señal finished del hilo para limpiar el worker y el hilo
-        self.worker_thread.finished.connect(self.orders_worker.deleteLater)
-        self.worker_thread.finished.connect(self.worker_thread.deleteLater)
-
-        # Añadir el hilo a la ventana principal para su seguimiento
-        self.main_window.add_thread(self.worker_thread)
-
-        self.worker_thread.start()
-        logger.info("Hilo de OrdersWorker iniciado.")
+        try:
+            orders = await fetch_orders(self.api_client, self.user_id)
+            self.update_orders_table(orders)
+        except Exception as e:
+            logger.error(f"Failed to load orders: {e}", exc_info=True)
+            self._on_error(f"No se pudieron cargar las órdenes: {e}")
 
     @Slot(list)
     def update_orders_table(self, orders: list):
@@ -167,11 +151,9 @@ class OrdersView(QWidget):
         QMessageBox.critical(self, "Error de Órdenes", f"No se pudieron cargar las órdenes:\n{error_message}")
 
     def cleanup(self):
-        """Detiene el worker de órdenes y limpia los recursos."""
-        logger.info("OrdersView: Iniciando limpieza de tareas.")
-        if self.worker_thread and self.worker_thread.isRunning():
-            logger.info("OrdersView: Solicitando detención del worker de órdenes.")
-            self.worker_thread.quit()
-            if not self.worker_thread.wait(5000): # Esperar hasta 5 segundos
-                logger.warning("OrdersView: El hilo del worker de órdenes no terminó correctamente.")
-        logger.info("OrdersView: Limpieza completada.")
+        """Cancela la tarea de carga de órdenes si se está ejecutando."""
+        logger.info("OrdersView: Cleaning up tasks.")
+        if self.load_orders_task and not self.load_orders_task.done():
+            self.load_orders_task.cancel()
+            logger.info("Order loading task cancelled.")
+        logger.info("OrdersView: Cleanup complete.")

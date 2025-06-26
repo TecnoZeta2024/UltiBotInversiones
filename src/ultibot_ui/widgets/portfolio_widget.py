@@ -12,7 +12,6 @@ import qasync
 from ultibot_ui.models import BaseMainWindow
 from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
 from ultibot_ui.services.trading_mode_state import get_trading_mode_manager, TradingModeStateManager
-from ultibot_ui.workers import ApiWorker
 
 logger = logging.getLogger(__name__)
 
@@ -45,30 +44,6 @@ class PortfolioWidget(QtWidgets.QWidget):
         self.user_id = user_id
         logger.info(f"PortfolioWidget: User ID set to {user_id}. Starting updates.")
         self.start_updates() # Iniciar actualizaciones una vez que el user_id esté disponible
-
-    def _start_api_worker(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine], on_success, on_error):
-        if not self.main_event_loop:
-            logger.error("PortfolioWidget: El bucle de eventos principal no está disponible para ApiWorker.")
-            raise RuntimeError("Bucle de eventos principal no disponible.")
-
-        thread = QtCore.QThread()
-        thread.setObjectName("PortfolioApiWorkerThread")
-        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory, main_event_loop=self.main_event_loop) # Usar self.main_event_loop
-        worker.moveToThread(thread)
-
-        worker.result_ready.connect(on_success)
-        worker.error_occurred.connect(on_error)
-        
-        # Conectar finished del worker a thread.quit y a la eliminación segura
-        worker.finished.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-
-        thread.started.connect(worker.run)
-        
-        thread.start()
-        # Añadir el hilo a la ventana principal para su seguimiento
-        self.main_window.add_thread(thread)
 
     def init_ui(self):
         """Inicializa la interfaz de usuario con un layout basado en pestañas."""
@@ -177,7 +152,7 @@ class PortfolioWidget(QtWidgets.QWidget):
         self.last_updated_label.setObjectName("subtitleLabel")
         
         self.refresh_button = QtWidgets.QPushButton("Actualizar")
-        self.refresh_button.clicked.connect(self._start_update_worker)
+        self.refresh_button.clicked.connect(self.refresh_data)
         
         status_layout.addWidget(self.last_updated_label)
         status_layout.addStretch()
@@ -225,7 +200,7 @@ class PortfolioWidget(QtWidgets.QWidget):
     def setup_update_timer(self):
         self.update_timer = QtCore.QTimer(self)
         self.update_timer.setInterval(15000)
-        self.update_timer.timeout.connect(self._start_update_worker)
+        self.update_timer.timeout.connect(self.refresh_data)
         self.update_timer.start()
         logger.info("Timer de actualización del portafolio iniciado.")
 
@@ -233,41 +208,45 @@ class PortfolioWidget(QtWidgets.QWidget):
         logger.info(f"PortfolioWidget: Modo de trading cambió a {new_mode}")
         self._update_mode_indicator()
         self._update_trades_title()
-        self._start_update_worker()
+        self.refresh_data()
 
-    def _start_update_worker(self):
-        current_mode = self.trading_mode_manager.current_mode
+    def refresh_data(self):
         if self.user_id is None:
             logger.warning("PortfolioWidget: user_id no está disponible. No se puede actualizar el portafolio.")
             self.last_updated_label.setText("Esperando configuración de usuario...")
-            if hasattr(self, 'refresh_button'): self.refresh_button.setEnabled(True)
             return
+        
+        asyncio.create_task(self._update_data_async())
 
+    async def _update_data_async(self):
         current_mode = self.trading_mode_manager.current_mode
-        user_id = self.user_id # user_id ya no es None aquí
+        user_id = self.user_id
+
+        if user_id is None:
+            logger.error("Intento de actualizar datos sin user_id.")
+            self._handle_worker_error("Error interno: user_id no está configurado.")
+            return
+        
         logger.info(f"Actualizando datos del portafolio para modo: {current_mode}")
         self.last_updated_label.setText(f"Actualizando portafolio ({current_mode.title()})...")
         if hasattr(self, 'refresh_button'): self.refresh_button.setEnabled(False)
-        
-        async def fetch_data_coroutine(api_client: UltiBotAPIClient) -> Dict[str, Any]:
-            logger.debug(f"PortfolioWidget: Iniciando fetch_data_coroutine para modo {current_mode}.")
+
+        try:
+            snapshot_task = self.api_client.get_portfolio_snapshot(user_id, current_mode)
+            open_trades_task = self.api_client.get_trades(trading_mode=current_mode, status="open")
             
-            snapshot_task = api_client.get_portfolio_snapshot(user_id, current_mode)
-            open_trades_task = api_client.get_trades(trading_mode=current_mode, status="open")
+            results = await asyncio.gather(snapshot_task, open_trades_task, return_exceptions=True)
             
-            results = await asyncio.gather(
-                snapshot_task, 
-                open_trades_task,
-                return_exceptions=True
-            )
-            
-            return {
+            result_data = {
                 "portfolio_snapshot": results[0],
                 "open_trades": results[1],
                 "trading_mode": current_mode
             }
-
-        self._start_api_worker(fetch_data_coroutine, self._handle_update_result, self._handle_worker_error)
+            self._handle_update_result(result_data)
+        except Exception as e:
+            self._handle_worker_error(str(e))
+        finally:
+            if hasattr(self, 'refresh_button'): self.refresh_button.setEnabled(True)
 
     def _handle_update_result(self, result_data: Dict[str, Any]):
         logger.info(f"DATOS COMPLETOS RECIBIDOS EN HANDLER: {result_data}")
@@ -348,11 +327,8 @@ class PortfolioWidget(QtWidgets.QWidget):
         self.error_label.setText("Error al cargar datos.")
         self.last_updated_label.setText("Actualización fallida.")
 
-    def refresh_data(self):
-        self._start_update_worker()
-
     def start_updates(self):
-        self._start_update_worker()
+        self.refresh_data()
         self.update_timer.start()
 
     def stop_updates(self):

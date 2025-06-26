@@ -3,7 +3,7 @@ from typing import Optional, List, Dict, Any, Callable, Coroutine
 from uuid import UUID
 import asyncio
 
-from PySide6.QtCore import Signal as pyqtSignal, QObject, QThread
+from PySide6.QtCore import Signal as pyqtSignal
 from PySide6 import QtWidgets # Importar QtWidgets completo
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QFrame
 
@@ -13,7 +13,6 @@ from ultibot_ui.services.api_client import UltiBotAPIClient
 from ultibot_ui.widgets.chart_widget import ChartWidget
 from ultibot_ui.widgets.notification_widget import NotificationWidget
 from ultibot_ui.widgets.portfolio_widget import PortfolioWidget
-from ultibot_ui.workers import ApiWorker
 
 logger = logging.getLogger(__name__)
 
@@ -81,55 +80,20 @@ class DashboardView(QWidget):
         notification_layout.addWidget(self.notification_widget)
         self.main_layout.addWidget(notification_card)
 
-    def _start_api_worker(
-        self,
-        coroutine_factory: Callable[[UltiBotAPIClient], Coroutine],
-        on_success: Callable[[Any], None],
-        on_error: Callable[[Exception], None],
-        worker_id: str,
-    ):
-        """Inicia un ApiWorker en un hilo separado para ejecutar una corutina."""
-        # Usar el bucle de eventos principal que ya se pasó al constructor de DashboardView
-        if not self.main_event_loop:
-            logger.error("DashboardView: El bucle de eventos principal no está disponible para ApiWorker.")
-            on_error(Exception("Error interno: Bucle de eventos principal no disponible."))
-            return
-
-        worker = ApiWorker(
-            api_client=self.api_client,
-            main_event_loop=self.main_event_loop, # Usar self.main_event_loop
-            coroutine_factory=coroutine_factory
-        )
-        thread = QThread()
-        thread.setObjectName(f"DashboardApiWorkerThread_{worker_id}")
-        self.main_window.add_thread(thread)
-
-        worker.moveToThread(thread)
-        
-        worker.result_ready.connect(on_success)
-        worker.error_occurred.connect(lambda e: on_error(Exception(e)))
-
-        # Conectar la señal finished del worker para que el hilo se cierre
-        worker.finished.connect(thread.quit)
-        
-        # Conectar la señal finished del hilo para limpiar el worker y el hilo
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        
-        thread.started.connect(worker.run)
-        thread.start()
-
     def initialize_async_components(self):
         """Inicia la carga de datos asíncrona para los componentes del dashboard."""
         logger.info("DashboardView: initialize_async_components INVOCADO")
-        self._pending_tasks = 1
+        asyncio.create_task(self._initialize_async())
 
-        self._start_api_worker(
-            coroutine_factory=lambda api: api.get_trades(trading_mode="both"),
-            on_success=self._on_performance_loaded,
-            on_error=self._on_load_error("desempeño de estrategias"),
-            worker_id="load_performance",
-        )
+    async def _initialize_async(self):
+        """Corutina que carga los datos iniciales."""
+        self._pending_tasks = 1
+        try:
+            trades_data = await self.api_client.get_trades(trading_mode="both")
+            trades = [Trade.model_validate(t) for t in trades_data]
+            self._on_performance_loaded(trades)
+        except Exception as e:
+            self._on_load_error("desempeño de estrategias")(e)
 
     def _check_initialization_complete(self):
         """Verifica si todas las tareas de inicialización han finalizado."""

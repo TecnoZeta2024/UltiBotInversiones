@@ -21,16 +21,13 @@ class UIStrategyService(QObject):
         Fetches strategies from the backend and emits a signal with the data.
         """
         try:
-            strategies_data: List[Dict[str, Any]] = await self.api_client.get_strategies()
-            # Si AIStrategyConfiguration es un modelo Pydantic, se podría validar aquí:
-            # strategies = [AIStrategyConfiguration.model_validate(s) for s in strategies_data]
-            # strategy_dicts = [s.model_dump(mode='json') for s in strategies]
-            # self.strategies_updated.emit(strategy_dicts)
+            # The API now returns a StrategyListResponse model, which is a dict like {"strategies": [...]}
+            response_data: Dict[str, Any] = await self.api_client.get_strategies()
+            strategies_list = response_data.get("strategies", [])
             
-            # Por ahora, emitimos los datos tal cual vienen del backend
-            logger.info(f"Successfully fetched {len(strategies_data)} strategies.")
-            self.strategies_updated.emit(strategies_data)
-            return strategies_data # Retornar para uso directo en el worker
+            logger.info(f"Successfully fetched {len(strategies_list)} strategies.")
+            self.strategies_updated.emit(strategies_list)
+            return strategies_list # Return for direct use in the worker
         except APIError as e:
             error_message = f"Error de API al obtener estrategias: {e.message} (Código: {e.status_code})"
             logger.error(error_message, exc_info=True)
@@ -80,14 +77,13 @@ class UIStrategyService(QObject):
             self.error_occurred.emit(error_message)
             raise
 
-    async def delete_strategy(self, strategy_id: str) -> Dict[str, Any]:
+    async def delete_strategy(self, strategy_id: str) -> None:
         """
         Elimina una estrategia del backend.
         """
         try:
-            result = await self.api_client.delete_strategy_config(strategy_id)
+            await self.api_client.delete_strategy_config(strategy_id)
             logger.info(f"Estrategia ID: {strategy_id} eliminada exitosamente.")
-            return result
         except APIError as e:
             error_message = f"Error de API al eliminar estrategia {strategy_id}: {e.message} (Código: {e.status_code})"
             logger.error(error_message, exc_info=True)
@@ -99,26 +95,45 @@ class UIStrategyService(QObject):
             self.error_occurred.emit(error_message)
             raise
 
-    async def update_strategy_status(self, strategy_id: str, is_active: bool) -> Dict[str, Any]:
+
+    async def activate_strategy(self, strategy_id: str) -> Dict[str, Any]:
         """
-        Actualiza el estado activo de una estrategia (activar/desactivar).
+        Activa una estrategia de trading.
         """
         try:
-            # Asumiendo que el trading_mode se gestiona a nivel de backend o es un valor por defecto
-            # Si el backend requiere trading_mode, se necesitaría obtenerlo de alguna parte (ej. UIConfigService)
-            # Por ahora, se usará un valor por defecto o se asumirá que el backend lo infiere.
-            # Si es necesario, se puede añadir un parámetro `trading_mode: str` a esta función.
-            trading_mode = "paper" # O obtener de self.api_client.get_current_trading_mode() si existe
-            result = await self.api_client.update_strategy_status(strategy_id, is_active, trading_mode)
-            logger.info(f"Estrategia {strategy_id} actualizada a estado activo: {is_active}.")
+            # TODO: El modo de trading debe obtenerse de un servicio de estado global.
+            trading_mode = "paper"
+            result = await self.api_client.activate_strategy(strategy_id, trading_mode)
+            logger.info(f"Estrategia {strategy_id} activada exitosamente.")
             return result
         except APIError as e:
-            error_message = f"Error de API al cambiar estado de estrategia {strategy_id}: {e.message} (Código: {e.status_code})"
+            error_message = f"Error de API al activar estrategia {strategy_id}: {e.message} (Código: {e.status_code})"
             logger.error(error_message, exc_info=True)
             self.error_occurred.emit(error_message)
             raise
         except Exception as e:
-            error_message = f"Error inesperado al cambiar estado de estrategia {strategy_id}: {e}"
+            error_message = f"Error inesperado al activar estrategia {strategy_id}: {e}"
+            logger.error(error_message, exc_info=True)
+            self.error_occurred.emit(error_message)
+            raise
+
+    async def deactivate_strategy(self, strategy_id: str) -> Dict[str, Any]:
+        """
+        Desactiva una estrategia de trading.
+        """
+        try:
+            # TODO: El modo de trading debe obtenerse de un servicio de estado global.
+            trading_mode = "paper"
+            result = await self.api_client.deactivate_strategy(strategy_id, trading_mode)
+            logger.info(f"Estrategia {strategy_id} desactivada exitosamente.")
+            return result
+        except APIError as e:
+            error_message = f"Error de API al desactivar estrategia {strategy_id}: {e.message} (Código: {e.status_code})"
+            logger.error(error_message, exc_info=True)
+            self.error_occurred.emit(error_message)
+            raise
+        except Exception as e:
+            error_message = f"Error inesperado al desactivar estrategia {strategy_id}: {e}"
             logger.error(error_message, exc_info=True)
             self.error_occurred.emit(error_message)
             raise

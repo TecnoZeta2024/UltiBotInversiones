@@ -1,7 +1,7 @@
 """
 Vista de historial que integra la visualización de resultados de Paper Trading.
 """
-
+import asyncio
 import logging
 from typing import Optional
 from uuid import UUID
@@ -25,11 +25,12 @@ class HistoryView(QWidget):
     Incluye tanto paper trading como trading real en pestañas separadas.
     """
     
-    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent=None):
+    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, main_event_loop: asyncio.AbstractEventLoop, parent=None):
         super().__init__(parent)
         self.user_id: Optional[UUID] = None # Se inicializará asíncronamente
         self.api_client = api_client
         self.main_window = main_window
+        self.main_event_loop = main_event_loop # Inyectar el bucle de eventos
         
         self.setup_ui()
         logger.info("HistoryView inicializada.")
@@ -73,7 +74,8 @@ class HistoryView(QWidget):
         # Pasar api_client y main_window, user_id se establecerá después
         self.paper_trading_report_widget = PaperTradingReportWidget(
             api_client=self.api_client,
-            main_window=self.main_window
+            main_window=self.main_window,
+            main_event_loop=self.main_event_loop # Propagar el bucle de eventos
         )
         self.paper_trading_tab = QWidget()
         paper_layout = QVBoxLayout(self.paper_trading_tab)

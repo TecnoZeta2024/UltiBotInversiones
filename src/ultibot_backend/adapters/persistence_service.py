@@ -261,9 +261,10 @@ class SupabasePersistenceService(IPersistenceService):
                 id=trade.id,
                 user_id=trade.user_id,
                 data=trade.model_dump_json(),
-                position_status=trade.positionStatus, # No usar .value
-                mode=trade.mode, # No usar .value
+                position_status=trade.positionStatus,
+                mode=trade.mode,
                 symbol=trade.symbol,
+                side=trade.side.value, # Asegurar que el valor del enum se pase como string
                 created_at=trade.created_at,
                 updated_at=trade.updated_at,
                 closed_at=trade.closed_at

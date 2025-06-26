@@ -1,28 +1,36 @@
-import logging
-from PySide6.QtCore import QThread
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget, 
-                               QTableWidgetItem, QHeaderView, QMessageBox, QPushButton)
-from typing import List, Dict, Any, cast, Optional
 import asyncio
-from decimal import Decimal # Importar Decimal
+import logging
+from decimal import Decimal
+from typing import Any, Dict, List, Optional
 
-from ultibot_ui.workers import StrategiesWorker, ApiWorker
+from PySide6.QtWidgets import (
+    QApplication,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
+
+from ultibot_ui.models import BaseMainWindow
 from ultibot_ui.services.api_client import UltiBotAPIClient
-from ultibot_ui.services.ui_strategy_service import UIStrategyService # Importar UIStrategyService
-from PySide6.QtWidgets import QApplication # Importar QApplication
-from ultibot_ui.models import BaseMainWindow # Importar BaseMainWindow para type hinting
+from ultibot_ui.services.ui_strategy_service import UIStrategyService
 
 logger = logging.getLogger(__name__)
 
 class StrategiesView(QWidget):
-    def __init__(self, api_client: UltiBotAPIClient, parent=None):
+    def __init__(self, api_client: UltiBotAPIClient, main_event_loop: asyncio.AbstractEventLoop, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Trading Strategies")
         self.api_client = api_client
-        self.strategy_service = UIStrategyService(api_client) # Inicializar UIStrategyService
-        self.thread: Optional[QThread] = None # Declarar self.thread aquí
-        self.worker: Optional[StrategiesWorker] = None # Declarar self.worker aquí
-        
+        self.main_event_loop = main_event_loop
+        self.strategy_service = UIStrategyService(api_client)
+        self.main_window: Optional[BaseMainWindow] = None
+
         self._layout = QVBoxLayout(self)
         
         self.title_label = QLabel("Configured Trading Strategies")
@@ -98,11 +106,12 @@ class StrategiesView(QWidget):
         layout.setContentsMargins(5, 0, 5, 0)
         layout.setSpacing(5)
 
-        toggle_button = QPushButton("Activar")
+        # TODO: Determinar el modo de trading desde la UI
+        is_active = strategy.get('is_active_paper_mode', False)
+        toggle_button = QPushButton("Desactivar" if is_active else "Activar")
         details_button = QPushButton("Detalles")
 
-        # Conectar botones a funcionalidad real
-        toggle_button.clicked.connect(lambda _, s=strategy: self.on_toggle_strategy(s))
+        toggle_button.clicked.connect(lambda _, s=strategy, b=toggle_button: self.on_toggle_strategy(s, b))
         details_button.clicked.connect(lambda _, s=strategy: self.on_show_details(s))
 
         layout.addWidget(toggle_button)
@@ -111,53 +120,38 @@ class StrategiesView(QWidget):
         buttons_widget.setLayout(layout)
         self.strategies_table_widget.setCellWidget(row, 4, buttons_widget)
 
-    def on_toggle_strategy(self, strategy: Dict[str, Any]):
+    def on_toggle_strategy(self, strategy: Dict[str, Any], button: QPushButton):
         """Handler para activar/desactivar estrategia."""
         strategy_id = strategy.get('id')
-        name = strategy.get('name', 'Sin Nombre')
-        is_active_paper_mode = strategy.get('isActivePaperMode', False) # Asumir modo papel por ahora
-
         if not strategy_id:
-            QMessageBox.warning(self, "Error", f"No se pudo alternar el estado de la estrategia '{name}': ID no encontrado.")
+            QMessageBox.warning(self, "Error", "ID de estrategia no encontrado.")
             return
 
-        # Ejecutar la operación asíncrona en un nuevo task
-        # Usar un ApiWorker para ejecutar la corutina de forma segura
-        coro_factory = lambda api_client: self.strategy_service.toggle_strategy_status(
-            strategy_id, is_active_paper_mode, "paper"
-        )
+        is_active = strategy.get('is_active_paper_mode', False)
+        new_status = not is_active
         
-        worker = ApiWorker(api_client=self.api_client, coroutine_factory=coro_factory)
-        thread = QThread() # Usar QThread para el ApiWorker
-        thread.setObjectName(f"ToggleStrategyWorkerThread_{strategy_id}")
-        worker.moveToThread(thread)
+        button.setEnabled(False)
+        button.setText("Actualizando...")
 
-        worker.result_ready.connect(lambda: self._on_toggle_success(strategy_id, is_active_paper_mode))
-        worker.error_occurred.connect(lambda msg: self._on_toggle_error(strategy_id, msg))
-        
-        thread.started.connect(worker.run)
-        
-        worker.result_ready.connect(worker.deleteLater)
-        worker.error_occurred.connect(worker.deleteLater)
-        worker.finished.connect(thread.quit)
-        thread.finished.connect(thread.deleteLater)
-        
-        # Añadir el hilo a la ventana principal para su seguimiento y limpieza
-        # Usar cast para ayudar a Pylance a reconocer el tipo de parent
-        main_window = cast(BaseMainWindow, self.parent())
-        if main_window and hasattr(main_window, 'add_thread'):
-            main_window.add_thread(thread)
-        
-        thread.start()
+        asyncio.create_task(self._toggle_strategy_async(strategy_id, new_status, button))
 
-    def _on_toggle_success(self, strategy_id: str, old_status: bool):
-        new_status_text = "activada" if not old_status else "desactivada"
-        QMessageBox.information(self, "Éxito", f"Estrategia {strategy_id} {new_status_text} correctamente.")
-        self.initialize_view_data() # Recargar la lista para reflejar el cambio
-
-    def _on_toggle_error(self, strategy_id: str, error_message: str):
-        QMessageBox.critical(self, "Error", f"Error al alternar estado de estrategia {strategy_id}:\n{error_message}")
-        logger.error(f"Error al alternar estado de estrategia {strategy_id}: {error_message}")
+    async def _toggle_strategy_async(self, strategy_id: str, new_status: bool, button: QPushButton):
+        try:
+            if new_status:
+                await self.strategy_service.activate_strategy(strategy_id)
+                QMessageBox.information(self, "Éxito", f"Estrategia {strategy_id} activada correctamente.")
+            else:
+                await self.strategy_service.deactivate_strategy(strategy_id)
+                QMessageBox.information(self, "Éxito", f"Estrategia {strategy_id} desactivada correctamente.")
+            
+            self.initialize_view_data()  # Recargar para reflejar el cambio
+        except Exception as e:
+            logger.error(f"Error al cambiar estado de la estrategia {strategy_id}: {e}", exc_info=True)
+            QMessageBox.critical(self, "Error", f"No se pudo actualizar la estrategia {strategy_id}:\n{e}")
+            # Restaurar el estado del botón en caso de error
+            button.setEnabled(True)
+            is_active = not new_status
+            button.setText("Desactivar" if is_active else "Activar")
 
     def on_show_details(self, strategy: Dict[str, Any]):
         """Handler para mostrar detalles de la estrategia."""
@@ -166,64 +160,20 @@ class StrategiesView(QWidget):
         QMessageBox.information(self, "Detalles de Estrategia", f"Nombre: {name}\nID: {strategy_id}\n(Más detalles próximamente)")
 
     def initialize_view_data(self):
-        """
-        Initializes and runs the worker to load strategies data asynchronously
-        on a dedicated QThread. This method is called after MainWindow is fully
-        initialized and visible.
-        """
+        """Loads strategies data asynchronously."""
         logger.info("StrategiesView: Initializing view data (loading strategies)...")
-        
-        # Obtener el bucle de eventos principal de la aplicación
-        app_instance = QApplication.instance()
-        if not app_instance:
-            logger.error("StrategiesView: No se encontró la instancia de QApplication.")
-            QMessageBox.critical(self, "Error de Inicialización", "No se pudo obtener la instancia de la aplicación. La aplicación podría no funcionar correctamente.")
-            return
-            
-        main_event_loop = app_instance.property("main_event_loop")
-        if not main_event_loop:
-            logger.error("StrategiesView: No se encontró el bucle de eventos principal de qasync como propiedad de la aplicación.")
-            QMessageBox.critical(self, "Error de Inicialización", "No se pudo obtener el bucle de eventos principal. La aplicación podría no funcionar correctamente.")
-            return
+        asyncio.create_task(self._load_strategies_async())
 
-        # Crear el nuevo worker y hilo
-        new_worker = StrategiesWorker(self.api_client, main_event_loop)
-        new_thread = QThread() # Crear un QThread para el worker
-        new_thread.setObjectName("StrategiesWorkerThread")
-        new_worker.moveToThread(new_thread) # Mover el worker a su propio hilo
-
-        # Detener el worker y hilo anteriores si existen y están corriendo
-        if self.thread and self.thread.isRunning():
-            logger.info("StrategiesView: Worker thread already running, stopping it.")
-            if self.worker: # Asegurarse de que self.worker no sea None
-                self.worker.stop() 
-            self.thread.quit()
-            self.thread.wait(1000) # Esperar un poco para que el hilo termine
-            self.thread = None
-            self.worker = None
-
-        # Asignar el nuevo worker y hilo
-        self.worker = new_worker
-        self.thread = new_thread
-
-
-        self.worker.strategies_ready.connect(self.update_strategies)
-        self.worker.error_occurred.connect(self.on_worker_error)
-        
-        # Conectar las señales para la gestión del hilo
-        self.thread.started.connect(self.worker.run)
-        self.worker.finished.connect(self.worker.deleteLater)
-        self.worker.finished.connect(self.thread.quit)
-        self.thread.finished.connect(self.thread.deleteLater)
-        
-        # Añadir el hilo a la ventana principal para su seguimiento y limpieza
-        main_window = cast(BaseMainWindow, self.parent())
-        if main_window and hasattr(main_window, 'add_thread'):
-            main_window.add_thread(self.thread)
-        
-        self.thread.start() # Iniciar el hilo
+    async def _load_strategies_async(self):
+        try:
+            # Usar el servicio de UI para obtener las estrategias
+            strategies = await self.strategy_service.fetch_strategies()
+            self.update_strategies(strategies)
+        except Exception as e:
+            logger.error(f"An error occurred while loading strategies: {e}", exc_info=True)
+            self.on_worker_error(str(e))
 
     def on_worker_error(self, error_message: str):
-        """Handles errors reported by the worker."""
-        logger.error(f"An error occurred in StrategiesWorker: {error_message}")
+        """Handles errors during data loading."""
+        logger.error(f"An error occurred in StrategiesView: {error_message}")
         QMessageBox.critical(self, "Error", f"Failed to load strategies:\n{error_message}")

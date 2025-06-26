@@ -187,3 +187,91 @@
 - **Acción:** Corrección de `IndentationError` en `src/ultibot_ui/views/opportunities_view.py` mediante la sobreescritura del archivo.
 - **Resultado:** Éxito
 - **Impacto:** `src/ultibot_ui/views/opportunities_view.py`
+- **Timestamp:** 2025-06-25 22:57 UTC
+- **Agente:** DevOps
+- **ID Tarea:** [TASK-DEVOPS-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Inicio de la tarea de resolución de errores en `frontend.log`.
+- **Resultado:** Éxito.
+- **Impacto:** Registro de inicio de tarea.
+- **Timestamp:** 2025-06-25 23:00 UTC
+- **Agente:** DevOps
+- **ID Tarea:** [TASK-DEVOPS-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Se diagnosticó que el `ConnectionRefusedError` en el frontend se debía a que el servidor backend no estaba en ejecución. Se inició el servidor backend con `uvicorn`.
+- **Resultado:** Éxito.
+- **Impacto:** El servidor backend ahora está en ejecución en `http://127.0.0.1:8000`.
+- **Timestamp:** 2025-06-25 23:07 UTC
+- **Agente:** DevOps
+- **ID Tarea:** [TASK-DEVOPS-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Corrección de la inconsistencia en el formato de símbolos de trading en `src/ultibot_ui/workers.py`.
+- **Resultado:** Éxito.
+- **Impacto:** `src/ultibot_ui/workers.py` modificado para normalizar los símbolos antes de la búsqueda.
+- **Timestamp:** 2025-06-25 23:09 UTC
+- **Agente:** DevOps
+- **ID Tarea:** [TASK-DEVOPS-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Segunda corrección en `src/ultibot_ui/workers.py` para manejar correctamente la respuesta de la API (una lista en lugar de un diccionario).
+- **Resultado:** Éxito.
+- **Impacto:** `src/ultibot_ui/workers.py` modificado para iterar sobre la lista de tickers. Se detectó un nuevo error de Pylance.
+
+- **Timestamp:** 2025-06-25 23:25 UTC
+- **Agente:** Leadcoder
+- **ID Tarea:** [TASK-UI-AUDIT-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Inicio de la tarea de auditoría holística de `src/ultibot_ui/main.py` para resolver problemas de funcionamiento de la interfaz.
+- **Resultado:** Éxito.
+- **Impacto:** Registro de inicio de tarea.
+- **Timestamp:** 2025-06-26 00:23 UTC
+- **Agente:** ui-ux-maestro
+- **ID Tarea:** [TASK-UI-AUDIT-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Reanudando la tarea de auditoría de la UI. Activando el agente 'ui-ux-maestro' y el Protocolo de Trazabilidad y Contexto (PTC).
+- **Resultado:** Éxito.
+- **Impacto:** Registro de continuación de tarea.
+- **Timestamp:** 2025-06-26 00:26 UTC
+- **Agente:** ui-ux-maestro
+- **ID Tarea:** [TASK-UI-AUDIT-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Finalizada la corrección sistemática de la inyección de dependencias para `main_event_loop` en toda la UI.
+- **Resultado:** Éxito.
+- **Impacto:** `src/ultibot_ui/widgets/paper_trading_report_widget.py`, `src/ultibot_ui/views/orders_view.py`, `src/ultibot_ui/windows/settings_view.py`, `src/ultibot_ui/views/trading_terminal_view.py` modificados. La arquitectura de la UI es ahora consistente y robusta.
+- **Timestamp:** 2025-06-26 00:42 UTC
+- **Agente:** UI/UX Maestro
+- **ID Tarea:** [TASK-UI-AUDIT-002]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Inicio de la auditoría y refactorización de `src/ultibot_ui/main.py` para resolver fallas arquitectónicas en el arranque asíncrono.
+- **Resultado:** Éxito.
+- **Impacto:** Registro de inicio de tarea. Se procederá a reescribir el archivo con una nueva clase `UltiBotApplication`.
+
+- **Timestamp:** 2025-06-26 00:53 UTC
+- **Agente:** CTO / Arquitecto de Sistemas
+- **ID Tarea:** [TASK-UI-REFACTOR-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Inicio de la tarea de refactorización final de la UI para eliminar el patrón `ApiWorker` y resolver errores de asincronía.
+- **Resultado:** Éxito.
+- **Impacto:** Registro de inicio de tarea. Se procederá a actualizar `TASKLIST.md`.
+
+- **Timestamp:** 2025-06-26 01:08 UTC
+- **Agente:** CTO / Arquitecto de Sistemas
+- **ID Tarea:** [TASK-UI-REFACTOR-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Reanudación de la tarea de refactorización de la UI. Se ha cargado el contexto de la sesión anterior. El objetivo es finalizar la migración del patrón `ApiWorker` a `asyncio.create_task`.
+- **Resultado:** Éxito.
+- **Impacto:** Registro de continuación de tarea. Se procederá a actualizar `TASKLIST.md` para reflejar el estado real del trabajo.
+
+- **Timestamp:** 2025-06-26 01:15 UTC
+- **Agente:** CTO / Arquitecto de Sistemas
+- **ID Tarea:** [TASK-UI-REFACTOR-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Finalizada la refactorización sistemática para eliminar el anti-patrón `ApiWorker` de toda la capa de la UI (`src/ultibot_ui/`).
+- **Resultado:** Éxito.
+- **Impacto:** `src/ultibot_ui/views/opportunities_view.py`, `src/ultibot_ui/views/strategy_management_view.py`, `src/ultibot_ui/views/strategies_view.py`, `src/ultibot_ui/views/portfolio_view.py`, `src/ultibot_ui/windows/main_window.py`. La arquitectura ahora es consistente con el patrón `asyncio.create_task`.
+- **Timestamp:** 2025-06-26 01:52 UTC
+- **Agente:** lead-data-scientist
+- **ID Tarea:** [RULE-UPDATE-001]
+- **Ciclo:** [B-MAD-R: Record]
+- **Acción:** Modificación de la regla de traspaso de contexto en `.clinerules/Token-limit-300k.md`. El activador ahora es el límite de costo de $1.2000, se requiere registro de avance previo y un análisis holístico al iniciar la nueva tarea.
+- **Resultado:** Éxito
+- **Impacto:** `.clinerules/Token-limit-300k.md`

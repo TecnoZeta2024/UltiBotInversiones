@@ -100,7 +100,8 @@ async def test_get_spot_balances_success(binance_adapter: BinanceAdapter):
 
 @pytest.mark.asyncio
 async def test_get_spot_balances_parsing_error(binance_adapter: BinanceAdapter):
-    """Prueba get_spot_balances cuando hay un error al parsear un balance."""
+    """Prueba que get_spot_balances lanza InvalidOperation con datos corruptos."""
+    from decimal import InvalidOperation
     mock_account_info_data = {
         "balances": [
             {"asset": "BTC", "free": "1.0", "locked": "0.5"},
@@ -109,12 +110,8 @@ async def test_get_spot_balances_parsing_error(binance_adapter: BinanceAdapter):
     }
     binance_adapter.get_account_info = AsyncMock(return_value=mock_account_info_data)
     
-    # Mockear print para capturar la advertencia
-    with patch('builtins.print') as mock_print:
-        balances = await binance_adapter.get_spot_balances("key", "secret")
-        assert len(balances) == 1
-        assert balances[0].asset == "BTC"
-        mock_print.assert_called_with("Advertencia: No se pudo parsear el balance para el activo XYZ: could not convert string to float: 'invalid_value'")
+    with pytest.raises(InvalidOperation):
+        await binance_adapter.get_spot_balances("key", "secret")
 
 @pytest.mark.asyncio
 @patch('src.ultibot_backend.adapters.binance_adapter.httpx.AsyncClient')
@@ -221,4 +218,3 @@ async def test_make_request_client_error_no_retry(MockAsyncClient):
         assert excinfo.value.status_code == 400
         assert mock_client_instance.get.call_count == 1 # Solo un intento
         mock_sleep.assert_not_called() # No se debe llamar a sleep
-

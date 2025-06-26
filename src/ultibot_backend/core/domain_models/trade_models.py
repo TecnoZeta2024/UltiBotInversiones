@@ -220,7 +220,6 @@ class Trade(BaseModel):
     closed_at: Optional[datetime] = Field(None, description="Timestamp del cierre de la posición.")
 
     model_config = ConfigDict(
-        use_enum_values=True,
         populate_by_name=True,
         arbitrary_types_allowed=True,
         from_attributes=True

@@ -1,7 +1,8 @@
 import logging
+import asyncio
 from collections import deque
-from PySide6.QtCore import QThread, Slot, QPointF
-from PySide6 import QtCore
+from typing import Optional
+from PySide6.QtCore import Slot, QPointF
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel, QGroupBox,
                                QFormLayout, QComboBox, QLineEdit,
                                QPushButton, QHBoxLayout, QMessageBox)
@@ -9,8 +10,8 @@ from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
 from PySide6.QtGui import QPainter
 
 from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
-from ultibot_ui.workers import TradingTerminalWorker, ApiWorker
-from ultibot_ui.models import BaseMainWindow # Importar BaseMainWindow
+from ultibot_ui.workers import price_feed_manager
+from ultibot_ui.models import BaseMainWindow
 
 logger = logging.getLogger(__name__)
 
@@ -18,25 +19,20 @@ class TradingTerminalView(QWidget):
     """
     Vista para la ejecución de órdenes manuales y visualización de datos de mercado.
     """
-    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, parent=None):
+    def __init__(self, api_client: UltiBotAPIClient, main_window: BaseMainWindow, main_event_loop: asyncio.AbstractEventLoop, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Terminal de Trading")
         
         self.api_client = api_client
         self.main_window = main_window
+        self.main_event_loop = main_event_loop
         self._layout = QVBoxLayout(self)
         
-        self.price_worker = None
+        self.price_feed_task: Optional[asyncio.Task] = None
         self.price_data = deque(maxlen=60)
-        app_instance = QtCore.QCoreApplication.instance()
-        self.main_event_loop = None
-        if app_instance:
-            self.main_event_loop = app_instance.property("main_event_loop") # Corregido el nombre de la propiedad
         
         if not self.main_event_loop:
             logger.error("TradingTerminalView: No se encontró el bucle de eventos de asyncio principal. La funcionalidad de feed de precios puede no funcionar correctamente.")
-            # Aquí podrías deshabilitar la funcionalidad de feed de precios o mostrar un mensaje al usuario.
-            # Por ahora, el worker manejará la ausencia del bucle.
 
         self.title_label = QLabel("Terminal de Trading")
         self.title_label.setStyleSheet("font-size: 16px; font-weight: bold;")
@@ -142,34 +138,23 @@ class TradingTerminalView(QWidget):
         logger.info("Price chart initialized for TradingTerminalView.")
 
     def start_price_feed(self, symbol: str):
-        """Inicia el worker para obtener datos de precios para el símbolo dado."""
-        if self.price_worker:
-            self.price_worker.stop()
-            self.price_worker.deleteLater()
-            self.price_worker = None
+        """Inicia una tarea asíncrona para obtener datos de precios para el símbolo dado."""
+        if self.price_feed_task and not self.price_feed_task.done():
+            self.price_feed_task.cancel()
+            logger.info(f"Previous price feed task for {self.chart.title()} cancelled.")
 
         self.price_data.clear()
         self.price_series.clear()
         self.chart.setTitle(f"Evolución de {symbol} (Tiempo Real)")
 
         if not self.main_event_loop:
-            QMessageBox.critical(self, "Error de Inicialización", "El bucle de eventos principal no está disponible. El feed de precios no se iniciará.")
-            logger.error("TradingTerminalView: No se puede iniciar el feed de precios porque el bucle de eventos principal no está disponible.")
+            QMessageBox.critical(self, "Error de Inicialización", "El bucle de eventos principal no está disponible.")
             return
 
-        self.price_worker = TradingTerminalWorker(self.api_client, symbol, self.main_event_loop) # Pasar main_event_loop
-        self.price_worker.price_updated.connect(self._update_price_chart)
-        self.price_worker.finished.connect(self.price_worker.deleteLater)
-        
-        thread = QThread()
-        thread.setObjectName(f"PriceFeedWorkerThread_{symbol}")
-        self.price_worker.moveToThread(thread)
-        thread.started.connect(self.price_worker.run)
-        thread.finished.connect(thread.deleteLater)
-        
-        self.main_window.add_thread(thread)
-        thread.start()
-        logger.info(f"Price feed worker started for {symbol}.")
+        self.price_feed_task = asyncio.create_task(
+            price_feed_manager(self.api_client, symbol, self._update_price_chart)
+        )
+        logger.info(f"Price feed task created for {symbol}.")
 
     @Slot(dict)
     def _update_price_chart(self, data: dict):
@@ -220,38 +205,35 @@ class TradingTerminalView(QWidget):
         
         logger.info(f"Preparando orden: {side.upper()} {amount} {symbol} @ {price if price else 'Market'}")
 
-        def coroutine_factory(api_client: UltiBotAPIClient):
-            return api_client.create_order(
-                symbol=symbol,
-                order_type=order_type,
-                side=side,
-                amount=amount,
-                price=price
-            )
-
-        # Asegurarse de que main_event_loop esté disponible
         if not self.main_event_loop:
-            QMessageBox.critical(self, "Error de Inicialización", "El bucle de eventos principal no está disponible. No se puede enviar la orden.")
-            logger.error("TradingTerminalView: No se puede enviar la orden porque el bucle de eventos principal no está disponible.")
+            QMessageBox.critical(self, "Error de Inicialización", "El bucle de eventos principal no está disponible.")
             return
 
-        order_worker = ApiWorker(api_client=self.api_client, coroutine_factory=coroutine_factory, main_event_loop=self.main_event_loop) # Pasar main_event_loop
-        order_thread = QThread()
-        order_thread.setObjectName(f"OrderWorkerThread_{symbol}_{side}")
-        order_worker.moveToThread(order_thread)
+        # TODO: Añadir un control en la UI para seleccionar el modo de trading (paper/real)
+        trading_mode = "paper" 
+        
+        order_data = {
+            "symbol": symbol,
+            "type": order_type,
+            "side": side,
+            "amount": amount,
+            "trading_mode": trading_mode,
+        }
+        if price:
+            order_data["price"] = price
 
-        order_worker.result_ready.connect(self._on_order_success)
-        order_worker.error_occurred.connect(self._on_order_error)
-        
-        order_thread.started.connect(order_worker.run)
-        
-        order_worker.result_ready.connect(order_worker.deleteLater)
-        order_worker.error_occurred.connect(order_worker.deleteLater)
-        order_worker.finished.connect(order_thread.quit)
-        order_thread.finished.connect(order_thread.deleteLater)
-        
-        self.main_window.add_thread(order_thread)
-        order_thread.start()
+        asyncio.create_task(self._execute_order_async(order_data))
+
+    async def _execute_order_async(self, order_data: dict):
+        """Ejecuta la creación de la orden como una tarea asíncrona."""
+        try:
+            # Usar el método unificado para ejecutar órdenes de mercado/límite
+            result = await self.api_client.execute_market_order(order_data)
+            self._on_order_success(result)
+        except APIError as e:
+            self._on_order_error(f"Error de API ({e.status_code}): {e.message}")
+        except Exception as e:
+            self._on_order_error(str(e))
 
     @Slot(object)
     def _on_order_success(self, result: dict):
@@ -268,8 +250,9 @@ class TradingTerminalView(QWidget):
         QMessageBox.critical(self, "Error de Orden", f"No se pudo enviar la orden:\n{error_message}")
 
     def cleanup(self):
-        """Limpia los recursos de la vista. Los hilos son gestionados por MainWindow."""
-        logger.info("TradingTerminalView: Cleanup initiated. Threads are managed by MainWindow.")
-        if self.price_worker:
-            self.price_worker = None
+        """Cancela la tarea del feed de precios si se está ejecutando."""
+        logger.info("TradingTerminalView: Cleanup initiated.")
+        if self.price_feed_task and not self.price_feed_task.done():
+            self.price_feed_task.cancel()
+            logger.info("Price feed task cancelled.")
         logger.info("TradingTerminalView: Cleanup finished.")

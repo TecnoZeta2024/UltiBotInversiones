@@ -12,13 +12,12 @@ from PySide6.QtWidgets import (
     QTableWidgetItem, QHeaderView, QApplication, QLineEdit, QPushButton, QDialog,
     QDialogButtonBox, QCompleter, QMessageBox, QAbstractItemView, QListWidget, QListWidgetItem
 )
-from PySide6.QtCore import Qt, QTimer, Signal as pyqtSignal, QThread
+from PySide6.QtCore import Qt, QTimer, Signal as pyqtSignal
 from PySide6.QtGui import QColor, QFont
 
 import qasync
 
 from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
-from ultibot_ui.workers import ApiWorker
 from shared.data_types import UserConfiguration
 from ultibot_backend.core.domain_models.user_configuration_models import RiskProfile, Theme
 from ultibot_ui.models import BaseMainWindow # Importar BaseMainWindow
@@ -93,8 +92,7 @@ class MarketDataWidget(QWidget):
         self.main_window = main_window # Guardar referencia a MainWindow
         self.main_event_loop = main_event_loop # Guardar la referencia al bucle de eventos
         self.selected_pairs: List[str] = [] 
-        self.all_available_pairs: List[str] = [] 
-        # self.active_api_workers ya no es necesario si MainWindow gestiona los hilos
+        self.all_available_pairs: List[str] = []
 
         self._init_ui()
         self._setup_timers()
@@ -104,43 +102,6 @@ class MarketDataWidget(QWidget):
         self.config_saved.connect(self._handle_config_saved_result)
         self.market_data_api_error.connect(self._handle_market_data_api_error)
         self.load_initial_configuration()
-
-    def _run_api_worker_and_await_result(self, coroutine_factory: Callable[[UltiBotAPIClient], Coroutine]) -> asyncio.Future:
-        # Usar self.main_event_loop que ya se pasó al constructor
-        if not self.main_event_loop:
-            logger.error("MarketDataWidget: El bucle de eventos principal no está disponible.")
-            raise RuntimeError("Bucle de eventos principal no disponible.")
-
-        future = self.main_event_loop.create_future()
-
-        worker = ApiWorker(coroutine_factory=coroutine_factory, api_client=self.api_client, main_event_loop=self.main_event_loop)
-        thread = QThread()
-        # Añadir el hilo a la ventana principal para su seguimiento, si main_window existe
-        if self.main_window:
-            self.main_window.add_thread(thread)
-
-        worker.moveToThread(thread)
-
-        def _on_result(result):
-            if not future.done():
-                self.main_event_loop.call_soon_threadsafe(future.set_result, result)
-        def _on_error(error_msg):
-            if not future.done():
-                self.main_event_loop.call_soon_threadsafe(future.set_exception, Exception(error_msg))
-        
-        worker.result_ready.connect(_on_result)
-        worker.error_occurred.connect(_on_error)
-        
-        # Conectar la señal finished del worker para que el hilo se cierre
-        worker.finished.connect(thread.quit)
-        
-        # Conectar la señal finished del hilo para limpiar el worker y el hilo
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-
-        thread.started.connect(worker.run)
-        thread.start()
-        return future
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
@@ -193,12 +154,15 @@ class MarketDataWidget(QWidget):
 
     def load_initial_configuration(self):
         logger.info("Cargando configuración inicial para MarketDataWidget...")
-        future = self._run_api_worker_and_await_result(
-            lambda api_client: api_client.get_user_configuration()
-        )
-        future.add_done_callback(
-            lambda f: self.user_config_fetched.emit(f.result()) if not f.exception() else self.market_data_api_error.emit(str(f.exception()))
-        )
+        asyncio.create_task(self._load_initial_configuration_async())
+
+    async def _load_initial_configuration_async(self):
+        try:
+            config_data = await self.api_client.get_user_configuration()
+            # Pydantic ya no se usa aquí para la validación, se asume que la API devuelve el formato correcto
+            self.user_config_fetched.emit(UserConfiguration(**config_data))
+        except Exception as e:
+            self.market_data_api_error.emit(str(e))
 
     def _handle_tickers_data_result(self, tickers_data: Dict[str, Any]):
         if not self.selected_pairs:
@@ -234,12 +198,14 @@ class MarketDataWidget(QWidget):
     def update_tickers_data(self):
         if not self.selected_pairs:
             return
-        future = self._run_api_worker_and_await_result(
-            lambda api_client: api_client.get_market_data(self.selected_pairs)
-        )
-        future.add_done_callback(
-            lambda f: self.tickers_data_fetched.emit(f.result()) if not f.exception() else self.market_data_api_error.emit(str(f.exception()))
-        )
+        asyncio.create_task(self._update_tickers_data_async())
+
+    async def _update_tickers_data_async(self):
+        try:
+            tickers_data = await self.api_client.get_market_data(self.selected_pairs)
+            self.tickers_data_fetched.emit(tickers_data)
+        except Exception as e:
+            self.market_data_api_error.emit(str(e))
 
     def show_pair_configuration_dialog(self):
         dialog = PairConfigurationDialog(self.all_available_pairs, self.selected_pairs, self)
@@ -254,26 +220,18 @@ class MarketDataWidget(QWidget):
         logger.info("Configuración de MarketDataWidget guardada exitosamente.")
 
     def save_widget_configuration(self):
-        future_get_config = self._run_api_worker_and_await_result(
-            lambda api_client: api_client.get_user_configuration()
-        )
+        asyncio.create_task(self._save_widget_configuration_async())
 
-        def on_get_config_done(f):
-            if f.exception():
-                self.market_data_api_error.emit(f"Error al obtener config para guardar: {f.exception()}")
-                return
-            
-            current_config: UserConfiguration = f.result()
+    async def _save_widget_configuration_async(self):
+        try:
+            config_data = await self.api_client.get_user_configuration()
+            current_config = UserConfiguration(**config_data)
             current_config.favorite_pairs = self.selected_pairs
             
-            future_update = self._run_api_worker_and_await_result(
-                lambda api_client: api_client.update_user_configuration(current_config)
-            )
-            future_update.add_done_callback(
-                lambda f_update: self.config_saved.emit(f_update.result()) if not f_update.exception() else self.market_data_api_error.emit(f"Error al guardar config: {f_update.exception()}")
-            )
-
-        future_get_config.add_done_callback(on_get_config_done)
+            updated_config_data = await self.api_client.update_user_configuration(current_config.model_dump(mode='json'))
+            self.config_saved.emit(UserConfiguration(**updated_config_data))
+        except Exception as e:
+            self.market_data_api_error.emit(f"Error al guardar la configuración: {e}")
 
     def _handle_market_data_api_error(self, message: str):
         logger.error(f"MarketDataWidget: Error de API: {message}")

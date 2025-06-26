@@ -7,7 +7,6 @@ import asyncio
 from unittest.mock import MagicMock # Importar MagicMock
 
 from ultibot_ui.models import BaseMainWindow
-from ultibot_ui.workers import ApiWorker
 from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
 from shared.data_types import Kline
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
@@ -99,61 +98,27 @@ class ChartWidget(QtWidgets.QWidget):
     def load_chart_data(self):
         if self.current_symbol and self.current_interval:
             self.chart_area.setText(f"Cargando datos para {self.current_symbol} ({self.current_interval})...")
-            logger.info(f"Solicitando datos para {self.current_symbol} - {self.current_interval} usando ApiWorker")
-            
-            current_symbol = self.current_symbol
-            current_interval = self.current_interval
+            logger.info(f"Solicitando datos para {self.current_symbol} - {self.current_interval}")
+            asyncio.create_task(self._load_chart_data_async())
 
-            if current_symbol is None or current_interval is None:
-                logger.error("ChartWidget: Símbolo o intervalo no definidos al intentar cargar datos del gráfico.")
-                self.chart_area.setText("Error: Símbolo o intervalo no definidos.")
-                return
-
-            # Obtener el bucle de eventos principal de la aplicación
-            app_instance = QtWidgets.QApplication.instance()
-            if not app_instance:
-                logger.error("ChartWidget: No se encontró la instancia de QApplication para ApiWorker.")
-                self.api_error_occurred.emit("Error interno: No se pudo obtener la instancia de la aplicación.")
-                return
-            
-            main_event_loop = app_instance.property("main_event_loop")
-            if not main_event_loop:
-                logger.error("ChartWidget: No se encontró el bucle de eventos principal de qasync para ApiWorker.")
-                self.api_error_occurred.emit("Error interno: Bucle de eventos principal no disponible.")
-                return
-
-        # Usar el cliente API real para obtener datos
-        async def get_ohlcv_data_coro(api_client: UltiBotAPIClient):
-            logger.info(f"Obteniendo datos reales para {current_symbol} - {current_interval}")
-            return await api_client.get_ohlcv_data(
-                symbol=current_symbol,
-                timeframe=current_interval,
+    async def _load_chart_data_async(self):
+        if not self.current_symbol or not self.current_interval:
+            logger.error("ChartWidget: Símbolo o intervalo no definidos.")
+            self.api_error_occurred.emit("Error: Símbolo o intervalo no definidos.")
+            return
+        
+        try:
+            data = await self.api_client.get_ohlcv_data(
+                symbol=self.current_symbol,
+                timeframe=self.current_interval,
                 limit=200
             )
-
-        worker = ApiWorker(
-            api_client=self.api_client,
-            main_event_loop=self.main_event_loop, # Pasar el bucle de eventos
-            coroutine_factory=get_ohlcv_data_coro
-        )
-        thread = QtCore.QThread()
-        thread.setObjectName(f"ChartWorkerThread_{current_symbol}_{current_interval}")
-        self.main_window.add_thread(thread)
-
-        worker.moveToThread(thread)
-
-        worker.result_ready.connect(self.candlestick_data_fetched.emit)
-        worker.error_occurred.connect(lambda e: self.api_error_occurred.emit(str(e)))
-        
-        # Conectar la señal finished del worker para que el hilo se cierre
-        worker.finished.connect(thread.quit)
-        
-        # Conectar la señal finished del hilo para limpiar el worker y el hilo
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-
-        thread.started.connect(worker.run)
-        thread.start()
+            # La validación con Pydantic se hace en el modelo Kline
+            klines = [Kline.model_validate(d) for d in data]
+            self.candlestick_data_fetched.emit(klines)
+        except Exception as e:
+            logger.error(f"Error al cargar datos del gráfico: {e}", exc_info=True)
+            self.api_error_occurred.emit(str(e))
 
     def update_chart_display(self):
         if not self.candlestick_data:
@@ -274,7 +239,6 @@ class ChartWidget(QtWidgets.QWidget):
 if __name__ == '__main__':
     import sys
     import logging
-    from ultibot_ui.workers import ApiWorker
     import qasync
 
     logging.basicConfig(level=logging.INFO)

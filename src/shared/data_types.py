@@ -67,12 +67,12 @@ class MarketData(BaseModel):
 
 class Ticker(BaseModel):
     symbol: str
-    price: float
-    price_change_percent_24h: Optional[float] = None
-    high_24h: Optional[float] = None
-    low_24h: Optional[float] = None
-    volume_24h: Optional[float] = None
-    quote_volume_24h: Optional[float] = None
+    price: float = Field(..., alias='lastPrice')
+    price_change_percent_24h: Optional[float] = Field(default=None, alias='priceChangePercent')
+    high_24h: Optional[float] = Field(default=None, alias='highPrice')
+    low_24h: Optional[float] = Field(default=None, alias='lowPrice')
+    volume_24h: Optional[float] = Field(default=None, alias='volume')
+    quote_volume_24h: Optional[float] = Field(default=None, alias='quoteVolume')
     last_updated: datetime = Field(default_factory=datetime.utcnow)
 
 class ServiceName(str, Enum):
