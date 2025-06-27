@@ -446,3 +446,352 @@ RuntimeError: Event loop stopped before Future completed.
 2025-06-27 22:00:08,796 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
 2025-06-27 22:00:09,518 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
 2025-06-27 22:00:09,519 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:00:39,542 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:00:39,544 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:00:39,549 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:00:39,550 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:00:40,120 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:00:40,121 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:01:10,148 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:01:10,150 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:01:10,157 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:01:10,160 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:01:10,845 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:01:10,846 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:01:40,874 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:01:40,876 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:01:40,882 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:01:40,884 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:01:41,447 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:01:41,448 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:02:11,476 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:02:11,478 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:02:11,484 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:02:11,487 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:02:12,178 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:02:12,179 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:02:42,202 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:02:42,204 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:02:42,210 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:02:42,212 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:02:42,760 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:02:42,762 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:03:12,788 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:03:12,790 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:03:12,796 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:03:12,798 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:03:13,499 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:03:13,501 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:03:43,526 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:03:43,528 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:03:43,534 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:03:43,535 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:03:44,247 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:03:44,249 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:04:14,274 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:04:14,277 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:04:14,284 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:04:14,288 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:04:15,010 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:04:15,011 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:04:45,040 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:04:45,043 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:04:45,048 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:04:45,050 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:04:45,612 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:04:45,613 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:05:15,637 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:05:15,639 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:05:15,646 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:05:15,648 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:05:16,279 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:05:16,280 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:05:46,307 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:05:46,309 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:05:46,315 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:05:46,317 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:05:46,874 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:05:46,875 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:06:16,902 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:06:16,904 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:06:16,912 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:06:16,914 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:06:17,612 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:06:17,613 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:06:47,640 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:06:47,642 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:06:47,648 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:06:47,651 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:06:48,299 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:06:48,300 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:07:18,325 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:07:18,328 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:07:18,335 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:07:18,336 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:07:19,235 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:07:19,236 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:07:49,267 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:07:49,270 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:07:49,279 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:07:49,282 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:07:49,867 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:07:49,869 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:08:19,895 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:08:19,897 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:08:19,903 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:08:19,905 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:08:20,782 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:08:20,784 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:08:50,815 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:08:50,818 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:08:50,824 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:08:50,826 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:08:51,484 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:08:51,486 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:09:21,509 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:09:21,511 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:09:21,517 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:09:21,518 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:09:22,157 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:09:22,158 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:09:52,183 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:09:52,184 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:09:52,190 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:09:52,192 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:09:52,883 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:09:52,884 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:10:22,909 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:10:22,912 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:10:22,918 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:10:22,920 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:10:23,599 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:10:23,600 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:10:53,626 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:10:53,628 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:10:53,633 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:10:53,635 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:10:54,252 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:10:54,253 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:11:24,278 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:11:24,279 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:11:24,285 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:11:24,286 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:11:24,950 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:11:24,952 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:11:54,979 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:11:54,981 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:11:54,987 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:11:54,989 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:11:55,591 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:11:55,593 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:12:25,621 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:12:25,623 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:12:25,629 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:12:25,631 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:12:26,273 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:12:26,275 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:12:56,301 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:12:56,304 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:12:56,311 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:12:56,313 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:12:56,988 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:12:56,990 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:13:27,016 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:13:27,018 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:13:27,024 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:13:27,026 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:13:27,583 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:13:27,584 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:13:57,608 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:13:57,609 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:13:57,614 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:13:57,615 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:13:58,309 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:13:58,310 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:14:28,335 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:14:28,337 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:14:28,343 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:14:28,346 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:14:28,923 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:14:28,924 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:14:58,948 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:14:58,951 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:14:58,957 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:14:58,959 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:14:59,592 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:14:59,594 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:15:29,632 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:15:29,636 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:15:29,645 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:15:29,648 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:15:30,257 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:15:30,258 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:16:00,285 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:16:00,287 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:16:00,293 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:16:00,294 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:16:00,924 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:16:00,925 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:16:01,079 - ultibot_backend - INFO - [MainThread] - main.py:111 - Creando nueva instancia de FastAPI...
+2025-06-27 22:16:01,080 - ultibot_backend - INFO - [MainThread] - main.py:154 - Registrando routers de la API...
+2025-06-27 22:16:01,105 - ultibot_backend - INFO - [MainThread] - main.py:165 - Todos los routers han sido registrados.
+2025-06-27 22:16:01,107 - ultibot_backend - INFO - [MainThread] - main.py:218 - Instancia global de la aplicación creada.
+2025-06-27 22:16:30,953 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:16:30,954 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:16:30,963 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:16:30,965 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:16:31,766 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:16:31,768 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:17:01,838 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:17:01,840 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:17:01,853 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:17:01,855 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:17:02,507 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:17:02,508 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:17:32,536 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:17:32,537 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:17:32,543 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:17:32,545 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:17:33,192 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:17:33,194 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:18:03,227 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:18:03,229 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:18:03,241 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:18:03,244 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:18:03,858 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:18:03,859 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:18:33,891 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:18:33,894 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:18:33,905 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:18:33,908 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:18:34,585 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:18:34,588 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:19:04,614 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:19:04,616 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:19:04,622 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:19:04,623 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:19:05,187 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:19:05,188 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:19:35,212 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:19:35,214 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:19:35,220 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:19:35,221 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:19:35,905 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:19:35,906 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:20:05,931 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:20:05,934 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:20:05,939 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:20:05,941 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:20:06,541 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:20:06,542 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:20:36,569 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:20:36,573 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:20:36,579 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:20:36,580 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:20:37,243 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:20:37,244 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:21:07,268 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:21:07,270 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:21:07,276 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:21:07,277 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:21:07,879 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:21:07,880 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:21:37,907 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:21:37,908 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:21:37,914 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:21:37,918 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:21:39,623 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:21:39,625 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:22:09,648 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:22:09,649 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:22:09,655 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:22:09,657 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:22:10,339 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:22:10,340 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:22:40,367 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:22:40,368 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:22:40,374 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:22:40,378 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:22:40,939 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:22:40,940 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:23:10,962 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:23:10,964 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:23:10,970 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:23:10,972 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:23:11,655 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:23:11,656 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:23:41,688 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:23:41,692 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:23:41,702 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:23:41,706 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:23:42,351 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:23:42,352 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:24:12,382 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:24:12,387 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:24:12,395 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:24:12,399 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:24:13,024 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:24:13,026 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:24:43,054 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:24:43,056 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:24:43,061 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:24:43,064 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:24:43,731 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:24:43,732 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:24:47,661 - ultibot_backend - INFO - [MainThread] - main.py:111 - Creando nueva instancia de FastAPI...
+2025-06-27 22:24:47,663 - ultibot_backend - INFO - [MainThread] - main.py:154 - Registrando routers de la API...
+2025-06-27 22:24:47,687 - ultibot_backend - INFO - [MainThread] - main.py:165 - Todos los routers han sido registrados.
+2025-06-27 22:24:47,690 - ultibot_backend - INFO - [MainThread] - main.py:218 - Instancia global de la aplicación creada.
+2025-06-27 22:25:13,754 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:25:13,755 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:25:13,761 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:25:13,764 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:25:14,385 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:25:14,386 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:25:32,570 - ultibot_backend - INFO - [MainThread] - main.py:111 - Creando nueva instancia de FastAPI...
+2025-06-27 22:25:32,572 - ultibot_backend - INFO - [MainThread] - main.py:154 - Registrando routers de la API...
+2025-06-27 22:25:32,595 - ultibot_backend - INFO - [MainThread] - main.py:165 - Todos los routers han sido registrados.
+2025-06-27 22:25:32,598 - ultibot_backend - INFO - [MainThread] - main.py:218 - Instancia global de la aplicación creada.
+2025-06-27 22:25:44,411 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:25:44,413 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:25:44,423 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:25:44,425 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:25:45,115 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:25:45,117 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:26:15,144 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:26:15,146 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:26:15,153 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:26:15,155 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:26:15,809 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:26:15,810 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:26:19,500 - ultibot_backend - INFO - [MainThread] - main.py:111 - Creando nueva instancia de FastAPI...
+2025-06-27 22:26:19,501 - ultibot_backend - INFO - [MainThread] - main.py:154 - Registrando routers de la API...
+2025-06-27 22:26:19,525 - ultibot_backend - INFO - [MainThread] - main.py:165 - Todos los routers han sido registrados.
+2025-06-27 22:26:19,527 - ultibot_backend - INFO - [MainThread] - main.py:218 - Instancia global de la aplicación creada.
+2025-06-27 22:26:45,835 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:26:45,837 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:26:45,842 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:26:45,845 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:26:46,409 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:26:46,411 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:27:16,473 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:27:16,475 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:27:16,487 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:27:16,489 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:27:17,114 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:27:17,115 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:27:47,147 - ultibot_backend - INFO - [MainThread] - main.py:123 - Middleware: Solicitud entrante: GET /health
+2025-06-27 22:27:47,150 - ultibot_backend - INFO - [MainThread] - main.py:170 - Ejecutando health check extendido
+2025-06-27 22:27:47,159 - ultibot_backend.adapters.persistence_service - INFO - [MainThread] - persistence_service.py:93 - Database connection test successful.
+2025-06-27 22:27:47,161 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:30 - Redis ping successful.
+2025-06-27 22:27:47,804 - ultibot_backend - INFO - [MainThread] - main.py:211 - Health check completado: Todos los componentes están operativos
+2025-06-27 22:27:47,806 - ultibot_backend - INFO - [MainThread] - main.py:125 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-27 22:27:55,721 - ultibot_backend - INFO - [MainThread] - main.py:111 - Creando nueva instancia de FastAPI...
+2025-06-27 22:27:55,722 - ultibot_backend - INFO - [MainThread] - main.py:154 - Registrando routers de la API...
+2025-06-27 22:27:55,745 - ultibot_backend - INFO - [MainThread] - main.py:165 - Todos los routers han sido registrados.
+2025-06-27 22:27:55,747 - ultibot_backend - INFO - [MainThread] - main.py:218 - Instancia global de la aplicación creada.
+2025-06-27 22:28:10,069 - ultibot_backend - INFO - [MainThread] - main.py:100 - Apagando UltiBot Backend (lifespan)...
+2025-06-27 22:28:10,072 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:205 - Shutting down dependency container...
+2025-06-27 22:28:10,078 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:40 - Redis client closed.
+2025-06-27 22:28:10,080 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:212 - Dependency container shut down.
+2025-06-27 22:28:10,081 - ultibot_backend - INFO - [MainThread] - main.py:103 - Recursos liberados y aplicación apagada (lifespan).
