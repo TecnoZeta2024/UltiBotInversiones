@@ -1,5 +1,101 @@
-- **ID:** DEBT-001
-- **Date:** 2025-06-26
-- **Component:** `ultibot_backend.services.portfolio_service`
-- **Description:** El servicio de portafolio falla al intentar obtener el resumen del portafolio real porque no se encuentran las credenciales de Binance. Aunque no bloquea el modo "paper", impide la funcionalidad en modo "real".
-- **Action:** Investigar el flujo de carga de credenciales y asegurar que el `portfolio_service` las reciba correctamente.
+# DEBT_LOG.md
+
+This document lists technical debt items identified during the Architectural Audit Protocol (PAA) that are not critical for the current objective but should be addressed in future iterations.
+
+## Identified TODOs (from `src` directory search):
+
+- **ultibot_backend/adapters/binance_adapter.py:**
+  - L62: `raise ValueError(f"Método HTTP no soportado: {method}")`
+  - L185: `Obtiene los datos de ticker de 24 horas para todos los símbolos.`
+  - L195: `raise BinanceAPIError(f"Error al obtener todos los tickers 24hr: {e}", original_exception=e)`
+  - L341: `symbol (str, optional): Símbolo específico para obtener información. Si es None, obtiene información de todos los símbolos.`
+  - L353: `raise BinanceAPIError(f"Error al obtener información de intercambio para {symbol if symbol else 'todos los símbolos'}: {e}", original_exception=e)`
+- **ultibot_backend/adapters/mcp_tools/base_mcp_tool.py:**
+  - L70: `Este método debe ser implementado por las subclases.`
+  - L72: `raise NotImplementedError("Las herramientas MCP deben implementar el método _run.")`
+  - L78: `Este método debe ser implementado por las subclases para operaciones asíncronas.`
+  - L80: `raise NotImplementedError("Las herramientas MCP deben implementar el método _arun para uso asíncrono.")`
+  - L100: `Este método está diseñado para ser llamado desde _arun.`
+  - L142: `Método factoría para crear una instancia de herramienta MCP`
+  - L148: `# Este método probablemente necesitará ser sobreescrito o especializado en un gestor.`
+  - L155: `# La idea es que una clase concreta llame a super() o este método sea usado por un factory.`
+  - L156: `# Por lo tanto, este método es más un placeholder conceptual aquí.`
+  - L158: `"Este método factoría debe ser implementado por una clase concreta o un gestor de herramientas MCP."`
+- **ultibot_backend/adapters/mcp_tools/mock_mcp_tool.py:**
+  - L111: `# El método factoría from_user_config_mcp de BaseMCPTool es un @classmethod`
+  - L119: `# Por ahora, para que esta herramienta sea usable, podemos añadir un método`
+- **ultibot_backend/adapters/telegram_adapter.py:**
+  - L65: `# Si todos los reintentos fallan`
+- **ultibot_backend/api/v1/endpoints/opportunities.py:**
+  - L67: `# Usar el método get_all con una condición para filtrar por estado`
+- **ultibot_backend/api/v1/endpoints/trades.py:**
+  - L119: `# TODO: Implement count method in persistence service`
+- **ultibot_backend/api/v1/models/config_models.py:**
+  - L7: `# Es necesario importar todos los tipos anidados que UserConfiguration utiliza.`
+  - L30: `Todos los campos son opcionales y usan snake_case.`
+- **ultibot_backend/main.py:**
+  - L176: `logger.info("Todos los routers han sido registrados.")`
+  - L203: `"message": "Todos los componentes están operativos"`
+- **ultibot_backend/services/credential_service.py:**
+  - L433: `logger.warning(f"binance_credential no es un objeto APICredential válido en el bloque de excepción. No se puede actualizar con todos los detalles.")`
+- **ultibot_backend/services/notification_service.py:**
+  - L65: `# Se recuperarán todos y se limitarán en memoria.`
+- **ultibot_backend/services/order_execution_service.py:**
+  - L39: `# Ejemplo de llamada a BinanceAdapter (esto es hipotético, el adaptador no tiene un método create_order aún)`
+- **ultibot_backend/services/trading_engine_service.py:**
+  - L743: `# ... (otros métodos del servicio que no necesitan cambios inmediatos) ...`
+  - `Se omiten por brevedad, pero estarían aquí en el archivo real.`
+- **ultibot_backend/services/trading_report_service.py:**
+  - L104: `# Obtener todos los trades cerrados para los filtros (sin límite para cálculos precisos)`
+- **ultibot_ui/dialogs/strategy_config_dialog.py:**
+  - L107: `self.include_all_spot_checkbox = QCheckBox("Incluir todos los pares SPOT disponibles")`
+  - L108: `self.include_all_spot_checkbox.setToolTip("Si se marca, la estrategia se aplicará a todos los pares SPOT, ignorando Pares Explícitos y Filtro Dinámico para SPOT.")`
+  - L349: `config_data = self.get_strategy_data() # Usar el nuevo nombre del método`
+- **ultibot_ui/main.py:**
+  - L79: `Este método se ejecuta como una tarea dentro del bucle de eventos de qasync.`
+  - L128: `Realiza una limpieza asíncrona de todos los recursos pendientes.`
+- **ultibot_ui/services/ui_strategy_service.py:**
+  - L104: `# TODO: El modo de trading debe obtenerse de un servicio de estado global.`
+  - L125: `# TODO: El modo de trading debe obtenerse de un servicio de estado global.`
+- **ultibot_ui/views/opportunities_view.py:**
+  - L122: `# Este método ya no es necesario ya que las llamadas se hacen directamente a _fetch_opportunities_async`
+  - L211: `# TODO: [LEADCODER-REFACTOR] La funcionalidad de análisis de IA está deshabilitada temporalmente.`
+  - L249: `# TODO: [LEADCODER-REFACTOR] La funcionalidad de análisis de IA está deshabilitada temporalmente.`
+  - L285: `# TODO: Determinar el modo de trading (papel/real) desde la configuración global de la UI`
+  - L290: `# TODO: [LEADCODER-REFACTOR] La funcionalidad de confirmación de trades está deshabilitada temporalmente.`
+  - L302: `#     # Usar el nuevo método unificado del API client`
+  - L329: `"""Este método ahora es un manejador de éxito genérico que abre el diálogo."""`
+- **ultibot_ui/views/orders_view.py:**
+  - L62: `self.side_filter_combo.addItems(["Todos", "BUY", "SELL"])`
+  - L143: `side_match = (side_filter == "Todos" or`
+- **ultibot_ui/views/portfolio_view.py:**
+  - L48: `Este método debe ser awaitable por el componente padre después de la inicialización.`
+- **ultibot_ui/views/strategies_view.py:**
+  - L109: `        # TODO: Determinar el modo de trading desde la UI`
+- **ultibot_ui/views/strategy_management_view.py:**
+  - L196: `# TODO: La UI debería permitir elegir qué modo (paper/real) se quiere (des)activar.`
+- **ultibot_ui/views/trading_terminal_view.py:**
+  - L212: `# TODO: Añadir un control en la UI para seleccionar el modo de trading (paper/real)`
+  - L230: `            # Usar el método unificado para ejecutar órdenes de mercado/límite`
+- **ultibot_ui/widgets/market_data_widget.py:**
+  - L159: `        Este método debe ser awaitable por el componente padre después de la inicialización.`
+- **ultibot_ui/widgets/paper_trading_report_widget.py:**
+  - L123: `self.symbol_combo.addItem("Todos", "")`
+  - L190: `        Este método es síncrono y programa la corutina _load_data_async.`
+- **ultibot_ui/widgets/portfolio_widget.py:**
+  - L353: `        Detiene las actualizaciones periódicas y asegura que todos los hilos de workers`
+- **ultibot_ui/widgets/portfolio_widget_original.py:**
+  - L181: `self.update_timer.timeout.connect(self._start_portfolio_update_worker) # Conectar a un método síncrono`
+  - L372: `portfolio_widget.start_updates() # Llamar al método síncrono que inicia el worker`
+- **ultibot_ui/widgets/real_trade_confirmation_dialog.py:**
+  - L262: `# Método para simular la obtención de la cantidad calculada (si fuera necesario)`
+- **ultibot_ui/widgets/sidebar_navigation_widget.py:**
+  - L62: `# Desmarcar todos los botones excepto el actual`
+- **ultibot_ui/windows/dashboard_view.py:**
+  - L124: `"""Detiene todos los hilos y tareas activas."""`
+- **ultibot_ui/windows/main_window.py:**
+  - L79: `Este método es llamado programáticamente desde el flujo de inicialización principal.`
+  - L95: `# Se asume que estos métodos inician tareas asíncronas y son awaitable, o que manejan su propia concurrencia.`
+  - L96: `# Si un método no es awaitable, se debe envolver en asyncio.create_task y luego await.`
+  - L134: `self._show_error_message(message) # Reutilizar el método privado existente`
+  - L298: `Este método ahora es una corutina simple que se ejecuta en el bucle de eventos principal.`

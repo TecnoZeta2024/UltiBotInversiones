@@ -1,3 +1,8 @@
+import sys
+import os
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import aiosqlite # Asegurar que el driver asíncrono se cargue temprano
 import asyncio
 import pytest
@@ -6,6 +11,11 @@ import logging
 import gc
 import sys
 import os
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
+
+
 import shutil
 import time
 import sqlite3

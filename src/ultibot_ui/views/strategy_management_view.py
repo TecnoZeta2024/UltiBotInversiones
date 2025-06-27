@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 from ultibot_ui.dialogs.strategy_config_dialog import StrategyConfigDialog
 from ultibot_ui.models import BaseMainWindow
 from ultibot_ui.services.ui_strategy_service import UIStrategyService
+from ultibot_ui.services.trading_mode_state import get_trading_mode_manager
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,7 @@ class StrategyManagementView(QWidget):
         self.strategy_service = UIStrategyService(api_client)
         self.main_window: Optional[BaseMainWindow] = None
         self.strategies_data: List[Dict[str, Any]] = []
+        self.trading_mode_manager = get_trading_mode_manager()
         self.init_ui()
         self.strategy_service.strategies_updated.connect(self.display_strategies)
         self.strategy_service.error_occurred.connect(self.display_error)
@@ -192,9 +194,8 @@ class StrategyManagementView(QWidget):
                 QMessageBox.critical(self, "Error", "ID de estrategia no encontrado para cambiar el estado.")
                 return
             
-            # Asumimos que el estado relevante es el de 'paper' por ahora, como en las otras vistas.
-            # TODO: La UI debería permitir elegir qué modo (paper/real) se quiere (des)activar.
-            current_status = selected_strategy.get('is_active_paper_mode', False)
+            current_mode = self.trading_mode_manager.current_mode
+            current_status = selected_strategy.get(f'is_active_{current_mode.value}_mode', False)
             new_status = not current_status
             action_name = "activar" if new_status else "desactivar"
 

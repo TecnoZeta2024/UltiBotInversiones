@@ -219,6 +219,16 @@ class UltiBotAPIClient:
         logger.info(f"Ejecutando orden de mercado en modo {trading_mode} para el símbolo {order_data.get('symbol')}.")
         return await self._make_request("POST", "/api/v1/trading/market-order", json=order_data)
 
+    async def execute_limit_order(self, order_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Ejecuta una orden límite."""
+        trading_mode = order_data.get("trading_mode")
+        if trading_mode == "real" and not ("api_key" in order_data and "api_secret" in order_data):
+            logger.error("Intento de orden real sin credenciales.")
+            raise ValueError("API key y secret son requeridos para operaciones en modo real.")
+        
+        logger.info(f"Ejecutando orden límite en modo {trading_mode} para el símbolo {order_data.get('symbol')} al precio {order_data.get('price')}.")
+        return await self._make_request("POST", "/api/v1/trading/limit-order", json=order_data)
+
     async def get_open_trades_by_mode(self, user_id: UUID, trading_mode: str) -> List[Dict[str, Any]]:
         """Obtiene las operaciones abiertas filtradas por modo de trading."""
         logger.info(f"Obteniendo trades abiertos para {user_id} en modo {trading_mode}.")

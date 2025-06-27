@@ -83,6 +83,18 @@ class OrderFormWidget(QtWidgets.QWidget):
         self.side_combo.currentTextChanged.connect(self._validate_form)
         form_layout.addRow("Operación:", self.side_combo)
         
+        self.order_type_combo = QtWidgets.QComboBox()
+        self.order_type_combo.addItems(["MARKET", "LIMIT"])
+        self.order_type_combo.currentTextChanged.connect(self._toggle_price_input)
+        form_layout.addRow("Tipo de Orden:", self.order_type_combo)
+
+        self.price_input = QtWidgets.QDoubleSpinBox()
+        self.price_input.setRange(0.00000001, 99999999999.0)
+        self.price_input.setDecimals(8)
+        self.price_input.setSingleStep(0.01)
+        self.price_input.setPlaceholderText("Precio (solo para órdenes LIMIT)")
+        form_layout.addRow("Precio:", self.price_input)
+
         self.quantity_input = QtWidgets.QDoubleSpinBox()
         self.quantity_input.setRange(0.00000001, 999999999.0)
         self.quantity_input.setDecimals(8)
@@ -126,6 +138,11 @@ class OrderFormWidget(QtWidgets.QWidget):
         credentials_layout.addRow("", security_warning)
         
         layout.addWidget(self.credentials_group)
+
+    def _toggle_price_input(self, order_type: str):
+        is_visible = (order_type == "LIMIT")
+        self.price_input.setVisible(is_visible)
+        self.price_input.setEnabled(is_visible)
 
     def _create_action_buttons(self, layout: QtWidgets.QVBoxLayout):
         buttons_layout = QtWidgets.QHBoxLayout()
@@ -230,6 +247,9 @@ class OrderFormWidget(QtWidgets.QWidget):
         if self.quantity_input.value() <= 0:
             is_valid = False
         
+        if self.order_type_combo.currentText() == "LIMIT" and self.price_input.value() <= 0:
+            is_valid = False
+
         current_mode = self.trading_mode_manager.current_mode
         if current_mode == 'real':
             if not self.api_key_input.text().strip() or not self.api_secret_input.text().strip():
@@ -292,7 +312,12 @@ class OrderFormWidget(QtWidgets.QWidget):
         logger.info(f"Ejecutando orden: {order_data}")
         
         try:
-            result = await self.api_client.execute_market_order(order_data)
+            if order_data["type"] == "MARKET":
+                result = await self.api_client.execute_market_order(order_data)
+            elif order_data["type"] == "LIMIT":
+                result = await self.api_client.execute_limit_order(order_data)
+            else:
+                raise ValueError(f"Tipo de orden no soportado: {order_data['type']}")
             self._handle_order_result(result)
         except Exception as e:
             self._handle_order_error(str(e))
@@ -306,9 +331,13 @@ class OrderFormWidget(QtWidgets.QWidget):
             "user_id": str(self.user_id),
             "symbol": self.symbol_input.text().strip().upper(),
             "side": self.side_combo.currentText(),
+            "type": self.order_type_combo.currentText(), # Añadir tipo de orden
             "quantity": self.quantity_input.value(),
             "trading_mode": current_mode
         }
+        
+        if self.order_type_combo.currentText() == "LIMIT":
+            order_data["price"] = self.price_input.value()
         
         if current_mode == 'real':
             order_data["api_key"] = self.api_key_input.text().strip()

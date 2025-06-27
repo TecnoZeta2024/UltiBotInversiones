@@ -209,8 +209,9 @@ class TradingTerminalView(QWidget):
             QMessageBox.critical(self, "Error de Inicialización", "El bucle de eventos principal no está disponible.")
             return
 
-        # TODO: Añadir un control en la UI para seleccionar el modo de trading (paper/real)
-        trading_mode = "paper" 
+        from ultibot_ui.services.trading_mode_state import get_trading_mode_manager
+        trading_mode_manager = get_trading_mode_manager()
+        trading_mode = trading_mode_manager.current_mode.value 
         
         order_data = {
             "symbol": symbol,
@@ -227,8 +228,12 @@ class TradingTerminalView(QWidget):
     async def _execute_order_async(self, order_data: dict):
         """Ejecuta la creación de la orden como una tarea asíncrona."""
         try:
-            # Usar el método unificado para ejecutar órdenes de mercado/límite
-            result = await self.api_client.execute_market_order(order_data)
+            if order_data["type"] == "market":
+                result = await self.api_client.execute_market_order(order_data)
+            elif order_data["type"] == "limit":
+                result = await self.api_client.execute_limit_order(order_data)
+            else:
+                raise ValueError(f"Tipo de orden no soportado: {order_data['type']}")
             self._on_order_success(result)
         except APIError as e:
             self._on_order_error(f"Error de API ({e.status_code}): {e.message}")

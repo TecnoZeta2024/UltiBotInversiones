@@ -45,14 +45,16 @@ class StrategyConfigDialog(QDialog):
     Diálogo modal para crear y editar configuraciones de TradingStrategyConfig.
     """
     def __init__(self, api_client: UltiBotAPIClient, 
+                 user_id: UUID, # Añadido user_id
                  strategy_data: Optional[Dict[str, Any]] = None, # Cambiado a dict
                  ai_profiles: Optional[List[dict]] = None,
                  is_duplicating: bool = False,
                  parent=None):
         super().__init__(parent)
         self.api_client = api_client
+        self.user_id = user_id # Guardar user_id
         self.strategy_data = strategy_data # Ahora es un dict
-        self.ai_profiles = ai_profiles or []
+        self.ai_profiles = ai_profiles # Se inicializará en _init_ui_async
         self.is_duplicating = is_duplicating
         
         self.is_edit_mode = (self.strategy_data is not None) and not self.is_duplicating
@@ -65,7 +67,31 @@ class StrategyConfigDialog(QDialog):
             self.setWindowTitle("Crear Nueva Configuración de Estrategia")
         self.setMinimumWidth(600)
 
-        self._init_ui()
+        # Iniciar la inicialización asíncrona
+        import asyncio
+        try:
+            loop = asyncio.get_event_loop()
+            loop.create_task(self._init_ui_async())
+        except RuntimeError:
+            asyncio.set_event_loop(asyncio.new_event_loop())
+            loop = asyncio.get_event_loop()
+            loop.create_task(self._init_ui_async())
+
+    async def _init_ui_async(self):
+        # Fetch AI profiles if not provided
+        if self.ai_profiles is None:
+            try:
+                user_config = await self.api_client.get_user_configuration()
+                self.ai_profiles = user_config.get('ai_strategy_configurations', [])
+                logger.info(f"Fetched {len(self.ai_profiles)} AI profiles.")
+            except Exception as e:
+                logger.error(f"Failed to fetch AI profiles: {e}", exc_info=True)
+                QMessageBox.critical(self, "Error", f"No se pudieron cargar los perfiles de IA: {e}")
+                self.reject()
+                return
+
+        self._init_ui() # Call the synchronous UI initialization
+        
         if self.is_edit_mode or self.is_duplicating:
             self._load_data_for_edit()
 
@@ -81,7 +107,7 @@ class StrategyConfigDialog(QDialog):
         form_layout.addRow("", self.config_name_error_label)
 
         self.base_strategy_type_combo = QComboBox()
-        for strategy_type in BaseStrategyType.values():
+        for strategy_type in BaseStrategyType.__members__.values():
             self.base_strategy_type_combo.addItem(strategy_type, strategy_type)
         self.base_strategy_type_combo.currentIndexChanged.connect(self._on_base_strategy_type_changed)
         form_layout.addRow("Tipo de Estrategia Base:", self.base_strategy_type_combo)
@@ -298,7 +324,7 @@ class StrategyConfigDialog(QDialog):
                 "indicator": self.dt_indicator_edit.text() or None
             }
             parameters_data = {k: v for k, v in parameters_data.items() if v is not None}
-        elif current_type == BaseStrategyType.ARBITRAGE_SIMPLE:
+        elif current_type == BaseStrategyType.ARBITRAGE_SIMPLE.value:
             parameters_data = {
                 "min_spread_percent": float(self.arb_min_spread_edit.text() or 0) if self.arb_min_spread_edit.text() else None,
                 "exchanges": [ex.strip() for ex in self.arb_exchanges_edit.text().split(',') if ex.strip()] or None
@@ -450,6 +476,13 @@ if __name__ == '__main__':
         async def update_strategy_config(self, strategy_id, config_data): # Renombrado
             print(f"Mock API: update_strategy_config called for {strategy_id} with {config_data}")
             return {"configName": config_data.get("configName", "Mock Strategy"), "id": strategy_id}
+        async def get_user_configuration(self) -> Dict[str, Any]:
+            return {
+                "ai_strategy_configurations": [
+                    {"id": "ai-profile-1", "name": "Perfil IA de Prueba 1"},
+                    {"id": "ai-profile-2", "name": "Perfil IA de Prueba 2"},
+                ]
+            }
 
     app = QApplication(sys.argv)
     
@@ -469,10 +502,15 @@ if __name__ == '__main__':
         "riskParametersOverride": {"dailyCapitalRiskPercentage": 1.5, "perTradeCapitalRiskPercentage": 0.5}
     }
 
-    dialog_edit = StrategyConfigDialog(api_client=mock_api_client, strategy_data=mock_config_to_edit)
-    if dialog_edit.exec_():
-        print("Edición aceptada:", dialog_edit.get_strategy_data())
-    else:
-        print("Edición cancelada")
-    
+    # Para ejecutar el diálogo en un entorno de prueba, necesitamos un bucle de eventos.
+    # Esto es solo para el bloque `if __name__ == '__main__':`
+    async def run_dialog():
+        dialog_edit = StrategyConfigDialog(api_client=mock_api_client, user_id=UUID('00000000-0000-0000-0000-000000000001'), strategy_data=mock_config_to_edit)
+        if dialog_edit.exec_():
+            print("Edición aceptada:", dialog_edit.get_strategy_data())
+        else:
+            print("Edición cancelada")
+        app.quit() # Asegurarse de que la aplicación Qt se cierre
+
+    asyncio.run(run_dialog())
     sys.exit(app.exec_())

@@ -4,7 +4,7 @@ from typing import List, Dict, Any, Optional
 from PySide6.QtCore import QObject, Signal as pyqtSignal
 
 from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
-# from shared.data_types import AIStrategyConfiguration # Comentado para evitar dependencia no clara
+from ultibot_ui.services.trading_mode_state import get_trading_mode_manager
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +15,7 @@ class UIStrategyService(QObject):
     def __init__(self, api_client: UltiBotAPIClient, parent: Optional[QObject] = None):
         super().__init__(parent)
         self.api_client = api_client
+        self.trading_mode_manager = get_trading_mode_manager()
 
     async def fetch_strategies(self) -> List[Dict[str, Any]]:
         """
@@ -101,8 +102,7 @@ class UIStrategyService(QObject):
         Activa una estrategia de trading.
         """
         try:
-            # TODO: El modo de trading debe obtenerse de un servicio de estado global.
-            trading_mode = "paper"
+            trading_mode = self.trading_mode_manager.current_mode
             result = await self.api_client.activate_strategy(strategy_id, trading_mode)
             logger.info(f"Estrategia {strategy_id} activada exitosamente.")
             return result
@@ -122,8 +122,7 @@ class UIStrategyService(QObject):
         Desactiva una estrategia de trading.
         """
         try:
-            # TODO: El modo de trading debe obtenerse de un servicio de estado global.
-            trading_mode = "paper"
+            trading_mode = self.trading_mode_manager.current_mode
             result = await self.api_client.deactivate_strategy(strategy_id, trading_mode)
             logger.info(f"Estrategia {strategy_id} desactivada exitosamente.")
             return result

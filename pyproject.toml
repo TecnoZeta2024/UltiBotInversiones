@@ -5,9 +5,9 @@ description = "Plataforma de trading personal avanzada y de alto rendimiento."
 authors = ["BMad Agent <bmad@example.com>"]
 readme = "README.md"
 packages = [
-    { include = "ultibot_backend", from = "src" },
     { include = "ultibot_ui", from = "src" },
     { include = "shared", from = "src" },
+    { include = "ultibot_backend", from = "src" },
 ]
 
 [tool.poetry.dependencies]

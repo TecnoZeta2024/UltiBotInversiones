@@ -93,8 +93,14 @@ class RealTradeConfirmationDialog(QDialog):
         
         confidence_str = "N/A"
         if self.opportunity.ai_analysis and self.opportunity.ai_analysis.calculated_confidence is not None:
-            confidence_str = f"{self.opportunity.ai_analysis.calculated_confidence:.2%}"
-        self._add_detail_row(details_layout, "Confianza IA:", confidence_str)
+            confidence_score = self.opportunity.ai_analysis.calculated_confidence
+            confidence_str = f"{confidence_score:.2%}"
+            if confidence_score < 0.5:
+                self._add_detail_row(details_layout, "Confianza IA:", QLabel(f"<b style=\"color: red;\">{confidence_str} (Baja)</b>"))
+            else:
+                self._add_detail_row(details_layout, "Confianza IA:", QLabel(f"<b style=\"color: lightgreen;\">{confidence_str} (Alta)</b>"))
+        else:
+            self._add_detail_row(details_layout, "Confianza IA:", confidence_str)
 
         entry_price_str = "N/A"
         if self.opportunity.initial_signal and self.opportunity.initial_signal.entry_price_target is not None:

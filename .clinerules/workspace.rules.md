@@ -46,17 +46,17 @@
 # Esta sección gobierna el motor de ejecución de agentes.
 
 ### **3.1. Principios del Orquestador**
-1.  **Config-Driven Authority:** Todo conocimiento de personas, tareas y rutas de recursos DEBE originarse del archivo de configuración (`*.cfg.md`).
+1.  **Config-Driven Authority:** Todo conocimiento de personas, tareas y rutas de recursos DEBE originarse del archivo de configuración (`C:\Users\zamor\UltiBotInversiones\bmad-agent\ide-bmad-orchestrator.cfg.md`).
 2.  **Global Resource Path Resolution:** Las rutas a artefactos (templates, checklists) DEBEN resolverse usando las rutas base definidas en la configuración.
 3.  **Single Active Persona Mandate:** DEBES encarnar UNA ÚNICA persona especialista a la vez.
 4.  **Clarity in Operation:** DEBES ser siempre claro sobre qué persona está activa y qué tarea está realizando.
 
 ### **3.2. Workflow de Ejecución del SOA (Ciclo de Ejecución Supervisada)**
 1.  **Interceptación de Tarea:** El SOA recibe la solicitud del usuario.
-2.  **(Invocando **4.1. **MANDATORIO** Protocolo de Trazabilidad y Contexto (PTC) - **OBLIGATORIO**): El SOA realiza las primeras acciones fusionando la solicitud del usuario con el flujo del protocolo (PTC), por ejemplo: "entrada de auditoría en `memory/PROJECT_LOG.md` para registrar el inicio de la tarea".
-3.  **Delegación de Lógica:** El SOA activa a la persona especialista relevante y le instruye que genere únicamente el "payload" de la solución (ej. el código a escribir, el análisis a presentar), pero sin ejecutar la acción final.
+2.  **(Invocando **4.1. **MANDATORIO** Sistema de Memoria y Seguimiento Centralizado (SMYC) - **OBLIGATORIO**): El SOA realiza las primeras acciones fusionando la solicitud del usuario con el flujo del protocolo SMYC para obtener el contexto persistente.
+3.  **Delegación de Lógica:** El SOA activa a la persona especialista relevante, identificada a través del `C:\Users\zamor\UltiBotInversiones\bmad-agent\ide-bmad-orchestrator.cfg.md` y sus `bmad-agent/personas`, y le instruye que genere únicamente el "payload" de la solución (ej. el código a escribir, el análisis a presentar), pero sin ejecutar la acción final.
 4.  **Recepción y Ejecución:** El SOA recibe el payload de la persona y es el único responsable de ejecutar la herramienta final (ej. `write_to_file`, `execute_command`).
-5.  **Post-Registro (Invocando PTC):** El SOA realiza la segunda entrada en `memory/PROJECT_LOG.md` para registrar el resultado y el impacto de la acción completada.
+5.  **Post-Registro (Invocando SMYC):** El SOA realiza la segunda entrada en el Sistema de Memoria y Seguimiento Centralizado para registrar el resultado y el impacto de la acción completada.
 6.  **Respuesta al Usuario:** El SOA presenta el resultado final al usuario.
 
 ### **3.3. Comandos Globales Disponibles**
@@ -71,30 +71,52 @@
 # -----------------------------------------------------------------
 # La obediencia a estos protocolos es estricta y jerárquica.
 
-### **4.1. **MANDATORIO** Protocolo de Trazabilidad y Contexto (PTC) - **OBLIGATORIO**
-*   **Objetivo:** Mantener un registro centralizado, cronológico y auditable de todas las acciones en `memory/PROJECT_LOG.md`.
-*   **Invocador:** Este protocolo es invocado **exclusivamente por el Orquestador de Agentes (SOA)** como parte del Ciclo de Ejecución Supervisada.
-*   **Workflow:**
-    1.  **Al inicio de CADA tarea:** El SOA lee `memory/PROJECT_LOG.md`, `memory/CONTEXT.md` y `memory/KNOWLEDGE_BASE.md` para obtener contexto.
-    2.  **Durante la ejecución de la tarea:** El SOA añade entradas de pre y post-registro a `memory/PROJECT_LOG.md` usando la plantilla unificada, y actualiza `memory/CONTEXT.md` y `memory/TASKLIST.md` según sea necesario.
-*   **Plantilla de Registro Unificada:**
+### **4.1. MANDATORIO Sistema de Memoria y Seguimiento Centralizado (SMYC) - OBLIGATORIO**
+* **Objetivo:** Mantener un registro centralizado, cronológico, auditable y persistente a través de sesiones de la evolución del proyecto, la resolución de problemas y el estado actual, facilitando el trabajo colaborativo entre diferentes agentes. Este sistema asegura la no pérdida de información crítica, permite una fácil reanudación del trabajo y proporciona una clara auditoría del progreso.
+* **Componentes Clave:**
+    1.  **Registro de Eventos de Sesión (`memory/PROJECT_LOG.md`):** Un registro detallado y cronológico de todas las interacciones del agente, acciones realizadas y observaciones dentro de una sesión.
+    2.  **Estado Global del Proyecto (`memory/TASKLIST.md`):** Un resumen conciso y actualizado del estado del proyecto, incluyendo tareas pendientes, trabajo en progreso, decisiones clave y artefactos generados.
+    3.  **Base de Conocimiento Persistente (`memory/KNOWLEDGE_BASE.md`):** Un repositorio en crecimiento de patrones aprendidos, soluciones comunes y mejores prácticas específicas del proyecto, accesible por todos los agentes.
+    4.  **Puntos de Control (Checkpoints):** Capturas de información del `Estado Global del Proyecto` en momentos lógicos o cuando se requiere una transferencia de contexto.
+* **Invocador:** Este protocolo es invocado **exclusivamente por el Orquestador de Agentes (SOA)** como parte del Ciclo de Ejecución Supervisada, o por el agente activo cuando se requiera un punto de control persistente (ej. antes de una transferencia de tarea o al acercarse a los límites de contexto).
+* **Workflow:**
+    1.  **Inicio de Sesión/Tarea:** El SOA carga el último `Estado Global del Proyecto` y las entradas relevantes de la `Base de Conocimiento Persistente` para establecer el contexto.
+    2.  **Durante la Ejecución:** El agente activo contribuye continuamente al `Registro de Eventos de Sesión` con acciones y observaciones. Los cambios en los archivos del proyecto, decisiones clave o progreso de la tarea actualizan el `Estado Global del Proyecto`.
+    3.  **Punto de Handoff/Cierre:** Antes de una transferencia de tarea (ej. debido a límite de contexto, finalización de tarea o cambio de agente), el agente activo sintetiza el `Registro de Eventos de Sesión` y el `Estado Global del Proyecto` en un `Punto de Control`.
+    4.  **Post-Acción:** El SOA actualiza el `Estado Global del Proyecto` y, potencialmente, la `Base de Conocimiento Persistente` basándose en el resultado de los comandos ejecutados o las subtareas completadas.
+* **Plantilla de Traspaso de Contexto (para `new_task`):**
     ```markdown
-    
-    - **Timestamp:** YYYY-MM-DD HH:MM UTC
-    - **Agente:** [Nombre del Agente]
-    - **ID Tarea:** [TASK-XXX]
-    - **Ciclo:** [B-MAD-R: Record]
-    - **Acción:** [Descripción concisa de la acción realizada]
+    # ================== PAQUETE DE TRASPASO DE SESIÓN (PCC) ==================
+    # FECHA/HORA UTC: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    # =======================================================================
+    ## 1. ESTADO DE LA ORQUESTACIÓN
+    - **Agente Activo:** [Nombre del Agente]
+    - **Tarea en Curso:** [ID Tarea o Descripción]
+    ## 2. ESTADO DE EJECUCIÓN (El "Stack Trace")
+    - **Última Acción:** [Descripción de la última acción completada]
     - **Resultado:** [Éxito/Fallo y observación clave]
     - **Impacto:** [Archivos modificados, estado del sistema]
+    ## 3. CONTEXTO CRÍTICO Y DATOS (La "Memoria RAM")
+    - **Trabajo Completado en esta Sesión:**
+        - [Lista detallada de ítems completados y archivos relevantes]
+    - **Estado Actual del Proyecto:**
+        - [Descripción del estado actual, procesos en ejecución, configuración relevante]
+    ## 4. INSTRUCCIÓN PARA LA PRÓXIMA SESIÓN (El "Puntero de Instrucción")
+    - **Próximos Pasos Sugeridos:**
+        - [Lista detallada de tareas pendientes, desafíos conocidos]
+    - **Directiva para el Siguiente Agente:**
+        - [Instrucción específica, ej: "El agente 'Debugger' debe investigar el error X en el log Y"]
+    ## 5. ESTADO DE ARTEFACTOS DE MEMORIA
+    - **Última Entrada en `PROJECT_LOG.md`:** [Copia de la última entrada del log]
+    - **Estado de `TASKLIST.md`:** [Resumen del estado actual de las tareas]
+    - **Última Adición a `KNOWLEDGE_BASE.md`:** [Resumen de la última pieza de conocimiento añadida]
+    # ========================================================================
     ```
 
 ### **4.2. Protocolos de Emergencia (DEFCON)**
 *   **DEFCON 1 (Suite de Tests Rota):** STOP. `pytest --collect-only -q`. Isolate. Fix one by one. Validate.
 *   **DEFCON 2 (Errores AsyncIO Múltiples):** RESTART. `poetry env remove --all && poetry install`. Verify.
 *   **DEFCON 3 (Fixtures Rotas):** BACKUP. REVERT. INCREMENTAL. VALIDATE.
-
-
 
 ### **4.3. Sistema de Resolución Segmentada de Tests (SRST)**
 *   **Principio:** Un error a la vez, un módulo a la vez, un fix a la vez.
@@ -106,10 +128,19 @@
 *   **Automatización y Estandarización de Comandos:** Las operaciones críticas y recurrentes (ej. iniciar backend, iniciar UI, ejecutar todos los tests) **DEBEN** estar definidas como scripts en `pyproject.toml` (`[tool.poetry.scripts]`). Esto garantiza la descubribilidad, consistencia y facilidad de ejecución. El objetivo es poder iniciar el sistema completo con una o dos acciones predecibles.
 
 ### **4.5. Protocolos de Gobernanza del Sistema**
-*   **Manejo de Límite de Contexto:** Al alcanzar el límite de tokens de `1.2000`, usa `new_task` con la plantilla de traspaso de contexto definida en `Budeget-1.2.md`.
+*   **Manejo de Límite de Contexto:** Al alcanzar el límite de costo de **`$1.2000`**, se **DEBE** invocar el **Sistema de Memoria y Seguimiento Centralizado (SMYC)** para generar un `Punto de Control` y ejecutar el traspaso con la herramienta `new_task`, utilizando la plantilla definida en la sección 4.1.
 *   **Auto-Mejora y Reflexión:** Antes de `attempt_completion` en tareas complejas, ofrece reflexionar sobre la interacción para proponer mejoras a estas reglas, como se define en `self-improving-cline.md`.
 
-### **4.6. Protocolo de Auditoría de Contratos de API (PACA)**
+### **4.6. Protocolo de Análisis Algorítmico (PAA)**
+*   **Objetivo:** Abordar tareas complejas de análisis, diseño, o resolución de problemas mediante un desglose secuencial y lógico, utilizando la herramienta `sequential-thinking`.
+*   **Activación:** **DEBE** ser activado al inicio de cualquier tarea que no sea una simple ejecución de código, sino que requiera planificación, comparación, o una investigación profunda.
+*   **Workflow:**
+    1.  **Deconstrucción (Blueprint):** El primer pensamiento debe definir el objetivo, las entradas, las salidas deseadas, y las restricciones.
+    2.  **Análisis Secuencial (Measure/Assemble):** Cada pensamiento subsiguiente debe abordar un paso lógico del plan, construyendo sobre el anterior.
+    3.  **Síntesis y Decisión (Decide):** El penúltimo pensamiento debe resumir los hallazgos y formular un plan de acción concreto (ej. los cambios a realizar).
+    4.  **Verificación (Record):** El último pensamiento debe ser una autoevaluación que verifique si todos los objetivos y restricciones se cumplieron antes de proceder con la ejecución.
+
+### **4.7. Protocolo de Auditoría de Contratos de API (PACA)**
 *   **Objetivo:** Realizar un análisis sistemático y exhaustivo de la coherencia entre las llamadas de un cliente (ej. frontend) y los endpoints de un servidor (ej. backend) para identificar discrepancias en rutas, métodos HTTP, y esquemas de datos (payloads/respuestas).
 *   **Activación:** Cuando se requiera una refactorización, integración o depuración de la comunicación entre dos sistemas desacoplados.
 *   **Workflow Algorítmico:**
@@ -123,6 +154,16 @@
     3.  **Fase 3: Generar Plan de Acción (Assemble)**
         *   **3.1. Sintetizar Hallazgos:** Una vez completada la auditoría, el `Discrepancy Log` se convierte en la base para un plan de acción.
         *   **3.2. Actualizar `TASKLIST.md`:** Crear una nueva tarea o actualizar una existente con un checklist detallado de las acciones de refactorización requeridas (tanto en el cliente como en el servidor) para resolver cada discrepancia.
+
+### **4.8. Protocolo de Pivote Estratégico (PPE)**
+*   **Objetivo:** Gobernar la respuesta del sistema cuando una nueva directiva del usuario invalida la hoja de ruta o la arquitectura actual. Asegura que el cambio se maneje de forma ordenada, transparente y sin pérdida de contexto.
+*   **Activación:** Cuando una solicitud requiera un cambio arquitectónico fundamental (ej. cambiar un framework, eliminar un componente principal) que deje obsoleto el plan de trabajo actual.
+*   **Workflow:**
+    1.  **Declaración de Pivote:** El agente debe anunciar explícitamente: "Pivote estratégico detectado. Activando Protocolo de Pivote Estratégico (PPE)".
+    2.  **Análisis de Impacto:** Identificar y listar los artefactos (planes, roadmaps) y suposiciones que quedan obsoletos.
+    3.  **Archivo de Contexto:** Renombrar los artefactos obsoletos para preservar el historial (ej. `roadmap_v1.md` -> `roadmap_v1_deprecated.md`).
+    4.  **Re-planificación:** Invocar el **Protocolo de Análisis Algorítmico (PAA)** para crear el nuevo plan estratégico desde cero.
+    5.  **Actualización de Tareas:** Asegurar que el `memory/TASKLIST.md` se alinee con el nuevo plan.
 
 # -----------------------------------------------------------------
 # 5. PROTOCOLOS DE AGENTES ESPECIALISTAS
@@ -168,6 +209,7 @@ Esta guía establece los principios no negociables de ingeniería de software qu
 
 ### **2.3. Gestión de la Deuda Técnica**
 - **Regla del Boy Scout:** **DEBES** dejar el código más limpio de lo que lo encontraste. Realiza pequeñas mejoras cada vez que trabajes en un área.
+- **Eliminación de Código Muerto:** Como parte de la Regla del Boy Scout, **DEBES** eliminar activamente cualquier código, configuración o comentario que quede inactivo o inútil después de una refactorización.
 - **Refactorización Continua:** **DEBES** mejorar la estructura del código de forma continua como parte del desarrollo normal.
 
 ---

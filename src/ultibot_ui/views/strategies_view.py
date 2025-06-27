@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 from ultibot_ui.models import BaseMainWindow
 from ultibot_ui.services.api_client import UltiBotAPIClient
 from ultibot_ui.services.ui_strategy_service import UIStrategyService
+from ultibot_ui.services.trading_mode_state import get_trading_mode_manager
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,7 @@ class StrategiesView(QWidget):
         self.main_event_loop = main_event_loop
         self.strategy_service = UIStrategyService(api_client)
         self.main_window = main_window # Asignar main_window
+        self.trading_mode_manager = get_trading_mode_manager()
 
         self._layout = QVBoxLayout(self)
         
@@ -106,8 +108,8 @@ class StrategiesView(QWidget):
         layout.setContentsMargins(5, 0, 5, 0)
         layout.setSpacing(5)
 
-        # TODO: Determinar el modo de trading desde la UI
-        is_active = strategy.get('is_active_paper_mode', False)
+        current_mode = self.trading_mode_manager.current_mode
+        is_active = strategy.get(f'is_active_{current_mode.value}_mode', False)
         toggle_button = QPushButton("Desactivar" if is_active else "Activar")
         details_button = QPushButton("Detalles")
 
@@ -127,7 +129,7 @@ class StrategiesView(QWidget):
             QMessageBox.warning(self, "Error", "ID de estrategia no encontrado.")
             return
 
-        is_active = strategy.get('is_active_paper_mode', False)
+        is_active = strategy.get(f'is_active_{self.trading_mode_manager.current_mode.value}_mode', False)
         new_status = not is_active
         
         button.setEnabled(False)

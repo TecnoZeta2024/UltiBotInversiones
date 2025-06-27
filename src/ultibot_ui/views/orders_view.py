@@ -9,6 +9,7 @@ from uuid import UUID
 
 from ultibot_ui.services.api_client import UltiBotAPIClient
 from ultibot_ui.models import BaseMainWindow # Importar BaseMainWindow
+from ultibot_ui.services.trading_mode_state import get_trading_mode_manager
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,7 @@ class OrdersView(QWidget):
         self.main_event_loop = main_event_loop
         self.all_orders = []
         self.load_orders_task: Optional[asyncio.Task] = None
+        self.trading_mode_manager = get_trading_mode_manager()
         
         self._layout = QVBoxLayout(self)
         
@@ -100,7 +102,7 @@ class OrdersView(QWidget):
         try:
             # Obtener órdenes cerradas de paper trading.
             # Asumimos que el user_id se maneja a través de la autenticación en el backend.
-            orders = await self.api_client.get_trades(trading_mode='paper', status='closed', limit=500)
+            orders = await self.api_client.get_trades(trading_mode=self.trading_mode_manager.current_mode.value, status='closed', limit=500)
             self.update_orders_table(orders)
         except Exception as e:
             logger.error(f"Failed to load orders: {e}", exc_info=True)

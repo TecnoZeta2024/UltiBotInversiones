@@ -9,6 +9,7 @@ REM Establece la URL donde el backend estara escuchando
 set BACKEND_URL=http://localhost:8000
 set BACKEND_LOG_FILE=logs/backend.log
 set FRONTEND_LOG_FILE=logs/frontend.log
+set DATABASE_URL=sqlite+aiosqlite:///ultibot_local.db
 
 echo "URL del Backend establecida en: %BACKEND_URL%"
 echo "El log del Backend se guardara en: %BACKEND_LOG_FILE%"
@@ -30,7 +31,7 @@ echo ""
 echo "Iniciando la aplicacion del Backend..."
 echo "======================================================"
 REM Inicia el backend en segundo plano. El logging es manejado por la aplicacion.
-start "UltiBot Backend" cmd /c "poetry run python src\ultibot_backend\main.py"
+start "UltiBot Backend" cmd /k "poetry run python src\ultibot_backend\main.py"
 
 echo "Backend iniciado. Revisa %BACKEND_LOG_FILE% para ver los detalles."
 echo ""
@@ -41,7 +42,7 @@ echo ""
 echo "Iniciando la aplicacion de la Interfaz de Usuario (Frontend)..."
 echo "======================================================"
 REM Inicia el frontend en segundo plano. El logging es manejado por la aplicacion.
-start "UltiBot Frontend" cmd /c "poetry run python src\ultibot_ui\main.py"
+start "UltiBot Frontend" cmd /k "poetry run python src\ultibot_ui\main.py"
 
 echo "Frontend iniciado. Revisa %FRONTEND_LOG_FILE% para ver los detalles."
 echo ""

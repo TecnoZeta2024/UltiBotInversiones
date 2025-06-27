@@ -9,6 +9,7 @@ import asyncio
 from ultibot_ui.services.api_client import UltiBotAPIClient
 from shared.data_types import UserConfiguration, RealTradingSettings
 from ultibot_ui import workers
+from ultibot_ui.services.trading_mode_state import get_trading_mode_manager
 
 logger = logging.getLogger(__name__)
 
@@ -198,6 +199,16 @@ class SettingsView(QWidget):
             logger.info("SettingsView: Solicitando guardar configuración de usuario general.")
             result = await workers.update_user_configuration(self.api_client, updated_config_model)
             self._handle_save_config_result(result, updated_config_model)
+
+            # Actualizar el TradingModeStateManager basado en la configuración guardada
+            trading_mode_manager = get_trading_mode_manager()
+            if self.real_trading_checkbox.isChecked():
+                trading_mode_manager.set_mode("real")
+            elif self.paper_trading_checkbox.isChecked():
+                trading_mode_manager.set_mode("paper")
+            else:
+                # Default to paper if neither is explicitly checked (shouldn't happen with current UI)
+                trading_mode_manager.set_mode("paper")
 
         except Exception as e:
             logger.error(f"Error al guardar la configuración: {e}", exc_info=True)

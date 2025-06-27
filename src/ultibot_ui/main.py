@@ -39,11 +39,11 @@ LOGGING_CONFIG = {
     },
     "loggers": {
         "httpx": {"handlers": ["console", "file"], "level": "INFO"},
-        "src.ultibot_ui": {"handlers": ["console", "file"], "level": "DEBUG", "propagate": False},
-        "ultibot_backend": {"handlers": ["console", "file"], "level": "DEBUG", "propagate": False},
+        "src.ultibot_ui": {"handlers": ["console", "file"], "level": "INFO", "propagate": False},
+        "ultibot_backend": {"handlers": ["console", "file"], "level": "INFO", "propagate": False},
         "qasync": {"handlers": ["console", "file"], "level": "INFO", "propagate": False},
     },
-    "root": {"level": "DEBUG", "handlers": ["console", "file"]},
+    "root": {"level": "INFO", "handlers": ["console", "file"]},
 }
 
 # Aplicar la configuración de logging inmediatamente
@@ -60,8 +60,6 @@ class UltiBotApplication(QtWidgets.QApplication):
         self.main_window: Optional[MainWindow] = None
         self.api_client: Optional[UltiBotAPIClient] = None
         self.main_event_loop: Optional[qasync.QEventLoop] = None
-
-        self.aboutToQuit.connect(self.cleanup)
 
     def load_stylesheet(self):
         """Carga la hoja de estilos QSS."""
@@ -136,14 +134,17 @@ class UltiBotApplication(QtWidgets.QApplication):
                 # Filtrar la tarea actual para evitar cancelarse a sí misma
                 tasks = [t for t in asyncio.all_tasks(loop=self.main_event_loop) if t is not asyncio.current_task()]
                 if tasks:
-                    logger.info(f"Cancelling {len(tasks)} outstanding tasks.")
+                    logger.info(f"Cancelling {len(tasks)} outstanding tasks. Details: {[t.get_name() for t in tasks]}")
                     for task in tasks:
                         task.cancel()
                     
                     # Esperar a que todas las tareas se cancelen
                     # return_exceptions=True permite que gather no falle si una tarea ya está cancelada o falla
-                    await asyncio.gather(*tasks, return_exceptions=True)
-                    logger.info("All outstanding tasks have been cancelled.")
+                    results = await asyncio.gather(*tasks, return_exceptions=True)
+                    for i, result in enumerate(results):
+                        if isinstance(result, Exception):
+                            logger.error(f"Task {tasks[i].get_name()} failed during cancellation: {result}", exc_info=True)
+                    logger.info("All outstanding tasks have been cancelled or handled.")
             except RuntimeError as e:
                 logger.warning(f"Could not cancel outstanding tasks during cleanup: {e}. Event loop might be closing.")
             except Exception as e:
@@ -160,19 +161,6 @@ class UltiBotApplication(QtWidgets.QApplication):
             
         logger.info("Async cleanup finished.")
 
-    @QtCore.Slot()
-    def cleanup(self):
-        """
-        Slot síncrono que inicia el proceso de limpieza asíncrono.
-        """
-        logger.info("Cleanup process triggered by aboutToQuit signal.")
-        if self.main_event_loop and self.main_event_loop.is_running():
-            # Creamos una tarea para la limpieza, pero no la esperamos aquí
-            # para no bloquear el hilo de la GUI. El bucle de qasync se encargará de ella.
-            asyncio.create_task(self.cleanup_async())
-        else:
-            logger.warning("Could not schedule async cleanup: no running event loop.")
-
 async def main(app: UltiBotApplication):
     """Punto de entrada principal y asíncrono para la aplicación de UI."""
     # Asignar el bucle de eventos actual a la aplicación para que los componentes internos puedan usarlo.
@@ -186,24 +174,27 @@ async def main(app: UltiBotApplication):
 
     try:
         # La inicialización asíncrona ahora se espera directamente.
-        # Esto asegura que cualquier excepción aquí sea capturada.
         await app.initialize_async()
-        
-        # Si la inicialización es exitosa, la ventana se habrá mostrado.
-        # El bucle de eventos de la aplicación ya está en marcha por qasync.
         logger.info("Application initialized successfully and is running.")
+        
+        # El bucle de eventos de la aplicación ya está en marcha por qasync.
+        # Esperamos aquí hasta que la aplicación se cierre.
+        while app.main_window and app.main_window.isVisible():
+            await asyncio.sleep(0.1)
 
     except Exception as e:
         logger.critical(f"Fatal error during application startup: {e}", exc_info=True)
-        # Aquí se podría mostrar un diálogo de error nativo si Qt ya está cargado.
-        app.exit(1)
+    finally:
+        # Esta sección se ejecuta siempre, ya sea por cierre normal o por excepción.
+        logger.info("Application is shutting down. Performing async cleanup...")
+        await app.cleanup_async()
+        app.exit()
 
 if __name__ == "__main__":
     # Se crea la instancia de la aplicación UNA SOLA VEZ, antes de que qasync tome el control.
     app = UltiBotApplication(sys.argv)
     try:
         # qasync.run envuelve la ejecución de la aplicación y el bucle de eventos.
-        # Le pasamos la instancia de la app a nuestra corrutina main.
         qasync.run(main(app))
     except Exception as e:
         # Captura final para errores que podrían ocurrir fuera del bucle principal.
