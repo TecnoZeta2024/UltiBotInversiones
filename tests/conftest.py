@@ -29,30 +29,30 @@ from sqlalchemy import text
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
 # Importaciones reales de los módulos del backend
-from ultibot_backend.core.domain_models.base import Base
-from ultibot_backend.main import app as global_fastapi_app
-from ultibot_backend.dependencies import get_db_session, DependencyContainer, get_container_async
+from core.domain_models.base import Base
+from main import app as global_fastapi_app
+from dependencies import get_db_session, DependencyContainer, get_container_async
 from fastapi import Request, FastAPI
-from ultibot_backend.services.performance_service import PerformanceService
-from ultibot_backend.services.strategy_service import StrategyService
-from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from ultibot_backend.services.config_service import ConfigurationService
-from ultibot_backend.services.credential_service import CredentialService
-from ultibot_backend.adapters.binance_adapter import BinanceAdapter
-from ultibot_backend.services.notification_service import NotificationService
-from ultibot_backend.services.market_data_service import MarketDataService
-from ultibot_backend.services.portfolio_service import PortfolioService
-from ultibot_backend.services.order_execution_service import OrderExecutionService, PaperOrderExecutionService
-from ultibot_backend.services.unified_order_execution_service import UnifiedOrderExecutionService
-from ultibot_backend.services.ai_orchestrator_service import AIOrchestrator
-from ultibot_backend.services.trading_engine_service import TradingEngine
-from ultibot_backend.app_config import get_app_settings, AppSettings
+from services.performance_service import PerformanceService
+from services.strategy_service import StrategyService
+from adapters.persistence_service import SupabasePersistenceService
+from services.config_service import ConfigurationService
+from services.credential_service import CredentialService
+from adapters.binance_adapter import BinanceAdapter
+from services.notification_service import NotificationService
+from services.market_data_service import MarketDataService
+from services.portfolio_service import PortfolioService
+from services.order_execution_service import OrderExecutionService, PaperOrderExecutionService
+from services.unified_order_execution_service import UnifiedOrderExecutionService
+from services.ai_orchestrator_service import AIOrchestrator
+from services.trading_engine_service import TradingEngine
+from app_config import get_app_settings, AppSettings
 from shared.data_types import APICredential, ServiceName, PerformanceMetrics, PortfolioSnapshot, PortfolioSummary
-from ultibot_backend.api.v1.models.performance_models import StrategyPerformanceData, OperatingMode
-from ultibot_backend.core.domain_models.trade_models import (
+from api.v1.models.performance_models import StrategyPerformanceData, OperatingMode
+from core.domain_models.trade_models import (
     OrderStatus, OrderCategory, TradeOrderDetails, TradeMode, TradeSide, PositionStatus
 )
-from ultibot_backend.core.domain_models.user_configuration_models import (
+from core.domain_models.user_configuration_models import (
     UserConfiguration, RiskProfileSettings, RealTradingSettings, RiskProfile, Theme
 )
 

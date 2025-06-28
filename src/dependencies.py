@@ -8,27 +8,27 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from sqlalchemy.pool import NullPool
 
 # Importar la Base y los modelos para la creación de tablas
-from ultibot_backend.core.domain_models.base import Base
-from ultibot_backend.core.domain_models import orm_models
+from core.domain_models.base import Base
+from core.domain_models import orm_models
 
 from fastapi import Request, Depends
-from ultibot_backend.services.order_execution_service import PaperOrderExecutionService
-from ultibot_backend.adapters.binance_adapter import BinanceAdapter
-from ultibot_backend.adapters.mobula_adapter import MobulaAdapter
-from ultibot_backend.adapters.persistence_service import SupabasePersistenceService as PersistenceService
-from ultibot_backend.adapters.redis_cache import RedisCache # Importar RedisCache
-from ultibot_backend.services.ai_orchestrator_service import AIOrchestrator as AIOrchestratorService
-from ultibot_backend.services.config_service import ConfigurationService
-from ultibot_backend.services.credential_service import CredentialService
-from ultibot_backend.services.market_data_service import MarketDataService
-from ultibot_backend.services.notification_service import NotificationService
-from ultibot_backend.services.order_execution_service import OrderExecutionService
-from ultibot_backend.services.performance_service import PerformanceService
-from ultibot_backend.services.portfolio_service import PortfolioService
-from ultibot_backend.services.strategy_service import StrategyService
-from ultibot_backend.services.trading_engine_service import TradingEngine as TradingEngineService
-from ultibot_backend.services.trading_report_service import TradingReportService
-from ultibot_backend.services.unified_order_execution_service import UnifiedOrderExecutionService
+from services.order_execution_service import PaperOrderExecutionService
+from adapters.binance_adapter import BinanceAdapter
+from adapters.mobula_adapter import MobulaAdapter
+from adapters.persistence_service import SupabasePersistenceService as PersistenceService
+from adapters.redis_cache import RedisCache # Importar RedisCache
+from services.ai_orchestrator_service import AIOrchestrator as AIOrchestratorService
+from services.config_service import ConfigurationService
+from services.credential_service import CredentialService
+from services.market_data_service import MarketDataService
+from services.notification_service import NotificationService
+from services.order_execution_service import OrderExecutionService
+from services.performance_service import PerformanceService
+from services.portfolio_service import PortfolioService
+from services.strategy_service import StrategyService
+from services.trading_engine_service import TradingEngine as TradingEngineService
+from services.trading_report_service import TradingReportService
+from services.unified_order_execution_service import UnifiedOrderExecutionService
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,6 @@ async def initialize_database():
         else:
             logger.info(f"Usando DATABASE_URL del entorno: {database_url}")
 
-        logger.info(f"DEBUG: DATABASE_URL before create_async_engine: '{database_url}'")
         try:
             logger.info(f"Initializing database with URL: {database_url}")
             _db_engine = create_async_engine(

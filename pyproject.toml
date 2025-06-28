@@ -7,7 +7,14 @@ readme = "README.md"
 packages = [
     { include = "ultibot_ui", from = "src" },
     { include = "shared", from = "src" },
-    { include = "ultibot_backend", from = "src" },
+    { include = "adapters", from = "src" },
+    { include = "api", from = "src" },
+    { include = "core", from = "src" },
+    { include = "features", from = "src" },
+    { include = "services", from = "src" },
+    { include = "app_config.py", from = "src" },
+    { include = "dependencies.py", from = "src" },
+    { include = "main.py", from = "src" },
 ]
 
 [tool.poetry.dependencies]

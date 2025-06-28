@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from decimal import Decimal
 
 # Importar modelos de dominio para mantener una única fuente de verdad
-from ultibot_backend.core.domain_models.trade_models import (
+from core.domain_models.trade_models import (
     Trade,
     TradeOrderDetails,
     OrderCategory,
@@ -20,7 +20,7 @@ from ultibot_backend.core.domain_models.trade_models import (
     OrderStatus, # Añadido para exportar
     PositionStatus, # Añadido para exportar
 )
-from ultibot_backend.core.domain_models.user_configuration_models import (
+from core.domain_models.user_configuration_models import (
     UserConfiguration,
     RealTradingSettings,
     RiskProfileSettings,
@@ -32,7 +32,7 @@ from ultibot_backend.core.domain_models.user_configuration_models import (
     CloudSyncPreferences,
     ConfidenceThresholds as AIAnalysisConfidenceThresholds,
 )
-from ultibot_backend.core.domain_models.opportunity_models import Opportunity, AIAnalysis, OpportunityStatus, SourceType as OpportunitySourceType # Importar Opportunity y AIAnalysis del backend
+from core.domain_models.opportunity_models import Opportunity, AIAnalysis, OpportunityStatus, SourceType as OpportunitySourceType # Importar Opportunity y AIAnalysis del backend
 
 
 class Kline(BaseModel):

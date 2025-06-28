@@ -29,6 +29,7 @@
 *   **Establecer Criterios de Aceptación:** Claros, medibles y binarios.
 
 ### **3. 𝐀ssemble (Ensamblaje y Ejecución)**
+*   **Análisis de Dependencias Proactivo:** Antes de escribir código, analiza los requisitos para identificar todas las librerías o paquetes de terceros necesarios. Instálalos de forma agrupada en un solo paso para optimizar la eficiencia.
 *   **Ejecución Metódica:** Ejecuta el plan de acción paso a paso.
 *   **Validación Continua:** Después de cada paso, verifica que no has roto nada.
 

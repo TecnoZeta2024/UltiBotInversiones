@@ -16,13 +16,13 @@ from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from starlette.routing import BaseRoute # Importar BaseRoute desde starlette
 
-from ultibot_backend.api.v1.endpoints import (
+from api.v1.endpoints import (
     config, market_data, notifications, opportunities,
     performance, portfolio, reports, strategies, trades, trading
 )
 from dotenv import load_dotenv
-from ultibot_backend.dependencies import DependencyContainer
-from ultibot_backend.core.exceptions import UltiBotError
+from dependencies import DependencyContainer
+from core.exceptions import UltiBotError
 
 # Cargar variables de entorno desde .env al inicio
 load_dotenv()
@@ -53,15 +53,23 @@ LOGGING_CONFIG = {
             "backupCount": 5,
             "encoding": "utf-8",
         },
+        "frontend_file_mirror": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "formatter": "default",
+            "filename": os.path.join(LOGS_DIR, "frontend.log"),
+            "maxBytes": 10485760,  # 10 MB
+            "backupCount": 5,
+            "encoding": "utf-8",
+        },
     },
     "loggers": {
         "uvicorn": {"handlers": ["console", "backend_file"], "level": "INFO"},
         "uvicorn.error": {"level": "INFO"},
         "uvicorn.access": {"handlers": ["console", "backend_file"], "level": "INFO"},
-        "ultibot_backend": {"handlers": ["console", "backend_file"], "level": "INFO", "propagate": False},
+        "ultibot_backend": {"handlers": ["console", "backend_file", "frontend_file_mirror"], "level": "DEBUG", "propagate": False},
     },
     "root": {
-        "level": "INFO",
+        "level": "DEBUG",
         "handlers": ["console", "backend_file"],
     },
 }
@@ -233,9 +241,9 @@ if __name__ == "__main__":
     import uvicorn
     logger.info("Iniciando servidor Uvicorn desde el punto de entrada principal...")
     uvicorn.run(
-        "ultibot_backend.main:app",
+        "main:app",
         host="0.0.0.0",
         port=8000,
-        reload=True,
+        reload=False,
         log_level="info"
     )
