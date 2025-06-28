@@ -16,15 +16,45 @@ from src.core.domain_models.user_configuration_models import (
 from src.core.exceptions import ConfigurationError
 from src.app_config import AppSettings
 
+from src.services.credential_service import CredentialService
+from src.services.portfolio_service import PortfolioService
+from src.services.notification_service import NotificationService
+
 @pytest.fixture
 def mock_persistence_service() -> MagicMock:
     """Mock for SupabasePersistenceService."""
     return AsyncMock(spec=SupabasePersistenceService)
 
 @pytest.fixture
-def config_service(mock_persistence_service: SupabasePersistenceService, app_settings_fixture: AppSettings) -> ConfigurationService:
-    """Fixture for ConfigurationService."""
-    service = ConfigurationService(persistence_service=mock_persistence_service)
+def mock_credential_service() -> MagicMock:
+    """Mock for CredentialService."""
+    return AsyncMock(spec=CredentialService)
+
+@pytest.fixture
+def mock_portfolio_service() -> MagicMock:
+    """Mock for PortfolioService."""
+    return AsyncMock(spec=PortfolioService)
+
+@pytest.fixture
+def mock_notification_service() -> MagicMock:
+    """Mock for NotificationService."""
+    return AsyncMock(spec=NotificationService)
+
+@pytest.fixture
+def config_service(
+    mock_persistence_service: SupabasePersistenceService,
+    mock_credential_service: CredentialService,
+    mock_portfolio_service: PortfolioService,
+    mock_notification_service: NotificationService,
+    app_settings_fixture: AppSettings
+) -> ConfigurationService:
+    """Fixture for ConfigurationService with all dependencies mocked."""
+    service = ConfigurationService(
+        persistence_service=mock_persistence_service,
+        credential_service=mock_credential_service,
+        portfolio_service=mock_portfolio_service,
+        notification_service=mock_notification_service
+    )
     service._user_id = app_settings_fixture.FIXED_USER_ID
     return service
 

@@ -14,34 +14,6 @@
 # Tu misión es garantizar que UltiBotInversiones evolucione hacia un sistema de trading personal avanzado, estable, sin costo y desplegable localmente, que aprende y mejora continuamente.
 
 # -----------------------------------------------------------------
-# 2. CICLO OPERATIVO MAESTRO (B-MAD-R)
-# -----------------------------------------------------------------
-# Para cada tarea, aplicarás rigurosamente el ciclo B-MAD-R:
-
-### **1. 𝐁lueprint (Diseño y Plan)**
-*   **Reformular el Objetivo:** ¿Cuál es el resultado final deseado?
-*   **Definir el "Porqué":** ¿Cómo contribuye este objetivo a la Misión Principal?
-*   **Plan de Acción:** Desglosa el objetivo en una lista de tareas (checklist) en `memory/TASKLIST.md`.
-*   **Clarificación de Artefactos:** Si la solicitud es ambigua sobre el tipo de resultado (ej. "¿código o documentación?"), prioriza la creación de artefactos conceptuales (Markdown, diagramas) antes de escribir código funcional. Para tareas de "auditoría" o "análisis", el resultado por defecto DEBE ser la documentación en `memory/`. Si la duda persiste, pregunta al usuario para confirmar el tipo de entregable deseado.
-
-### **2. 𝐌easure (Medición y Criterios)**
-*   **Definir el Éxito:** ¿Cómo sabremos que la tarea está completa y bien hecha?
-*   **Establecer Criterios de Aceptación:** Claros, medibles y binarios.
-
-### **3. 𝐀ssemble (Ensamblaje y Ejecución)**
-*   **Análisis de Dependencias Proactivo:** Antes de escribir código, analiza los requisitos para identificar todas las librerías o paquetes de terceros necesarios. Instálalos de forma agrupada en un solo paso para optimizar la eficiencia.
-*   **Ejecución Metódica:** Ejecuta el plan de acción paso a paso.
-*   **Validación Continua:** Después de cada paso, verifica que no has roto nada.
-
-### **4. 𝐃ecide (Decisión y Cierre)**
-*   **Evaluar Resultados:** Compara los resultados con los criterios de éxito.
-*   **Tomar una Decisión:** Éxito (procede) o Fallo (inicia un protocolo de debugging relevante).
-
-### **5. 🇷ecord (Registro y Trazabilidad) - OBLIGATORIO**
-*   **Activación:** Este paso se ejecuta **después de cada paso de `Assemble` y después del `Decide` final**.
-*   **Acción:** El agente activo **DEBE** registrar su acción invocando el **Protocolo de Trazabilidad y Contexto (PTC)** (ver sección 4.2).
-
-# -----------------------------------------------------------------
 # 3. SISTEMA DE ORQUESTACIÓN DE AGENTES (SOA)
 # -----------------------------------------------------------------
 # Esta sección gobierna el motor de ejecución de agentes.
@@ -54,10 +26,10 @@
 
 ### **3.2. Workflow de Ejecución del SOA (Ciclo de Ejecución Supervisada)**
 1.  **Interceptación de Tarea:** El SOA recibe la solicitud del usuario.
-2.  **(Invocando **4.1. **MANDATORIO** Sistema de Memoria y Seguimiento Centralizado (SMYC) - **OBLIGATORIO**): El SOA realiza las primeras acciones fusionando la solicitud del usuario con el flujo del protocolo SMYC para obtener el contexto persistente.
+2.  **(Invocando (SMYC)**): El SOA realiza las primeras acciones fusionando la solicitud del usuario con el flujo del protocolo SMYC para obtener el contexto persistente.
 3.  **Delegación de Lógica:** El SOA activa a la persona especialista relevante, identificada a través del `C:\Users\zamor\UltiBotInversiones\bmad-agent\ide-bmad-orchestrator.cfg.md` y sus `bmad-agent/personas`, y le instruye que genere únicamente el "payload" de la solución (ej. el código a escribir, el análisis a presentar), pero sin ejecutar la acción final.
 4.  **Recepción y Ejecución:** El SOA recibe el payload de la persona y es el único responsable de ejecutar la herramienta final (ej. `write_to_file`, `execute_command`).
-5.  **Post-Registro (Invocando SMYC):** El SOA realiza la segunda entrada en el Sistema de Memoria y Seguimiento Centralizado para registrar el resultado y el impacto de la acción completada.
+5.  **Post-Registro (Invocando (SMYC)):** El SOA realiza la segunda entrada en el Sistema de Memoria y Seguimiento Centralizado para registrar el resultado y el impacto de la acción completada.
 6.  **Respuesta al Usuario:** El SOA presenta el resultado final al usuario.
 
 ### **3.3. Comandos Globales Disponibles**
@@ -74,17 +46,52 @@
 
 ### **4.1. MANDATORIO Sistema de Memoria y Seguimiento Centralizado (SMYC) - OBLIGATORIO**
 * **Objetivo:** Mantener un registro centralizado, cronológico, auditable y persistente a través de sesiones de la evolución del proyecto, la resolución de problemas y el estado actual, facilitando el trabajo colaborativo entre diferentes agentes. Este sistema asegura la no pérdida de información crítica, permite una fácil reanudación del trabajo y proporciona una clara auditoría del progreso.
-* **Componentes Clave:**
-    1.  **Registro de Eventos de Sesión (`memory/PROJECT_LOG.md`):** Un registro detallado y cronológico de todas las interacciones del agente, acciones realizadas y observaciones dentro de una sesión.
-    2.  **Estado Global del Proyecto (`memory/TASKLIST.md`):** Un resumen conciso y actualizado del estado del proyecto, incluyendo tareas pendientes, trabajo en progreso, decisiones clave y artefactos generados.
-    3.  **Base de Conocimiento Persistente (`memory/KNOWLEDGE_BASE.md`):** Un repositorio en crecimiento de patrones aprendidos, soluciones comunes y mejores prácticas específicas del proyecto, accesible por todos los agentes.
-    4.  **Puntos de Control (Checkpoints):** Capturas de información del `Estado Global del Proyecto` en momentos lógicos o cuando se requiere una transferencia de contexto.
+* **Manifiesto de Artefactos de Memoria (Fuente de Verdad):**
+  A continuación se define el contrato de datos para los componentes de la memoria.
+  Toda operación DEBE adherirse a estas definiciones.
+
+  ```yaml
+  # ==================================================
+  # == MEMORY ARTIFACTS MANIFEST
+  # ==================================================
+  memory_artifacts:
+    - concept_id: "session_event_log"
+      description: "Registro cronológico inmutable de todas las acciones, observaciones y resultados de la sesión."
+      artifact_path: "memory/PROJECT_LOG.md"
+      rules:
+        - "READ"
+        - "APPEND_ONLY"
+      mutability: "immutable"
+
+    - concept_id: "global_project_state"
+      description: "Estado actual del plan de trabajo, checklist de tareas y objetivos a corto plazo."
+      artifact_path: "memory/TASKLIST.md"
+      rules:
+        - "READ"
+        - "OVERWRITE"
+      mutability: "mutable"
+
+    - concept_id: "persistent_knowledge_base"
+      description: "Repositorio de lecciones aprendidas, soluciones a problemas recurrentes y patrones de diseño."
+      artifact_path: "memory/KNOWLEDGE_BASE.md"
+      rules:
+        - "READ"
+        - "APPEND_ONLY"
+      mutability: "immutable"
+  ```
+
 * **Invocador:** Este protocolo es invocado **exclusivamente por el Orquestador de Agentes (SOA)** como parte del Ciclo de Ejecución Supervisada, o por el agente activo cuando se requiera un punto de control persistente (ej. antes de una transferencia de tarea o al acercarse a los límites de contexto).
 * **Workflow:**
-    1.  **Inicio de Sesión/Tarea:** El SOA carga el último `Estado Global del Proyecto` y las entradas relevantes de la `Base de Conocimiento Persistente` para establecer el contexto.
-    2.  **Durante la Ejecución:** El agente activo contribuye continuamente al `Registro de Eventos de Sesión` con acciones y observaciones. Los cambios en los archivos del proyecto, decisiones clave o progreso de la tarea actualizan el `Estado Global del Proyecto`.
-    3.  **Punto de Handoff/Cierre:** Antes de una transferencia de tarea (ej. debido a límite de contexto, finalización de tarea o cambio de agente), el agente activo sintetiza el `Registro de Eventos de Sesión` y el `Estado Global del Proyecto` en un `Punto de Control`.
-    4.  **Post-Acción:** El SOA actualiza el `Estado Global del Proyecto` y, potencialmente, la `Base de Conocimiento Persistente` basándose en el resultado de los comandos ejecutados o las subtareas completadas.
+    1.  **Inicio de Sesión/Tarea:** El SOA carga el artefacto del **`global_project_state` (`memory/TASKLIST.md`)** y las entradas relevantes del **`persistent_knowledge_base` (`memory/KNOWLEDGE_BASE.md`)** para establecer el contexto.
+    2.  **Durante la Ejecución:** El agente activo contribuye continuamente al **`session_event_log` (`memory/PROJECT_LOG.md`)** con acciones y observaciones. Los cambios en los archivos del proyecto, decisiones clave o progreso de la tarea actualizan el **`global_project_state` (`memory/TASKLIST.md`)**.
+    3.  **Punto de Handoff/Cierre:** Antes de una transferencia de tarea (ej. debido a límite de contexto, finalización de tarea o cambio de agente), el agente activo sintetiza el **`session_event_log` (`memory/PROJECT_LOG.md`)** y el **`global_project_state` (`memory/TASKLIST.md`)** en un `Punto de Control`.
+    4.  **Post-Acción:** El SOA actualiza el **`global_project_state` (`memory/TASKLIST.md`)** y, potencialmente, la **`persistent_knowledge_base` (`memory/KNOWLEDGE_BASE.md`)** basándose en el resultado de los comandos ejecutados o las subtareas completadas.
+* **Principio de Inmutabilidad del Registro (OBLIGATORIO):**
+    - Los artefactos de memoria con `mutability: "immutable"` (`memory/PROJECT_LOG.md` y `memory/KNOWLEDGE_BASE.md`) son **INMUTABLES Y DE SOLO-AÑADIR (APPEND-ONLY)**.
+    - Se **PROHÍBE ESTRICTAMENTE** el uso de herramientas que sobreescriban estos archivos en su totalidad.
+    - Toda nueva entrada **DEBE** ser añadida al final del archivo existente. El agente **DEBE** leer el contenido completo, añadir la nueva información al final, y luego escribir el contenido combinado. Cualquier acción que resulte en la eliminación de datos históricos se considera una violación crítica del protocolo.
+    - El artefacto `global_project_state` (`memory/TASKLIST.md`) es la excepción, ya que su regla es `OVERWRITE` y su `mutability` es `mutable`.
+
 * **Plantilla de Traspaso de Contexto (para `new_task`):**
     ```markdown
     # ================== PAQUETE DE TRASPASO DE SESIÓN (PCC) ==================
@@ -107,10 +114,10 @@
         - [Lista detallada de tareas pendientes, desafíos conocidos]
     - **Directiva para el Siguiente Agente:**
         - [Instrucción específica, ej: "El agente 'Debugger' debe investigar el error X en el log Y"]
-    ## 5. ESTADO DE ARTEFACTOS DE MEMORIA
-    - **Última Entrada en `PROJECT_LOG.md`:** [Copia de la última entrada del log]
-    - **Estado de `TASKLIST.md`:** [Resumen del estado actual de las tareas]
-    - **Última Adición a `KNOWLEDGE_BASE.md`:** [Resumen de la última pieza de conocimiento añadida]
+    ## 5. ESTADO DE ARTEFACTOS DE MEMORIA (Según Manifiesto)
+    - **`session_event_log`:** [Copia de la última entrada del log en `memory/PROJECT_LOG.md`]
+    - **`global_project_state`:** [Resumen del estado actual de `memory/TASKLIST.md`]
+    - **`persistent_knowledge_base`:** [Resumen de la última adición a `memory/KNOWLEDGE_BASE.md`]
     # ========================================================================
     ```
 

@@ -154,6 +154,25 @@ docker-compose up --build -d
 
 # Actualizar poetry.lock después de modificar pyproject.toml
 poetry lock
+
+### **Debugging de Errores de Colección de Pytest (`pytest collection errors`)**
+
+-   **Identificación:** Cuando `pytest` falla antes de ejecutar cualquier test, mostrando un `ERROR collecting tests/...` y a menudo un `Interrupted: X error during collection`.
+-   **Causas Comunes:**
+    -   Errores de sintaxis (`SyntaxError`).
+    -   Errores de importación (`ImportError`, `ModuleNotFoundError`).
+    -   Errores de nombre (`NameError`) a nivel de módulo o clase.
+    -   Fixtures no encontradas (`fixture '...' not found`).
+-   **Workflow de Resolución:**
+    1.  **Leer el Traceback Completo:** Ignorar el resumen y centrarse en el primer `ERROR` detallado. El error de colección siempre está en la parte superior de la salida.
+    2.  **Identificar el Tipo de Error:**
+        -   **SI** es `NameError`: Verificar que todas las clases, funciones y tipos de datos (ej. `MagicMock`, `List`, `Tuple`) utilizados en las firmas de las funciones o en el cuerpo del módulo estén correctamente importados.
+        -   **SI** es `fixture not found`:
+            a.  Verificar la ortografía exacta del nombre del fixture.
+            b.  Consultar `tests/conftest.py` (y cualquier `conftest.py` de subdirectorios) para encontrar la definición correcta del fixture o un fixture alternativo que proporcione la dependencia necesaria (ej. usar `mock_dependency_container` en lugar de un mock de servicio específico).
+        -   **SI** es `ImportError`: Verificar que la ruta de importación sea correcta y que no haya dependencias circulares. Usar `sys.path.insert` si es necesario en `conftest.py` para asegurar que los módulos de `src` sean visibles.
+    3.  **Aplicar Fix Atómico:** Corregir únicamente el error de colección identificado. No intentar solucionar otros problemas potenciales.
+    4.  **Validar Inmediatamente:** Re-ejecutar `poetry run pytest --collect-only -q {path/to/failed/file.py}` para una validación rápida y aislada. Si pasa, ejecutar la suite completa.
 ```
 
 ---

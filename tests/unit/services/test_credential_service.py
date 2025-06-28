@@ -21,7 +21,7 @@ def mock_binance_adapter():
     return adapter
 
 @pytest.fixture
-def credential_service(mock_persistence_service: MagicMock, mock_binance_adapter: MagicMock):
+def credential_service(mock_persistence_service: AsyncMock, mock_binance_adapter: MagicMock):
     """
     Fixture principal para CredentialService con dependencias mockeadas.
     Utiliza el mock_persistence_service de conftest.py para consistencia.
@@ -73,7 +73,10 @@ def test_decrypt_invalid_token(credential_service: CredentialService):
 # --- Pruebas de Métodos del Servicio ---
 
 @pytest.mark.asyncio
-async def test_add_credential(credential_service: CredentialService, sample_credential_data, mock_persistence_service: MagicMock):
+async def test_add_credential(credential_service: CredentialService, sample_credential_data, mock_persistence_service: AsyncMock):
+    # Configurar el mock para que devuelva un valor simulado
+    mock_persistence_service.upsert.return_value = None # O un objeto relevante si es necesario
+
     created_credential = await credential_service.add_credential(**sample_credential_data)
 
     assert created_credential is not None
@@ -92,8 +95,8 @@ async def test_add_credential(credential_service: CredentialService, sample_cred
     assert decrypted_secret == sample_credential_data["api_secret"]
 
 @pytest.mark.asyncio
-async def test_get_credential_success(credential_service: CredentialService, sample_encrypted_credential, mock_persistence_service: MagicMock, sample_credential_data):
-    mock_persistence_service.get_one.return_value = sample_encrypted_credential.model_dump()
+async def test_get_credential_success(credential_service: CredentialService, sample_encrypted_credential, mock_persistence_service: AsyncMock, sample_credential_data):
+    mock_persistence_service.get_one.return_value = sample_encrypted_credential
 
     retrieved_credential = await credential_service.get_credential(
         service_name=sample_encrypted_credential.service_name,
@@ -111,9 +114,9 @@ async def test_get_credential_success(credential_service: CredentialService, sam
     assert f"credential_label = '{sample_encrypted_credential.credential_label}'" in call_args['condition']
 
 @pytest.mark.asyncio
-async def test_get_credential_decryption_failure_key(credential_service: CredentialService, sample_encrypted_credential, mock_persistence_service: MagicMock):
+async def test_get_credential_decryption_failure_key(credential_service: CredentialService, sample_encrypted_credential, mock_persistence_service: AsyncMock):
     sample_encrypted_credential.encrypted_api_key = "corrupted_or_different_key_encrypted_data"
-    mock_persistence_service.get_one.return_value = sample_encrypted_credential.model_dump()
+    mock_persistence_service.get_one.return_value = sample_encrypted_credential
 
     with pytest.raises(CredentialError, match="API Key para .* no pudo ser desencriptada"):
         await credential_service.get_credential(
@@ -122,9 +125,9 @@ async def test_get_credential_decryption_failure_key(credential_service: Credent
         )
 
 @pytest.mark.asyncio
-async def test_verify_credential_binance_success(credential_service: CredentialService, sample_encrypted_credential, mock_binance_adapter: MagicMock, mock_persistence_service: MagicMock, sample_credential_data):
+async def test_verify_credential_binance_success(credential_service: CredentialService, sample_encrypted_credential, mock_binance_adapter: MagicMock, mock_persistence_service: AsyncMock, sample_credential_data):
     mock_binance_adapter.get_account_info.return_value = {"canTrade": True, "permissions": ["SPOT"]}
-    mock_persistence_service.get_one.return_value = sample_encrypted_credential.model_dump()
+    mock_persistence_service.get_one.return_value = sample_encrypted_credential
 
     is_valid = await credential_service.verify_credential(sample_encrypted_credential.credential_label, sample_encrypted_credential.service_name)
 
@@ -140,9 +143,9 @@ async def test_verify_credential_binance_success(credential_service: CredentialS
     assert call_args['data']['permissions'] == ["SPOT_TRADING"]
 
 @pytest.mark.asyncio
-async def test_verify_credential_binance_api_error(credential_service: CredentialService, sample_encrypted_credential, mock_binance_adapter: MagicMock, mock_persistence_service: MagicMock, sample_credential_data):
+async def test_verify_credential_binance_api_error(credential_service: CredentialService, sample_encrypted_credential, mock_binance_adapter: MagicMock, mock_persistence_service: AsyncMock, sample_credential_data):
     mock_binance_adapter.get_account_info.side_effect = BinanceAPIError("Binance Down", status_code=500)
-    mock_persistence_service.get_one.return_value = sample_encrypted_credential.model_dump()
+    mock_persistence_service.get_one.return_value = sample_encrypted_credential
 
     is_valid = await credential_service.verify_credential(sample_encrypted_credential.credential_label, sample_encrypted_credential.service_name)
 
@@ -157,8 +160,8 @@ async def test_verify_credential_binance_api_error(credential_service: Credentia
     assert call_args['data']['status'] == "verification_failed"
 
 @pytest.mark.asyncio
-async def test_verify_credential_decryption_error(credential_service: CredentialService, sample_encrypted_credential, mock_persistence_service: MagicMock):
-    mock_persistence_service.get_one.return_value = sample_encrypted_credential.model_dump()
+async def test_verify_credential_decryption_error(credential_service: CredentialService, sample_encrypted_credential, mock_persistence_service: AsyncMock):
+    mock_persistence_service.get_one.return_value = sample_encrypted_credential
     
     # Sobrescribir el mock de decrypt_data para este test específico.
     # El side_effect hace que la primera llamada (para la api_key) devuelva None.
@@ -172,7 +175,7 @@ async def test_verify_credential_decryption_error(credential_service: Credential
     mock_persistence_service.upsert.assert_not_called()
 
 @pytest.mark.asyncio
-async def test_verify_credential_telegram_success(credential_service: CredentialService, mock_persistence_service: MagicMock):
+async def test_verify_credential_telegram_success(credential_service: CredentialService, mock_persistence_service: AsyncMock):
     telegram_credential = APICredential(
         id=uuid4(),
         user_id=credential_service.fixed_user_id,
@@ -183,7 +186,7 @@ async def test_verify_credential_telegram_success(credential_service: Credential
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow()
     )
-    mock_persistence_service.get_one.return_value = telegram_credential.model_dump()
+    mock_persistence_service.get_one.return_value = telegram_credential
     
     mock_notification_service = AsyncMock()
     mock_notification_service.send_test_telegram_notification = AsyncMock(return_value=True)

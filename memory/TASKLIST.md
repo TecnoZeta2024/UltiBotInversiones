@@ -1,31 +1,50 @@
-# Estado Global del Proyecto: Migración a UI Web (Evolución 2.0)
+# =================================================================
+# == TASK LIST - UltiBotInversiones (Misión: EVO-2.0-UI-WEB)
+# =================================================================
+# Este archivo refleja el plan de trabajo actual basado en MIGRATION_PLAN_UI_WEB.md.
+# -----------------------------------------------------------------
 
-**Visión:** Transformar UltiBotInversiones a una aplicación web moderna.
-**Plan de Acción Detallado:** `memory/action_task_evolution_2.0.md`
+## Fase 0: Fortificación del Backend (Pre-requisito Innegociable)
+*   **Estado:** `EN PROGRESO`
+
+- [x] **1. Implementar Pruebas Unitarias de Modelos de Dominio**
+- [x] **2. Implementar Pruebas Unitarias de Estrategias de Trading**
+- [ ] **3. Expandir Pruebas de Integración de API**
+    - [ ] 3.1. Ampliar la cobertura de `tests/integration/api/v1/endpoints` para todos los endpoints definidos en `API_CONTRACT_MAP.md`.
+    - [ ] 3.2. Priorizar endpoints de `trading`, `market_data`, `opportunities`, y `portfolio`.
+    - [x] 3.3. **(Completado)** Crear y validar pruebas para los endpoints de `config` (`test_config_endpoints.py`).
+    - [x] 3.4. **(Completado)** Crear y validar pruebas para los endpoints de `strategies` (`test_strategies_endpoints.py`).
 
 ---
 
-## Estado Actual
-
-- **Fase Activa:** Fase 0 - Fundación del Backend
-- **Próxima Tarea Crítica:** Implementar pruebas unitarias para los modelos de dominio.
+## Fase 1: Andamiaje Frontend y Desarrollo Guiado por Mocks
+*   **Estado:** `COMPLETADO (con desviaciones)`
+*   **Deuda Técnica Identificada:**
+    - Se omitió el Mock Server (MSW).
+    - No se implementó un gestor de estado global (Zustand).
+    - **Acción Requerida:** Mitigar con pruebas de integración robustas en Fase 3 y considerar refactorización si la complejidad aumenta.
 
 ---
 
-## Resumen de Fases
+## Fase 2: Implementación de Vistas con Paridad de Funciones
+*   **Estado:** `COMPLETADO`
+*   **Deuda Técnica Identificada:**
+    - [ ] **(Pendiente)** Escribir pruebas unitarias y de componentes para hooks y componentes con lógica de negocio.
+    - **Acción Requerida:** Priorizar la creación de tests para los flujos críticos (crear orden, aprobar oportunidad).
 
-- [ ] **Fase 0: Fundación del Backend**
-    - **Estado:** `PENDIENTE`
-    - **Objetivo:** Aumentar la cobertura de pruebas del backend a >90% para componentes críticos.
+---
 
-- [ ] **Fase 1: Transición a una UI Web**
-    - **Estado:** `PENDIENTE`
-    - **Objetivo:** Crear un PoC funcional con React, Magic UI y Highcharts, conectado al backend.
+## Fase 3: Integración con el Backend Real
+*   **Estado:** `PENDIENTE`
 
-- [ ] **Fase 2: Implementación y Migración de Vistas**
-    - **Estado:** `PENDIENTE`
-    - **Objetivo:** Reconstruir todas las funcionalidades de la UI en la nueva plataforma web.
+- [ ] **1. El "Interruptor" (The Switch)**
+- [ ] **2. Pruebas de Integración Manual y Depuración**
 
-- [ ] **Fase 3: Pruebas de Sistema y Despliegue**
-    - **Estado:** `PENDIENTE`
-    - **Objetivo:** Validar el sistema E2E y simplificar la estrategia de despliegue.
+---
+
+## Fase 4: Pruebas E2E, Despliegue y Limpieza
+*   **Estado:** `PENDIENTE`
+
+- [ ] **1. Pruebas de Extremo a Extremo (E2E) con Playwright**
+- [ ] **2. Estrategia de Despliegue Simplificada (Local-First)**
+- [ ] **3. Tierra Quemada (Scorched Earth)**

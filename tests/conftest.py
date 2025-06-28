@@ -2,6 +2,7 @@ import sys
 import os
 import pytest
 import subprocess
+os.environ["TESTING"] = "True"
 import time
 import requests
 import asyncio
@@ -35,6 +36,17 @@ from src.core.domain_models.user_configuration_models import AIStrategyConfigura
 from src.services.ai_orchestrator_service import AIOrchestrator
 from src.adapters.persistence_service import SupabasePersistenceService
 from src.services.market_data_service import MarketDataService
+from src.services.config_service import ConfigurationService
+from src.services.credential_service import CredentialService
+from src.services.trading_engine_service import TradingEngine
+from src.services.unified_order_execution_service import UnifiedOrderExecutionService
+from src.services.portfolio_service import PortfolioService
+from src.services.performance_service import PerformanceService
+from src.services.trading_report_service import TradingReportService
+from src.services.notification_service import NotificationService
+from src.services.strategy_service import StrategyService
+from src.adapters.binance_adapter import BinanceAdapter
+from src.adapters.redis_cache import RedisCache
 
 # Define the path to the test database
 TEST_DB_PATH = pathlib.Path(__file__).parent.parent / "ultibot_local.db"
@@ -211,8 +223,6 @@ def app_settings_fixture() -> AppSettings:
     Provides application settings. It now correctly uses the get_app_settings
     function which handles loading from the correct .env file and caching.
     """
-    import os
-    os.environ["TESTING"] = "True"
     return get_app_settings()
 
 @pytest.fixture(scope="session")
@@ -223,23 +233,12 @@ def user_id(app_settings_fixture: AppSettings) -> UUID:
     return app_settings_fixture.FIXED_USER_ID
 
 @pytest.fixture
-def mock_persistence_service() -> MagicMock:
+def mock_persistence_service() -> AsyncMock:
     """
-    Provides a mock for PersistenceService, explicitly mocking only the methods
-    that are used in the tests to avoid unexpected behavior from AsyncMock.
+    Provides a fully asynchronous mock for SupabasePersistenceService.
+    This ensures all methods are awaitable by default.
     """
-    mock = MagicMock() # Use MagicMock instead of AsyncMock(spec=...)
-    
-    # Explicitly mock async methods
-    mock.get_opportunity_by_id = AsyncMock()
-    mock.get_user_configuration = AsyncMock()
-    mock.upsert_user_configuration = AsyncMock()
-    mock.upsert_trade = AsyncMock()
-    mock.get_closed_trades = AsyncMock()
-    mock.get_trades_with_filters = AsyncMock()
-    mock.update_opportunity_status = AsyncMock()
-
-    return mock
+    return AsyncMock(spec=SupabasePersistenceService)
 
 @pytest.fixture(scope="session")
 def event_loop():
@@ -253,19 +252,29 @@ def event_loop():
     loop.close()
 
 @pytest.fixture
-def mock_dependency_container() -> AsyncMock:
+def mock_dependency_container() -> MagicMock:
     """
-    Provides a fully mocked DependencyContainer with mocked service attributes.
+    Provides a fully mocked DependencyContainer with all service attributes.
+    Using MagicMock as the base allows for flexible attribute assignment,
+    while spec ensures it conforms to the DependencyContainer's interface.
     """
-    container_mock = AsyncMock(spec=DependencyContainer)
-    
-    # Mock the service attributes within the container to ensure they exist
+    container_mock = MagicMock(spec=DependencyContainer)
+
+    # Mock all service attributes to prevent AttributeError in integration tests
     container_mock.persistence_service = AsyncMock(spec=SupabasePersistenceService)
-    container_mock.config_service = AsyncMock()
-    container_mock.trading_engine_service = AsyncMock()
-    container_mock.unified_order_execution_service = AsyncMock()
+    container_mock.config_service = AsyncMock(spec=ConfigurationService)
+    container_mock.credential_service = AsyncMock(spec=CredentialService)
+    container_mock.trading_engine_service = AsyncMock(spec=TradingEngine)
+    container_mock.unified_order_execution_service = AsyncMock(spec=UnifiedOrderExecutionService)
     container_mock.market_data_service = AsyncMock(spec=MarketDataService)
     container_mock.ai_orchestrator = AsyncMock(spec=AIOrchestrator)
+    container_mock.portfolio_service = AsyncMock(spec=PortfolioService)
+    container_mock.performance_service = AsyncMock(spec=PerformanceService)
+    container_mock.report_service = AsyncMock(spec=TradingReportService)
+    container_mock.notification_service = AsyncMock(spec=NotificationService)
+    container_mock.strategy_service = AsyncMock(spec=StrategyService)
+    container_mock.binance_adapter = AsyncMock(spec=BinanceAdapter)
+    container_mock.cache = AsyncMock(spec=RedisCache)
     
     return container_mock
 
@@ -275,7 +284,6 @@ async def client(mock_dependency_container: AsyncMock) -> AsyncGenerator[Tuple[A
     Test client fixture that injects a mocked dependency container for each test.
     This ensures complete isolation from real services during integration tests.
     """
-    os.environ["TESTING"] = "True"
     app = create_app()
 
     async with app.router.lifespan_context(app):
@@ -359,3 +367,40 @@ def sample_ai_config() -> AIStrategyConfiguration:
         confidence_thresholds=ConfidenceThresholds(paper_trading=0.7, real_trading=0.85),
         max_context_window_tokens=None
     )
+
+@pytest.fixture
+def trading_engine_fixture() -> TradingEngine:
+    """
+    Provides a REAL TradingEngine instance with mocked dependencies for integration tests.
+    This allows testing the internal logic of TradingEngine while controlling its external interactions.
+    """
+    # Mock all service dependencies with AsyncMocks
+    persistence_service = AsyncMock(spec=SupabasePersistenceService)
+    market_data_service = AsyncMock(spec=MarketDataService)
+    unified_order_execution_service = AsyncMock(spec=UnifiedOrderExecutionService)
+    credential_service = AsyncMock(spec=CredentialService)
+    notification_service = AsyncMock(spec=NotificationService)
+    strategy_service = AsyncMock(spec=StrategyService)
+    configuration_service = AsyncMock(spec=ConfigurationService)
+    portfolio_service = AsyncMock(spec=PortfolioService)
+    ai_orchestrator = AsyncMock(spec=AIOrchestrator)
+
+    # Create a real instance of the TradingEngine with mocked dependencies
+    engine = TradingEngine(
+        persistence_service=persistence_service,
+        market_data_service=market_data_service,
+        unified_order_execution_service=unified_order_execution_service,
+        credential_service=credential_service,
+        notification_service=notification_service,
+        strategy_service=strategy_service,
+        configuration_service=configuration_service,
+        portfolio_service=portfolio_service,
+        ai_orchestrator=ai_orchestrator,
+    )
+
+    # Spy on methods that we might want to assert calls to, without replacing their logic.
+    # We use patch.object on the *instance* to spy on them.
+    # Note: This is better done inside the test itself using `with patch.object(...)`
+    # to avoid test-to-test contamination. We leave this fixture clean.
+
+    return engine

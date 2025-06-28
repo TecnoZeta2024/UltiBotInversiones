@@ -19,7 +19,7 @@
 ## Fase 0: Fortificación del Backend (Pre-requisito Innegociable)
 
 *   **Objetivo:** Asegurar que el backend sea una base estable y confiable antes de construir la nueva UI sobre él. Esta fase aborda la deuda técnica crítica identificada en la auditoría.
-*   **Estado:** `EN PROGRESO`
+*   **Estado:** `COMPLETADO`
 
 ### Tareas:
 
@@ -33,19 +33,18 @@
     - [x] 2.2. Validar la lógica de entrada, salida y gestión de riesgo de forma aislada.
     - [x] **Criterio de Éxito:** Cobertura de pruebas > 90% para los archivos de estrategias.
 
-- [ ] **3. Expandir Pruebas de Integración de API**
-    - [ ] 3.1. Ampliar la cobertura de `tests/integration/api/v1/endpoints` para todos los endpoints definidos en `API_CONTRACT_MAP.md`.
-    - [ ] 3.2. Priorizar endpoints de `trading`, `market_data`, `opportunities`, y `portfolio`.
-    - [ ] 3.3. **(En progreso)** Crear y validar pruebas para los endpoints de `config` (`test_config_endpoints.py`).
-    - [ ] **Criterio de Éxito:** Todos los endpoints principales de la API tienen al menos una prueba de integración que valida su funcionalidad básica (happy path y error handling).
+- [x] **3. Expandir Pruebas de Integración de API**
+    - [x] 3.1. Ampliar la cobertura de `tests/integration/api/v1/endpoints` para todos los endpoints definidos en `API_CONTRACT_MAP.md`.
+    - [x] 3.2. Priorizar endpoints de `trading`, `market_data`, `opportunities`, y `portfolio`.
+    - [x] 3.3. **(Completado)** Crear y validar pruebas para los endpoints de `config` (`test_config_endpoints.py`).
+    - [x] **Criterio de Éxito:** Todos los endpoints principales de la API tienen al menos una prueba de integración que valida su funcionalidad básica (happy path y error handling).
 
 ---
 
 ## Fase 1: Andamiaje Frontend y Desarrollo Guiado por Mocks
 
 *   **Objetivo:** Crear un prototipo funcional y aislado de la nueva UI, validando las tecnologías seleccionadas y estableciendo un entorno de desarrollo robusto basado en un backend simulado.
-*   **Estado:** `COMPLETADO (con desviaciones)`
-*   **Nota del Agente:** El desarrollo avanzó directamente a la implementación de componentes y vistas, omitiendo la capa de Mocking (MSW) y el gestor de estado centralizado (Zustand) planeados. El desarrollo se realizó probablemente contra el backend real.
+*   **Estado:** `EN PROGRESO`
 
 ### Tareas:
 

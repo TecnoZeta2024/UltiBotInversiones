@@ -1,118 +1,66 @@
-# BASE DE CONOCIMIENTO DEL PROYECTO: UltiBotInversiones
+# =================================================================
+# == KNOWLEDGE BASE - UltiBotInversiones
+# =================================================================
+# Este es un repositorio de patrones aprendidos, soluciones comunes y
+# mejores prácticas específicas del proyecto. Es inmutable y de solo-añadir (append-only).
+# -----------------------------------------------------------------
 
-Este documento proporciona un resumen conciso y altamente informativo de los aspectos clave del proyecto UltiBotInversiones. Sirve como una referencia rápida para todos los agentes y desarrolladores, asegurando una comprensión compartida de la arquitectura, los modelos de datos y las directrices operativas.
+### KB-0001: Solución a la Amnesia de Contexto entre Sesiones
+- **Problema:** Los agentes pierden el contexto entre ejecuciones de `new_task`, causando retrabajo y bucles de depuración.
+- **Solución:** Implementar el **Sistema de Memoria y Seguimiento Centralizado (SMYC)** definido en `workspace.rules.md`.
+- **Componentes Clave:**
+    1.  `memory/PROJECT_LOG.md`: Registro inmutable de acciones.
+    2.  `memory/TASKLIST.md`: Estado actual de las tareas.
+    3.  `memory/KNOWLEDGE_BASE.md`: Base de conocimiento persistente.
+- **Protocolo de Traspaso:** Utilizar la **Plantilla de Paquete de Traspaso de Sesión (PCC)** al invocar `new_task` para asegurar la continuidad del contexto.
 
----
+### KB-0002: Resolución de Errores de Configuración en Tests (pydantic.ValidationError)
+- **Problema:** Los tests fallan con `pydantic.ValidationError` porque `AppSettings` no puede encontrar variables de entorno requeridas (ej. `SUPABASE_URL`).
+- **Causa Raíz:** El entorno de prueba (`TESTING=True`) no se activa globalmente antes de que las fixtures que dependen de la configuración (como `ai_orchestrator_fixture`) sean inicializadas.
+- **Solución:** Establecer `os.environ["TESTING"] = "True"` al principio del archivo `tests/conftest.py`, antes de cualquier importación o definición de fixture. Esto garantiza que `get_app_settings()` siempre cargue la configuración desde `.env.test` para toda la sesión de pytest.
 
-## 1. Visión General y Arquitectura
+### KB-0003: Resolución de `AssertionError` con Mocks de `AsyncMock`
+- **Problema:** Los tests fallan con `AssertionError` al comparar un atributo de un objeto mockeado (ej. `trade.side`) con un valor estático (ej. `"buy"`), porque el atributo en sí mismo es otro `AsyncMock`.
+- **Causa Raíz:** El método mockeado (ej. `trading_engine_fixture.create_trade_from_decision`) no tiene configurado un `return_value`. Por defecto, devuelve un nuevo `AsyncMock`.
+- **Solución:** Configurar explícitamente el `return_value` del método mockeado para que devuelva un objeto (`MagicMock`) con los atributos y valores esperados por las aserciones del test.
+- **Ejemplo:**
+  ```python
+  # En el test
+  mock_buy_trade = MagicMock(spec=Trade)
+  mock_buy_trade.side = "buy"
+  trading_engine_fixture.create_trade_from_decision.return_value = mock_buy_trade
+  
+  trade = await trading_engine_fixture.create_trade_from_decision(...)
+  
+  assert trade.side == "buy" # Pasa porque trade.side es "buy"
 
-UltiBotInversiones es una plataforma de trading personal avanzada, implementada como un **Monolito Modular** dentro de un **Monorepo**. Su objetivo es la ejecución de estrategias de trading de baja latencia, potenciadas por **Inteligencia Artificial (Gemini)** y orquestadas por **LangChain (Python)**.
+### KB-0004: Mocking de Métodos en Instancias Reales vs. Mocks Completos
+- **Problema:** Un test falla con `AttributeError: 'method' object has no attribute 'return_value'` o `AttributeError: 'function' object has no attribute 'assert_called_once'`.
+- **Causa Raíz:** El test intenta tratar un método de una instancia de clase real como si fuera un `MagicMock` o `AsyncMock`. Esto ocurre comúnmente después de refactorizar una fixture para que devuelva una instancia real del servicio en lugar de un mock completo (ej. `trading_engine_fixture`).
+- **Solución:** En lugar de asignar `return_value` directamente, se debe usar `unittest.mock.patch.object` para mockear (o espiar) el método específico dentro del contexto del test.
+- **Ejemplo:**
+  ```python
+  # Incorrecto (cuando trading_engine_fixture es una instancia real)
+  # trading_engine_fixture.create_trade_from_decision.return_value = my_mock_trade
 
-### 1.1. Arquitectura del Sistema Principal (`Architecture.md`)
-*   **Estilo Arquitectónico:** Monolito Modular (v1.0), con visión a Arquitectura Orientada a Eventos y Microservicios.
-*   **Estructura del Repositorio:** Monorepo.
-*   **Flujo de Datos:** Unidireccional (captura de datos -> análisis IA -> ejecución -> notificación).
-*   **Patrones Clave:** Agente-Herramientas (LangChain), Procesamiento Asíncrono, Diseño Orientado al Dominio (DDD).
-*   **Componentes Principales:** UI (PyQt5), Núcleo de Trading, Orquestador IA, Gestión de Datos (Supabase/PostgreSQL), Sistema de Notificaciones.
-*   **Servicios Externos:** Binance API (datos y ejecución), Telegram Bot API (notificaciones), Mobula API (verificación de datos), Google Gemini API (motor IA).
+  # Correcto
+  with patch.object(trading_engine_fixture, 'create_trade_from_decision', new_callable=AsyncMock) as mock_create_trade:
+      mock_create_trade.return_value = my_mock_trade
+      
+      await trading_engine_fixture.create_trade_from_decision(...)
+      
+      mock_create_trade.assert_called_once()
 
-### 1.2. Arquitectura del Sistema de Agentes de IA (`agent-system-architecture.md`)
-El sistema de agentes se basa en `bmad-agent` y orquesta tareas complejas.
-*   **Orquestador (Orchestrator):** Núcleo del sistema, gestiona el estado, procesa comandos y dirige el flujo de agentes.
-*   **Cargadores:** Config Loader, Persona Loader.
-*   **Ejecutor de Tareas (Task Executor):** Localiza y ejecuta tareas, resuelve rutas a recursos.
-*   **Interfaz del Espacio de Trabajo (Workspace Interface):** Abstracción para interactuar con el proyecto (leer/escribir archivos, ejecutar comandos).
-
----
-
-## 2. Modelos de Datos Clave (`data-models.md`)
-
-Las entidades principales del sistema, persistidas en PostgreSQL (vía Supabase), incluyen:
-
-*   **`UserConfiguration`**: Preferencias del usuario (notificaciones, trading, IA, UI).
-*   **`APICredential`**: Almacenamiento seguro y encriptado de claves API externas (Binance, Telegram, Gemini, Mobula).
-*   **`Notification`**: Registros de notificaciones del sistema (eventos, canales, prioridad).
-*   **`Trade`**: Detalles de operaciones de trading (paper, real, backtest), incluyendo órdenes de entrada/salida, P&L, y contexto de mercado.
-*   **`Opportunity`**: Oportunidades de trading detectadas, con análisis de IA, estado, y feedback del usuario.
-*   **`TradingStrategyConfig`**: Configuraciones modulares de estrategias de trading (Scalping, Day Trading, Arbitraje Simple, etc.) con parámetros específicos y reglas de aplicabilidad.
-*   **`PortfolioSnapshot`**: Instantáneas del estado del portafolio (valor total, balances, activos, P&L) para modos paper/real/backtest.
-
----
-
-## 3. Flujos de Trabajo y Secuencias (`sequence-diagrams.md`)
-
-El flujo de trabajo principal del sistema sigue un ciclo de 5 fases:
-
-1.  **Detección y Registro de Oportunidad:** Eventos de mercado (Binance WS) disparan la evaluación por el `TradingEngine`, registrando oportunidades en `DataPersistenceService`.
-2.  **Análisis y Enriquecimiento por IA:** `AI_Orchestrator` (LangChain + Gemini) analiza la oportunidad, utilizando herramientas (Mobula, Binance REST) para enriquecer datos. El resultado (confianza, parámetros) se actualiza en la oportunidad.
-3.  **Presentación y Confirmación:** `TradingEngine` presenta la oportunidad a la UI (si requiere confirmación del usuario para operaciones reales).
-4.  **Ejecución de Orden Real:** Tras confirmación (si aplica), `TradingEngine` usa `CredentialManager` y `BinanceAPI` para colocar la orden real, registrando el `Trade`.
-5.  **Gestión Post-Ejecución y Notificación:** `TradingEngine` notifica a `NotificationService`, que envía alertas a la UI y Telegram.
-
----
-
-## 4. Guías Operativas Esenciales
-
-### 4.1. Manejo de Errores (`operational-guidelines.md`)
-*   **Enfoque General:** Excepciones de Python, manejadores de FastAPI.
-*   **Logging:** `logging` estándar de Python (DEBUG, INFO, WARNING, ERROR, CRITICAL).
-*   **Patrones Específicos:** Captura de excepciones `httpx` (timeouts, reintentos), excepciones de lógica de negocio, transacciones de DB.
-
-### 4.2. Estándares de Codificación (`operational-guidelines.md`)
-*   **Runtime:** Python `3.11.9`.
-*   **Linter/Formateador:** `Ruff` (principal), con `pre-commit hooks` obligatorios.
-*   **Convenciones de Nomenclatura:** `snake_case` para variables/funciones, `PascalCase` para clases, `UPPER_SNAKE_CASE` para constantes.
-*   **Operaciones Asíncronas:** Uso extensivo de `async`/`await` para I/O.
-*   **Seguridad de Tipos:** `Type Hints` obligatorios, `Pydantic Models` para validación, análisis estático con `Ruff` (y `MyPy` si es necesario).
-*   **Comentarios y Documentación:** Docstrings en estilo Google Style para funciones/clases públicas.
-
-### 4.3. Estrategia de Pruebas (`operational-guidelines.md`)
-*   **Herramientas:** `pytest` (principal), `pytest-asyncio`, `unittest.mock`.
-*   **Tipos de Pruebas:**
-    *   **Unitarias:** Aislamadas, cubren lógica de negocio. Ubicación: `tests/unit/`.
-    *   **Integración:** Interacción entre módulos, con mocks para externos. Ubicación: `tests/integration/`.
-    *   **E2E (v1.0):** Principalmente pruebas manuales para UI; integración de alto nivel para flujos de backend.
-*   **Cobertura:** Cobertura razonable de lógica crítica.
-
-### 4.4. Mejores Prácticas de Seguridad (`operational-guidelines.md`)
-*   **Validación de Entrada:** Pydantic para APIs, validación en backend.
-*   **Gestión de Secretos:** Claves API encriptadas en DB (`APICredential`), desencriptación solo en uso. `APP_ENCRYPTION_KEY` crucial.
-*   **Seguridad de Dependencias:** `Poetry` para gestión, revisión periódica de vulnerabilidades.
-*   **Principio de Mínimo Privilegio:** Permisos mínimos para API keys.
-*   **Manejo de Errores:** No exponer detalles sensibles en UI/logs.
-
-### 4.5. Cómo Añadir Nuevas Estrategias (`adding-new-strategies-guide.md`)
-El sistema es modular para añadir nuevas estrategias sin modificar código existente:
-1.  Definir el Modelo de Parámetros (clase Pydantic).
-2.  Actualizar el Enum `BaseStrategyType`.
-3.  Actualizar el `Union Type` de `StrategySpecificParameters`.
-4.  Añadir Validación en `TradingStrategyConfig`.
-5.  Actualizar `StrategyService` para la conversión de parámetros.
-
----
-
-## 5. Estructura del Proyecto (`project-structure.md`)
-
-La estructura del monorepo es la siguiente:
-
-```
-{project-root}/
-├── .github/                    # Workflows de CI/CD
-├── .vscode/                    # Configuración VSCode
-├── docs/                       # Documentación del proyecto
-├── infra/                      # Configuración de infraestructura (Docker)
-├── scripts/                    # Scripts de utilidad
-├── src/                        # Código fuente principal
-│   ├── ultibot_backend/        # Backend (FastAPI)
-│   │   ├── api/                # Endpoints
-│   │   ├── core/               # Lógica de negocio central
-│   │   ├── services/           # Implementaciones de servicios
-│   │   └── adapters/           # Adaptadores para servicios externos
-│   ├── ultibot_ui/             # Interfaz de Usuario (PyQt5)
-│   └── shared/                 # Código compartido
-├── tests/                      # Pruebas automatizadas
-├── .env.example                # Ejemplo de variables de entorno
-├── .gitignore                  # Archivos ignorados por Git
-├── Dockerfile                  # Dockerfile del backend
-├── pyproject.toml              # Definición del proyecto (Poetry)
-└── README.md                   # Visión general del proyecto
+### KB-0005: Resolución de Errores de Colección de Pytest (`fixture not found` y `NameError`)
+- **Problema:** La suite de `pytest` falla antes de ejecutar cualquier test, durante la fase de "colección", con errores como `fixture '...' not found` o `NameError: name '...' is not defined`.
+- **Causa Raíz:**
+    1.  **`fixture not found`**: El nombre de una fixture solicitada en la firma de un test es incorrecto, o la fixture no está definida en un `conftest.py` accesible. A menudo, se solicita un mock de servicio específico (ej. `mock_strategy_service_integration`) cuando se debería usar un contenedor de dependencias mockeado más general (ej. `mock_dependency_container`).
+    2.  **`NameError`**: Un tipo o clase (ej. `MagicMock`) se utiliza en la firma de un test sin haber sido importado previamente en el archivo.
+- **Solución:**
+    1.  **Para `fixture not found`**:
+        -   Revisar `tests/conftest.py` para identificar la `fixture` correcta que provee las dependencias mockeadas (ej. `mock_dependency_container`).
+        -   Corregir la firma del test para usar la `fixture` correcta.
+        -   Acceder al mock específico a través del contenedor (ej. `mock_service = mock_dependency_container.service_name`).
+    2.  **Para `NameError`**:
+        -   Añadir la importación necesaria en la parte superior del archivo de prueba (ej. `from unittest.mock import MagicMock`).
+- **Protocolo de Debugging:** Ver la sección "Debugging de Errores de Colección de Pytest" en `.clinerules/debugging-agent-protocol.md`.

@@ -1,42 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { File, Folder, Tree, type TreeViewElement } from "@/components/magicui/file-tree";
 import { Card, CardContent } from "@/components/base/Card";
-
-// Mock data for FileTree - replace with actual data from the backend
-const STRATEGIES_FILES: TreeViewElement[] = [
-  {
-    id: "1",
-    name: "strategies",
-    children: [
-      {
-        id: "2",
-        name: "long_term",
-        children: [
-          { id: "3", name: "mean_reversion.py" },
-          { id: "4", name: "momentum_dca.py" },
-        ],
-      },
-      {
-        id: "5",
-        name: "short_term",
-        children: [
-          { id: "6", name: "scalping_rsi.py" },
-          { id: "7", name: "arbitrage_bot.py" },
-        ],
-      },
-       { id: "8", name: "custom_strategy.py" },
-    ],
-  },
-];
-
-// Mock content for files - replace with actual file content fetching
-const fileContents: { [key: string]: string } = {
-    "3": "print('Mean Reversion Strategy')",
-    "4": "print('Momentum DCA Strategy')",
-    "6": "print('Scalping RSI Strategy')",
-    "7": "print('Arbitrage Bot Strategy')",
-    "8": "print('Custom Strategy')",
-};
+import apiClient from '@/lib/apiClient'; // Import the API client
 
 const renderTree = (elements: TreeViewElement[], handleSelect: (id: string) => void): React.ReactNode => {
     return elements.map((element) => {
@@ -56,12 +21,48 @@ const renderTree = (elements: TreeViewElement[], handleSelect: (id: string) => v
 };
 
 export default function StrategiesView() {
-  const [selectedFile, setSelectedFile] = useState<string | undefined>(undefined);
+  const [strategies, setStrategies] = useState<TreeViewElement[]>([]);
+  const [selectedFile, setSelectedFile] = useState<{id: string} | undefined>(undefined);
   const [activeFileContent, setActiveFileContent] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSelect = (id: string) => {
-    setSelectedFile(id);
-    setActiveFileContent(fileContents[id] || `Content for ${id} not found.`);
+  useEffect(() => {
+    const fetchStrategies = async () => {
+      try {
+        setIsLoading(true);
+        // NOTE: This endpoint does not exist yet. It needs to be created in the backend.
+        const response = await apiClient.get('/strategies/files');
+        setStrategies(response.data);
+        setError(null);
+      } catch (err) {
+        setError("Failed to fetch strategies. Please make sure the backend is running.");
+        console.error(err);
+        // Fallback to mock data on error
+        setStrategies([{ id: "error", name: "Error loading strategies" }]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStrategies();
+  }, []);
+
+  const handleSelect = async (id: string) => {
+    // id is the full path of the file, which is what the backend needs
+    setSelectedFile({id});
+    try {
+        // The backend endpoint is /strategies/files/{file_path:path}
+        // We need to extract the relative path from the full id.
+        const basePath = "src/ultibot_backend/strategies/";
+        const relativePath = id.startsWith(basePath) ? id.substring(basePath.length) : id;
+
+        const response = await apiClient.get(`/strategies/files/${relativePath}`);
+        setActiveFileContent(response.data.content);
+    } catch (err) {
+        setActiveFileContent(`Could not load content for file: ${id}.`);
+        console.error(err);
+    }
   };
 
   return (
@@ -70,13 +71,19 @@ export default function StrategiesView() {
         <h2 className="text-xl font-semibold mb-2">Strategy Files</h2>
         <Card className="h-full">
           <CardContent className="p-2">
-            <Tree
-              className="overflow-hidden rounded-md bg-background"
-              initialSelectedId={selectedFile}
-              elements={STRATEGIES_FILES}
-            >
-              {renderTree(STRATEGIES_FILES, handleSelect)}
-            </Tree>
+            {isLoading ? (
+              <p>Loading strategies...</p>
+            ) : error ? (
+              <p className="text-red-500">{error}</p>
+            ) : (
+              <Tree
+                className="overflow-hidden rounded-md bg-background"
+                initialSelectedId={selectedFile?.id}
+                elements={strategies}
+              >
+                {renderTree(strategies, handleSelect)}
+              </Tree>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -89,6 +96,7 @@ export default function StrategiesView() {
                     value={activeFileContent}
                     onChange={(e) => setActiveFileContent(e.target.value)}
                     placeholder="Select a file to view its content..."
+                    readOnly={!selectedFile} // Make it read-only until a file is selected
                 />
             </CardContent>
         </Card>
