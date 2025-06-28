@@ -1,14 +1,28 @@
 import sys
 import os
 import pytest
+import subprocess
+import time
+import requests
+import asyncio
+import pathlib
+import shutil
 from uuid import UUID, uuid4
 from unittest.mock import MagicMock, AsyncMock
 from datetime import datetime, timezone
 from decimal import Decimal
+import threading
+from typing import Tuple, AsyncGenerator
 
-# Add the project root to the Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import pytest_asyncio
+from httpx import AsyncClient, ASGITransport
+from fastapi import FastAPI
 
+# Add the src directory to the Python path to resolve imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
+
+from src.main import create_app
+from src.dependencies import DependencyContainer
 from src.app_config import AppSettings, get_app_settings
 from src.core.domain_models.opportunity_models import (
     Opportunity, 
@@ -21,6 +35,175 @@ from src.core.domain_models.user_configuration_models import AIStrategyConfigura
 from src.services.ai_orchestrator_service import AIOrchestrator
 from src.adapters.persistence_service import SupabasePersistenceService
 from src.services.market_data_service import MarketDataService
+
+# Define the path to the test database
+TEST_DB_PATH = pathlib.Path(__file__).parent.parent / "ultibot_local.db"
+
+def read_stream(stream, buffer):
+    for line in iter(stream.readline, ''):
+        buffer.append(line)
+    stream.close()
+
+@pytest.fixture(scope="function", autouse=True)
+def cleanup_test_db():
+    """
+    Ensures the test database is clean before and after each test function.
+    This fixture runs automatically for each test.
+    """
+    print(f"[{datetime.now()}] Cleaning up test database: {TEST_DB_PATH}")
+    if TEST_DB_PATH.exists():
+        try:
+            os.remove(TEST_DB_PATH)
+            print(f"[{datetime.now()}] Successfully removed test database: {TEST_DB_PATH}")
+        except OSError as e:
+            print(f"[{datetime.now()}] Error removing test database {TEST_DB_PATH}: {e}")
+            # Attempt to force delete if possible (Windows specific)
+            if os.name == 'nt': # For Windows
+                try:
+                    subprocess.run(["taskkill", "/F", "/IM", "python.exe"], check=False, capture_output=True)
+                    subprocess.run(["taskkill", "/F", "/IM", "node.exe"], check=False, capture_output=True)
+                    time.sleep(1) # Give time for processes to terminate
+                    if TEST_DB_PATH.exists():
+                        os.remove(TEST_DB_PATH)
+                        print(f"[{datetime.now()}] Successfully force-removed test database after taskkill: {TEST_DB_PATH}")
+                except Exception as force_e:
+                    print(f"[{datetime.now()}] Failed to force-remove database: {force_e}")
+            pytest.fail(f"Failed to clean up test database: {TEST_DB_PATH}. It might be locked. Error: {e}")
+    yield
+    print(f"[{datetime.now()}] Final cleanup of test database: {TEST_DB_PATH}")
+    if TEST_DB_PATH.exists():
+        try:
+            os.remove(TEST_DB_PATH)
+            print(f"[{datetime.now()}] Successfully removed test database during final cleanup: {TEST_DB_PATH}")
+        except OSError as e:
+            print(f"[{datetime.now()}] Error during final cleanup of test database {TEST_DB_PATH}: {e}")
+            # Attempt to force delete if possible (Windows specific)
+            if os.name == 'nt': # For Windows
+                try:
+                    subprocess.run(["taskkill", "/F", "/IM", "python.exe"], check=False, capture_output=True)
+                    subprocess.run(["taskkill", "/F", "/IM", "node.exe"], check=False, capture_output=True)
+                    time.sleep(1) # Give time for processes to terminate
+                    if TEST_DB_PATH.exists():
+                        os.remove(TEST_DB_PATH)
+                        print(f"[{datetime.now()}] Successfully force-removed test database during final cleanup after taskkill: {TEST_DB_PATH}")
+                except Exception as force_e:
+                    print(f"[{datetime.now()}] Failed to force-remove database during final cleanup: {force_e}")
+            pytest.fail(f"Failed final cleanup of test database: {TEST_DB_PATH}. It might be locked. Error: {e}")
+
+
+@pytest.fixture(scope="session")
+def live_server():
+    """
+    Fixture to run the FastAPI application in a separate process for e2e tests.
+    """
+    env = os.environ.copy()
+    env["TESTING"] = "True"
+    # Ensure the backend uses the test database
+    env["DATABASE_URL"] = f"sqlite+aiosqlite:///{TEST_DB_PATH}"
+
+    print(f"[{datetime.now()}] Starting backend server...")
+    process = subprocess.Popen(
+        ["poetry", "run", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8000", "--app-dir", "src/"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=env
+    )
+    
+    stdout_buffer = []
+    stderr_buffer = []
+    stdout_thread = threading.Thread(target=read_stream, args=(process.stdout, stdout_buffer))
+    stderr_thread = threading.Thread(target=read_stream, args=(process.stderr, stderr_buffer))
+    stdout_thread.start()
+    stderr_thread.start()
+
+    timeout = time.time() + 30
+    base_url = "http://127.0.0.1:8000"
+    while True:
+        try:
+            response = requests.get(f"{base_url}/docs")
+            if response.status_code == 200:
+                print(f"[{datetime.now()}] Backend server started successfully at {base_url}")
+                break
+        except requests.ConnectionError:
+            if time.time() > timeout:
+                print(f"[{datetime.now()}] Backend stdout: {''.join(stdout_buffer)}")
+                print(f"[{datetime.now()}] Backend stderr: {''.join(stderr_buffer)}")
+                pytest.fail(f"Server failed to start within 30 seconds.")
+            time.sleep(0.5)
+
+    yield base_url
+    print(f"[{datetime.now()}] Backend server yielded: {base_url}")
+    
+    process.terminate()
+    time.sleep(1) # Give time for process to terminate
+    process.wait()
+    stdout_thread.join(timeout=5)
+    stderr_thread.join(timeout=5)
+    print(f"[{datetime.now()}] Backend server terminated.")
+    print(f"[{datetime.now()}] Backend stdout on exit: {''.join(stdout_buffer)}")
+    print(f"[{datetime.now()}] Backend stderr on exit: {''.join(stderr_buffer)}")
+
+
+@pytest.fixture(scope="session")
+def frontend_server():
+    """
+    Fixture to run the frontend development server in a separate process for e2e tests.
+    """
+    frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../src/ultibot_frontend'))
+    
+    print(f"[{datetime.now()}] Starting frontend server from {frontend_path}...")
+    process = subprocess.Popen(
+        ["npm", "run", "dev"],
+        cwd=frontend_path,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        shell=True
+    )
+
+    stdout_buffer = []
+    stderr_buffer = []
+    stdout_thread = threading.Thread(target=read_stream, args=(process.stdout, stdout_buffer))
+    stderr_thread = threading.Thread(target=read_stream, args=(process.stderr, stderr_buffer))
+    stdout_thread.start()
+    stderr_thread.start()
+
+    timeout = time.time() + 60
+    frontend_url = "http://localhost:5173"
+    while True:
+        try:
+            response = requests.get(frontend_url)
+            if response.status_code == 200:
+                print(f"[{datetime.now()}] Frontend server started successfully at {frontend_url}")
+                break
+        except requests.ConnectionError:
+            if time.time() > timeout:
+                print(f"[{datetime.now()}] Frontend stdout: {''.join(stdout_buffer)}")
+                print(f"[{datetime.now()}] Frontend stderr: {''.join(stderr_buffer)}")
+                pytest.fail(f"Frontend server failed to start within 60 seconds.")
+            time.sleep(1)
+
+    yield frontend_url
+    print(f"[{datetime.now()}] Frontend server yielded: {frontend_url}")
+    
+    process.terminate()
+    time.sleep(1) # Give time for process to terminate
+    process.wait()
+    stdout_thread.join(timeout=5)
+    stderr_thread.join(timeout=5)
+    print(f"[{datetime.now()}] Frontend server terminated.")
+    print(f"[{datetime.now()}] Frontend stdout on exit: {''.join(stdout_buffer)}")
+    print(f"[{datetime.now()}] Frontend stderr on exit: {''.join(stderr_buffer)}")
+
+@pytest.fixture(scope="session")
+async def e2e_setup(live_server, frontend_server):
+    """
+    Combines backend and frontend server fixtures for E2E test setup.
+    """
+    print(f"[{datetime.now()}] E2E setup complete. Both servers are running.")
+    yield
+    print(f"[{datetime.now()}] E2E teardown complete.")
 
 @pytest.fixture(scope="session")
 def app_settings_fixture() -> AppSettings:
@@ -42,49 +225,68 @@ def user_id(app_settings_fixture: AppSettings) -> UUID:
 @pytest.fixture
 def mock_persistence_service() -> MagicMock:
     """
-    Provides a more robust mock for SupabasePersistenceService, simulating
-    the async session and SQLAlchemy's Result object structure to prevent
-    'coroutine' object has no attribute '_mapping' errors.
+    Provides a mock for PersistenceService, explicitly mocking only the methods
+    that are used in the tests to avoid unexpected behavior from AsyncMock.
     """
-    mock = AsyncMock(spec=SupabasePersistenceService)
+    mock = MagicMock() # Use MagicMock instead of AsyncMock(spec=...)
     
-    # Mock the async context manager for sessions
-    mock_session = AsyncMock()
-    
-    # Mock the result of session.execute()
-    # This should be a MagicMock, not AsyncMock, because the result object
-    # itself is not awaitable, but is the result of an awaited call.
-    mock_result = MagicMock()
-    
-    # Configure the chain of calls: result.scalars().first()
-    mock_scalars = MagicMock()
-    mock_scalars.first.return_value = None # Default to finding nothing
-    mock_result.scalars.return_value = mock_scalars
-    
-    # Configure the chain for fetchone()._mapping
-    mock_record = MagicMock()
-    mock_record._mapping = {} # Default to an empty dict
-    mock_result.fetchone.return_value = mock_record
-    
-    # Configure the chain for fetchall()
-    mock_result.fetchall.return_value = [] # Default to an empty list
-    
-    # Configure the chain for scalars().all()
-    mock_scalars.all.return_value = [] # Default to an empty list
-
-    # Set the return value for session.execute
-    mock_session.execute.return_value = mock_result
-    
-    # The service's _get_session() should return our mock session
-    mock_async_session_manager = AsyncMock()
-    mock_async_session_manager.__aenter__.return_value = mock_session
-    mock._get_session.return_value = mock_async_session_manager
-    
-    # Also mock the direct method calls for tests that patch them directly
-    mock.get_user_configuration = AsyncMock(return_value=None)
+    # Explicitly mock async methods
+    mock.get_opportunity_by_id = AsyncMock()
+    mock.get_user_configuration = AsyncMock()
     mock.upsert_user_configuration = AsyncMock()
+    mock.upsert_trade = AsyncMock()
+    mock.get_closed_trades = AsyncMock()
+    mock.get_trades_with_filters = AsyncMock()
+    mock.update_opportunity_status = AsyncMock()
 
     return mock
+
+@pytest.fixture(scope="session")
+def event_loop():
+    """
+    Creates an instance of the default event loop for the entire test session.
+    Prevents 'Event loop is closed' errors with pytest-asyncio.
+    """
+    policy = asyncio.get_event_loop_policy()
+    loop = policy.new_event_loop()
+    yield loop
+    loop.close()
+
+@pytest.fixture
+def mock_dependency_container() -> AsyncMock:
+    """
+    Provides a fully mocked DependencyContainer with mocked service attributes.
+    """
+    container_mock = AsyncMock(spec=DependencyContainer)
+    
+    # Mock the service attributes within the container to ensure they exist
+    container_mock.persistence_service = AsyncMock(spec=SupabasePersistenceService)
+    container_mock.config_service = AsyncMock()
+    container_mock.trading_engine_service = AsyncMock()
+    container_mock.unified_order_execution_service = AsyncMock()
+    container_mock.market_data_service = AsyncMock(spec=MarketDataService)
+    container_mock.ai_orchestrator = AsyncMock(spec=AIOrchestrator)
+    
+    return container_mock
+
+@pytest_asyncio.fixture
+async def client(mock_dependency_container: AsyncMock) -> AsyncGenerator[Tuple[AsyncClient, FastAPI], None]:
+    """
+    Test client fixture that injects a mocked dependency container for each test.
+    This ensures complete isolation from real services during integration tests.
+    """
+    os.environ["TESTING"] = "True"
+    app = create_app()
+
+    async with app.router.lifespan_context(app):
+        # In testing, we inject the mocked container directly into the app's state.
+        # This bypasses the real service initialization in the lifespan event.
+        app.state.dependency_container = mock_dependency_container
+        
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            yield ac, app
+
 
 @pytest.fixture
 def mock_market_data_service() -> MagicMock:

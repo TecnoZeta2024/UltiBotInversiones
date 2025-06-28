@@ -56,7 +56,7 @@ async def confirm_real_opportunity(
     if opportunity.status != OpportunityStatus.PENDING_USER_CONFIRMATION_REAL:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Opportunity {opportunity_id} is not in 'pending_user_confirmation_real' status. Current status: {opportunity.status.value}"
+            detail=f"Opportunity {opportunity_id} is not in 'pending_user_confirmation_real' status. Current status: {str(opportunity.status)}"
         )
     
     user_config = await config_service.get_user_configuration(str(user_id))

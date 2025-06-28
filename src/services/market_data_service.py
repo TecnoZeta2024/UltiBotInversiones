@@ -9,7 +9,7 @@ from core.domain_models.market_data_models import MarketDataORM
 from adapters.binance_adapter import BinanceAdapter
 from services.credential_service import CredentialService
 from core.ports.persistence_service import IPersistenceService
-from core.exceptions import BinanceAPIError, CredentialError, UltiBotError, ExternalAPIError, MarketDataError
+from core.exceptions import BinanceAPIError, CredentialError, UltiBotError, ExternalAPIError, MarketDataError, MarketDataValidationError
 from datetime import datetime, timezone
 import asyncio
 
@@ -189,9 +189,17 @@ class MarketDataService:
             ticker_data = await self.binance_adapter.get_ticker_24hr(symbol)
             logger.info(f"Datos de ticker 24hr para {symbol} obtenidos.")
             return ticker_data
+        except ValueError as e:
+            logger.warning(f"Error de validación de datos de mercado para {symbol}: {e}")
+            raise MarketDataValidationError(f"Símbolo o intervalo inválido: {symbol}") from e
         except BinanceAPIError as e:
-            logger.error(f"Error de la API de Binance al obtener datos de ticker 24hr para {symbol}: {e}")
-            raise MarketDataError(f"Fallo al obtener datos de ticker 24hr de Binance para {symbol}: {e}") from e
+            error_msg = str(e)
+            if "Invalid symbol" in error_msg or "Invalid interval" in error_msg:
+                logger.warning(f"Error de validación de datos de mercado para {symbol}: {error_msg}")
+                raise MarketDataValidationError(f"Símbolo o intervalo inválido: {symbol}") from e
+            else:
+                logger.error(f"Error de la API de Binance al obtener datos de ticker 24hr para {symbol}: {e}")
+                raise MarketDataError(f"Fallo al obtener datos de ticker 24hr de Binance para {symbol}: {e}") from e
         except Exception as e:
             logger.critical(f"Error inesperado al obtener datos de ticker 24hr para {symbol}: {e}", exc_info=True)
             raise MarketDataError(f"Error inesperado al obtener datos de ticker 24hr para {symbol}: {e}") from e
@@ -305,9 +313,17 @@ class MarketDataService:
 
             logger.info(f"Datos de velas para {symbol}-{interval} obtenidos y procesados.")
             return processed_data
+        except ValueError as e:
+            logger.warning(f"Error de validación de datos de velas para {symbol}-{interval}: {e}")
+            raise MarketDataValidationError(f"Símbolo o intervalo inválido para velas: {symbol}-{interval}") from e
         except BinanceAPIError as e:
-            logger.error(f"Error al obtener datos de velas para {symbol}-{interval}: {e}")
-            raise UltiBotError(f"No se pudieron obtener los datos de velas de Binance para {symbol}-{interval}: {e}")
+            error_msg = str(e)
+            if "Invalid symbol" in error_msg or "Invalid interval" in error_msg:
+                logger.warning(f"Error de validación de datos de velas para {symbol}-{interval}: {error_msg}")
+                raise MarketDataValidationError(f"Símbolo o intervalo inválido para velas: {symbol}-{interval}") from e
+            else:
+                logger.error(f"Error al obtener datos de velas para {symbol}-{interval}: {e}")
+                raise UltiBotError(f"No se pudieron obtener los datos de velas de Binance para {symbol}-{interval}: {e}")
         except Exception as e:
             logger.critical(f"Error inesperado al obtener datos de velas para {symbol}-{interval}: {e}", exc_info=True)
             raise UltiBotError(f"Error inesperado al obtener datos de velas de Binance para {symbol}-{interval}: {e}")

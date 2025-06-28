@@ -8,6 +8,11 @@ from typing import Tuple
 
 from core.domain_models.opportunity_models import (
     AIAnalysisRequest,
+)
+from core.exceptions import UltiBotError # Importar UltiBotError
+
+from core.domain_models.opportunity_models import (
+    AIAnalysisRequest,
     Opportunity,
     OpportunityStatus,
     InitialSignal,
@@ -146,13 +151,41 @@ class TestOpportunitiesEndpoints:
         response = await client_with_db.post(
             "/api/v1/gemini/opportunities", json=invalid_payload
         )
-        assert response.status_code == 422 # Unprocessable Entity
+        assert response.status_code == 422, f"Expected status 422, got {response.status_code}. Response: {response.text}"
+
         response_data = response.json()
         assert "detail" in response_data
-        assert any("value is not a valid uuid" in error["msg"] for error in response_data["detail"])
-        assert any("invalid datetime format" in error["msg"] for error in response_data["detail"])
-        assert any("value is not a valid enumeration member" in error["msg"] for error in response_data["detail"])
-        assert any("field required" in error["msg"] for error in response_data["detail"])
+        
+        errors = response_data["detail"]
+        # Create a dictionary for easy lookup of errors by field
+        error_map = {tuple(err["loc"]): err for err in errors}
+
+        # 1. Check for missing user_id
+        user_id_loc = ('body', 'opportunities', 0, 'user_id')
+        assert user_id_loc in error_map
+        assert error_map[user_id_loc]["type"] == "missing"
+        assert "Field required" in error_map[user_id_loc]["msg"]
+
+        # 2. Check for invalid detected_at
+        detected_at_loc = ('body', 'opportunities', 0, 'detected_at')
+        assert detected_at_loc in error_map
+        assert error_map[detected_at_loc]["type"] == "datetime_from_date_parsing"
+
+        # 3. Check for invalid source_type
+        source_type_loc = ('body', 'opportunities', 0, 'source_type')
+        assert source_type_loc in error_map
+        assert error_map[source_type_loc]["type"] == "enum"
+        
+        # 4. Check for invalid status
+        status_loc = ('body', 'opportunities', 0, 'status')
+        assert status_loc in error_map
+        assert error_map[status_loc]["type"] == "enum"
+        
+        # 5. Check for missing fields in initial_signal is not performed
+        # because Pydantic allows an empty object for a sub-model if all its fields are Optional.
+        # The current model `InitialSignal` has all Optional fields.
+        initial_signal_direction_loc = ('body', 'opportunities', 0, 'initial_signal', 'direction_sought')
+        assert initial_signal_direction_loc not in error_map
 
     async def test_get_real_trading_candidates_success(
         self, client: Tuple[AsyncClient, FastAPI], mock_user_config: UserConfiguration, opportunity_fixture: Opportunity
@@ -201,37 +234,35 @@ class TestOpportunitiesEndpoints:
     ):
         """Test GET /api/v1/opportunities/real-trading-candidates when persistence service fails."""
         http_client, app = client
-        mock_persistence = AsyncMock(spec=SupabasePersistenceService)
+
+        # 1. Mock Config Service para asegurar que el modo de trading está activo
         mock_config = AsyncMock(spec=ConfigurationService)
-
         if mock_user_config.real_trading_settings is None:
-            mock_user_config.real_trading_settings = RealTradingSettings(
-                real_trading_mode_active=False,
-                real_trades_executed_count=0,
-                max_concurrent_operations=0,
-                daily_loss_limit_absolute=None,
-                daily_profit_target_absolute=None,
-                asset_specific_stop_loss=None,
-                auto_pause_trading_conditions=None,
-                daily_capital_risked_usd=Decimal("0"),
-                last_daily_reset=None
-            )
-        mock_user_config.real_trading_settings.real_trading_mode_active = True # Ensure active for this test
-        
+            mock_user_config.real_trading_settings = RealTradingSettings(real_trading_mode_active=True)
+        else:
+            mock_user_config.real_trading_settings.real_trading_mode_active = True
         mock_config.get_user_configuration.return_value = mock_user_config
-        mock_persistence.get_all.side_effect = Exception("Database connection failed")
+        
+        # 2. Mock Persistence Service para que lance una excepción
+        mock_persistence = AsyncMock(spec=SupabasePersistenceService)
+        mock_persistence.get_all.side_effect = UltiBotError("Database connection failed", status_code=500)
 
-        app.dependency_overrides[deps.get_persistence_service] = lambda: mock_persistence
+        # 3. Usar dependency_overrides para inyectar ambos mocks de forma consistente
         app.dependency_overrides[deps.get_config_service] = lambda: mock_config
+        app.dependency_overrides[deps.get_persistence_service] = lambda: mock_persistence
 
+        # 4. Ejecutar la solicitud
         response = await http_client.get("/api/v1/opportunities/real-trading-candidates")
         
+        # 5. Validar que el manejador de excepciones funcionó correctamente
         assert response.status_code == 500
         assert "Database connection failed" in response.json()["detail"]
         
+        # 6. Verificar que los mocks fueron llamados
         mock_config.get_user_configuration.assert_called_once()
         mock_persistence.get_all.assert_called_once()
 
+        # 7. Limpiar los overrides para no afectar otros tests
         app.dependency_overrides.clear()
 
     async def test_get_real_trading_candidates_mode_inactive(

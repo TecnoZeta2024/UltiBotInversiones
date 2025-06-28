@@ -83,37 +83,38 @@ logger = logging.getLogger("ultibot_backend")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
-    Context manager para manejar el ciclo de vida de la aplicación.
-    Crea y gestiona una única instancia del DependencyContainer.
+    Context manager to handle the application's lifecycle.
+    It creates and manages a single instance of the DependencyContainer,
+    unless in a testing environment where the container is managed by fixtures.
     """
-    # Configurar el logging aquí para asegurar que se hace una sola vez
-    # y en el momento adecuado.
     dictConfig(LOGGING_CONFIG)
-    
-    logger.info("Iniciando UltiBot Backend (lifespan)...")
-    
-    # Instanciar el contenedor directamente aquí
-    container = DependencyContainer()
-    app.state.container = container  # Adjuntar a app.state
-    logger.info(f"DependencyContainer adjuntado a app.state: {app.state.container is not None}")
-    
-    try:
-        await container.initialize_services()
-        logger.info("Contenedor de dependencias inicializado en lifespan.")
-        
-    except Exception as e:
-        logger.critical(f"Error fatal durante el arranque de la aplicación (lifespan): {e}", exc_info=True)
-        raise
+    logger.info("Starting UltiBot Backend (lifespan)...")
 
-    logger.info("Aplicación iniciada correctamente (lifespan).")
+    is_testing = os.environ.get("TESTING", "False").lower() == "true"
+
+    # Only initialize the container if not in a testing environment
+    if not is_testing:
+        container = DependencyContainer()
+        app.state.dependency_container = container
+        logger.info(f"DependencyContainer attached to app.state for non-test env: {app.state.dependency_container is not None}")
+        try:
+            await container.initialize_services()
+            logger.info("Dependency container initialized in lifespan for non-test env.")
+        except Exception as e:
+            logger.critical(f"Fatal error during application startup (lifespan): {e}", exc_info=True)
+            raise
+    else:
+        logger.info("Skipping container initialization in lifespan (TESTING mode).")
+
+    logger.info("Application started successfully (lifespan).")
     yield
     
-    logger.info("Apagando UltiBot Backend (lifespan)...")
-    if hasattr(app.state, 'container') and app.state.container:
-        await app.state.container.shutdown()
-        logger.info("Recursos liberados y aplicación apagada (lifespan).")
+    logger.info("Shutting down UltiBot Backend (lifespan)...")
+    if hasattr(app.state, 'dependency_container') and app.state.dependency_container:
+        await app.state.dependency_container.shutdown()
+        logger.info("Resources released and application shut down (lifespan).")
     else:
-        logger.warning("No se encontró DependencyContainer en app.state durante el apagado.")
+        logger.warning("No DependencyContainer found in app.state during shutdown.")
 
 def create_app() -> FastAPI:
     """
@@ -126,7 +127,7 @@ def create_app() -> FastAPI:
         description="El backend para la plataforma de trading algorítmico UltiBotInversiones.",
         version="1.0.0",
         lifespan=lifespan,
-        debug=os.environ.get("TESTING") == "True"
+        debug=False  # Forzar debug=False para que los manejadores de excepciones funcionen en tests
     )
 
     @app_instance.middleware("http")
@@ -149,7 +150,7 @@ def create_app() -> FastAPI:
         logger.critical(f"Excepción no controlada en {request.method} {request.url.path}: {exc}", exc_info=True)
         return JSONResponse(
             status_code=500,
-            content={"detail": "Ocurrió un error interno inesperado en el servidor."},
+            content={"detail": str(exc)},
         )
 
     app_instance.add_middleware(
@@ -190,7 +191,7 @@ def create_app() -> FastAPI:
         logger.info("Ejecutando health check extendido")
         
         # Obtener contenedor de dependencias desde el contexto de la app
-        container = app_instance.state.container
+        container = app_instance.state.dependency_container
         
         # Verificar estado de componentes críticos
         health_status = {
@@ -233,15 +234,15 @@ def create_app() -> FastAPI:
         
     return app_instance
 
-# Crear la instancia global de la aplicación para la ejecución normal (no para tests)
-app = create_app()
-logger.info("Instancia global de la aplicación creada.")
-
+# Point of entry for running the application directly
 if __name__ == "__main__":
     import uvicorn
     logger.info("Iniciando servidor Uvicorn desde el punto de entrada principal...")
+    # Uvicorn will call create_app() because of the 'factory=True' argument.
+    # This prevents a global 'app' instance from being created on import.
     uvicorn.run(
-        "main:app",
+        "main:create_app",
+        factory=True,
         host="0.0.0.0",
         port=8000,
         reload=False,

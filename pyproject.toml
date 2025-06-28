@@ -48,6 +48,9 @@ pylint = "^3.3.7"
 pytest-qt = "^4.4.0"
 pytest-timeout = "^2.3.1"
 playwright = "^1.53.0"
+pytest-playwright = "^0.7.0"
+selenium = "^4.33.0"
+webdriver-manager = "^4.0.2"
 
 [tool.poetry.scripts]
 test = "pytest:main"
@@ -84,4 +87,5 @@ addopts = "-ra -q --cov=src --cov-report=term-missing"
 testpaths = [
     "tests",
 ]
+pythonpath = ["src"]
 asyncio_mode = "auto"

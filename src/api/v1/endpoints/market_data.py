@@ -4,7 +4,7 @@ from uuid import UUID
 
 from services.market_data_service import MarketDataService
 from dependencies import get_market_data_service
-from core.exceptions import UltiBotError
+from core.exceptions import UltiBotError, MarketDataValidationError
 
 router = APIRouter()
 
@@ -39,6 +39,8 @@ async def get_ticker_24hr(
     try:
         ticker_data = await market_data_service.get_ticker_24hr(symbol)
         return ticker_data
+    except MarketDataValidationError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=e.message)
     except UltiBotError as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to fetch 24hr ticker data: {e.message}")
     except Exception as e:
@@ -65,6 +67,8 @@ async def get_market_klines(
             end_time=end_time
         )
         return klines
+    except MarketDataValidationError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=e.message)
     except UltiBotError as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to fetch klines: {e.message}")
     except Exception as e:

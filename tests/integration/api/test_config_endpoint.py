@@ -1,16 +1,8 @@
 import pytest
 from httpx import AsyncClient
-from fastapi import FastAPI, Depends, APIRouter
+from fastapi import FastAPI, Depends
 from typing import Tuple
-from app_config import AppSettings, get_app_settings
-from main import app as fastapi_app
-
-# Añadir un endpoint de prueba a la aplicación principal para este test
-config_router = APIRouter()
-
-@config_router.get("/test-config")
-def get_test_config(settings: AppSettings = Depends(get_app_settings)):
-    return {"log_level": settings.LOG_LEVEL}
+from src.app_config import AppSettings, get_app_settings
 
 @pytest.mark.asyncio
 async def test_config_dependency_injection(
@@ -21,11 +13,14 @@ async def test_config_dependency_injection(
     creating a modified settings object and injecting it into the test client's app instance.
     """
     test_client, test_app = client
-    
-    # Include the test router in the isolated test app instance
-    test_app.include_router(config_router)
+
+    # Define and add a test-specific endpoint directly to the test_app instance
+    @test_app.get("/test-config")
+    def get_test_config(settings: AppSettings = Depends(get_app_settings)):
+        return {"log_level": settings.LOG_LEVEL}
 
     # 1. Test with default settings from .env.test (via app_settings_fixture)
+    # The client fixture already uses the test environment, so this should work out of the box.
     response_default = await test_client.get("/test-config")
     assert response_default.status_code == 200
     # La configuración por defecto en .env.test es INFO

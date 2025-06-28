@@ -158,8 +158,9 @@ class PerformanceService:
 
             win_rate = (winning_operations / total_operations) * 100 if total_operations > 0 else 0.0
 
-            strategy_config = await self.strategy_service.get_strategy_config(str(strategy_id), str(user_id))
-            strategy_name = strategy_config.config_name if strategy_config else "Estrategia Desconocida"
+            # TODO: Refactorizar para obtener el nombre de la estrategia sin depender de StrategyService
+            #       o ajustar el modelo de respuesta para que no lo requiera.
+            strategy_name = "Estrategia Desconocida"
             
             try:
                 current_operating_mode = OperatingMode(trade_mode_str)

@@ -79,7 +79,11 @@ async def test_get_portfolio_summary_invalid_mode(
     response = await http_client.get("/api/v1/portfolio/summary?trading_mode=invalid_mode")
     
     assert response.status_code == 422 # Unprocessable Entity
-    assert "value is not a valid enumeration member" in response.json()["detail"][0]["msg"]
+    data = response.json()
+    assert "detail" in data
+    assert data["detail"][0]["type"] == "literal_error"
+    assert data["detail"][0]["loc"] == ["query", "trading_mode"]
+    assert "Input should be 'paper', 'real' or 'both'" in data["detail"][0]["msg"]
     app.dependency_overrides = {}
 
 async def test_get_portfolio_summary_service_error(
@@ -146,7 +150,11 @@ async def test_get_portfolio_snapshot_invalid_mode(
     response = await http_client.get(f"/api/v1/portfolio/snapshot/{user_id}?trading_mode=invalid_mode")
     
     assert response.status_code == 422 # Unprocessable Entity
-    assert "value is not a valid enumeration member" in response.json()["detail"][0]["msg"]
+    data = response.json()
+    assert "detail" in data
+    assert data["detail"][0]["type"] == "literal_error"
+    assert data["detail"][0]["loc"] == ["query", "trading_mode"]
+    assert "Input should be 'paper', 'real' or 'both'" in data["detail"][0]["msg"]
     app.dependency_overrides = {}
 
 async def test_get_portfolio_snapshot_service_error(

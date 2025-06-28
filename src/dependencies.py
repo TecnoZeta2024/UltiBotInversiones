@@ -134,10 +134,10 @@ class DependencyContainer:
             raise RuntimeError("Database session factory not initialized before service initialization.")
         
         self.credential_service = CredentialService(
-            session_factory=cast(async_sessionmaker[AsyncSession], _session_factory),
+            persistence_service=self.persistence_service,
             binance_adapter=self.binance_adapter
         )
-        self.trading_report_service = TradingReportService(session_factory=cast(async_sessionmaker[AsyncSession], _session_factory))
+        self.trading_report_service = TradingReportService(persistence_service=self.persistence_service)
 
         self.mobula_adapter = MobulaAdapter(
             credential_service=self.credential_service,
@@ -165,8 +165,13 @@ class DependencyContainer:
             market_data_service=self.market_data_service
         )
 
+        # Asegurarse de que CredentialService y NotificationService estén inicializados antes de ConfigService
+        # Ya están inicializados arriba: self.credential_service y self.notification_service
         self.config_service = ConfigurationService(
-            persistence_service=self.persistence_service
+            persistence_service=self.persistence_service,
+            credential_service=self.credential_service,
+            portfolio_service=self.portfolio_service,
+            notification_service=self.notification_service
         )
 
         self.strategy_service = StrategyService(
@@ -200,21 +205,45 @@ class DependencyContainer:
             await self.binance_adapter.close()
         if self.cache: # Cerrar el cliente Redis
             await self.cache.close()
+        
+        global _db_engine
+        if _db_engine:
+            logger.info("Disposing of database engine...")
+            await _db_engine.dispose()
+            _db_engine = None # Reset the engine
+            logger.info("Database engine disposed.")
+
         logger.info("Dependency container shut down.")
 
 
 _global_container: Optional[DependencyContainer] = None
 
 async def get_container_async(request: Request) -> DependencyContainer:
-    global _global_container
-    if hasattr(request.app.state, 'container') and request.app.state.container is not None:
-        return request.app.state.container
+    """
+    Retrieves the dependency container from the application state.
+    In a testing environment, it strictly expects the container to be set by the test fixture.
+    In a production environment, it uses a global singleton.
+    """
+    # Check if running in a test environment
+    is_testing = os.environ.get("TESTING", "False").lower() == "true"
+
+    if hasattr(request.app.state, 'dependency_container') and request.app.state.dependency_container is not None:
+        return request.app.state.dependency_container
+    
+    if is_testing:
+        # In tests, the container MUST be set by the fixture. If not, it's a test setup error.
+        raise RuntimeError(
+            "DependencyContainer not found in app.state. "
+            "Ensure your test fixture sets `app.state.dependency_container`."
+        )
     else:
+        # In production, initialize and use a global container
+        global _global_container
         if _global_container is None:
-            logger.warning("DependencyContainer no encontrado en app.state. Inicializando contenedor global para tests.")
+            logger.info("Global DependencyContainer not found, initializing for production.")
             _global_container = DependencyContainer()
             await _global_container.initialize_services()
-            logger.info("Contenedor global de contingencia inicializado y servicios cargados.")
+            logger.info("Global DependencyContainer initialized for production.")
         return _global_container
 
 

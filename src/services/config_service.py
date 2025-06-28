@@ -33,32 +33,20 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 class ConfigurationService:
-    def __init__(self, persistence_service: SupabasePersistenceService):
+    def __init__(
+        self, 
+        persistence_service: SupabasePersistenceService,
+        credential_service: "CredentialService", # Inyectar directamente
+        portfolio_service: "PortfolioService",   # Inyectar directamente
+        notification_service: "NotificationService" # Inyectar directamente
+    ):
         app_settings = get_app_settings()
         self.persistence_service = persistence_service
-        self.credential_service: Optional["CredentialService"] = None
-        self.portfolio_service: Optional["PortfolioService"] = None
-        self.notification_service: Optional["NotificationService"] = None
+        self.credential_service = credential_service
+        self.portfolio_service = portfolio_service
+        self.notification_service = notification_service
         self._user_configuration: Optional[UserConfiguration] = None
         self._user_id: UUID = app_settings.FIXED_USER_ID
-
-    def set_credential_service(self, credential_service: "CredentialService"):
-        if not self.credential_service:
-            self.credential_service = credential_service
-        else:
-            logger.warning("CredentialService already set in ConfigService, ignoring attempt to reset.")
-
-    def set_portfolio_service(self, portfolio_service: "PortfolioService"):
-        if not self.portfolio_service:
-            self.portfolio_service = portfolio_service
-        else:
-            logger.warning("PortfolioService already set in ConfigService, ignoring attempt to reset.")
-
-    def set_notification_service(self, notification_service: "NotificationService"):
-        if not self.notification_service:
-            self.notification_service = notification_service
-        else:
-            logger.warning("NotificationService already set in ConfigService, ignoring attempt to reset.")
 
     async def _load_config_from_db(self, user_id: Optional[str] = None) -> UserConfiguration:
         target_user_id = user_id if user_id else str(self._user_id)
@@ -251,7 +239,5 @@ class ConfigurationService:
         REAL_TRADE_LIMIT_CONFIGURABLE_O_FIJO = 5 # Asumiendo límite fijo por ahora
         
         return {
-            "isActive": real_settings.real_trading_mode_active,
-            "executedCount": executed_count,
-            "limit": REAL_TRADE_LIMIT_CONFIGURABLE_O_FIJO
+            "is_real_trading_enabled": real_settings.real_trading_mode_active
         }

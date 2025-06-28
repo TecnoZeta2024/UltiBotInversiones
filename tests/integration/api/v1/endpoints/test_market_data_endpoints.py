@@ -155,8 +155,8 @@ async def test_get_ticker_24hr_invalid_symbol(client: Tuple[AsyncClient, FastAPI
     
     response = await http_client.get("/api/v1/market/ticker/24hr/INVALID_SYMBOL")
     
-    assert response.status_code == 422 # Unprocessable Entity (FastAPI validation error)
-    assert "value is not a valid enumeration member" in response.json()["detail"][0]["msg"]
+    assert response.status_code == 422
+    assert "Símbolo o intervalo inválido" in response.json()["detail"]
     app.dependency_overrides.clear()
 
 @pytest.mark.asyncio
@@ -186,7 +186,7 @@ async def test_get_klines_invalid_interval(client: Tuple[AsyncClient, FastAPI]):
     response = await http_client.get("/api/v1/market/klines?symbol=BTCUSDT&interval=INVALID&limit=1")
     
     assert response.status_code == 422
-    assert "value is not a valid enumeration member" in response.json()["detail"][0]["msg"]
+    assert "Símbolo o intervalo inválido" in response.json()["detail"]
     app.dependency_overrides.clear()
 
 @pytest.mark.asyncio

@@ -4,14 +4,15 @@ from typing import Optional
 from uuid import UUID
 from functools import lru_cache
 
-# Determine which .env file to use based on the TESTING environment variable.
-# Pydantic's BaseSettings will handle the loading.
-env_file = ".env.test" if os.getenv("TESTING") == "True" else ".env"
-
 class AppSettings(BaseSettings):
-    # Let Pydantic handle loading the correct .env file.
-    # It will automatically override with environment variables.
-    model_config = SettingsConfigDict(env_file=env_file, env_file_encoding="utf-8", extra="ignore")
+    """
+    Defines the application settings model. Pydantic's BaseSettings
+    will automatically load values from environment variables or a specified
+    .env file.
+    """
+    # We define the model_config here but specify the env_file during instantiation
+    # in get_app_settings for dynamic loading (e.g., for tests).
+    model_config = SettingsConfigDict(env_file_encoding="utf-8", extra="ignore")
 
     # Supabase
     SUPABASE_URL: str
@@ -47,6 +48,8 @@ class AppSettings(BaseSettings):
 def get_app_settings() -> AppSettings:
     """
     Returns a cached instance of the application settings.
-    Using lru_cache ensures the settings are loaded only once.
+    It dynamically determines which .env file to load based on the
+    TESTING environment variable.
     """
-    return AppSettings()  # type: ignore
+    env_file_to_use = ".env.test" if os.getenv("TESTING") == "True" else ".env"
+    return AppSettings(_env_file=env_file_to_use)

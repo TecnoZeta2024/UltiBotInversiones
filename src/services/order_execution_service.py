@@ -366,13 +366,13 @@ class PaperOrderExecutionService:
         base_asset = symbol.replace("USDT", "") # Ej: BTC
         quote_asset = "USDT"
 
-        if side == 'BUY':
+        if side.upper() == 'BUY':
             if self.virtual_balances.get(quote_asset, Decimal("0")) < cost_or_revenue:
                 raise OrderExecutionError(f"Capital virtual insuficiente para comprar {quantity} de {base_asset} (necesario: {cost_or_revenue}, disponible: {self.virtual_balances.get(quote_asset, Decimal('0'))})")
             self.virtual_balances[quote_asset] = self.virtual_balances.get(quote_asset, Decimal("0")) - cost_or_revenue
             self.virtual_balances[base_asset] = self.virtual_balances.get(base_asset, Decimal("0")) + quantity
             logger.info(f"Compra simulada: {quantity} {base_asset} a {simulated_price}. Nuevo balance USDT: {self.virtual_balances[quote_asset]}, {base_asset}: {self.virtual_balances[base_asset]}")
-        elif side == 'SELL':
+        elif side.upper() == 'SELL':
             if self.virtual_balances.get(base_asset, Decimal("0")) < quantity:
                 raise OrderExecutionError(f"Cantidad virtual insuficiente de {base_asset} para vender (necesario: {quantity}, disponible: {self.virtual_balances.get(base_asset, Decimal('0'))})")
             self.virtual_balances[base_asset] = self.virtual_balances.get(base_asset, Decimal("0")) - quantity
@@ -435,13 +435,13 @@ class PaperOrderExecutionService:
         base_asset = symbol.replace("USDT", "")
         quote_asset = "USDT"
 
-        if side == 'BUY':
+        if side.upper() == 'BUY':
             if self.virtual_balances.get(quote_asset, Decimal("0")) < cost_or_revenue:
                 raise OrderExecutionError(f"Capital virtual insuficiente para comprar {quantity} de {base_asset} (necesario: {cost_or_revenue}, disponible: {self.virtual_balances.get(quote_asset, Decimal('0'))})")
             self.virtual_balances[quote_asset] = self.virtual_balances.get(quote_asset, Decimal("0")) - cost_or_revenue
             self.virtual_balances[base_asset] = self.virtual_balances.get(base_asset, Decimal("0")) + quantity
             logger.info(f"Compra simulada: {quantity} {base_asset} a {simulated_price}. Nuevo balance USDT: {self.virtual_balances[quote_asset]}, {base_asset}: {self.virtual_balances[base_asset]}")
-        elif side == 'SELL':
+        elif side.upper() == 'SELL':
             if self.virtual_balances.get(base_asset, Decimal("0")) < quantity:
                 raise OrderExecutionError(f"Cantidad virtual insuficiente de {base_asset} para vender (necesario: {quantity}, disponible: {self.virtual_balances.get(base_asset, Decimal('0'))})")
             self.virtual_balances[base_asset] = self.virtual_balances.get(base_asset, Decimal("0")) - quantity
@@ -497,12 +497,12 @@ class PaperOrderExecutionService:
         quote_asset = "USDT"
         cost_or_revenue = quantity * price
 
-        if side == 'BUY':
+        if side.upper() == 'BUY':
             if self.virtual_balances.get(quote_asset, Decimal("0")) < cost_or_revenue:
                 raise OrderExecutionError(f"Capital virtual insuficiente para comprar {quantity} de {base_asset} (necesario: {cost_or_revenue}, disponible: {self.virtual_balances.get(quote_asset, Decimal('0'))})")
             # No se ajustan los balances inmediatamente, ya que es una orden LIMIT (no ejecutada aún)
             logger.info(f"Orden LIMIT de compra simulada: {quantity} {base_asset} a {price}. Balance USDT: {self.virtual_balances[quote_asset]}")
-        elif side == 'SELL':
+        elif side.upper() == 'SELL':
             if self.virtual_balances.get(base_asset, Decimal("0")) < quantity:
                 raise OrderExecutionError(f"Cantidad virtual insuficiente de {base_asset} para vender (necesario: {quantity}, disponible: {self.virtual_balances.get(base_asset, Decimal('0'))})")
             # No se ajustan los balances inmediatamente

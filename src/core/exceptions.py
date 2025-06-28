@@ -70,8 +70,13 @@ class AIAnalysisError(UltiBotError):
 
 class MarketDataError(UltiBotError):
     """Excepción para errores al obtener datos de mercado."""
-    def __init__(self, message: str, code: Optional[str] = "MARKET_DATA_ERROR", details: Optional[Dict[str, Any]] = None):
-        super().__init__(message, status_code=502, code=code, details=details)
+    def __init__(self, message: str, status_code: int = 502, code: Optional[str] = "MARKET_DATA_ERROR", details: Optional[Dict[str, Any]] = None):
+        super().__init__(message, status_code=status_code, code=code, details=details)
+
+class MarketDataValidationError(MarketDataError):
+    """Excepción para errores de validación de datos de mercado (ej. símbolo/intervalo inválido)."""
+    def __init__(self, message: str, code: Optional[str] = "MARKET_DATA_VALIDATION_ERROR", details: Optional[Dict[str, Any]] = None):
+        super().__init__(message, status_code=422, code=code, details=details)
 
 
 class PortfolioError(UltiBotError):
