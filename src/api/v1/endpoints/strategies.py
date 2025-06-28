@@ -41,13 +41,18 @@ async def create_strategy(
     request: Request,
     strategy_service: StrategyService = Depends(get_strategy_service)
 ) -> TradingStrategyResponse:
-    """Create a new trading strategy configuration for the fixed user."""
-    user_id = get_app_settings().FIXED_USER_ID
+    """Create a new trading strategy configuration."""
+    user_id = request.headers.get("X-User-ID")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="X-User-ID header is required"
+        )
     try:
         logger.info(f"Creating new strategy: {strategy_request.config_name} for user {user_id}")
         strategy_data = strategy_request.dict(exclude_unset=True)
         created_strategy = await strategy_service.create_strategy_config(
-            user_id=str(user_id),
+            user_id=user_id,
             strategy_data=strategy_data
         )
         response = TradingStrategyResponse.from_strategy_config(created_strategy)
@@ -57,6 +62,8 @@ async def create_strategy(
         raise
     except Exception as e:
         logger.error(f"Unexpected error creating strategy: {e}")
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create strategy configuration"
@@ -72,12 +79,17 @@ async def list_strategies(
     request: Request,
     strategy_service: StrategyService = Depends(get_strategy_service)
 ) -> StrategyListResponse:
-    """List all trading strategy configurations for the fixed user."""
-    user_id = get_app_settings().FIXED_USER_ID
+    """List all trading strategy configurations for the user."""
+    user_id = request.headers.get("X-User-ID")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="X-User-ID header is required"
+        )
     try:
         logger.info(f"Listing strategies for user {user_id}")
         strategies = await strategy_service.list_strategy_configs(
-            user_id=str(user_id)
+            user_id=user_id
         )
         strategy_responses = [
             TradingStrategyResponse.from_strategy_config(strategy)
@@ -91,6 +103,8 @@ async def list_strategies(
         return response
     except Exception as e:
         logger.error(f"Unexpected error listing strategies: {e}", exc_info=True)
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve strategy configurations"
@@ -106,13 +120,18 @@ async def get_strategy(
     request: Request,
     strategy_service: StrategyService = Depends(get_strategy_service)
 ) -> TradingStrategyResponse:
-    """Get a trading strategy configuration by ID for the fixed user."""
-    user_id = get_app_settings().FIXED_USER_ID
+    """Get a trading strategy configuration by ID for the user."""
+    user_id = request.headers.get("X-User-ID")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="X-User-ID header is required"
+        )
     try:
         logger.info(f"Getting strategy {strategy_id} for user {user_id}")
         strategy = await strategy_service.get_strategy_config(
             strategy_id=strategy_id,
-            user_id=str(user_id)
+            user_id=user_id
         )
         if not strategy:
             raise HTTPException(
@@ -126,6 +145,8 @@ async def get_strategy(
         raise
     except Exception as e:
         logger.error(f"Unexpected error getting strategy {strategy_id}: {e}")
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve strategy configuration"
@@ -142,14 +163,19 @@ async def update_strategy(
     request: Request,
     strategy_service: StrategyService = Depends(get_strategy_service)
 ) -> TradingStrategyResponse:
-    """Update a trading strategy configuration for the fixed user."""
-    user_id = get_app_settings().FIXED_USER_ID
+    """Update a trading strategy configuration for the user."""
+    user_id = request.headers.get("X-User-ID")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="X-User-ID header is required"
+        )
     try:
         logger.info(f"Updating strategy {strategy_id} for user {user_id}")
         strategy_data = strategy_request.dict(exclude_unset=True)
         updated_strategy = await strategy_service.update_strategy_config(
             strategy_id=strategy_id,
-            user_id=str(user_id),
+            user_id=user_id,
             strategy_data=strategy_data
         )
         if not updated_strategy:
@@ -164,6 +190,8 @@ async def update_strategy(
         raise
     except Exception as e:
         logger.error(f"Unexpected error updating strategy {strategy_id}: {e}")
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update strategy configuration"
@@ -179,13 +207,18 @@ async def delete_strategy(
     request: Request,
     strategy_service: StrategyService = Depends(get_strategy_service)
 ) -> None:
-    """Delete a trading strategy configuration for the fixed user."""
-    user_id = get_app_settings().FIXED_USER_ID
+    """Delete a trading strategy configuration for the user."""
+    user_id = request.headers.get("X-User-ID")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="X-User-ID header is required"
+        )
     try:
         logger.info(f"Deleting strategy {strategy_id} for user {user_id}")
         deleted = await strategy_service.delete_strategy_config(
             strategy_id=strategy_id,
-            user_id=str(user_id)
+            user_id=user_id
         )
         if not deleted:
             raise HTTPException(
@@ -197,6 +230,8 @@ async def delete_strategy(
         raise
     except Exception as e:
         logger.error(f"Unexpected error deleting strategy {strategy_id}: {e}")
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete strategy configuration"
@@ -213,13 +248,18 @@ async def activate_strategy(
     request: Request,
     strategy_service: StrategyService = Depends(get_strategy_service)
 ) -> StrategyActivationResponse:
-    """Activate a trading strategy in the specified mode for the fixed user."""
-    user_id = get_app_settings().FIXED_USER_ID
+    """Activate a trading strategy in the specified mode for the user."""
+    user_id = request.headers.get("X-User-ID")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="X-User-ID header is required"
+        )
     try:
         logger.info(f"Activating strategy {strategy_id} in {activation_request.mode} mode for user {user_id}")
         updated_strategy = await strategy_service.activate_strategy(
             strategy_id=strategy_id,
-            user_id=str(user_id),
+            user_id=user_id,
             mode=activation_request.mode
         )
         if not updated_strategy:
@@ -244,6 +284,8 @@ async def activate_strategy(
         raise
     except Exception as e:
         logger.error(f"Unexpected error activating strategy {strategy_id}: {e}")
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to activate strategy in {activation_request.mode} mode"
@@ -260,13 +302,18 @@ async def deactivate_strategy(
     request: Request,
     strategy_service: StrategyService = Depends(get_strategy_service)
 ) -> StrategyActivationResponse:
-    """Deactivate a trading strategy in the specified mode for the fixed user."""
-    user_id = get_app_settings().FIXED_USER_ID
+    """Deactivate a trading strategy in the specified mode for the user."""
+    user_id = request.headers.get("X-User-ID")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="X-User-ID header is required"
+        )
     try:
         logger.info(f"Deactivating strategy {strategy_id} in {deactivation_request.mode} mode for user {user_id}")
         updated_strategy = await strategy_service.deactivate_strategy(
             strategy_id=strategy_id,
-            user_id=str(user_id),
+            user_id=user_id,
             mode=deactivation_request.mode
         )
         if not updated_strategy:
@@ -291,6 +338,8 @@ async def deactivate_strategy(
         raise
     except Exception as e:
         logger.error(f"Unexpected error deactivating strategy {strategy_id}: {e}")
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to deactivate strategy in {deactivation_request.mode} mode"
@@ -306,12 +355,17 @@ async def get_active_strategies_by_mode(
     request: Request,
     strategy_service: StrategyService = Depends(get_strategy_service)
 ) -> StrategyListResponse:
-    """Get all active strategies for a specific trading mode for the fixed user."""
-    user_id = get_app_settings().FIXED_USER_ID
+    """Get all active strategies for a specific trading mode for the user."""
+    user_id = request.headers.get("X-User-ID")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="X-User-ID header is required"
+        )
     try:
         logger.info(f"Getting active {mode} strategies for user {user_id}")
         strategies = await strategy_service.get_active_strategies(
-            user_id=str(user_id),
+            user_id=user_id,
             mode=mode
         )
         strategy_responses = [
@@ -328,6 +382,8 @@ async def get_active_strategies_by_mode(
         raise
     except Exception as e:
         logger.error(f"Unexpected error getting active {mode} strategies: {e}")
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve active {mode} strategies"

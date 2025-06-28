@@ -13,7 +13,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text # Importar text
 
-from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from adapters.persistence_service import SupabasePersistenceService
 
 # User ID fijo para las pruebas
 FIXED_USER_ID = UUID("00000000-0000-0000-0000-000000000001")

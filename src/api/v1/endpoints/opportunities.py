@@ -44,14 +44,9 @@ async def get_real_trading_candidates(
     """
     app_settings = get_app_settings()
     user_id = app_settings.FIXED_USER_ID
-    user_config_dict = await config_service.get_user_configuration(str(user_id))
-    if not user_config_dict:
+    user_config = await config_service.get_user_configuration(str(user_id))
+    if not user_config:
         raise HTTPException(status_code=404, detail="User configuration not found")
-        
-    # Convertir explícitamente a dict y añadir user_id
-    config_data = dict(user_config_dict)
-    config_data['user_id'] = user_id
-    user_config = UserConfiguration(**config_data)
 
 
     real_trading_settings = user_config.real_trading_settings

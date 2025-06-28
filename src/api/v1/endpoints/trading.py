@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 from decimal import Decimal
 
 from shared.data_types import ConfirmRealTradeRequest, OpportunityStatus, Opportunity, TradeOrderDetails
+from core.domain_models.trade_models import TradeSide
 from services.trading_engine_service import TradingEngine
 from services.config_service import ConfigurationService
 from adapters.persistence_service import SupabasePersistenceService
@@ -25,7 +26,7 @@ async def confirm_real_opportunity(
     """
     Endpoint para que el usuario fijo confirme explícitamente una oportunidad de trading real.
     """
-    user_id = get_app_settings().FIXED_USER_ID
+    user_id = str(get_app_settings().FIXED_USER_ID) # Convert UUID to str for consistent comparison
 
     if opportunity_id != request.opportunity_id:
         raise HTTPException(
@@ -33,7 +34,7 @@ async def confirm_real_opportunity(
             detail="Opportunity ID in path and request body do not match."
         )
     
-    if user_id != request.user_id:
+    if user_id != str(request.user_id): # Ensure both are strings for comparison
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User ID in settings does not match user ID in request body."
@@ -46,7 +47,7 @@ async def confirm_real_opportunity(
             detail=f"Opportunity with ID {opportunity_id} not found."
         )
 
-    if opportunity.user_id != user_id:
+    if str(opportunity.user_id) != user_id: # Ensure both are strings for comparison
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User not authorized to confirm this opportunity."
@@ -91,13 +92,13 @@ TradingMode = Literal["paper", "real"]
 class MarketOrderRequest(BaseModel):
     """Request model for market order execution."""
     symbol: str = Field(..., description="Trading symbol (e.g., 'BTCUSDT')")
-    side: str = Field(..., description="Order side ('BUY' or 'SELL')")
+    side: TradeSide = Field(..., description="Order side ('BUY' or 'SELL')")
     quantity: Decimal = Field(..., gt=0, description="Order quantity (must be positive)")
     trading_mode: TradingMode = Field(..., description="Trading mode ('paper' or 'real')")
     api_key: Optional[str] = Field(None, description="API key for real trading (required for real mode)")
     api_secret: Optional[str] = Field(None, description="API secret for real trading (required for real mode)")
 
-@router.post("/market-order", response_model=TradeOrderDetails, status_code=status.HTTP_200_OK)
+@router.post("/market-order", status_code=status.HTTP_200_OK)
 async def execute_market_order(
     request: MarketOrderRequest,
     unified_execution_service: Annotated[UnifiedOrderExecutionService, Depends(get_unified_order_execution_service)]
@@ -120,7 +121,8 @@ async def execute_market_order(
             quantity=request.quantity,
             trading_mode=request.trading_mode,
             api_key=request.api_key,
-            api_secret=request.api_secret
+            api_secret=request.api_secret,
+            oco_order_list_id=None
         )
         
         return order_details
@@ -163,7 +165,7 @@ async def reset_paper_trading_balances(
     """
     Reset paper trading balances to initial capital for the fixed user.
     """
-    user_id = get_app_settings().FIXED_USER_ID
+    user_id = str(get_app_settings().FIXED_USER_ID) # Convert UUID to str
     try:
         unified_execution_service.reset_virtual_balances(initial_capital=Decimal(initial_capital))
         return {

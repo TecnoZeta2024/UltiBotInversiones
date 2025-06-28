@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from shared.data_types import TradeOrderDetails
 from services.order_execution_service import OrderExecutionService, PaperOrderExecutionService
+from core.domain_models.trade_models import TradeSide
 from core.exceptions import OrderExecutionError, ConfigurationError
 
 logger = logging.getLogger(__name__)
@@ -31,7 +32,7 @@ class UnifiedOrderExecutionService:
         self,
         user_id: UUID,
         symbol: str,
-        side: str,  # 'BUY' or 'SELL'
+        side: TradeSide,
         quantity: Decimal,
         trading_mode: TradingMode,
         api_key: Optional[str] = None,
@@ -66,7 +67,7 @@ class UnifiedOrderExecutionService:
                 return await self.paper_execution_service.execute_market_order(
                     user_id=user_id,
                     symbol=symbol,
-                    side=side,
+                    side=side.value,
                     quantity=quantity,
                     ocoOrderListId=oco_order_list_id
                 )
@@ -82,7 +83,7 @@ class UnifiedOrderExecutionService:
                 return await self.real_execution_service.execute_market_order(
                     user_id=user_id,
                     symbol=symbol,
-                    side=side,
+                    side=side.value,
                     quantity=quantity,
                     api_key=api_key,
                     api_secret=api_secret,
@@ -285,7 +286,7 @@ class UnifiedOrderExecutionService:
         user_id: UUID,
         trading_mode: TradingMode,
         symbol: str,
-        side: str,
+        side: TradeSide,
         api_key: Optional[str] = None,
         api_secret: Optional[str] = None,
     ) -> TradeOrderDetails:

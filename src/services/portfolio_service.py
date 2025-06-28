@@ -7,7 +7,7 @@ from decimal import Decimal
 from fastapi import Depends
 
 from shared.data_types import PortfolioSnapshot, PortfolioSummary, PortfolioAsset, AssetBalance, Trade
-from core.domain_models.user_configuration_models import UserConfiguration, PaperTradingAsset, Theme
+from core.domain_models.user_configuration_models import UserConfiguration, PaperTradingAsset, Theme, RiskProfile
 from services.market_data_service import MarketDataService
 from core.ports.persistence_service import IPersistenceService
 from core.exceptions import UltiBotError, ConfigurationError, ExternalAPIError, PortfolioError
@@ -90,7 +90,7 @@ class PortfolioService:
             self.paper_trading_balance = Decimal("10000.0")
             raise UltiBotError(f"Unexpected error initializing portfolio: {e}")
 
-    async def get_portfolio_snapshot(self, user_id: UUID) -> PortfolioSnapshot:
+    async def get_portfolio_snapshot(self, user_id: UUID, trading_mode: str = "both") -> PortfolioSnapshot:
         if self.user_id is None or self.user_id != user_id:
             await self.initialize_portfolio(user_id)
 
@@ -194,28 +194,28 @@ class PortfolioService:
             if not user_config_dict:
                 user_config = UserConfiguration(
                     user_id=str(user_id),
-                    default_paper_trading_capital=self.paper_trading_balance,
+                    defaultPaperTradingCapital=self.paper_trading_balance,
                     id=str(UUID(int=0)),
-                    telegram_chat_id=None,
-                    notification_preferences=None,
-                    enable_telegram_notifications=False,
-                    paper_trading_active=True,
-                    paper_trading_assets=[],
+                    telegramChatId=None,
+                    notificationPreferences=[],
+                    enableTelegramNotifications=False,
+                    paperTradingActive=True,
+                    paperTradingAssets=[],
                     watchlists=[],
-                    favorite_pairs=[],
-                    risk_profile=None,
-                    risk_profile_settings=None,
-                    real_trading_settings=None,
-                    ai_strategy_configurations=None,
-                    ai_analysis_confidence_thresholds=None,
-                    mcp_server_preferences=None,
-                    selected_theme=Theme.DARK,
-                    dashboard_layout_profiles=None,
-                    active_dashboard_layout_profile_id=None,
-                    dashboard_layout_config=None,
-                    cloud_sync_preferences=None,
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow()
+                    favoritePairs=[],
+                    riskProfile=RiskProfile.MODERATE,
+                    riskProfileSettings=None,
+                    realTradingSettings=None,
+                    aiStrategyConfigurations=[],
+                    aiAnalysisConfidenceThresholds=None,
+                    mcpServerPreferences=[],
+                    selectedTheme=Theme.DARK,
+                    dashboardLayoutProfiles={},
+                    activeDashboardLayoutProfileId=None,
+                    dashboardLayoutConfig={},
+                    cloudSyncPreferences=None,
+                    createdAt=datetime.utcnow(),
+                    updatedAt=datetime.utcnow()
                 )
                 await self._persistence_service.upsert_user_configuration(user_config.model_dump())
             else:

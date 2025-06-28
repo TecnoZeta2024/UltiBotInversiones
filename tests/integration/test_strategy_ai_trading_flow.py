@@ -1,18 +1,20 @@
 import pytest
+import sys
+sys.path.insert(0, 'src')
 import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock
 
-from ultibot_backend.services.trading_engine_service import TradingEngine, TradingDecision
-from ultibot_backend.services.ai_orchestrator_service import AIAnalysisResult
-from ultibot_backend.core.domain_models.trading_strategy_models import (
+from services.trading_engine_service import TradingEngine, TradingDecision
+from services.ai_orchestrator_service import AIAnalysisResult
+from core.domain_models.trading_strategy_models import (
     TradingStrategyConfig, BaseStrategyType, ScalpingParameters
 )
-from ultibot_backend.core.domain_models.user_configuration_models import (
+from core.domain_models.user_configuration_models import (
     UserConfiguration, AIStrategyConfiguration, ConfidenceThresholds
 )
-from ultibot_backend.core.domain_models.opportunity_models import (
+from core.domain_models.opportunity_models import (
     Opportunity, OpportunityStatus, SourceType, Direction, InitialSignal, SuggestedAction, RecommendedTradeParams
 )
 from shared.data_types import PortfolioSnapshot, PortfolioSummary

@@ -28,6 +28,22 @@ async def get_market_tickers(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"An unexpected error occurred: {e}")
 
+@router.get("/ticker/24hr/{symbol}", response_model=Dict[str, Any])
+async def get_ticker_24hr(
+    symbol: str,
+    market_data_service: MarketDataService = Depends(get_market_data_service)
+):
+    """
+    Get 24-hour ticker price change statistics for a specific symbol.
+    """
+    try:
+        ticker_data = await market_data_service.get_ticker_24hr(symbol)
+        return ticker_data
+    except UltiBotError as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to fetch 24hr ticker data: {e.message}")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"An unexpected error occurred: {e}")
+
 @router.get("/klines", response_model=List[Dict[str, Any]])
 async def get_market_klines(
     symbol: str = Query(..., description="Trading symbol, e.g. 'BTCUSDT'"),

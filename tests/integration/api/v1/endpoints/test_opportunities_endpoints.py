@@ -4,8 +4,9 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 from datetime import datetime, timezone
 from decimal import Decimal
+from typing import Tuple
 
-from ultibot_backend.core.domain_models.opportunity_models import (
+from core.domain_models.opportunity_models import (
     AIAnalysisRequest,
     Opportunity,
     OpportunityStatus,
@@ -16,9 +17,11 @@ from ultibot_backend.core.domain_models.opportunity_models import (
     AIAnalysis,
     RecommendedTradeParams,
 )
-from ultibot_backend.core.domain_models.user_configuration_models import UserConfiguration, RealTradingSettings
+from adapters.persistence_service import SupabasePersistenceService
+from services.config_service import ConfigurationService
+from core.domain_models.user_configuration_models import UserConfiguration, RealTradingSettings
 from fastapi import FastAPI
-from ultibot_backend import dependencies as deps
+import dependencies as deps
 
 # Fixtures para datos de prueba (pueden permanecer igual)
 @pytest.fixture
@@ -93,17 +96,17 @@ class TestOpportunitiesEndpoints:
     """Integration tests for the opportunities endpoints, aligned with actual implementation."""
 
     async def test_get_gemini_opportunities_success(
-        self, client: AsyncClient, app: FastAPI, persistence_service_fixture: MagicMock, opportunity_fixture: Opportunity
+        self, client_with_db: AsyncClient, persistence_service_fixture: MagicMock, opportunity_fixture: Opportunity
     ):
         """Test GET /api/v1/gemini/opportunities - currently returns an empty list."""
         # El endpoint real devuelve una lista vacía por ahora.
-        response = await client.get("/api/v1/gemini/opportunities")
+        response = await client_with_db.get("/api/v1/gemini/opportunities")
         assert response.status_code == 200
         assert response.json() == []
 
     async def test_post_gemini_opportunities_success(
         self,
-        client: AsyncClient,
+        client_with_db: AsyncClient,
         ai_analysis_request_fixture: AIAnalysisRequest,
     ):
         """
@@ -111,7 +114,7 @@ class TestOpportunitiesEndpoints:
         The endpoint currently echoes the request's opportunities.
         """
         # El endpoint real devuelve las oportunidades del request con un mensaje.
-        response = await client.post(
+        response = await client_with_db.post(
             "/api/v1/gemini/opportunities", json=ai_analysis_request_fixture.model_dump(mode='json')
         )
         assert response.status_code == 200 # El endpoint devuelve 200, no 201
@@ -122,12 +125,12 @@ class TestOpportunitiesEndpoints:
         assert response_data["opportunities"] == ai_analysis_request_fixture.model_dump(mode='json')["opportunities"]
 
     async def test_get_real_trading_candidates_success(
-        self, client: AsyncClient, app: FastAPI, mock_user_config: UserConfiguration, opportunity_fixture: Opportunity
+        self, client: Tuple[AsyncClient, FastAPI], mock_user_config: UserConfiguration, opportunity_fixture: Opportunity
     ):
         """Test GET /api/v1/opportunities/real-trading-candidates for success."""
-        
-        mock_persistence = AsyncMock()
-        mock_config = AsyncMock()
+        http_client, app = client
+        mock_persistence = AsyncMock(spec=SupabasePersistenceService)
+        mock_config = AsyncMock(spec=ConfigurationService)
 
         if mock_user_config.real_trading_settings is None:
             mock_user_config.real_trading_settings = RealTradingSettings(
@@ -143,13 +146,13 @@ class TestOpportunitiesEndpoints:
             )
         mock_user_config.real_trading_settings.real_trading_mode_active = True
         
-        mock_config.get_user_configuration.return_value = mock_user_config.model_dump()
-        mock_persistence.get_all.return_value = [opportunity_fixture.model_dump()]
+        mock_config.get_user_configuration.return_value = mock_user_config
+        mock_persistence.get_all.return_value = [opportunity_fixture]
 
         app.dependency_overrides[deps.get_persistence_service] = lambda: mock_persistence
         app.dependency_overrides[deps.get_config_service] = lambda: mock_config
 
-        response = await client.get("/api/v1/opportunities/real-trading-candidates")
+        response = await http_client.get("/api/v1/opportunities/real-trading-candidates")
         
         assert response.status_code == 200
         assert response.json() == [opportunity_fixture.model_dump(mode='json')]
@@ -164,10 +167,11 @@ class TestOpportunitiesEndpoints:
         app.dependency_overrides.clear()
 
     async def test_get_real_trading_candidates_mode_inactive(
-        self, client: AsyncClient, app: FastAPI, mock_user_config: UserConfiguration
+        self, client: Tuple[AsyncClient, FastAPI], mock_user_config: UserConfiguration
     ):
         """Test GET /api/v1/opportunities/real-trading-candidates when real trading mode is inactive."""
-        mock_config = AsyncMock()
+        http_client, app = client
+        mock_config = AsyncMock(spec=ConfigurationService)
         
         if mock_user_config.real_trading_settings is None:
             mock_user_config.real_trading_settings = RealTradingSettings(
@@ -182,11 +186,11 @@ class TestOpportunitiesEndpoints:
                 last_daily_reset=None
             )
         mock_user_config.real_trading_settings.real_trading_mode_active = False
-        mock_config.get_user_configuration.return_value = mock_user_config.model_dump()
+        mock_config.get_user_configuration.return_value = mock_user_config
 
         app.dependency_overrides[deps.get_config_service] = lambda: mock_config
 
-        response = await client.get("/api/v1/opportunities/real-trading-candidates")
+        response = await http_client.get("/api/v1/opportunities/real-trading-candidates")
         
         assert response.status_code == 403
         assert response.json() == {"detail": "El modo de trading real no está activo para este usuario."}

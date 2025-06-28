@@ -7,11 +7,11 @@ from unittest.mock import AsyncMock, MagicMock
 import logging
 from decimal import Decimal
 
-from ultibot_backend.core.domain_models.trade_models import TradeSide, PositionStatus, OrderCategory, TradeOrderDetails
-from ultibot_backend.core.domain_models.opportunity_models import Opportunity, OpportunityStatus, AIAnalysis, SourceType, InitialSignal, Direction, SuggestedAction
-from ultibot_backend.core.domain_models.user_configuration_models import UserConfiguration, RiskProfileSettings, RealTradingSettings
+from core.domain_models.trade_models import TradeSide, PositionStatus, OrderCategory, TradeOrderDetails
+from core.domain_models.opportunity_models import Opportunity, OpportunityStatus, AIAnalysis, SourceType, InitialSignal, Direction, SuggestedAction
+from core.domain_models.user_configuration_models import UserConfiguration, RiskProfileSettings, RealTradingSettings
 from shared.data_types import APICredential, PortfolioSnapshot, PortfolioSummary, ServiceName
-from ultibot_backend.core.domain_models.trading_strategy_models import TradingStrategyConfig
+from core.domain_models.trading_strategy_models import TradingStrategyConfig
 
 logger = logging.getLogger(__name__)
 
@@ -20,15 +20,15 @@ async def test_complete_real_trading_flow_with_capital_management():
     """
     Test de integración para el flujo completo de operación real con gestión de capital y TSL/TP.
     """
-    from ultibot_backend.services.trading_engine_service import TradingEngine
-    from ultibot_backend.services.config_service import ConfigurationService
-    from ultibot_backend.services.credential_service import CredentialService
-    from ultibot_backend.services.market_data_service import MarketDataService
-    from ultibot_backend.services.portfolio_service import PortfolioService
-    from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-    from ultibot_backend.services.notification_service import NotificationService
-    from ultibot_backend.services.unified_order_execution_service import UnifiedOrderExecutionService
-    from ultibot_backend.services.ai_orchestrator_service import AIOrchestrator
+    from services.trading_engine_service import TradingEngine
+    from services.config_service import ConfigurationService
+    from services.credential_service import CredentialService
+    from services.market_data_service import MarketDataService
+    from services.portfolio_service import PortfolioService
+    from adapters.persistence_service import SupabasePersistenceService
+    from services.notification_service import NotificationService
+    from services.unified_order_execution_service import UnifiedOrderExecutionService
+    from services.ai_orchestrator_service import AIOrchestrator
 
     # Mock all dependencies
     mock_config_service = AsyncMock(spec=ConfigurationService)
@@ -118,21 +118,21 @@ async def test_complete_real_trading_flow_with_capital_management():
     user_config = UserConfiguration(
         id=user_id,
         user_id=user_id,
-        telegramChatId=None,
-        notificationPreferences=None,
-        enableTelegramNotifications=True,
-        defaultPaperTradingCapital=None,
-        paperTradingActive=False,
-        paperTradingAssets=None,
+        telegram_chat_id=None,
+        notification_preferences=None,
+        enable_telegram_notifications=True,
+        default_paper_trading_capital=None,
+        paper_trading_active=False,
+        paper_trading_assets=None,
         watchlists=None,
-        favoritePairs=None,
-        riskProfile=None,
-        riskProfileSettings=RiskProfileSettings(
+        favorite_pairs=None,
+        risk_profile=None,
+        risk_profile_settings=RiskProfileSettings(
             daily_capital_risk_percentage=0.50,
             per_trade_capital_risk_percentage=0.02,
             max_drawdown_percentage=0.10
         ),
-        realTradingSettings=RealTradingSettings(
+        real_trading_settings=RealTradingSettings(
             real_trading_mode_active=True,
             real_trades_executed_count=1,
             max_concurrent_operations=5,
@@ -143,16 +143,16 @@ async def test_complete_real_trading_flow_with_capital_management():
             daily_capital_risked_usd=Decimal("0.0"),
             last_daily_reset=None
         ),
-        aiStrategyConfigurations=None,
-        aiAnalysisConfidenceThresholds=None,
-        mcpServerPreferences=None,
-        selectedTheme=None,
-        dashboardLayoutProfiles=None,
-        activeDashboardLayoutProfileId=None,
-        dashboardLayoutConfig=None,
-        cloudSyncPreferences=None,
-        createdAt=None,
-        updatedAt=None
+        ai_strategy_configurations=None,
+        ai_analysis_confidence_thresholds=None,
+        mcp_server_preferences=None,
+        selected_theme=None,
+        dashboard_layout_profiles=None,
+        active_dashboard_layout_profile_id=None,
+        dashboard_layout_config=None,
+        cloud_sync_preferences=None,
+        created_at=None,
+        updated_at=None
     )
     mock_config_service.get_user_configuration.return_value = user_config
 
@@ -229,15 +229,15 @@ async def test_capital_management_daily_reset():
     """
     Test que verifica el reinicio automático del capital diario arriesgado.
     """
-    from ultibot_backend.services.trading_engine_service import TradingEngine
-    from ultibot_backend.services.config_service import ConfigurationService
-    from ultibot_backend.services.credential_service import CredentialService
-    from ultibot_backend.services.market_data_service import MarketDataService
-    from ultibot_backend.services.portfolio_service import PortfolioService
-    from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-    from ultibot_backend.services.notification_service import NotificationService
-    from ultibot_backend.services.unified_order_execution_service import UnifiedOrderExecutionService
-    from ultibot_backend.services.ai_orchestrator_service import AIOrchestrator
+    from services.trading_engine_service import TradingEngine
+    from services.config_service import ConfigurationService
+    from services.credential_service import CredentialService
+    from services.market_data_service import MarketDataService
+    from services.portfolio_service import PortfolioService
+    from adapters.persistence_service import SupabasePersistenceService
+    from services.notification_service import NotificationService
+    from services.unified_order_execution_service import UnifiedOrderExecutionService
+    from services.ai_orchestrator_service import AIOrchestrator
 
     # Mocks
     mock_config_service = AsyncMock(spec=ConfigurationService)
@@ -298,12 +298,12 @@ async def test_capital_management_daily_reset():
     user_config = UserConfiguration(
         id=user_id_str,
         user_id=user_id_str,
-        riskProfileSettings=RiskProfileSettings(
+        risk_profile_settings=RiskProfileSettings(
             daily_capital_risk_percentage=0.50,
             per_trade_capital_risk_percentage=0.02,
             max_drawdown_percentage=0.10
         ),
-        realTradingSettings=RealTradingSettings(
+        real_trading_settings=RealTradingSettings(
             real_trading_mode_active=True,
             daily_capital_risked_usd=Decimal("100.0"),
             last_daily_reset=yesterday,
@@ -314,12 +314,12 @@ async def test_capital_management_daily_reset():
             asset_specific_stop_loss=None,
             auto_pause_trading_conditions=None
         ),
-        telegramChatId=None, notificationPreferences=None, enableTelegramNotifications=None,
-        defaultPaperTradingCapital=None, paperTradingActive=None, paperTradingAssets=None,
-        watchlists=None, favoritePairs=None, riskProfile=None, aiStrategyConfigurations=None,
-        aiAnalysisConfidenceThresholds=None, mcpServerPreferences=None, selectedTheme=None,
-        dashboardLayoutProfiles=None, activeDashboardLayoutProfileId=None,
-        dashboardLayoutConfig=None, cloudSyncPreferences=None, createdAt=None, updatedAt=None
+        telegram_chat_id=None, notification_preferences=None, enable_telegram_notifications=None,
+        default_paper_trading_capital=None, paper_trading_active=None, paper_trading_assets=None,
+        watchlists=None, favorite_pairs=None, risk_profile=None, ai_strategy_configurations=None,
+        ai_analysis_confidence_thresholds=None, mcp_server_preferences=None, selected_theme=None,
+        dashboard_layout_profiles=None, active_dashboard_layout_profile_id=None,
+        dashboard_layout_config=None, cloud_sync_preferences=None, created_at=None, updated_at=None
     )
     mock_config_service.get_user_configuration.return_value = user_config
 

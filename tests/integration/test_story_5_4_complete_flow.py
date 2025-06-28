@@ -14,11 +14,11 @@ from unittest.mock import AsyncMock, patch, MagicMock
 from uuid import UUID, uuid4
 from datetime import datetime, timezone
 
-from ultibot_backend.services.strategy_service import StrategyService
-from ultibot_backend.services.ai_orchestrator_service import AIOrchestrator
-from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
+from services.strategy_service import StrategyService
+from services.ai_orchestrator_service import AIOrchestrator
+from adapters.persistence_service import SupabasePersistenceService
 
-from ultibot_backend.core.domain_models.trading_strategy_models import (
+from core.domain_models.trading_strategy_models import (
     TradingStrategyConfig,
     BaseStrategyType,
     ScalpingParameters,
@@ -26,8 +26,8 @@ from ultibot_backend.core.domain_models.trading_strategy_models import (
     ApplicabilityRules,
     Timeframe,
 )
-from ultibot_backend.core.domain_models.trade_models import Trade
-from ultibot_backend.core.domain_models.user_configuration_models import (
+from core.domain_models.trade_models import Trade
+from core.domain_models.user_configuration_models import (
     UserConfiguration,
     AIStrategyConfiguration,
     ConfidenceThresholds,
@@ -43,58 +43,59 @@ def user_id():
 
 
 @pytest.fixture
-def mock_persistence_service():
-    return AsyncMock(spec=SupabasePersistenceService)
-
-
-@pytest.fixture
-def configuration_service(mock_persistence_service):
-    from ultibot_backend.services.config_service import ConfigurationService
-    return ConfigurationService(mock_persistence_service)
-
-
-@pytest.fixture
-def strategy_service(mock_persistence_service, configuration_service):
-    return StrategyService(mock_persistence_service, configuration_service)
-
-
-@pytest.fixture
-def ai_orchestrator():
-    return AsyncMock(spec=AIOrchestrator)
-
-
-@pytest.fixture
-def trading_engine(
-    strategy_service,
-    configuration_service,
-    ai_orchestrator,
-    mock_persistence_service,  # Añadido para completitud
-):
-    from ultibot_backend.services.trading_engine_service import TradingEngine
-    # Mock de otros servicios necesarios para el constructor de TradingEngine
-    mock_market_data_service = AsyncMock()
-    mock_unified_order_execution_service = AsyncMock()
-    mock_credential_service = AsyncMock()
-    mock_notification_service = AsyncMock()
-    mock_portfolio_service = AsyncMock()
-
-    return TradingEngine(
-        persistence_service=mock_persistence_service,
-        market_data_service=mock_market_data_service,
-        unified_order_execution_service=mock_unified_order_execution_service,
-        credential_service=mock_credential_service,
-        notification_service=mock_notification_service,
-        strategy_service=strategy_service,
-        configuration_service=configuration_service,
-        portfolio_service=mock_portfolio_service,
-        ai_orchestrator=ai_orchestrator,
+def eth_opportunity(user_id):
+    """Sample ETH opportunity for testing."""
+    from core.domain_models.opportunity_models import (
+        Opportunity,
+        OpportunityStatus,
+        InitialSignal,
+        SourceType,
+        AIAnalysis,
+        SuggestedAction,
+        Direction,
+    )
+    return Opportunity(
+        id=str(uuid4()),
+        user_id=user_id,
+        strategy_id=None,
+        exchange='BINANCE', # Añadido el argumento 'exchange'
+        symbol="ETHUSDT",
+        detected_at=datetime.now(timezone.utc),
+        source_type=SourceType.INTERNAL_INDICATOR_ALGO,
+        source_name="rsi_oversold_detector",
+        initial_signal=InitialSignal(
+            direction_sought=Direction.SELL,
+            entry_price_target=Decimal("3000.0"),
+            stop_loss_target=Decimal("3100.0"),
+            take_profit_target=[Decimal("2900.0")],
+            timeframe="1h",
+            confidence_source=0.75,
+            reasoning_source_text="RSI oversold, potential reversal",
+            reasoning_source_structured=None
+        ),
+        status=OpportunityStatus.NEW,
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
+        source_data=None,
+        system_calculated_priority_score=None,
+        last_priority_calculation_at=None,
+        status_reason_code=None,
+        status_reason_text=None,
+        ai_analysis=None,
+        investigation_details=None,
+        user_feedback=None,
+        linked_trade_ids=None,
+        expires_at=None,
+        expiration_logic=None,
+        post_trade_feedback=None,
+        post_facto_simulation_results=None,
     )
 
 
 @pytest.fixture
 def btc_opportunity(user_id, scalping_strategy_btc):
     """Sample BTC opportunity for testing."""
-    from ultibot_backend.core.domain_models.opportunity_models import (
+    from core.domain_models.opportunity_models import (
         Opportunity,
         OpportunityStatus,
         InitialSignal,
@@ -105,6 +106,7 @@ def btc_opportunity(user_id, scalping_strategy_btc):
         id=str(uuid4()),
         user_id=user_id,
         strategy_id=UUID(scalping_strategy_btc.id),
+        exchange='BINANCE', # Añadido el argumento 'exchange'
         symbol="BTCUSDT",
         detected_at=datetime.now(timezone.utc),
         source_type=SourceType.MCP_SIGNAL, # Ensure this is an Enum member
@@ -138,53 +140,6 @@ def btc_opportunity(user_id, scalping_strategy_btc):
     )
 
 
-@pytest.fixture
-def eth_opportunity(user_id):
-    """Sample ETH opportunity for testing."""
-    from ultibot_backend.core.domain_models.opportunity_models import (
-        Opportunity,
-        OpportunityStatus,
-        InitialSignal,
-        SourceType,
-        AIAnalysis,
-        SuggestedAction,
-        Direction,
-    )
-    return Opportunity(
-        id=str(uuid4()),
-        user_id=user_id,
-        strategy_id=None,
-        symbol="ETHUSDT",
-        detected_at=datetime.now(timezone.utc),
-        source_type=SourceType.INTERNAL_INDICATOR_ALGO,
-        source_name="rsi_oversold_detector",
-        initial_signal=InitialSignal(
-            direction_sought=Direction.SELL,
-            entry_price_target=Decimal("3000.0"),
-            stop_loss_target=Decimal("3100.0"),
-            take_profit_target=[Decimal("2900.0")],
-            timeframe="1h",
-            confidence_source=0.75,
-            reasoning_source_text="RSI oversold, potential reversal",
-            reasoning_source_structured=None
-        ),
-        status=OpportunityStatus.NEW,
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc),
-        source_data=None,
-        system_calculated_priority_score=None,
-        last_priority_calculation_at=None,
-        status_reason_code=None,
-        status_reason_text=None,
-        ai_analysis=None,
-        investigation_details=None,
-        user_feedback=None,
-        linked_trade_ids=None,
-        expires_at=None,
-        expiration_logic=None,
-        post_trade_feedback=None,
-        post_facto_simulation_results=None,
-    )
 
 
 @pytest.fixture
@@ -271,6 +226,10 @@ def ai_strategy_config():
     return AIStrategyConfiguration(
         id="ai_profile_1",
         name="Conservative Day Trading AI",
+        is_active_paper_mode=True,
+        is_active_real_mode=False,
+        total_pnl=Decimal("0.0"),
+        number_of_trades=0,
         applies_to_strategies=None,
         applies_to_pairs=None,
         gemini_prompt_template="Analyze this {symbol} opportunity for day trading. Market data: {market_data}. Strategy: {strategy_params}",
@@ -288,8 +247,8 @@ def ai_strategy_config():
 @pytest.fixture
 def user_configuration(user_id, ai_strategy_config):
     """Complete user configuration for testing."""
-    from ultibot_backend.core.domain_models.user_configuration_models import RiskProfileSettings
-    return UserConfiguration(
+    from core.domain_models.user_configuration_models import RiskProfileSettings
+    return UserConfiguration.model_construct(
         id=str(uuid4()),
         user_id=user_id,
         telegram_chat_id=None,
@@ -302,26 +261,26 @@ def user_configuration(user_id, ai_strategy_config):
         favorite_pairs=["BTCUSDT", "ETHUSDT"],
         risk_profile=RiskProfile.MODERATE,
         risk_profile_settings=RiskProfileSettings(
-            daily_capital_risk_percentage=0.02,  # 2%
-            per_trade_capital_risk_percentage=0.01,  # 1%
-            max_drawdown_percentage=0.15,  # 15%
+            daily_capital_risk_percentage=0.02,
+            per_trade_capital_risk_percentage=0.01,
+            max_drawdown_percentage=0.15,
         ),
-            real_trading_settings=RealTradingSettings(
-                real_trading_mode_active=True,
-                real_trades_executed_count=0,
-                max_concurrent_operations=5,
-                daily_loss_limit_absolute=Decimal("500.0"),
-                daily_profit_target_absolute=Decimal("1000.0"),
-                daily_capital_risked_usd=Decimal("0.0"),
-                last_daily_reset=datetime.now(timezone.utc),
-                asset_specific_stop_loss=None,
-                auto_pause_trading_conditions=None,
-            ),
-            ai_strategy_configurations=[ai_strategy_config],
-            ai_analysis_confidence_thresholds=ConfidenceThresholds(
-                paper_trading=0.60,
-                real_trading=0.75,
-            ),
+        real_trading_settings=RealTradingSettings(
+            real_trading_mode_active=True,
+            real_trades_executed_count=0,
+            max_concurrent_operations=5,
+            daily_loss_limit_absolute=Decimal("500.0"),
+            daily_profit_target_absolute=Decimal("1000.0"),
+            daily_capital_risked_usd=Decimal("0.0"),
+            last_daily_reset=datetime.now(timezone.utc),
+            asset_specific_stop_loss=None,
+            auto_pause_trading_conditions=None,
+        ),
+        ai_strategy_configurations=[ai_strategy_config],
+        ai_analysis_confidence_thresholds=ConfidenceThresholds(
+            paper_trading=0.60,
+            real_trading=0.75,
+        ),
         mcp_server_preferences=None,
         selected_theme=Theme.DARK,
         dashboard_layout_profiles=None,
@@ -365,40 +324,39 @@ class TestCompleteOpportunityProcessingFlow:
     @pytest.mark.asyncio
     async def test_single_strategy_paper_trade_execution_flow(
         self,
-        trading_engine,
-        mock_persistence_service,
+        trading_engine_fixture,
+        mock_persistence_service_integration,
         btc_opportunity,
         scalping_strategy_btc,
         user_configuration,
         user_id,
     ):
         """Test complete flow: opportunity → single applicable strategy → paper trade execution."""
-        from ultibot_backend.core.domain_models.opportunity_models import (
+        from core.domain_models.opportunity_models import (
             OpportunityStatus,
         )
         mode = "paper"
         
-        # Mock database responses
-        active_strategies_data = [
-            scalping_strategy_btc
-        ]
-        mock_persistence_service.list_strategy_configs_by_user = AsyncMock(return_value=active_strategies_data)
-        
-        # Mock get_strategy_config calls
-        mock_persistence_service.get_user_configuration.return_value = user_configuration
-        mock_persistence_service.get_strategy_config_by_id = AsyncMock(
-            return_value=scalping_strategy_btc
+        # FIX: Mock the direct dependencies of TradingEngine
+        trading_engine_fixture.strategy_service.get_active_strategies = AsyncMock(
+            return_value=[scalping_strategy_btc]
         )
-
-        # Mock trade creation (no actual DB persistence needed for this test)
-        mock_persistence_service.upsert_trade = AsyncMock()
+        trading_engine_fixture.strategy_service.is_strategy_applicable_to_symbol = AsyncMock(
+            return_value=True
+        )
+        trading_engine_fixture.configuration_service.get_user_configuration = AsyncMock(
+            return_value=user_configuration
+        )
         
-        with patch.object(trading_engine, '_update_opportunity_status') as mock_update_status:
+        # Mock trade creation (no actual DB persistence needed for this test)
+        mock_persistence_service_integration.upsert_trade = AsyncMock()
+        
+        with patch.object(trading_engine_fixture, '_update_opportunity_status') as mock_update_status:
             # Explicitly set strategy_id to rule out fixture issues
             btc_opportunity.strategy_id = UUID(scalping_strategy_btc.id)
             
             # Execute the complete flow
-            decisions = await trading_engine.process_opportunity(
+            decisions = await trading_engine_fixture.process_opportunity(
                 btc_opportunity
             )
 
@@ -423,7 +381,7 @@ class TestCompleteOpportunityProcessingFlow:
             # (In a real scenario, another service call would do this)
             
             # Now, we can manually call the status update to satisfy the mock assertion
-            await trading_engine._update_opportunity_status(
+            await trading_engine_fixture._update_opportunity_status(
                 btc_opportunity,
                 OpportunityStatus.CONVERTED_TO_TRADE_PAPER,
                 "trades_executed",
@@ -441,17 +399,17 @@ class TestCompleteOpportunityProcessingFlow:
     @pytest.mark.asyncio
     async def test_multiple_strategies_with_ai_integration_flow(
         self,
-        trading_engine,
-        mock_persistence_service,
+        trading_engine_fixture,
+        mock_persistence_service_integration,
         btc_opportunity,
         scalping_strategy_btc,
         day_trading_strategy_multi,
         user_configuration,
-        ai_orchestrator,
+        ai_orchestrator_fixture,
         user_id,
     ):
         """Test flow with multiple strategies where one uses AI analysis."""
-        from ultibot_backend.core.domain_models.opportunity_models import (
+        from core.domain_models.opportunity_models import (
             SuggestedAction,
         )
         mode = "paper"
@@ -461,21 +419,16 @@ class TestCompleteOpportunityProcessingFlow:
             scalping_strategy_btc,
             day_trading_strategy_multi,
         ]
-        # Correctly mock the methods that are actually called by the services
-        mock_persistence_service.list_strategy_configs_by_user = AsyncMock(return_value=active_strategies_data)
-        
-        # Mock the configuration service directly to ensure the correct user_config is returned
-        trading_engine.configuration_service.get_user_configuration = AsyncMock(return_value=user_configuration)
-        
-        mock_persistence_service.get_strategy_config_by_id = AsyncMock(
-            side_effect=[
-                scalping_strategy_btc,
-                day_trading_strategy_multi,
-            ]
+        # FIX: Mock the direct dependencies of TradingEngine
+        trading_engine_fixture.strategy_service.get_active_strategies = AsyncMock(
+            return_value=[scalping_strategy_btc, day_trading_strategy_multi]
+        )
+        trading_engine_fixture.configuration_service.get_user_configuration = AsyncMock(
+            return_value=user_configuration
         )
         
         # Mock the new method call within the loop
-        trading_engine.strategy_service.is_strategy_applicable_to_symbol = AsyncMock(return_value=True)
+        trading_engine_fixture.strategy_service.is_strategy_applicable_to_symbol = AsyncMock(return_value=True)
         
         # Mock AI analysis for day trading strategy
         ai_analysis_result = AsyncMock()
@@ -483,7 +436,7 @@ class TestCompleteOpportunityProcessingFlow:
         ai_analysis_result.suggested_action = SuggestedAction.BUY
         ai_analysis_result.reasoning_ai = "AI confirms bullish momentum with strong volume"
         # Ensure the mock returns a Pydantic model instance for recommended_trade_params
-        from ultibot_backend.core.domain_models.opportunity_models import RecommendedTradeParams
+        from core.domain_models.opportunity_models import RecommendedTradeParams
         ai_analysis_result.recommended_trade_params = RecommendedTradeParams(
             entry_price=Decimal("50100.0"),
             stop_loss_price=Decimal("49200.0"),
@@ -491,12 +444,12 @@ class TestCompleteOpportunityProcessingFlow:
             trade_size_percentage=Decimal("0.025"), # as percentage
         )
         ai_analysis_result.ai_warnings = []
-        ai_orchestrator.analyze_opportunity_with_strategy_context_async.return_value = ai_analysis_result
+        ai_orchestrator_fixture.analyze_opportunity_with_strategy_context_async = AsyncMock(return_value=ai_analysis_result)
         
         # Mock update methods
-        with patch.object(trading_engine, '_update_opportunity_status') as mock_update_status:
+        with patch.object(trading_engine_fixture, '_update_opportunity_status') as mock_update_status:
             
-            decisions = await trading_engine.process_opportunity(
+            decisions = await trading_engine_fixture.process_opportunity(
                 btc_opportunity
             )
             
@@ -520,20 +473,20 @@ class TestCompleteOpportunityProcessingFlow:
             assert "AI confirms" in ai_decision.reasoning
             
             # Verify AI was called
-            ai_orchestrator.analyze_opportunity_with_strategy_context_async.assert_called_once()
+            ai_orchestrator_fixture.analyze_opportunity_with_strategy_context_async.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_no_applicable_strategies_rejection_flow(
         self,
-        trading_engine,
-        mock_persistence_service,
+        trading_engine_fixture,
+        mock_persistence_service_integration,
         eth_opportunity,  # ETH opportunity
         scalping_strategy_btc,  # BTC-only strategy
         user_configuration,
         user_id,
     ):
         """Test flow where active strategies exist but none are applicable."""
-        from ultibot_backend.core.domain_models.opportunity_models import (
+        from core.domain_models.opportunity_models import (
             OpportunityStatus,
         )
         mode = "paper"
@@ -542,14 +495,14 @@ class TestCompleteOpportunityProcessingFlow:
         active_strategies_data = [
             scalping_strategy_btc
         ]
-        mock_persistence_service.list_strategy_configs_by_user = AsyncMock(return_value=active_strategies_data)
-        mock_persistence_service.get_user_configuration.return_value = user_configuration
+        mock_persistence_service_integration.list_strategy_configs_by_user = AsyncMock(return_value=active_strategies_data)
+        mock_persistence_service_integration.get_user_configuration = AsyncMock(return_value=user_configuration)
         
         # The new implementation of process_opportunity returns decisions
         # but does not directly update the status. The status update is
         # orchestrated by a higher-level service.
         # The test should simply verify that no decisions are generated.
-        decisions = await trading_engine.process_opportunity(
+        decisions = await trading_engine_fixture.process_opportunity(
             eth_opportunity
         )
 
@@ -562,16 +515,16 @@ class TestCompleteOpportunityProcessingFlow:
     @pytest.mark.asyncio
     async def test_confidence_threshold_rejection_flow(
         self,
-        trading_engine,
-        mock_persistence_service,
+        trading_engine_fixture,
+        mock_persistence_service_integration,
         btc_opportunity,
         day_trading_strategy_multi,
         user_configuration,
-        ai_orchestrator,
+        ai_orchestrator_fixture,
         user_id,
     ):
         """Test flow where AI analysis confidence is below threshold."""
-        from ultibot_backend.core.domain_models.opportunity_models import (
+        from core.domain_models.opportunity_models import (
             OpportunityStatus,
             SuggestedAction,
         )
@@ -580,12 +533,13 @@ class TestCompleteOpportunityProcessingFlow:
         # FIX: Explicitly set the user configuration to real trading mode for this test.
         user_configuration.paper_trading_active = False
         
-        # Mock active strategy
-        active_strategies_data = [
-            day_trading_strategy_multi
-        ]
-        mock_persistence_service.list_strategy_configs_by_user = AsyncMock(return_value=active_strategies_data)
-        mock_persistence_service.get_user_configuration.return_value = user_configuration
+        # FIX: Mock the direct dependencies of TradingEngine
+        trading_engine_fixture.strategy_service.get_active_strategies = AsyncMock(
+            return_value=[day_trading_strategy_multi]
+        )
+        trading_engine_fixture.configuration_service.get_user_configuration = AsyncMock(
+            return_value=user_configuration
+        )
         
         # Mock low-confidence AI analysis
         ai_analysis_result = AsyncMock()
@@ -594,15 +548,18 @@ class TestCompleteOpportunityProcessingFlow:
         ai_analysis_result.reasoning_ai = "Weak bullish signal, uncertain market conditions"
         ai_analysis_result.recommended_trade_params = None
         ai_analysis_result.ai_warnings = ["Low confidence due to market volatility"]
-        ai_orchestrator.analyze_opportunity_with_strategy_context_async.return_value = ai_analysis_result
+        ai_orchestrator_fixture.analyze_opportunity_with_strategy_context_async = AsyncMock(return_value=ai_analysis_result)
         
+        # AÑADIR ESTE MOCK para forzar el fallo cuando la IA no es suficiente
+        trading_engine_fixture.strategy_service.strategy_can_operate_autonomously = AsyncMock(return_value=False)
+
         # Mock strategy applicability
-        trading_engine.strategy_service.is_strategy_applicable_to_symbol = AsyncMock(return_value=True)
+        trading_engine_fixture.strategy_service.is_strategy_applicable_to_symbol = AsyncMock(return_value=True)
 
         # The logic is that if confidence is too low, no decision is returned.
         # The test must verify that the opportunity status is updated accordingly.
-        with patch.object(trading_engine, '_update_opportunity_status') as mock_update_status:
-            decisions = await trading_engine.process_opportunity(
+        with patch.object(trading_engine_fixture, '_update_opportunity_status') as mock_update_status:
+            decisions = await trading_engine_fixture.process_opportunity(
                 btc_opportunity
             )
 
@@ -620,8 +577,8 @@ class TestCompleteOpportunityProcessingFlow:
     @pytest.mark.asyncio
     async def test_real_mode_confirmation_required_flow(
         self,
-        trading_engine,
-        mock_persistence_service,
+        trading_engine_fixture,
+        mock_persistence_service_integration,
         btc_opportunity,
         scalping_strategy_btc,
         user_configuration,
@@ -630,7 +587,7 @@ class TestCompleteOpportunityProcessingFlow:
         mock_portfolio_snapshot,
     ):
         """Test flow where real mode requires user confirmation."""
-        from ultibot_backend.core.domain_models.opportunity_models import (
+        from core.domain_models.opportunity_models import (
             OpportunityStatus,
         )
         mode = "real"
@@ -641,24 +598,22 @@ class TestCompleteOpportunityProcessingFlow:
         # Modify strategy to be active in real mode
         scalping_strategy_btc.is_active_real_mode = True
         
-        # FIX: Add missing mock for strategy applicability.
-        trading_engine.strategy_service.is_strategy_applicable_to_symbol = AsyncMock(return_value=True)
-
         # FIX: Mock dependencies needed for decision evaluation
-        trading_engine.market_data_service.get_current_price = AsyncMock(return_value=mock_current_price)
-        trading_engine.portfolio_service.get_portfolio_snapshot = AsyncMock(return_value=mock_portfolio_snapshot)
+        trading_engine_fixture.market_data_service.get_current_price = AsyncMock(return_value=mock_current_price)
+        trading_engine_fixture.portfolio_service.get_portfolio_snapshot = AsyncMock(return_value=mock_portfolio_snapshot)
 
-        # Mock active strategy
+        # FIX: Mock the direct dependencies of TradingEngine
         scalping_strategy_btc.is_active_real_mode = True # Ensure it's active for real mode test
-        active_strategies_data = [
-            scalping_strategy_btc
-        ]
-        mock_persistence_service.list_strategy_configs_by_user = AsyncMock(return_value=active_strategies_data)
-        mock_persistence_service.get_user_configuration.return_value = user_configuration
+        trading_engine_fixture.strategy_service.get_active_strategies = AsyncMock(
+            return_value=[scalping_strategy_btc]
+        )
+        trading_engine_fixture.configuration_service.get_user_configuration = AsyncMock(
+            return_value=user_configuration
+        )
 
         # FIX: Directly mock the outcome of the evaluation to isolate the test's focus.
         # This avoids guessing internal dependencies of the evaluation method.
-        from ultibot_backend.services.trading_engine_service import TradingDecision
+        from services.trading_engine_service import TradingDecision
         mock_decision = TradingDecision(
             decision="execute_trade",
             confidence=0.95,
@@ -669,10 +624,10 @@ class TestCompleteOpportunityProcessingFlow:
             mode='real'
         )
         
-        with patch.object(trading_engine, '_evaluate_strategy_for_opportunity', return_value=mock_decision) as mock_evaluate, \
-             patch.object(trading_engine, '_update_opportunity_status') as mock_update_status:
+        with patch.object(trading_engine_fixture, '_evaluate_strategy_for_opportunity', return_value=mock_decision) as mock_evaluate, \
+             patch.object(trading_engine_fixture, '_update_opportunity_status') as mock_update_status:
             
-            decisions = await trading_engine.process_opportunity(
+            decisions = await trading_engine_fixture.process_opportunity(
                 btc_opportunity
             )
             
@@ -698,32 +653,32 @@ class TestCompleteOpportunityProcessingFlow:
     @pytest.mark.asyncio
     async def test_strategy_evaluation_error_resilience_flow(
         self,
-        trading_engine,
-        mock_persistence_service,
+        trading_engine_fixture,
+        mock_persistence_service_integration,
         btc_opportunity,
         scalping_strategy_btc,
         day_trading_strategy_multi,
         user_configuration,
-        ai_orchestrator,
+        ai_orchestrator_fixture,
         user_id,
     ):
         """Test that individual strategy errors don't break the entire flow."""
-        from ultibot_backend.core.domain_models.opportunity_models import (
+        from core.domain_models.opportunity_models import (
             OpportunityStatus,
         )
-        from ultibot_backend.services.trading_engine_service import TradingDecision
+        from services.trading_engine_service import TradingDecision
         mode = "paper"
         
-        # Mock both strategies as active
-        active_strategies_data = [
-            scalping_strategy_btc,
-            day_trading_strategy_multi,
-        ]
-        mock_persistence_service.list_strategy_configs_by_user = AsyncMock(return_value=active_strategies_data)
-        mock_persistence_service.get_user_configuration.return_value = user_configuration
+        # FIX: Mock the direct dependencies of TradingEngine
+        trading_engine_fixture.strategy_service.get_active_strategies = AsyncMock(
+            return_value=[scalping_strategy_btc, day_trading_strategy_multi]
+        )
+        trading_engine_fixture.configuration_service.get_user_configuration = AsyncMock(
+            return_value=user_configuration
+        )
         
         # Mock strategy applicability for both
-        trading_engine.strategy_service.is_strategy_applicable_to_symbol = AsyncMock(return_value=True)
+        trading_engine_fixture.strategy_service.is_strategy_applicable_to_symbol = AsyncMock(return_value=True)
 
         # Mock the evaluation: AI strategy fails (returns None), scalping succeeds
         successful_decision = TradingDecision(
@@ -737,17 +692,18 @@ class TestCompleteOpportunityProcessingFlow:
         
         async def mock_evaluation_side_effect(strategy, opportunity, user_config, mode_arg):
             if strategy.id == day_trading_strategy_multi.id:
-                # Simulate a failure for the AI strategy
-                return None
+                # Simulate a failure for the AI strategy by raising an exception
+                # This is a more realistic way to test error resilience
+                raise ValueError("Simulated AI evaluation error")
             if strategy.id == scalping_strategy_btc.id:
                 # Simulate success for the autonomous strategy
                 return successful_decision
             return None
 
-        with patch.object(trading_engine, '_evaluate_strategy_for_opportunity', side_effect=mock_evaluation_side_effect) as mock_evaluate, \
-             patch.object(trading_engine, '_update_opportunity_status') as mock_update_status:
+        with patch.object(trading_engine_fixture, '_evaluate_strategy_for_opportunity', side_effect=mock_evaluation_side_effect) as mock_evaluate, \
+             patch.object(trading_engine_fixture, '_update_opportunity_status') as mock_update_status:
             
-            decisions = await trading_engine.process_opportunity(
+            decisions = await trading_engine_fixture.process_opportunity(
                 btc_opportunity
             )
             
@@ -773,7 +729,7 @@ class TestTradeCreationWithStrategyAssociation:
     @pytest.mark.asyncio
     async def test_trade_strategy_id_association(
         self,
-        trading_engine,
+        trading_engine_fixture,
         btc_opportunity,
         scalping_strategy_btc,
         user_configuration,
@@ -781,7 +737,7 @@ class TestTradeCreationWithStrategyAssociation:
         mock_portfolio_snapshot,
     ):
         """Test that created trades have correct strategy_id association."""
-        from ultibot_backend.services.trading_engine_service import TradingDecision
+        from services.trading_engine_service import TradingDecision
         decision = TradingDecision(
             decision="execute_trade",
             confidence=0.8,
@@ -791,12 +747,12 @@ class TestTradeCreationWithStrategyAssociation:
         )
         
         # Mock trade creation
-        with patch('ultibot_backend.services.trading_engine_service.uuid4', return_value=uuid4()), \
-             patch('ultibot_backend.services.trading_engine_service.datetime') as mock_datetime:
+        with patch('services.trading_engine_service.uuid4', return_value=uuid4()), \
+             patch('services.trading_engine_service.datetime') as mock_datetime:
             
             mock_datetime.now.return_value = datetime.now(timezone.utc)
             
-            trade = await trading_engine.create_trade_from_decision(
+            trade = await trading_engine_fixture.create_trade_from_decision(
                 decision,
                 btc_opportunity,
                 scalping_strategy_btc,
@@ -813,7 +769,7 @@ class TestTradeCreationWithStrategyAssociation:
     @pytest.mark.asyncio
     async def test_trade_side_determination(
         self,
-        trading_engine,
+        trading_engine_fixture,
         btc_opportunity,
         scalping_strategy_btc,
         user_configuration,
@@ -821,8 +777,8 @@ class TestTradeCreationWithStrategyAssociation:
         mock_portfolio_snapshot,
     ):
         """Test that trade side is correctly determined from opportunity signal."""
-        from ultibot_backend.services.trading_engine_service import TradingDecision
-        from ultibot_backend.core.domain_models.opportunity_models import Direction
+        from services.trading_engine_service import TradingDecision
+        from core.domain_models.opportunity_models import Direction
         # Test buy signal
         btc_opportunity.initial_signal.direction_sought = Direction.BUY
         decision = TradingDecision(
@@ -833,7 +789,7 @@ class TestTradeCreationWithStrategyAssociation:
             strategy_id=scalping_strategy_btc.id,
         )
         
-        trade = await trading_engine.create_trade_from_decision(
+        trade = await trading_engine_fixture.create_trade_from_decision(
             decision, btc_opportunity, scalping_strategy_btc, user_configuration, mock_current_price, mock_portfolio_snapshot
         )
         
@@ -841,7 +797,7 @@ class TestTradeCreationWithStrategyAssociation:
         
         # Test sell signal
         btc_opportunity.initial_signal.direction_sought = Direction.SELL
-        trade = await trading_engine.create_trade_from_decision(
+        trade = await trading_engine_fixture.create_trade_from_decision(
             decision, btc_opportunity, scalping_strategy_btc, user_configuration, mock_current_price, mock_portfolio_snapshot
         )
         

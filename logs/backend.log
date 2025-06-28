@@ -128,3 +128,211 @@
 2025-06-27 22:28:10,081 - ultibot_backend - INFO - [MainThread] - main.py:103 - Recursos liberados y aplicación apagada (lifespan).
 2025-06-27 22:28:10,083 - uvicorn.error - INFO - [MainThread] - on.py:76 - Application shutdown complete.
 2025-06-27 22:28:10,084 - uvicorn.error - INFO - [MainThread] - server.py:92 - Finished server process [1]
+2025-06-27 21:11:27,411 - ultibot_backend - INFO - [Thread-15 (run_blocking_portal)] - main.py:93 - Iniciando UltiBot Backend (lifespan)...
+2025-06-27 21:11:27,412 - ultibot_backend - INFO - [Thread-15 (run_blocking_portal)] - main.py:98 - DependencyContainer adjuntado a app.state: True
+2025-06-27 21:11:27,412 - dependencies - INFO - [Thread-15 (run_blocking_portal)] - dependencies.py:113 - Initializing dependency container...
+2025-06-27 21:11:27,412 - dependencies - INFO - [Thread-15 (run_blocking_portal)] - dependencies.py:51 - Usando DATABASE_URL del entorno: sqlite+aiosqlite:///C:/Users/zamor/AppData/Local/Temp/tmprq6gqqjk/test_db.sqlite
+2025-06-27 21:11:27,414 - dependencies - INFO - [Thread-15 (run_blocking_portal)] - dependencies.py:54 - Initializing database with URL: sqlite+aiosqlite:///C:/Users/zamor/AppData/Local/Temp/tmprq6gqqjk/test_db.sqlite
+2025-06-27 21:11:27,415 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing <function connect.<locals>.connector at 0x0000019B2F103380>
+2025-06-27 21:11:27,416 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation <function connect.<locals>.connector at 0x0000019B2F103380> completed
+2025-06-27 21:11:27,416 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method create_function of sqlite3.Connection object at 0x0000019B2F09E890>, 'regexp', 2, <function SQLiteDialect_pysqlite.on_connect.<locals>.regexp at 0x0000019B2F08F380>, deterministic=True)
+2025-06-27 21:11:27,416 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method create_function of sqlite3.Connection object at 0x0000019B2F09E890>, 'regexp', 2, <function SQLiteDialect_pysqlite.on_connect.<locals>.regexp at 0x0000019B2F08F380>, deterministic=True) completed
+2025-06-27 21:11:27,417 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method create_function of sqlite3.Connection object at 0x0000019B2F09E890>, 'floor', 1, <built-in function floor>, deterministic=True)
+2025-06-27 21:11:27,417 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method create_function of sqlite3.Connection object at 0x0000019B2F09E890>, 'floor', 1, <built-in function floor>, deterministic=True) completed
+2025-06-27 21:11:27,418 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method cursor of sqlite3.Connection object at 0x0000019B2F09E890>)
+2025-06-27 21:11:27,418 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method cursor of sqlite3.Connection object at 0x0000019B2F09E890>) completed
+2025-06-27 21:11:27,418 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method execute of sqlite3.Cursor object at 0x0000019B2F195CC0>, 'PRAGMA read_uncommitted', [])
+2025-06-27 21:11:27,419 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method execute of sqlite3.Cursor object at 0x0000019B2F195CC0>, 'PRAGMA read_uncommitted', []) completed
+2025-06-27 21:11:27,419 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x0000019B2F195CC0>)
+2025-06-27 21:11:27,419 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x0000019B2F195CC0>) completed
+2025-06-27 21:11:27,420 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method close of sqlite3.Cursor object at 0x0000019B2F195CC0>)
+2025-06-27 21:11:27,420 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method close of sqlite3.Cursor object at 0x0000019B2F195CC0>) completed
+2025-06-27 21:11:27,421 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method rollback of sqlite3.Connection object at 0x0000019B2F09E890>)
+2025-06-27 21:11:27,421 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method rollback of sqlite3.Connection object at 0x0000019B2F09E890>) completed
+2025-06-27 21:11:27,422 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method cursor of sqlite3.Connection object at 0x0000019B2F09E890>)
+2025-06-27 21:11:27,422 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method cursor of sqlite3.Connection object at 0x0000019B2F09E890>) completed
+2025-06-27 21:11:27,423 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method execute of sqlite3.Cursor object at 0x0000019B2F195DC0>, 'PRAGMA main.table_info("api_credentials")', ())
+2025-06-27 21:11:27,423 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method execute of sqlite3.Cursor object at 0x0000019B2F195DC0>, 'PRAGMA main.table_info("api_credentials")', ()) completed
+2025-06-27 21:11:27,423 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x0000019B2F195DC0>)
+2025-06-27 21:11:27,424 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x0000019B2F195DC0>) completed
+2025-06-27 21:11:27,424 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method close of sqlite3.Cursor object at 0x0000019B2F195DC0>)
+2025-06-27 21:11:27,424 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method close of sqlite3.Cursor object at 0x0000019B2F195DC0>) completed
+2025-06-27 21:11:27,425 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method cursor of sqlite3.Connection object at 0x0000019B2F09E890>)
+2025-06-27 21:11:27,425 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method cursor of sqlite3.Connection object at 0x0000019B2F09E890>) completed
+2025-06-27 21:11:27,426 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method execute of sqlite3.Cursor object at 0x0000019B2F195EC0>, 'PRAGMA main.table_info("user_configurations")', ())
+2025-06-27 21:11:27,426 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method execute of sqlite3.Cursor object at 0x0000019B2F195EC0>, 'PRAGMA main.table_info("user_configurations")', ()) completed
+2025-06-27 21:11:27,426 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x0000019B2F195EC0>)
+2025-06-27 21:11:27,427 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x0000019B2F195EC0>) completed
+2025-06-27 21:11:27,427 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method close of sqlite3.Cursor object at 0x0000019B2F195EC0>)
+2025-06-27 21:11:27,427 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method close of sqlite3.Cursor object at 0x0000019B2F195EC0>) completed
+2025-06-27 21:11:27,428 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method cursor of sqlite3.Connection object at 0x0000019B2F09E890>)
+2025-06-27 21:11:27,428 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method cursor of sqlite3.Connection object at 0x0000019B2F09E890>) completed
+2025-06-27 21:11:27,429 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method execute of sqlite3.Cursor object at 0x0000019B2F195F40>, 'PRAGMA main.table_info("trades")', ())
+2025-06-27 21:11:27,429 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method execute of sqlite3.Cursor object at 0x0000019B2F195F40>, 'PRAGMA main.table_info("trades")', ()) completed
+2025-06-27 21:11:27,429 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x0000019B2F195F40>)
+2025-06-27 21:11:27,430 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x0000019B2F195F40>) completed
+2025-06-27 21:11:27,430 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method close of sqlite3.Cursor object at 0x0000019B2F195F40>)
+2025-06-27 21:11:27,430 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method close of sqlite3.Cursor object at 0x0000019B2F195F40>) completed
+2025-06-27 21:11:27,431 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method cursor of sqlite3.Connection object at 0x0000019B2F09E890>)
+2025-06-27 21:11:27,431 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method cursor of sqlite3.Connection object at 0x0000019B2F09E890>) completed
+2025-06-27 21:11:27,432 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method execute of sqlite3.Cursor object at 0x0000019B2F195FC0>, 'PRAGMA main.table_info("portfolio_snapshots")', ())
+2025-06-27 21:11:27,432 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method execute of sqlite3.Cursor object at 0x0000019B2F195FC0>, 'PRAGMA main.table_info("portfolio_snapshots")', ()) completed
+2025-06-27 21:11:27,432 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x0000019B2F195FC0>)
+2025-06-27 21:11:27,432 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x0000019B2F195FC0>) completed
+2025-06-27 21:11:27,433 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method close of sqlite3.Cursor object at 0x0000019B2F195FC0>)
+2025-06-27 21:11:27,433 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method close of sqlite3.Cursor object at 0x0000019B2F195FC0>) completed
+2025-06-27 21:11:27,434 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method cursor of sqlite3.Connection object at 0x0000019B2F09E890>)
+2025-06-27 21:11:27,434 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method cursor of sqlite3.Connection object at 0x0000019B2F09E890>) completed
+2025-06-27 21:11:27,434 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method execute of sqlite3.Cursor object at 0x0000019B2F196040>, 'PRAGMA main.table_info("opportunities")', ())
+2025-06-27 21:11:27,434 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method execute of sqlite3.Cursor object at 0x0000019B2F196040>, 'PRAGMA main.table_info("opportunities")', ()) completed
+2025-06-27 21:11:27,435 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x0000019B2F196040>)
+2025-06-27 21:11:27,435 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x0000019B2F196040>) completed
+2025-06-27 21:11:27,436 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method close of sqlite3.Cursor object at 0x0000019B2F196040>)
+2025-06-27 21:11:27,436 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method close of sqlite3.Cursor object at 0x0000019B2F196040>) completed
+2025-06-27 21:11:27,437 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method cursor of sqlite3.Connection object at 0x0000019B2F09E890>)
+2025-06-27 21:11:27,437 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method cursor of sqlite3.Connection object at 0x0000019B2F09E890>) completed
+2025-06-27 21:11:27,437 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method execute of sqlite3.Cursor object at 0x0000019B2F1960C0>, 'PRAGMA main.table_info("strategy_configurations")', ())
+2025-06-27 21:11:27,438 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method execute of sqlite3.Cursor object at 0x0000019B2F1960C0>, 'PRAGMA main.table_info("strategy_configurations")', ()) completed
+2025-06-27 21:11:27,439 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x0000019B2F1960C0>)
+2025-06-27 21:11:27,439 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x0000019B2F1960C0>) completed
+2025-06-27 21:11:27,439 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method close of sqlite3.Cursor object at 0x0000019B2F1960C0>)
+2025-06-27 21:11:27,439 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method close of sqlite3.Cursor object at 0x0000019B2F1960C0>) completed
+2025-06-27 21:11:27,441 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method cursor of sqlite3.Connection object at 0x0000019B2F09E890>)
+2025-06-27 21:11:27,441 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method cursor of sqlite3.Connection object at 0x0000019B2F09E890>) completed
+2025-06-27 21:11:27,441 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method execute of sqlite3.Cursor object at 0x0000019B2F196140>, 'PRAGMA main.table_info("market_data")', ())
+2025-06-27 21:11:27,442 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method execute of sqlite3.Cursor object at 0x0000019B2F196140>, 'PRAGMA main.table_info("market_data")', ()) completed
+2025-06-27 21:11:27,442 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x0000019B2F196140>)
+2025-06-27 21:11:27,442 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x0000019B2F196140>) completed
+2025-06-27 21:11:27,443 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method close of sqlite3.Cursor object at 0x0000019B2F196140>)
+2025-06-27 21:11:27,443 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method close of sqlite3.Cursor object at 0x0000019B2F196140>) completed
+2025-06-27 21:11:27,443 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method cursor of sqlite3.Connection object at 0x0000019B2F09E890>)
+2025-06-27 21:11:27,444 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method cursor of sqlite3.Connection object at 0x0000019B2F09E890>) completed
+2025-06-27 21:11:27,444 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method execute of sqlite3.Cursor object at 0x0000019B2F1961C0>, 'PRAGMA main.table_info("notifications")', ())
+2025-06-27 21:11:27,444 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method execute of sqlite3.Cursor object at 0x0000019B2F1961C0>, 'PRAGMA main.table_info("notifications")', ()) completed
+2025-06-27 21:11:27,444 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x0000019B2F1961C0>)
+2025-06-27 21:11:27,445 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method fetchall of sqlite3.Cursor object at 0x0000019B2F1961C0>) completed
+2025-06-27 21:11:27,445 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method close of sqlite3.Cursor object at 0x0000019B2F1961C0>)
+2025-06-27 21:11:27,445 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method close of sqlite3.Cursor object at 0x0000019B2F1961C0>) completed
+2025-06-27 21:11:27,445 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method commit of sqlite3.Connection object at 0x0000019B2F09E890>)
+2025-06-27 21:11:27,446 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method commit of sqlite3.Connection object at 0x0000019B2F09E890>) completed
+2025-06-27 21:11:27,446 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method rollback of sqlite3.Connection object at 0x0000019B2F09E890>)
+2025-06-27 21:11:27,446 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method rollback of sqlite3.Connection object at 0x0000019B2F09E890>) completed
+2025-06-27 21:11:27,448 - aiosqlite - DEBUG - [Thread-16] - core.py:104 - executing functools.partial(<built-in method close of sqlite3.Connection object at 0x0000019B2F09E890>)
+2025-06-27 21:11:27,448 - aiosqlite - DEBUG - [Thread-16] - core.py:106 - operation functools.partial(<built-in method close of sqlite3.Connection object at 0x0000019B2F09E890>) completed
+2025-06-27 21:11:27,448 - dependencies - INFO - [Thread-15 (run_blocking_portal)] - dependencies.py:69 - Database tables created and session factory initialized successfully.
+2025-06-27 21:11:27,449 - httpx - DEBUG - [Thread-15 (run_blocking_portal)] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-27 21:11:27,451 - httpx - DEBUG - [Thread-15 (run_blocking_portal)] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-27 21:11:27,649 - adapters.redis_cache - INFO - [Thread-15 (run_blocking_portal)] - redis_cache.py:12 - RedisCache initialized with URL: redis://localhost:6379/0
+2025-06-27 21:11:27,649 - adapters.redis_cache - INFO - [Thread-15 (run_blocking_portal)] - redis_cache.py:18 - Redis client created.
+2025-06-27 21:11:27,651 - httpx - DEBUG - [Thread-15 (run_blocking_portal)] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-27 21:11:27,651 - httpx - DEBUG - [Thread-15 (run_blocking_portal)] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-27 21:11:27,846 - services.order_execution_service - INFO - [Thread-15 (run_blocking_portal)] - order_execution_service.py:343 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-27 21:11:27,852 - services.credential_service - INFO - [Thread-15 (run_blocking_portal)] - credential_service.py:30 - CredentialService __init__ intentando obtener encryption_key de AppSettings: Presente
+2025-06-27 21:11:27,853 - services.credential_service - INFO - [Thread-15 (run_blocking_portal)] - credential_service.py:36 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-27 21:11:27,853 - services.unified_order_execution_service - INFO - [Thread-15 (run_blocking_portal)] - unified_order_execution_service.py:28 - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-27 21:11:27,943 - services.ai_orchestrator_service - INFO - [Thread-15 (run_blocking_portal)] - ai_orchestrator_service.py:144 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
+2025-06-27 21:11:27,944 - services.performance_service - INFO - [Thread-15 (run_blocking_portal)] - performance_service.py:29 - PerformanceService initialized. PersistenceService instance: <adapters.persistence_service.SupabasePersistenceService object at 0x0000019B2EFBE190>
+2025-06-27 21:11:27,944 - dependencies - INFO - [Thread-15 (run_blocking_portal)] - dependencies.py:193 - Dependency container initialized successfully.
+2025-06-27 21:11:27,944 - ultibot_backend - INFO - [Thread-15 (run_blocking_portal)] - main.py:102 - Contenedor de dependencias inicializado en lifespan.
+2025-06-27 21:11:27,945 - ultibot_backend - INFO - [Thread-15 (run_blocking_portal)] - main.py:108 - Aplicación iniciada correctamente (lifespan).
+2025-06-27 21:11:27,947 - asyncio - DEBUG - [MainThread] - selector_events.py:54 - Using selector: SelectSelector
+2025-06-27 21:11:27,950 - ultibot_backend - INFO - [Thread-15 (run_blocking_portal)] - main.py:134 - Middleware: Solicitud entrante: POST /api/v1/market-order
+2025-06-27 21:11:27,952 - ultibot_backend - INFO - [Thread-15 (run_blocking_portal)] - main.py:136 - Middleware: Solicitud procesada: POST /api/v1/market-order - Status: 404
+2025-06-27 21:11:27,955 - httpx - INFO - [MainThread] - _client.py:1038 - HTTP Request: POST http://testserver/api/v1/market-order "HTTP/1.1 404 Not Found"
+2025-06-27 21:11:27,963 - ultibot_backend - INFO - [Thread-15 (run_blocking_portal)] - main.py:111 - Apagando UltiBot Backend (lifespan)...
+2025-06-27 21:11:27,963 - dependencies - INFO - [Thread-15 (run_blocking_portal)] - dependencies.py:196 - Shutting down dependency container...
+2025-06-27 21:11:27,964 - adapters.redis_cache - INFO - [Thread-15 (run_blocking_portal)] - redis_cache.py:40 - Redis client closed.
+2025-06-27 21:11:27,964 - dependencies - INFO - [Thread-15 (run_blocking_portal)] - dependencies.py:203 - Dependency container shut down.
+2025-06-27 21:11:27,964 - ultibot_backend - INFO - [Thread-15 (run_blocking_portal)] - main.py:114 - Recursos liberados y aplicación apagada (lifespan).
+2025-06-27 21:11:27,967 - asyncio - DEBUG - [Thread-17 (run_blocking_portal)] - selector_events.py:54 - Using selector: SelectSelector
+2025-06-27 21:11:27,972 - ultibot_backend - INFO - [Thread-17 (run_blocking_portal)] - main.py:93 - Iniciando UltiBot Backend (lifespan)...
+2025-06-27 21:11:27,976 - ultibot_backend - INFO - [Thread-17 (run_blocking_portal)] - main.py:98 - DependencyContainer adjuntado a app.state: True
+2025-06-27 21:11:27,977 - dependencies - INFO - [Thread-17 (run_blocking_portal)] - dependencies.py:113 - Initializing dependency container...
+2025-06-27 21:11:27,978 - httpx - DEBUG - [Thread-17 (run_blocking_portal)] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-27 21:11:27,979 - httpx - DEBUG - [Thread-17 (run_blocking_portal)] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-27 21:11:28,174 - adapters.redis_cache - INFO - [Thread-17 (run_blocking_portal)] - redis_cache.py:12 - RedisCache initialized with URL: redis://localhost:6379/0
+2025-06-27 21:11:28,175 - adapters.redis_cache - INFO - [Thread-17 (run_blocking_portal)] - redis_cache.py:18 - Redis client created.
+2025-06-27 21:11:28,176 - httpx - DEBUG - [Thread-17 (run_blocking_portal)] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-27 21:11:28,176 - httpx - DEBUG - [Thread-17 (run_blocking_portal)] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-27 21:11:28,363 - services.order_execution_service - INFO - [Thread-17 (run_blocking_portal)] - order_execution_service.py:343 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-27 21:11:28,364 - services.credential_service - INFO - [Thread-17 (run_blocking_portal)] - credential_service.py:30 - CredentialService __init__ intentando obtener encryption_key de AppSettings: Presente
+2025-06-27 21:11:28,364 - services.credential_service - INFO - [Thread-17 (run_blocking_portal)] - credential_service.py:36 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-27 21:11:28,365 - services.unified_order_execution_service - INFO - [Thread-17 (run_blocking_portal)] - unified_order_execution_service.py:28 - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-27 21:11:28,368 - services.ai_orchestrator_service - INFO - [Thread-17 (run_blocking_portal)] - ai_orchestrator_service.py:144 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
+2025-06-27 21:11:28,368 - services.performance_service - INFO - [Thread-17 (run_blocking_portal)] - performance_service.py:29 - PerformanceService initialized. PersistenceService instance: <adapters.persistence_service.SupabasePersistenceService object at 0x0000019B2E7EEED0>
+2025-06-27 21:11:28,369 - dependencies - INFO - [Thread-17 (run_blocking_portal)] - dependencies.py:193 - Dependency container initialized successfully.
+2025-06-27 21:11:28,369 - ultibot_backend - INFO - [Thread-17 (run_blocking_portal)] - main.py:102 - Contenedor de dependencias inicializado en lifespan.
+2025-06-27 21:11:28,370 - ultibot_backend - INFO - [Thread-17 (run_blocking_portal)] - main.py:108 - Aplicación iniciada correctamente (lifespan).
+2025-06-27 21:11:28,371 - asyncio - DEBUG - [MainThread] - selector_events.py:54 - Using selector: SelectSelector
+2025-06-27 21:11:28,373 - ultibot_backend - INFO - [Thread-17 (run_blocking_portal)] - main.py:134 - Middleware: Solicitud entrante: POST /api/v1/market-order
+2025-06-27 21:11:28,374 - ultibot_backend - INFO - [Thread-17 (run_blocking_portal)] - main.py:136 - Middleware: Solicitud procesada: POST /api/v1/market-order - Status: 404
+2025-06-27 21:11:28,376 - httpx - INFO - [MainThread] - _client.py:1038 - HTTP Request: POST http://testserver/api/v1/market-order "HTTP/1.1 404 Not Found"
+2025-06-27 21:11:28,381 - ultibot_backend - INFO - [Thread-17 (run_blocking_portal)] - main.py:111 - Apagando UltiBot Backend (lifespan)...
+2025-06-27 21:11:28,381 - dependencies - INFO - [Thread-17 (run_blocking_portal)] - dependencies.py:196 - Shutting down dependency container...
+2025-06-27 21:11:28,381 - adapters.redis_cache - INFO - [Thread-17 (run_blocking_portal)] - redis_cache.py:40 - Redis client closed.
+2025-06-27 21:11:28,381 - dependencies - INFO - [Thread-17 (run_blocking_portal)] - dependencies.py:203 - Dependency container shut down.
+2025-06-27 21:11:28,383 - ultibot_backend - INFO - [Thread-17 (run_blocking_portal)] - main.py:114 - Recursos liberados y aplicación apagada (lifespan).
+2025-06-27 21:11:28,387 - asyncio - DEBUG - [Thread-18 (run_blocking_portal)] - selector_events.py:54 - Using selector: SelectSelector
+2025-06-27 21:11:28,390 - ultibot_backend - INFO - [Thread-18 (run_blocking_portal)] - main.py:93 - Iniciando UltiBot Backend (lifespan)...
+2025-06-27 21:11:28,391 - ultibot_backend - INFO - [Thread-18 (run_blocking_portal)] - main.py:98 - DependencyContainer adjuntado a app.state: True
+2025-06-27 21:11:28,391 - dependencies - INFO - [Thread-18 (run_blocking_portal)] - dependencies.py:113 - Initializing dependency container...
+2025-06-27 21:11:28,393 - httpx - DEBUG - [Thread-18 (run_blocking_portal)] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-27 21:11:28,393 - httpx - DEBUG - [Thread-18 (run_blocking_portal)] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-27 21:11:28,588 - adapters.redis_cache - INFO - [Thread-18 (run_blocking_portal)] - redis_cache.py:12 - RedisCache initialized with URL: redis://localhost:6379/0
+2025-06-27 21:11:28,589 - adapters.redis_cache - INFO - [Thread-18 (run_blocking_portal)] - redis_cache.py:18 - Redis client created.
+2025-06-27 21:11:28,590 - httpx - DEBUG - [Thread-18 (run_blocking_portal)] - _config.py:82 - load_ssl_context verify=True cert=None trust_env=True http2=False
+2025-06-27 21:11:28,590 - httpx - DEBUG - [Thread-18 (run_blocking_portal)] - _config.py:148 - load_verify_locations cafile='C:\\Users\\zamor\\UltiBotInversiones\\.venv\\Lib\\site-packages\\certifi\\cacert.pem'
+2025-06-27 21:11:28,784 - services.order_execution_service - INFO - [Thread-18 (run_blocking_portal)] - order_execution_service.py:343 - Paper Trading Service inicializado con capital virtual: 10000.0 USDT
+2025-06-27 21:11:28,785 - services.credential_service - INFO - [Thread-18 (run_blocking_portal)] - credential_service.py:30 - CredentialService __init__ intentando obtener encryption_key de AppSettings: Presente
+2025-06-27 21:11:28,785 - services.credential_service - INFO - [Thread-18 (run_blocking_portal)] - credential_service.py:36 - Pasando la siguiente clave (str) a Fernet: m-28N... (truncada por seguridad)
+2025-06-27 21:11:28,785 - services.unified_order_execution_service - INFO - [Thread-18 (run_blocking_portal)] - unified_order_execution_service.py:28 - UnifiedOrderExecutionService initialized with both real and paper execution services
+2025-06-27 21:11:28,790 - services.ai_orchestrator_service - INFO - [Thread-18 (run_blocking_portal)] - ai_orchestrator_service.py:144 - AIOrchestrator initialized with gemini-1.5-pro-latest and PydanticOutputParser.
+2025-06-27 21:11:28,791 - services.performance_service - INFO - [Thread-18 (run_blocking_portal)] - performance_service.py:29 - PerformanceService initialized. PersistenceService instance: <adapters.persistence_service.SupabasePersistenceService object at 0x0000019B2EF68150>
+2025-06-27 21:11:28,791 - dependencies - INFO - [Thread-18 (run_blocking_portal)] - dependencies.py:193 - Dependency container initialized successfully.
+2025-06-27 21:11:28,791 - ultibot_backend - INFO - [Thread-18 (run_blocking_portal)] - main.py:102 - Contenedor de dependencias inicializado en lifespan.
+2025-06-27 21:11:28,792 - ultibot_backend - INFO - [Thread-18 (run_blocking_portal)] - main.py:108 - Aplicación iniciada correctamente (lifespan).
+2025-06-27 21:11:28,793 - asyncio - DEBUG - [MainThread] - selector_events.py:54 - Using selector: SelectSelector
+2025-06-27 21:11:28,797 - ultibot_backend - INFO - [Thread-18 (run_blocking_portal)] - main.py:134 - Middleware: Solicitud entrante: POST /api/v1/market-order
+2025-06-27 21:11:28,797 - ultibot_backend - INFO - [Thread-18 (run_blocking_portal)] - main.py:136 - Middleware: Solicitud procesada: POST /api/v1/market-order - Status: 404
+2025-06-27 21:11:28,798 - httpx - INFO - [MainThread] - _client.py:1038 - HTTP Request: POST http://testserver/api/v1/market-order "HTTP/1.1 404 Not Found"
+2025-06-27 21:11:28,803 - ultibot_backend - INFO - [Thread-18 (run_blocking_portal)] - main.py:111 - Apagando UltiBot Backend (lifespan)...
+2025-06-27 21:11:28,804 - dependencies - INFO - [Thread-18 (run_blocking_portal)] - dependencies.py:196 - Shutting down dependency container...
+2025-06-27 21:11:28,804 - adapters.redis_cache - INFO - [Thread-18 (run_blocking_portal)] - redis_cache.py:40 - Redis client closed.
+2025-06-27 21:11:28,804 - dependencies - INFO - [Thread-18 (run_blocking_portal)] - dependencies.py:203 - Dependency container shut down.
+2025-06-27 21:11:28,804 - ultibot_backend - INFO - [Thread-18 (run_blocking_portal)] - main.py:114 - Recursos liberados y aplicación apagada (lifespan).
+2025-06-27 21:11:28,807 - tests.conftest - INFO - [MainThread] - conftest.py:135 - Motor de base de datos dispuesto.
+2025-06-27 21:11:28,807 - tests.conftest - INFO - [MainThread] - conftest.py:143 - Directorio temporal C:\Users\zamor\AppData\Local\Temp\tmprq6gqqjk eliminado exitosamente (intento 1/5).
+2025-06-27 21:14:01,525 - ultibot_backend - INFO - [Thread-16 (run_blocking_portal)] - main.py:93 - Iniciando UltiBot Backend (lifespan)...
+2025-06-27 21:14:01,525 - ultibot_backend - INFO - [Thread-16 (run_blocking_portal)] - main.py:98 - DependencyContainer adjuntado a app.state: True
+2025-06-27 21:14:01,526 - dependencies - INFO - [Thread-16 (run_blocking_portal)] - dependencies.py:113 - Initializing dependency container...
+2025-06-27 21:14:01,526 - ultibot_backend - CRITICAL - [Thread-16 (run_blocking_portal)] - main.py:105 - Error fatal durante el arranque de la aplicación (lifespan): Database session factory not initialized before persistence service initialization.
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\main.py", line 101, in lifespan
+    await container.initialize_services()
+  File "C:\Users\zamor\UltiBotInversiones\src\dependencies.py", line 118, in initialize_services
+    raise RuntimeError("Database session factory not initialized before persistence service initialization.")
+RuntimeError: Database session factory not initialized before persistence service initialization.
+2025-06-27 21:14:01,770 - asyncio - DEBUG - [Thread-17 (run_blocking_portal)] - selector_events.py:54 - Using selector: SelectSelector
+2025-06-27 21:14:01,773 - ultibot_backend - INFO - [Thread-17 (run_blocking_portal)] - main.py:93 - Iniciando UltiBot Backend (lifespan)...
+2025-06-27 21:14:01,773 - ultibot_backend - INFO - [Thread-17 (run_blocking_portal)] - main.py:98 - DependencyContainer adjuntado a app.state: True
+2025-06-27 21:14:01,774 - dependencies - INFO - [Thread-17 (run_blocking_portal)] - dependencies.py:113 - Initializing dependency container...
+2025-06-27 21:14:01,774 - ultibot_backend - CRITICAL - [Thread-17 (run_blocking_portal)] - main.py:105 - Error fatal durante el arranque de la aplicación (lifespan): Database session factory not initialized before persistence service initialization.
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\main.py", line 101, in lifespan
+    await container.initialize_services()
+  File "C:\Users\zamor\UltiBotInversiones\src\dependencies.py", line 118, in initialize_services
+    raise RuntimeError("Database session factory not initialized before persistence service initialization.")
+RuntimeError: Database session factory not initialized before persistence service initialization.
+2025-06-27 21:14:02,058 - asyncio - DEBUG - [Thread-18 (run_blocking_portal)] - selector_events.py:54 - Using selector: SelectSelector
+2025-06-27 21:14:02,061 - ultibot_backend - INFO - [Thread-18 (run_blocking_portal)] - main.py:93 - Iniciando UltiBot Backend (lifespan)...
+2025-06-27 21:14:02,061 - ultibot_backend - INFO - [Thread-18 (run_blocking_portal)] - main.py:98 - DependencyContainer adjuntado a app.state: True
+2025-06-27 21:14:02,061 - dependencies - INFO - [Thread-18 (run_blocking_portal)] - dependencies.py:113 - Initializing dependency container...
+2025-06-27 21:14:02,062 - ultibot_backend - CRITICAL - [Thread-18 (run_blocking_portal)] - main.py:105 - Error fatal durante el arranque de la aplicación (lifespan): Database session factory not initialized before persistence service initialization.
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\main.py", line 101, in lifespan
+    await container.initialize_services()
+  File "C:\Users\zamor\UltiBotInversiones\src\dependencies.py", line 118, in initialize_services
+    raise RuntimeError("Database session factory not initialized before persistence service initialization.")
+RuntimeError: Database session factory not initialized before persistence service initialization.
+2025-06-27 21:14:02,328 - tests.conftest - INFO - [MainThread] - conftest.py:135 - Motor de base de datos dispuesto.
+2025-06-27 21:14:02,329 - tests.conftest - INFO - [MainThread] - conftest.py:143 - Directorio temporal C:\Users\zamor\AppData\Local\Temp\tmpjhd391qt eliminado exitosamente (intento 1/5).

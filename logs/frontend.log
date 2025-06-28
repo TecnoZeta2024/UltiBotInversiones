@@ -50,3 +50,54 @@
 2025-06-27 22:28:10,078 - ultibot_backend.adapters.redis_cache - INFO - [MainThread] - redis_cache.py:40 - Redis client closed.
 2025-06-27 22:28:10,080 - ultibot_backend.dependencies - INFO - [MainThread] - dependencies.py:212 - Dependency container shut down.
 2025-06-27 22:28:10,081 - ultibot_backend - INFO - [MainThread] - main.py:103 - Recursos liberados y aplicación apagada (lifespan).
+2025-06-27 21:11:27,411 - ultibot_backend - INFO - [Thread-15 (run_blocking_portal)] - main.py:93 - Iniciando UltiBot Backend (lifespan)...
+2025-06-27 21:11:27,412 - ultibot_backend - INFO - [Thread-15 (run_blocking_portal)] - main.py:98 - DependencyContainer adjuntado a app.state: True
+2025-06-27 21:11:27,944 - ultibot_backend - INFO - [Thread-15 (run_blocking_portal)] - main.py:102 - Contenedor de dependencias inicializado en lifespan.
+2025-06-27 21:11:27,945 - ultibot_backend - INFO - [Thread-15 (run_blocking_portal)] - main.py:108 - Aplicación iniciada correctamente (lifespan).
+2025-06-27 21:11:27,950 - ultibot_backend - INFO - [Thread-15 (run_blocking_portal)] - main.py:134 - Middleware: Solicitud entrante: POST /api/v1/market-order
+2025-06-27 21:11:27,952 - ultibot_backend - INFO - [Thread-15 (run_blocking_portal)] - main.py:136 - Middleware: Solicitud procesada: POST /api/v1/market-order - Status: 404
+2025-06-27 21:11:27,963 - ultibot_backend - INFO - [Thread-15 (run_blocking_portal)] - main.py:111 - Apagando UltiBot Backend (lifespan)...
+2025-06-27 21:11:27,964 - ultibot_backend - INFO - [Thread-15 (run_blocking_portal)] - main.py:114 - Recursos liberados y aplicación apagada (lifespan).
+2025-06-27 21:11:27,972 - ultibot_backend - INFO - [Thread-17 (run_blocking_portal)] - main.py:93 - Iniciando UltiBot Backend (lifespan)...
+2025-06-27 21:11:27,976 - ultibot_backend - INFO - [Thread-17 (run_blocking_portal)] - main.py:98 - DependencyContainer adjuntado a app.state: True
+2025-06-27 21:11:28,369 - ultibot_backend - INFO - [Thread-17 (run_blocking_portal)] - main.py:102 - Contenedor de dependencias inicializado en lifespan.
+2025-06-27 21:11:28,370 - ultibot_backend - INFO - [Thread-17 (run_blocking_portal)] - main.py:108 - Aplicación iniciada correctamente (lifespan).
+2025-06-27 21:11:28,373 - ultibot_backend - INFO - [Thread-17 (run_blocking_portal)] - main.py:134 - Middleware: Solicitud entrante: POST /api/v1/market-order
+2025-06-27 21:11:28,374 - ultibot_backend - INFO - [Thread-17 (run_blocking_portal)] - main.py:136 - Middleware: Solicitud procesada: POST /api/v1/market-order - Status: 404
+2025-06-27 21:11:28,381 - ultibot_backend - INFO - [Thread-17 (run_blocking_portal)] - main.py:111 - Apagando UltiBot Backend (lifespan)...
+2025-06-27 21:11:28,383 - ultibot_backend - INFO - [Thread-17 (run_blocking_portal)] - main.py:114 - Recursos liberados y aplicación apagada (lifespan).
+2025-06-27 21:11:28,390 - ultibot_backend - INFO - [Thread-18 (run_blocking_portal)] - main.py:93 - Iniciando UltiBot Backend (lifespan)...
+2025-06-27 21:11:28,391 - ultibot_backend - INFO - [Thread-18 (run_blocking_portal)] - main.py:98 - DependencyContainer adjuntado a app.state: True
+2025-06-27 21:11:28,791 - ultibot_backend - INFO - [Thread-18 (run_blocking_portal)] - main.py:102 - Contenedor de dependencias inicializado en lifespan.
+2025-06-27 21:11:28,792 - ultibot_backend - INFO - [Thread-18 (run_blocking_portal)] - main.py:108 - Aplicación iniciada correctamente (lifespan).
+2025-06-27 21:11:28,797 - ultibot_backend - INFO - [Thread-18 (run_blocking_portal)] - main.py:134 - Middleware: Solicitud entrante: POST /api/v1/market-order
+2025-06-27 21:11:28,797 - ultibot_backend - INFO - [Thread-18 (run_blocking_portal)] - main.py:136 - Middleware: Solicitud procesada: POST /api/v1/market-order - Status: 404
+2025-06-27 21:11:28,803 - ultibot_backend - INFO - [Thread-18 (run_blocking_portal)] - main.py:111 - Apagando UltiBot Backend (lifespan)...
+2025-06-27 21:11:28,804 - ultibot_backend - INFO - [Thread-18 (run_blocking_portal)] - main.py:114 - Recursos liberados y aplicación apagada (lifespan).
+2025-06-27 21:14:01,525 - ultibot_backend - INFO - [Thread-16 (run_blocking_portal)] - main.py:93 - Iniciando UltiBot Backend (lifespan)...
+2025-06-27 21:14:01,525 - ultibot_backend - INFO - [Thread-16 (run_blocking_portal)] - main.py:98 - DependencyContainer adjuntado a app.state: True
+2025-06-27 21:14:01,526 - ultibot_backend - CRITICAL - [Thread-16 (run_blocking_portal)] - main.py:105 - Error fatal durante el arranque de la aplicación (lifespan): Database session factory not initialized before persistence service initialization.
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\main.py", line 101, in lifespan
+    await container.initialize_services()
+  File "C:\Users\zamor\UltiBotInversiones\src\dependencies.py", line 118, in initialize_services
+    raise RuntimeError("Database session factory not initialized before persistence service initialization.")
+RuntimeError: Database session factory not initialized before persistence service initialization.
+2025-06-27 21:14:01,773 - ultibot_backend - INFO - [Thread-17 (run_blocking_portal)] - main.py:93 - Iniciando UltiBot Backend (lifespan)...
+2025-06-27 21:14:01,773 - ultibot_backend - INFO - [Thread-17 (run_blocking_portal)] - main.py:98 - DependencyContainer adjuntado a app.state: True
+2025-06-27 21:14:01,774 - ultibot_backend - CRITICAL - [Thread-17 (run_blocking_portal)] - main.py:105 - Error fatal durante el arranque de la aplicación (lifespan): Database session factory not initialized before persistence service initialization.
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\main.py", line 101, in lifespan
+    await container.initialize_services()
+  File "C:\Users\zamor\UltiBotInversiones\src\dependencies.py", line 118, in initialize_services
+    raise RuntimeError("Database session factory not initialized before persistence service initialization.")
+RuntimeError: Database session factory not initialized before persistence service initialization.
+2025-06-27 21:14:02,061 - ultibot_backend - INFO - [Thread-18 (run_blocking_portal)] - main.py:93 - Iniciando UltiBot Backend (lifespan)...
+2025-06-27 21:14:02,061 - ultibot_backend - INFO - [Thread-18 (run_blocking_portal)] - main.py:98 - DependencyContainer adjuntado a app.state: True
+2025-06-27 21:14:02,062 - ultibot_backend - CRITICAL - [Thread-18 (run_blocking_portal)] - main.py:105 - Error fatal durante el arranque de la aplicación (lifespan): Database session factory not initialized before persistence service initialization.
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\main.py", line 101, in lifespan
+    await container.initialize_services()
+  File "C:\Users\zamor\UltiBotInversiones\src\dependencies.py", line 118, in initialize_services
+    raise RuntimeError("Database session factory not initialized before persistence service initialization.")
+RuntimeError: Database session factory not initialized before persistence service initialization.

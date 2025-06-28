@@ -178,6 +178,24 @@ class MarketDataService:
                 market_data[original_symbol] = {"error": "Error inesperado"}
         return market_data
 
+    async def get_ticker_24hr(self, symbol: str) -> Dict[str, Any]:
+        """
+        Obtiene estadísticas de cambio de precio de 24 horas para un símbolo específico.
+        """
+        if self._closed:
+            logger.warning(f"MarketDataService está cerrado. No se pueden obtener datos de ticker 24hr para {symbol}.")
+            raise MarketDataError(f"MarketDataService cerrado. No se pueden obtener datos de ticker 24hr para {symbol}.")
+        try:
+            ticker_data = await self.binance_adapter.get_ticker_24hr(symbol)
+            logger.info(f"Datos de ticker 24hr para {symbol} obtenidos.")
+            return ticker_data
+        except BinanceAPIError as e:
+            logger.error(f"Error de la API de Binance al obtener datos de ticker 24hr para {symbol}: {e}")
+            raise MarketDataError(f"Fallo al obtener datos de ticker 24hr de Binance para {symbol}: {e}") from e
+        except Exception as e:
+            logger.critical(f"Error inesperado al obtener datos de ticker 24hr para {symbol}: {e}", exc_info=True)
+            raise MarketDataError(f"Error inesperado al obtener datos de ticker 24hr para {symbol}: {e}") from e
+
     async def get_latest_price(self, symbol: str) -> float:
         """
         Obtiene el último precio conocido para un símbolo específico.

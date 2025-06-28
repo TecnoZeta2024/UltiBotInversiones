@@ -1,16 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 import logging
 from datetime import datetime
-from decimal import Decimal # Importar Decimal
+from decimal import Decimal
 from typing import Annotated, Optional, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from pydantic import BaseModel
 
-from shared.data_types import PortfolioSnapshot, PortfolioSummary, PerformanceMetrics # Añadir PerformanceMetrics
+from shared.data_types import PortfolioSnapshot, PortfolioSummary, PerformanceMetrics
 from services.portfolio_service import PortfolioService
-from services.trading_report_service import TradingReportService # Importar TradingReportService
+from services.trading_report_service import TradingReportService
 from app_config import get_app_settings
 from dependencies import get_portfolio_service, get_trading_report_service
 
@@ -40,41 +39,9 @@ async def get_portfolio_snapshot(
         PortfolioSnapshot with data filtered by trading mode
     """
     try:
-        if trading_mode == "both":
-            snapshot = await portfolio_service.get_portfolio_snapshot(user_id)
-            return snapshot
-        elif trading_mode == "paper":
-            await portfolio_service.initialize_portfolio(user_id)
-            paper_summary = await portfolio_service._get_paper_trading_summary()
-            empty_real = PortfolioSummary(
-                available_balance_usdt=Decimal('0.0'),
-                total_assets_value_usd=Decimal('0.0'),
-                total_portfolio_value_usd=Decimal('0.0'),
-                assets=[],
-                error_message="Real trading data not requested"
-            )
-            return PortfolioSnapshot(
-                paper_trading=paper_summary,
-                real_trading=empty_real
-            )
-        elif trading_mode == "real":
-            real_summary = await portfolio_service._get_real_trading_summary(user_id)
-            empty_paper = PortfolioSummary(
-                available_balance_usdt=Decimal('0.0'),
-                total_assets_value_usd=Decimal('0.0'),
-                total_portfolio_value_usd=Decimal('0.0'),
-                assets=[],
-                error_message="Paper trading data not requested"
-            )
-            return PortfolioSnapshot(
-                paper_trading=empty_paper,
-                real_trading=real_summary
-            )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid trading_mode: {trading_mode}. Must be 'paper', 'real', or 'both'"
-            )
+        # La llamada al servicio ahora pasa correctamente el trading_mode
+        snapshot = await portfolio_service.get_portfolio_snapshot(user_id, trading_mode)
+        return snapshot
             
     except Exception as e:
         logger.error(f"Error al obtener snapshot del portafolio: {e}", exc_info=True)

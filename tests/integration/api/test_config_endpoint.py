@@ -2,8 +2,8 @@ import pytest
 from httpx import AsyncClient
 from fastapi import FastAPI, Depends, APIRouter
 from typing import Tuple
-from ultibot_backend.app_config import AppSettings, get_app_settings
-from ultibot_backend.main import app as fastapi_app
+from app_config import AppSettings, get_app_settings
+from main import app as fastapi_app
 
 # Añadir un endpoint de prueba a la aplicación principal para este test
 config_router = APIRouter()

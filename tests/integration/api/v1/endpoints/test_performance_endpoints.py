@@ -6,8 +6,8 @@ from typing import Tuple
 from fastapi import FastAPI
 
 from tests.conftest import FIXED_USER_ID
-from ultibot_backend.dependencies import get_performance_service
-from ultibot_backend.api.v1.models.performance_models import StrategyPerformanceData, OperatingMode
+from dependencies import get_performance_service
+from api.v1.models.performance_models import StrategyPerformanceData, OperatingMode
 
 # No se necesitan más importaciones de dominio o servicio, ya que el servicio está completamente mockeado.
 
