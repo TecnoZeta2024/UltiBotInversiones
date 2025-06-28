@@ -5,9 +5,9 @@ from datetime import datetime, timezone
 from typing import Dict, Any
 import asyncpg
 
-from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from ultibot_backend.core.domain_models.user_configuration_models import RiskProfile, Theme
-from shared.data_types import UserConfiguration, APICredential, ServiceName
+from src.adapters.persistence_service import SupabasePersistenceService
+from src.core.domain_models.user_configuration_models import RiskProfile, Theme
+from src.shared.data_types import UserConfiguration, APICredential, ServiceName
 
 @pytest.fixture
 def mock_persistence_service() -> AsyncMock:

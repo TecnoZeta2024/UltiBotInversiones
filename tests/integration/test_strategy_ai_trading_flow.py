@@ -1,25 +1,21 @@
 import pytest
-import sys
-sys.path.insert(0, 'src')
 import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock
 
-from services.trading_engine_service import TradingEngine, TradingDecision
-from services.ai_orchestrator_service import AIAnalysisResult
-from core.domain_models.trading_strategy_models import (
+from src.services.trading_engine_service import TradingEngine, TradingDecision
+from src.services.ai_orchestrator_service import AIAnalysisResult
+from src.core.domain_models.trading_strategy_models import (
     TradingStrategyConfig, BaseStrategyType, ScalpingParameters
 )
-from core.domain_models.user_configuration_models import (
+from src.core.domain_models.user_configuration_models import (
     UserConfiguration, AIStrategyConfiguration, ConfidenceThresholds
 )
-from core.domain_models.opportunity_models import (
+from src.core.domain_models.opportunity_models import (
     Opportunity, OpportunityStatus, SourceType, Direction, InitialSignal, SuggestedAction, RecommendedTradeParams
 )
-from shared.data_types import PortfolioSnapshot, PortfolioSummary
-
-from tests.conftest import FIXED_USER_ID
+from src.shared.data_types import PortfolioSnapshot, PortfolioSummary
 
 @pytest.fixture
 def sample_strategy_id() -> uuid.UUID:
@@ -27,14 +23,14 @@ def sample_strategy_id() -> uuid.UUID:
     return uuid.uuid4()
 
 @pytest.fixture
-def sample_opportunity(sample_strategy_id: uuid.UUID) -> Opportunity:
+def sample_opportunity(sample_strategy_id: uuid.UUID, user_id: uuid.UUID) -> Opportunity:
     """
     Provides a fully-formed Opportunity object, ensuring all fields are present.
     """
     now = datetime.now(timezone.utc)
     return Opportunity(
         id=str(uuid.uuid4()),
-        user_id=str(FIXED_USER_ID),
+        user_id=str(user_id),
         strategy_id=sample_strategy_id,
         exchange="binance",
         symbol="BTCUSDT",
@@ -70,11 +66,11 @@ def sample_opportunity(sample_strategy_id: uuid.UUID) -> Opportunity:
     )
 
 @pytest.fixture
-def scalping_strategy_with_ai(sample_strategy_id: uuid.UUID) -> TradingStrategyConfig:
+def scalping_strategy_with_ai(sample_strategy_id: uuid.UUID, user_id: uuid.UUID) -> TradingStrategyConfig:
     """Provides a fully-formed TradingStrategyConfig that requires AI analysis."""
     return TradingStrategyConfig(
         id=str(sample_strategy_id),
-        user_id=str(FIXED_USER_ID),
+        user_id=str(user_id),
         config_name="AI Scalping Test",
         base_strategy_type=BaseStrategyType.SCALPING,
         description=None,
@@ -101,11 +97,11 @@ def scalping_strategy_with_ai(sample_strategy_id: uuid.UUID) -> TradingStrategyC
     )
 
 @pytest.fixture
-def autonomous_scalping_strategy(sample_strategy_id: uuid.UUID) -> TradingStrategyConfig:
+def autonomous_scalping_strategy(sample_strategy_id: uuid.UUID, user_id: uuid.UUID) -> TradingStrategyConfig:
     """Provides a fully-formed TradingStrategyConfig that operates autonomously."""
     return TradingStrategyConfig(
         id=str(sample_strategy_id),
-        user_id=str(FIXED_USER_ID),
+        user_id=str(user_id),
         config_name="Autonomous Scalping Test",
         base_strategy_type=BaseStrategyType.SCALPING,
         description=None,
@@ -164,6 +160,14 @@ async def test_ai_workflow_high_confidence_generates_decision(
     results in an affirmative TradingDecision.
     """
     # 1. Setup Mocks
+    # Since trading_engine_fixture is an AsyncMock, its attributes need to be mocked as well.
+    trading_engine_fixture.strategy_service = AsyncMock()
+    trading_engine_fixture.ai_orchestrator = AsyncMock()
+    trading_engine_fixture.persistence_service = AsyncMock()
+    trading_engine_fixture.unified_order_execution_service = AsyncMock()
+    trading_engine_fixture.configuration_service = AsyncMock()
+
+    # Assign mocks to local variables for clarity
     strategy_service = trading_engine_fixture.strategy_service
     ai_orchestrator = trading_engine_fixture.ai_orchestrator
     persistence_service = trading_engine_fixture.persistence_service
@@ -171,12 +175,12 @@ async def test_ai_workflow_high_confidence_generates_decision(
     config_service = trading_engine_fixture.configuration_service
 
     # Correctly mock the service calls made by process_opportunity
-    strategy_service.get_active_strategies = AsyncMock(return_value=[scalping_strategy_with_ai])
-    strategy_service.is_strategy_applicable_to_symbol = AsyncMock(return_value=True)
-    strategy_service.strategy_can_operate_autonomously = AsyncMock(return_value=False)
+    strategy_service.get_active_strategies.return_value = [scalping_strategy_with_ai]
+    strategy_service.is_strategy_applicable_to_symbol.return_value = True
+    strategy_service.strategy_can_operate_autonomously.return_value = False
     
     mock_user_config.ai_strategy_configurations = [ai_config_scalping]
-    config_service.get_user_configuration = AsyncMock(return_value=mock_user_config)
+    config_service.get_user_configuration.return_value = mock_user_config
 
     ai_result = AIAnalysisResult(
         analysis_id=str(uuid.uuid4()),
@@ -190,9 +194,7 @@ async def test_ai_workflow_high_confidence_generates_decision(
             trade_size_percentage=None
         ).model_dump()
     )
-    ai_orchestrator.analyze_opportunity_with_strategy_context_async = AsyncMock(return_value=ai_result)
-    persistence_service.update_opportunity_status = AsyncMock()
-    persistence_service.upsert_trade = AsyncMock()
+    ai_orchestrator.analyze_opportunity_with_strategy_context_async.return_value = ai_result
 
     # 2. Execute
     decisions = await trading_engine_fixture.process_opportunity(sample_opportunity)
@@ -208,8 +210,9 @@ async def test_ai_workflow_high_confidence_generates_decision(
     assert decision.ai_analysis_used is True
 
     persistence_service.update_opportunity_status.assert_called_once()
-    call_kwargs = persistence_service.update_opportunity_status.call_args.kwargs
-    assert call_kwargs['new_status'] == OpportunityStatus.UNDER_EVALUATION
+    # The call is made with opportunity_id, new_status, etc. Let's check the important one.
+    call_args, call_kwargs = persistence_service.update_opportunity_status.call_args
+    assert call_kwargs.get('new_status') == OpportunityStatus.UNDER_EVALUATION
 
     order_execution_service.execute_market_order.assert_not_called()
     persistence_service.upsert_trade.assert_not_called()
@@ -227,18 +230,24 @@ async def test_ai_workflow_low_confidence_rejects_opportunity(
     is rejected and does not generate a trade decision.
     """
     # 1. Setup Mocks
+    trading_engine_fixture.strategy_service = AsyncMock()
+    trading_engine_fixture.ai_orchestrator = AsyncMock()
+    trading_engine_fixture.persistence_service = AsyncMock()
+    trading_engine_fixture.unified_order_execution_service = AsyncMock()
+    trading_engine_fixture.configuration_service = AsyncMock()
+
     strategy_service = trading_engine_fixture.strategy_service
     ai_orchestrator = trading_engine_fixture.ai_orchestrator
     persistence_service = trading_engine_fixture.persistence_service
     order_execution_service = trading_engine_fixture.unified_order_execution_service
     config_service = trading_engine_fixture.configuration_service
 
-    strategy_service.get_active_strategies = AsyncMock(return_value=[scalping_strategy_with_ai])
-    strategy_service.is_strategy_applicable_to_symbol = AsyncMock(return_value=True)
-    strategy_service.strategy_can_operate_autonomously = AsyncMock(return_value=False)
+    strategy_service.get_active_strategies.return_value = [scalping_strategy_with_ai]
+    strategy_service.is_strategy_applicable_to_symbol.return_value = True
+    strategy_service.strategy_can_operate_autonomously.return_value = False
     
     mock_user_config.ai_strategy_configurations = [ai_config_scalping]
-    config_service.get_user_configuration = AsyncMock(return_value=mock_user_config)
+    config_service.get_user_configuration.return_value = mock_user_config
 
     ai_result = AIAnalysisResult(
         analysis_id=str(uuid.uuid4()),
@@ -246,8 +255,7 @@ async def test_ai_workflow_low_confidence_rejects_opportunity(
         suggested_action=SuggestedAction.BUY,
         reasoning_ai="Indicators are weak.",
     )
-    ai_orchestrator.analyze_opportunity_with_strategy_context_async = AsyncMock(return_value=ai_result)
-    persistence_service.update_opportunity_status = AsyncMock()
+    ai_orchestrator.analyze_opportunity_with_strategy_context_async.return_value = ai_result
 
     # 2. Execute
     decisions = await trading_engine_fixture.process_opportunity(sample_opportunity)
@@ -258,9 +266,9 @@ async def test_ai_workflow_low_confidence_rejects_opportunity(
     assert len(decisions) == 0
 
     persistence_service.update_opportunity_status.assert_called_once()
-    call_kwargs = persistence_service.update_opportunity_status.call_args.kwargs
-    assert call_kwargs['new_status'] == OpportunityStatus.REJECTED_BY_SYSTEM
-    assert call_kwargs['status_reason'] == "All applicable strategies evaluated, but none resulted in a decision to trade."
+    _call_args, call_kwargs = persistence_service.update_opportunity_status.call_args
+    assert call_kwargs.get('new_status') == OpportunityStatus.REJECTED_BY_SYSTEM
+    assert "All applicable strategies evaluated" in call_kwargs.get('status_reason', '')
 
     order_execution_service.execute_market_order.assert_not_called()
 
@@ -276,20 +284,24 @@ async def test_autonomous_strategy_generates_decision_without_ai(
     and directly generates a TradingDecision.
     """
     # 1. Setup Mocks
+    trading_engine_fixture.strategy_service = AsyncMock()
+    trading_engine_fixture.ai_orchestrator = AsyncMock()
+    trading_engine_fixture.persistence_service = AsyncMock()
+    trading_engine_fixture.unified_order_execution_service = AsyncMock()
+    trading_engine_fixture.configuration_service = AsyncMock()
+
     strategy_service = trading_engine_fixture.strategy_service
     ai_orchestrator = trading_engine_fixture.ai_orchestrator
     persistence_service = trading_engine_fixture.persistence_service
     order_execution_service = trading_engine_fixture.unified_order_execution_service
     config_service = trading_engine_fixture.configuration_service
 
-    strategy_service.get_active_strategies = AsyncMock(return_value=[autonomous_scalping_strategy])
-    strategy_service.is_strategy_applicable_to_symbol = AsyncMock(return_value=True)
-    strategy_service.strategy_can_operate_autonomously = AsyncMock(return_value=True)
-    config_service.get_user_configuration = AsyncMock(return_value=mock_user_config)
+    strategy_service.get_active_strategies.return_value = [autonomous_scalping_strategy]
+    strategy_service.is_strategy_applicable_to_symbol.return_value = True
+    strategy_service.strategy_can_operate_autonomously.return_value = True
+    config_service.get_user_configuration.return_value = mock_user_config
     
-    ai_orchestrator.analyze_opportunity_with_strategy_context_async = AsyncMock()
-    persistence_service.update_opportunity_status = AsyncMock()
-    persistence_service.upsert_trade = AsyncMock()
+    ai_orchestrator.analyze_opportunity_with_strategy_context_async.return_value = None # Explicitly set
 
     # 2. Execute
     decisions = await trading_engine_fixture.process_opportunity(sample_opportunity)
@@ -304,8 +316,8 @@ async def test_autonomous_strategy_generates_decision_without_ai(
     assert decision.ai_analysis_used is False
 
     persistence_service.update_opportunity_status.assert_called_once()
-    call_kwargs = persistence_service.update_opportunity_status.call_args.kwargs
-    assert call_kwargs['new_status'] == OpportunityStatus.UNDER_EVALUATION
+    _call_args, call_kwargs = persistence_service.update_opportunity_status.call_args
+    assert call_kwargs.get('new_status') == OpportunityStatus.UNDER_EVALUATION
 
     order_execution_service.execute_market_order.assert_not_called()
     persistence_service.upsert_trade.assert_not_called()

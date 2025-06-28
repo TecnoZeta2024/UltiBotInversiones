@@ -1,5 +1,5 @@
 import pytest
-from ultibot_backend.services.trading_engine_service import TradingEngine
+from src.services.trading_engine_service import TradingEngine
 
 def test_trading_engine_service_can_be_imported():
     """

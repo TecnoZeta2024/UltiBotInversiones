@@ -4,13 +4,16 @@ from uuid import UUID, uuid4
 from datetime import datetime, timezone
 from typing import Optional
 
-from ultibot_backend.services.performance_service import PerformanceService
-from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from ultibot_backend.services.strategy_service import StrategyService
-from ultibot_backend.api.v1.models.performance_models import OperatingMode, StrategyPerformanceData
-from shared.data_types import Trade, TradeOrderDetails, OrderType, OrderStatus, OrderCategory, PositionStatus
-from ultibot_backend.core.domain_models.trade_models import TradeMode, TradeSide # Importar TradeMode y TradeSide
-from ultibot_backend.core.domain_models.trading_strategy_models import TradingStrategyConfig, BaseStrategyType # Para mock de strategy_config
+from src.services.performance_service import PerformanceService
+from src.adapters.persistence_service import SupabasePersistenceService
+from src.services.strategy_service import StrategyService
+from src.api.v1.models.performance_models import OperatingMode, StrategyPerformanceData
+from src.shared.data_types import Trade, TradeOrderDetails, OrderType, OrderStatus, OrderCategory, PositionStatus
+from src.core.domain_models.trade_models import TradeMode, TradeSide # Importar TradeMode y TradeSide
+from src.core.domain_models.trading_strategy_models import (
+    TradingStrategyConfig, BaseStrategyType, ScalpingParameters, DayTradingParameters,
+    GridTradingParameters, Timeframe
+) # Para mock de strategy_config
 
 
 from decimal import Decimal # Importar Decimal
@@ -63,10 +66,12 @@ def mock_strategy_service():
         user_id=str(USER_ID), # user_id es str
         config_name="Estrategia por Defecto",
         base_strategy_type=BaseStrategyType.SCALPING,
-        parameters={
-            "profit_target_percentage": 0.01,
-            "stop_loss_percentage": 0.005
-        },
+        parameters=ScalpingParameters(
+            profit_target_percentage=0.01,
+            stop_loss_percentage=0.005,
+            max_holding_time_seconds=60,
+            leverage=1.0
+        ),
         is_active_paper_mode=True,
         is_active_real_mode=False,
         description="Descripción por defecto",
@@ -208,10 +213,12 @@ async def test_get_all_strategies_performance_with_closed_trades(
         user_id=str(USER_ID),
         config_name="Test Strategy 1",
         base_strategy_type=BaseStrategyType.SCALPING,
-        parameters={
-            "profit_target_percentage": 0.01, # Añadido para SRST-5011
-            "stop_loss_percentage": 0.005 # Añadido para SRST-5011
-        },
+        parameters=ScalpingParameters(
+            profit_target_percentage=0.01,
+            stop_loss_percentage=0.005,
+            max_holding_time_seconds=60,
+            leverage=1.0
+        ),
         is_active_paper_mode=True,
         is_active_real_mode=False,
         description="Test strategy description",
@@ -290,10 +297,12 @@ async def test_get_all_strategies_performance_multiple_trades_mixed_pnl(
     
     mock_strategy_config = TradingStrategyConfig(
         id=str(strategy1_id), user_id=str(USER_ID), config_name="Scalping Pro", 
-        base_strategy_type=BaseStrategyType.SCALPING, parameters={
-            "profit_target_percentage": 0.01, # Añadido para SRST-5011
-            "stop_loss_percentage": 0.005 # Añadido para SRST-5011
-        },
+        base_strategy_type=BaseStrategyType.SCALPING, parameters=ScalpingParameters(
+            profit_target_percentage=0.01,
+            stop_loss_percentage=0.005,
+            max_holding_time_seconds=60,
+            leverage=1.0
+        ),
         is_active_paper_mode=True, is_active_real_mode=False, description="Scalping strategy",
         allowed_symbols=None, # Añadido para SRST-5011
         excluded_symbols=None, # Añadido para SRST-5011
@@ -366,10 +375,16 @@ async def test_get_all_strategies_performance_mode_filtering_real(
     
     mock_strategy_config_real = TradingStrategyConfig(
         id=str(strategy_real_id), user_id=str(USER_ID), config_name="Real Trader", 
-        base_strategy_type=BaseStrategyType.DAY_TRADING, parameters={
-            "profit_target_percentage": 0.01, # Añadido para SRST-5011
-            "stop_loss_percentage": 0.005 # Añadido para SRST-5011
-        },
+        base_strategy_type=BaseStrategyType.DAY_TRADING, parameters=DayTradingParameters(
+            entry_timeframes=[Timeframe.FIFTEEN_MINUTES],
+            rsi_period=14,
+            rsi_overbought=70.0,
+            rsi_oversold=30.0,
+            macd_fast_period=12,
+            macd_slow_period=26,
+            macd_signal_period=9,
+            exit_timeframes=None
+        ),
         is_active_paper_mode=False, is_active_real_mode=True, description="Real trading strategy",
         allowed_symbols=None, # Añadido para SRST-5011
         excluded_symbols=None, # Añadido para SRST-5011
@@ -505,10 +520,12 @@ async def test_get_all_strategies_performance_multiple_strategies_different_mode
 
     mock_strategy_config_paper = TradingStrategyConfig(
         id=str(strategy_paper_id), user_id=str(USER_ID), config_name="Paper Trader Pro",
-        base_strategy_type=BaseStrategyType.SCALPING, parameters={
-            "profit_target_percentage": 0.01, # Añadido para SRST-5011
-            "stop_loss_percentage": 0.005 # Añadido para SRST-5011
-        },
+        base_strategy_type=BaseStrategyType.SCALPING, parameters=ScalpingParameters(
+            profit_target_percentage=0.01,
+            stop_loss_percentage=0.005,
+            max_holding_time_seconds=60,
+            leverage=1.0
+        ),
         is_active_paper_mode=True, is_active_real_mode=False, description="Paper trading strategy",
         allowed_symbols=None, # Añadido para SRST-5011
         excluded_symbols=None, # Añadido para SRST-5011
@@ -518,10 +535,16 @@ async def test_get_all_strategies_performance_multiple_strategies_different_mode
     )
     mock_strategy_config_real = TradingStrategyConfig(
         id=str(strategy_real_id), user_id=str(USER_ID), config_name="Real Deal Trader",
-        base_strategy_type=BaseStrategyType.DAY_TRADING, parameters={
-            "profit_target_percentage": 0.01, # Añadido para SRST-5011
-            "stop_loss_percentage": 0.005 # Añadido para SRST-5011
-        },
+        base_strategy_type=BaseStrategyType.DAY_TRADING, parameters=DayTradingParameters(
+            entry_timeframes=[Timeframe.ONE_HOUR],
+            rsi_period=14,
+            rsi_overbought=70.0,
+            rsi_oversold=30.0,
+            macd_fast_period=12,
+            macd_slow_period=26,
+            macd_signal_period=9,
+            exit_timeframes=None
+        ),
         is_active_paper_mode=False, is_active_real_mode=True, description="Real trading strategy",
         allowed_symbols=None, # Añadido para SRST-5011
         excluded_symbols=None, # Añadido para SRST-5011
@@ -603,10 +626,12 @@ async def test_get_all_strategies_performance_breakeven_trades(
 
     mock_strategy_config = TradingStrategyConfig(
         id=str(strategy_id), user_id=str(USER_ID), config_name="Breakeven Master",
-        base_strategy_type=BaseStrategyType.GRID_TRADING, parameters={
-            "profit_target_percentage": 0.01, # Añadido para SRST-5011
-            "stop_loss_percentage": 0.005 # Añadido para SRST-5011
-        },
+        base_strategy_type=BaseStrategyType.GRID_TRADING, parameters=GridTradingParameters(
+            grid_upper_price=100.0,
+            grid_lower_price=90.0,
+            grid_levels=10,
+            profit_per_grid=0.001
+        ),
         is_active_paper_mode=True, is_active_real_mode=False, description="Grid strategy for breakeven",
         allowed_symbols=None, # Añadido para SRST-5011
         excluded_symbols=None, # Añadido para SRST-5011
@@ -736,10 +761,12 @@ async def test_get_all_strategies_performance_win_rate_edge_cases(
     
     mock_strategy_config = TradingStrategyConfig(
         id=str(strategy_id), user_id=str(USER_ID), config_name="WinRate Test Strat",
-        base_strategy_type=BaseStrategyType.SCALPING, parameters={
-            "profit_target_percentage": 0.01, # Añadido para SRST-5011
-            "stop_loss_percentage": 0.005 # Añadido para SRST-5011
-        },
+        base_strategy_type=BaseStrategyType.SCALPING, parameters=ScalpingParameters(
+            profit_target_percentage=0.01,
+            stop_loss_percentage=0.005,
+            max_holding_time_seconds=60,
+            leverage=1.0
+        ),
         is_active_paper_mode=True, is_active_real_mode=False, description=description,
         allowed_symbols=None, # Añadido para SRST-5011
         excluded_symbols=None, # Añadido para SRST-5011

@@ -17,10 +17,10 @@ from PySide6.QtGui import QColor, QFont
 
 import qasync
 
-from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
-from shared.data_types import UserConfiguration
-from ultibot_backend.core.domain_models.user_configuration_models import RiskProfile, Theme
-from ultibot_ui.models import BaseMainWindow # Importar BaseMainWindow
+from src.ultibot_ui.services.api_client import UltiBotAPIClient, APIError
+from src.shared.data_types import UserConfiguration
+from src.core.domain_models.user_configuration_models import RiskProfile, Theme
+from src.ultibot_ui.models import BaseMainWindow # Importar BaseMainWindow
 
 logger = logging.getLogger(__name__)
 

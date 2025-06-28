@@ -10,10 +10,10 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QTimer, QDateTime
 from PySide6.QtGui import QColor
-from ultibot_backend.core.domain_models.opportunity_models import Opportunity, AIAnalysis, OpportunityStatus
-from ultibot_backend.core.domain_models.user_configuration_models import AIStrategyConfiguration
-from ultibot_backend.core.domain_models.trading_strategy_models import TradingStrategyConfig
-from ultibot_ui.models import BaseMainWindow
+from src.core.domain_models.opportunity_models import Opportunity, AIAnalysis, OpportunityStatus
+from src.core.domain_models.user_configuration_models import AIStrategyConfiguration
+from src.core.domain_models.trading_strategy_models import TradingStrategyConfig
+from src.ultibot_ui.models import BaseMainWindow
 from ultibot_ui.services.api_client import UltiBotAPIClient, APIError
 from ultibot_ui.dialogs.ai_analysis_dialog import AIAnalysisDialog # Nueva importación para el diálogo de análisis de IA
 

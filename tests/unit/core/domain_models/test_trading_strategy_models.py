@@ -2,7 +2,7 @@
 import pytest
 from datetime import datetime
 from uuid import uuid4
-from src.ultibot_backend.core.domain_models.trading_strategy_models import (
+from src.core.domain_models.trading_strategy_models import (
     Timeframe,
     BaseStrategyType,
     ScalpingParameters,

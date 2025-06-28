@@ -4,7 +4,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 from decimal import Decimal
 
-from src.ultibot_backend.core.domain_models.trade_models import (
+from src.core.domain_models.trade_models import (
     TradeSide,
     TradeMode,
     PositionStatus,
@@ -237,4 +237,3 @@ class TestTradeModel:
         assert trade.currentStopPrice_tsl == Decimal("60000.0")
         assert len(trade.riskRewardAdjustments) == 1
         assert isinstance(trade.closed_at, datetime)
-

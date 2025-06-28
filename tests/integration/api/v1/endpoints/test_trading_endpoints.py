@@ -7,15 +7,15 @@ from typing import Tuple
 from fastapi import FastAPI
 from datetime import datetime
 
-from services.unified_order_execution_service import UnifiedOrderExecutionService
-from services.trading_engine_service import TradingEngine
-from services.config_service import ConfigurationService
-from adapters.persistence_service import SupabasePersistenceService
-from core.domain_models.trade_models import TradeOrderDetails, OrderCategory, OrderStatus, OrderType, TradeSide
-from core.domain_models.opportunity_models import OpportunityStatus, Opportunity, InitialSignal, SourceType, Direction, AIAnalysis, SuggestedAction, RecommendedTradeParams
-from core.domain_models.user_configuration_models import UserConfiguration, RealTradingSettings, AIStrategyConfiguration, ConfidenceThresholds, RiskProfile, Theme, RiskProfileSettings
-from dependencies import get_unified_order_execution_service, get_trading_engine_service, get_config_service, get_persistence_service
-from app_config import get_app_settings
+from src.services.unified_order_execution_service import UnifiedOrderExecutionService
+from src.services.trading_engine_service import TradingEngine
+from src.services.config_service import ConfigurationService
+from src.adapters.persistence_service import SupabasePersistenceService
+from src.core.domain_models.trade_models import TradeOrderDetails, OrderCategory, OrderStatus, OrderType, TradeSide
+from src.core.domain_models.opportunity_models import OpportunityStatus, Opportunity, InitialSignal, SourceType, Direction, AIAnalysis, SuggestedAction, RecommendedTradeParams
+from src.core.domain_models.user_configuration_models import UserConfiguration, RealTradingSettings, AIStrategyConfiguration, ConfidenceThresholds, RiskProfile, Theme, RiskProfileSettings
+from src.dependencies import get_unified_order_execution_service, get_trading_engine_service, get_config_service, get_persistence_service
+from src.app_config import get_app_settings
 
 # Sample data fixtures
 @pytest.fixture
@@ -343,7 +343,7 @@ class TestTradingEndpoints:
         app.dependency_overrides[get_persistence_service] = lambda: persistence_service_fixture
         get_app_settings().FIXED_USER_ID = user_id
 
-        mock_opportunity_pending_confirmation.status = OpportunityStatus.NEW.value # Wrong status
+        mock_opportunity_pending_confirmation.status = OpportunityStatus.NEW # Wrong status
         persistence_service_fixture.get_opportunity_by_id.return_value = mock_opportunity_pending_confirmation
 
         request_payload = {
@@ -360,7 +360,7 @@ class TestTradingEndpoints:
         # Assert
         assert response.status_code == 400
         assert response.json()["detail"] == f"Opportunity {mock_opportunity_pending_confirmation.id} is not in 'pending_user_confirmation_real' status. Current status: {mock_opportunity_pending_confirmation.status}"
-        persistence_service_fixture.get_opportunity_by_id.assert_called_once_with(mock_opportunity_pending_confirmation.id)
+        persistence_service_fixture.get_opportunity_by_id.assert_called_once_with(UUID(mock_opportunity_pending_confirmation.id))
         app.dependency_overrides.clear()
 
     @pytest.mark.asyncio

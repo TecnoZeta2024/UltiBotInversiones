@@ -4,11 +4,11 @@ from uuid import uuid4, UUID
 from datetime import datetime
 from decimal import Decimal
 
-from ultibot_backend.services.market_data_service import MarketDataService
-from ultibot_backend.services.credential_service import CredentialService, CredentialError
-from ultibot_backend.adapters.binance_adapter import BinanceAdapter, BinanceAPIError
-from ultibot_backend.adapters.persistence_service import SupabasePersistenceService
-from shared.data_types import APICredential, ServiceName, BinanceConnectionStatus, AssetBalance
+from src.services.market_data_service import MarketDataService
+from src.services.credential_service import CredentialService, CredentialError
+from src.adapters.binance_adapter import BinanceAdapter, BinanceAPIError
+from src.adapters.persistence_service import SupabasePersistenceService
+from src.shared.data_types import APICredential, ServiceName, BinanceConnectionStatus, AssetBalance
 
 @pytest.fixture
 def mock_credential_service():
@@ -156,7 +156,7 @@ async def test_get_binance_spot_balances_api_error(market_data_service: MarketDa
     mock_credential_service.get_credential.return_value = sample_binance_credential
     mock_binance_adapter.get_spot_balances.side_effect = BinanceAPIError("Failed to fetch balances")
 
-    from ultibot_backend.core.exceptions import UltiBotError # Importar aquí para evitar error de importación circular si se mueve arriba
+    from src.core.exceptions import UltiBotError # Importar aquí para evitar error de importación circular si se mueve arriba
     with pytest.raises(UltiBotError) as excinfo: # MarketDataService envuelve BinanceAPIError en UltiBotError
         await market_data_service.get_binance_spot_balances()
     assert "No se pudieron obtener los balances de Binance: Failed to fetch balances" in str(excinfo.value)

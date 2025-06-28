@@ -476,10 +476,10 @@ class UserConfiguration(BaseModel):
 
     @staticmethod
     def _normalize_symbol_for_storage(symbol: str) -> str:
-        """Helper to normalize symbol for storage (removes '/' and ',' and converts to uppercase)."""
+        """Helper to normalize symbol for storage (removes '/', ',' and '-' and converts to uppercase)."""
         if not symbol:
             raise ValueError("Symbol cannot be empty.")
-        normalized = symbol.replace("/", "").replace(",", "").upper()
+        normalized = symbol.replace("/", "").replace(",", "").replace("-", "").upper()
         if not normalized.isalnum():
             raise ValueError(f"Invalid symbol for storage: {symbol}")
         return normalized

@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPalette, QColor, QFont
 
-from ultibot_backend.core.domain_models.opportunity_models import AIAnalysis, Opportunity
+from src.core.domain_models.opportunity_models import AIAnalysis, Opportunity
 
 logger = logging.getLogger(__name__)
 

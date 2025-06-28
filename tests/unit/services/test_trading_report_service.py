@@ -3,35 +3,34 @@ Pruebas unitarias para TradingReportService.
 """
 
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
-from datetime import datetime
+from unittest.mock import AsyncMock
 from uuid import uuid4
 from decimal import Decimal
+from datetime import datetime
 
-from ultibot_backend.services.trading_report_service import TradingReportService
-from ultibot_backend.core.exceptions import ReportError
-from ultibot_backend.core.domain_models.trade_models import (
+from src.services.trading_report_service import TradingReportService
+from src.core.exceptions import ReportError
+from src.core.domain_models.trade_models import (
     Trade,
     TradeOrderDetails,
     OrderCategory,
     OrderType,
     OrderStatus,
     TradeSide,
+    TradeMode,
+    PositionStatus,
 )
-from shared.data_types import PerformanceMetrics
+from src.shared.data_types import PerformanceMetrics
+from src.adapters.persistence_service import SupabasePersistenceService
 
 
 @pytest.fixture
-def mock_session_factory():
+def trading_report_service(mock_persistence_service: SupabasePersistenceService) -> TradingReportService:
     """
-    Fixture para mockear la session_factory que devuelve un context manager asíncrono.
-    Esto simula el comportamiento de `async with session_factory() as session:`.
+    Fixture que proporciona una instancia de TradingReportService con un 
+    servicio de persistencia mockeado inyectado.
     """
-    mock_session = AsyncMock()
-    mock_factory = MagicMock()
-    mock_factory.return_value.__aenter__.return_value = mock_session
-    mock_factory.return_value.__aexit__.return_value = None  # Necesario para el context manager
-    return mock_factory, mock_session
+    return TradingReportService(persistence_service=mock_persistence_service)
 
 
 @pytest.fixture
@@ -48,7 +47,8 @@ def sample_trade_data():
             orderId_exchange=None, clientOrderId_exchange=None, requestedPrice=None,
             cumulativeQuoteQty=None, commissions=[], commission=None,
             commissionAsset=None, submittedAt=None, fillTimestamp=None,
-            rawResponse=None, ocoOrderListId=None
+            rawResponse=None, ocoOrderListId=None,
+            price=None, stopPrice=None, timeInForce=None
         )
         exit_order = TradeOrderDetails(
             orderId_internal=uuid4(), type=OrderType.MARKET, status=OrderStatus.FILLED,
@@ -58,7 +58,8 @@ def sample_trade_data():
             orderId_exchange=None, clientOrderId_exchange=None, requestedPrice=None,
             cumulativeQuoteQty=None, commissions=[], commission=None,
             commissionAsset=None, submittedAt=None, fillTimestamp=None,
-            rawResponse=None, ocoOrderListId=None
+            rawResponse=None, ocoOrderListId=None,
+            price=None, stopPrice=None, timeInForce=None
         )
         
         return Trade(
@@ -66,8 +67,8 @@ def sample_trade_data():
             user_id=user_id,
             symbol=symbol,
             side=TradeSide.BUY,
-            mode="paper",
-            positionStatus="closed",
+            mode=TradeMode.PAPER,
+            positionStatus=PositionStatus.CLOSED,
             opened_at=datetime.utcnow(),
             closed_at=datetime.utcnow(),
             pnl_usd=Decimal(str(pnl)),
@@ -93,53 +94,49 @@ def sample_trade_data():
     ]
 
 
-@patch('ultibot_backend.services.trading_report_service.SupabasePersistenceService')
 @pytest.mark.asyncio
-async def test_get_closed_trades_success(mock_persistence_service_class, mock_session_factory, sample_trade_data):
+async def test_get_closed_trades_success(
+    trading_report_service: TradingReportService, 
+    mock_persistence_service: AsyncMock, 
+    sample_trade_data: list[Trade]
+):
     """Prueba obtener trades cerrados exitosamente."""
     # Arrange
-    mock_factory, mock_session = mock_session_factory
-    mock_persistence_instance = AsyncMock()
-    mock_persistence_service_class.return_value = mock_persistence_instance
-    mock_persistence_instance.get_closed_trades.return_value = sample_trade_data
-    
-    service = TradingReportService(session_factory=mock_factory)
+    mock_persistence_service.get_closed_trades.return_value = sample_trade_data
     user_id = sample_trade_data[0].user_id
 
     # Act
-    result = await service.get_closed_trades(user_id, mode="paper")
+    result = await trading_report_service.get_closed_trades(user_id, mode="paper")
 
     # Assert
-    mock_factory.assert_called_once()
-    mock_persistence_service_class.assert_called_once_with(mock_session)
-    mock_persistence_instance.get_closed_trades.assert_called_once_with(
-        user_id=user_id, mode='paper', symbol=None, start_date=None, end_date=None
+    mock_persistence_service.get_closed_trades.assert_called_once_with(
+        user_id=str(user_id), mode='paper', symbol=None, start_date=None, end_date=None
     )
     assert len(result) == 3
     assert result[0].symbol == "BTCUSDT"
 
 
-@patch('ultibot_backend.services.trading_report_service.SupabasePersistenceService')
 @pytest.mark.asyncio
-async def test_calculate_performance_metrics_success(mock_persistence_service_class, mock_session_factory, sample_trade_data):
+async def test_calculate_performance_metrics_success(
+    trading_report_service: TradingReportService, 
+    mock_persistence_service: AsyncMock, 
+    sample_trade_data: list[Trade]
+):
     """Prueba cálculo de métricas de rendimiento exitoso."""
     # Arrange
-    mock_factory, mock_session = mock_session_factory
-    mock_persistence_instance = AsyncMock()
-    mock_persistence_service_class.return_value = mock_persistence_instance
-    mock_persistence_instance.get_closed_trades.return_value = sample_trade_data
-    
-    service = TradingReportService(session_factory=mock_factory)
+    mock_persistence_service.get_closed_trades.return_value = sample_trade_data
     user_id = sample_trade_data[0].user_id
 
     # Act
-    result = await service.calculate_performance_metrics(user_id, mode="paper")
+    result = await trading_report_service.calculate_performance_metrics(user_id, mode="paper")
 
     # Assert
-    mock_factory.assert_called_once()
-    mock_persistence_service_class.assert_called_once_with(mock_session)
-    mock_persistence_instance.get_closed_trades.assert_called_once_with(
-        user_id=user_id, mode='paper', symbol=None, start_date=None, end_date=None
+    # La llamada a `calculate_performance_metrics` invoca internamente a `get_closed_trades`,
+    # que a su vez llama a `persistence_service.get_closed_trades`.
+    # Verificamos la llamada al método del mock de persistencia.
+    # Notar que `limit` y `offset` no se pasan al servicio de persistencia.
+    mock_persistence_service.get_closed_trades.assert_called_once_with(
+        user_id=str(user_id), mode='paper', symbol=None, start_date=None, end_date=None
     )
     assert isinstance(result, PerformanceMetrics)
     assert result.total_trades == 3
@@ -149,52 +146,44 @@ async def test_calculate_performance_metrics_success(mock_persistence_service_cl
     assert result.total_pnl == Decimal("125.0")
 
 
-@patch('ultibot_backend.services.trading_report_service.SupabasePersistenceService')
 @pytest.mark.asyncio
-async def test_calculate_performance_metrics_no_trades(mock_persistence_service_class, mock_session_factory):
+async def test_calculate_performance_metrics_no_trades(
+    trading_report_service: TradingReportService, 
+    mock_persistence_service: AsyncMock
+):
     """Prueba cálculo de métricas cuando no hay trades."""
     # Arrange
-    mock_factory, mock_session = mock_session_factory
-    mock_persistence_instance = AsyncMock()
-    mock_persistence_service_class.return_value = mock_persistence_instance
-    mock_persistence_instance.get_closed_trades.return_value = []
-    
-    service = TradingReportService(session_factory=mock_factory)
+    mock_persistence_service.get_closed_trades.return_value = []
     user_id = uuid4()
 
     # Act
-    result = await service.calculate_performance_metrics(user_id, mode="paper")
+    result = await trading_report_service.calculate_performance_metrics(user_id, mode="paper")
 
     # Assert
-    mock_factory.assert_called_once()
-    mock_persistence_service_class.assert_called_once_with(mock_session)
-    mock_persistence_instance.get_closed_trades.assert_called_once_with(
-        user_id=user_id, mode='paper', symbol=None, start_date=None, end_date=None
+    # La llamada a `calculate_performance_metrics` invoca internamente a `get_closed_trades`,
+    # que a su vez llama a `persistence_service.get_closed_trades`.
+    # Verificamos la llamada al método del mock de persistencia.
+    mock_persistence_service.get_closed_trades.assert_called_once_with(
+        user_id=str(user_id), mode='paper', symbol=None, start_date=None, end_date=None
     )
     assert result.total_trades == 0
     assert result.total_pnl == Decimal("0.0")
 
 
-@patch('ultibot_backend.services.trading_report_service.SupabasePersistenceService')
 @pytest.mark.asyncio
-async def test_get_closed_trades_error_handling(mock_persistence_service_class, mock_session_factory):
+async def test_get_closed_trades_error_handling(
+    trading_report_service: TradingReportService, 
+    mock_persistence_service: AsyncMock
+):
     """Prueba manejo de errores al obtener trades cerrados."""
     # Arrange
-    mock_factory, mock_session = mock_session_factory
-    mock_persistence_instance = AsyncMock()
-    mock_persistence_service_class.return_value = mock_persistence_instance
-    mock_persistence_instance.get_closed_trades.side_effect = Exception("Database connection failed")
-    
-    service = TradingReportService(session_factory=mock_factory)
+    mock_persistence_service.get_closed_trades.side_effect = Exception("Database connection failed")
     user_id = uuid4()
 
     # Act & Assert
-    with pytest.raises(ReportError) as exc_info:
-        await service.get_closed_trades(user_id, mode="paper")
+    with pytest.raises(ReportError, match="Error al obtener historial de trades: Database connection failed"):
+        await trading_report_service.get_closed_trades(user_id, mode="paper")
     
-    mock_factory.assert_called_once()
-    mock_persistence_service_class.assert_called_once_with(mock_session)
-    mock_persistence_instance.get_closed_trades.assert_called_once_with(
-        user_id=user_id, mode='paper', symbol=None, start_date=None, end_date=None
+    mock_persistence_service.get_closed_trades.assert_called_once_with(
+        user_id=str(user_id), mode='paper', symbol=None, start_date=None, end_date=None
     )
-    assert "Error al obtener historial de trades" in str(exc_info.value)

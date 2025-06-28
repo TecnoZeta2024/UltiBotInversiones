@@ -124,6 +124,36 @@ class TestOpportunitiesEndpoints:
         # Compara el contenido de las oportunidades
         assert response_data["opportunities"] == ai_analysis_request_fixture.model_dump(mode='json')["opportunities"]
 
+    async def test_post_gemini_opportunities_invalid_data(
+        self,
+        client_with_db: AsyncClient,
+    ):
+        """
+        Test POST /api/v1/gemini/opportunities with invalid data.
+        """
+        invalid_payload = {
+            "opportunities": [
+                {
+                    "id": "invalid-uuid", # Invalid UUID
+                    "symbol": "BTCUSDT",
+                    "detected_at": "not-a-date", # Invalid date
+                    "source_type": "INVALID_SOURCE", # Invalid enum
+                    "initial_signal": {}, # Missing required fields
+                    "status": "NEW"
+                }
+            ]
+        }
+        response = await client_with_db.post(
+            "/api/v1/gemini/opportunities", json=invalid_payload
+        )
+        assert response.status_code == 422 # Unprocessable Entity
+        response_data = response.json()
+        assert "detail" in response_data
+        assert any("value is not a valid uuid" in error["msg"] for error in response_data["detail"])
+        assert any("invalid datetime format" in error["msg"] for error in response_data["detail"])
+        assert any("value is not a valid enumeration member" in error["msg"] for error in response_data["detail"])
+        assert any("field required" in error["msg"] for error in response_data["detail"])
+
     async def test_get_real_trading_candidates_success(
         self, client: Tuple[AsyncClient, FastAPI], mock_user_config: UserConfiguration, opportunity_fixture: Opportunity
     ):
@@ -163,6 +193,44 @@ class TestOpportunitiesEndpoints:
             condition="status = :status",
             params={"status": OpportunityStatus.PENDING_USER_CONFIRMATION_REAL.value}
         )
+
+        app.dependency_overrides.clear()
+
+    async def test_get_real_trading_candidates_service_error(
+        self, client: Tuple[AsyncClient, FastAPI], mock_user_config: UserConfiguration
+    ):
+        """Test GET /api/v1/opportunities/real-trading-candidates when persistence service fails."""
+        http_client, app = client
+        mock_persistence = AsyncMock(spec=SupabasePersistenceService)
+        mock_config = AsyncMock(spec=ConfigurationService)
+
+        if mock_user_config.real_trading_settings is None:
+            mock_user_config.real_trading_settings = RealTradingSettings(
+                real_trading_mode_active=False,
+                real_trades_executed_count=0,
+                max_concurrent_operations=0,
+                daily_loss_limit_absolute=None,
+                daily_profit_target_absolute=None,
+                asset_specific_stop_loss=None,
+                auto_pause_trading_conditions=None,
+                daily_capital_risked_usd=Decimal("0"),
+                last_daily_reset=None
+            )
+        mock_user_config.real_trading_settings.real_trading_mode_active = True # Ensure active for this test
+        
+        mock_config.get_user_configuration.return_value = mock_user_config
+        mock_persistence.get_all.side_effect = Exception("Database connection failed")
+
+        app.dependency_overrides[deps.get_persistence_service] = lambda: mock_persistence
+        app.dependency_overrides[deps.get_config_service] = lambda: mock_config
+
+        response = await http_client.get("/api/v1/opportunities/real-trading-candidates")
+        
+        assert response.status_code == 500
+        assert "Database connection failed" in response.json()["detail"]
+        
+        mock_config.get_user_configuration.assert_called_once()
+        mock_persistence.get_all.assert_called_once()
 
         app.dependency_overrides.clear()
 

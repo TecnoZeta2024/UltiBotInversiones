@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import uuid4, UUID
 
-from src.ultibot_backend.core.domain_models.opportunity_models import (
+from src.core.domain_models.opportunity_models import (
     OpportunityStatus,
     SourceType,
     Direction,
@@ -262,4 +262,3 @@ class TestOpportunityModel:
         sample_opportunity.add_investigation_note("Second note", "User B")
         assert len(sample_opportunity.investigation_details.investigation_notes) == 2
         assert sample_opportunity.investigation_details.investigation_notes[1].author == "User B"
-

@@ -14,6 +14,8 @@ from src.core.domain_models.opportunity_models import (
     InitialSignal,
     SourceType,
     OpportunityStatus,
+    Direction,
+    SuggestedAction,
 )
 from src.core.domain_models.user_configuration_models import (
     UserConfiguration,
@@ -22,7 +24,7 @@ from src.core.domain_models.user_configuration_models import (
     RiskProfileSettings,
 )
 from src.services.trading_engine_service import TradingEngine, TradingDecision
-from src.services.ai_orchestrator_service import AIAnalysisResult, SuggestedAction
+from src.services.ai_orchestrator_service import AIAnalysisResult
 
 # Fixtures para configuración básica
 @pytest.fixture
@@ -31,33 +33,64 @@ def mock_user_id():
 
 @pytest.fixture
 def mock_opportunity(mock_user_id):
+    """Provides a fully-formed mock Opportunity object."""
+    now = datetime.now(timezone.utc)
     return Opportunity(
-        id=uuid4(),
-        user_id=mock_user_id,
+        id=str(uuid4()),
+        user_id=str(mock_user_id),
+        strategy_id=uuid4(),
+        exchange="binance",
         symbol="BTC/USDT",
-        status=OpportunityStatus.DETECTED,
-        source_type=SourceType.MANUAL_INPUT,
+        detected_at=now,
+        source_type=SourceType.INTERNAL_INDICATOR_ALGO,
+        source_name="test_indicator",
+        source_data=None,
         initial_signal=InitialSignal(
+            direction_sought=Direction.BUY,
             entry_price_target=Decimal("50000"),
             take_profit_target=[Decimal("51000")],
-            stop_loss_target=[Decimal("49500")],
+            stop_loss_target=Decimal("49500"),
+            timeframe="1h",
+            reasoning_source_structured=None,
+            reasoning_source_text="Mock signal",
+            confidence_source=0.75
         ),
+        system_calculated_priority_score=None,
+        last_priority_calculation_at=None,
+        status=OpportunityStatus.NEW,
+        status_reason_code=None,
+        status_reason_text=None,
+        ai_analysis=None,
+        investigation_details=None,
+        user_feedback=None,
+        linked_trade_ids=None,
+        expires_at=None,
+        expiration_logic=None,
+        post_trade_feedback=None,
+        post_facto_simulation_results=None,
+        created_at=now,
+        updated_at=now
     )
 
 @pytest.fixture
 def mock_user_config(mock_user_id):
-    return UserConfiguration(
+    """Provides a fully-formed mock UserConfiguration object."""
+    return UserConfiguration.model_construct(
+        id=str(uuid4()),
         user_id=str(mock_user_id),
         paper_trading_active=True,
-        risk_profile_settings=RiskProfileSettings(
+        risk_profile_settings=RiskProfileSettings.model_construct(
             per_trade_capital_risk_percentage=Decimal("1.0"),
             daily_capital_risk_percentage=Decimal("5.0"),
+            max_drawdown_percentage=Decimal("10.0")
         ),
         ai_strategy_configurations=[
-            AIStrategyConfiguration(
+            AIStrategyConfiguration.model_construct(
                 id="ai_profile_1",
                 name="Default AI Profile",
-                confidence_thresholds=ConfidenceThresholds(
+                is_active_paper_mode=True,
+                is_active_real_mode=True,
+                confidence_thresholds=ConfidenceThresholds.model_construct(
                     paper_trading=0.7,
                     real_trading=0.85
                 )
@@ -97,13 +130,31 @@ async def test_process_opportunity_with_scalping_strategy_generates_buy_decision
     # 1. Configuración del Test (Arrange)
     strategy_id = uuid4()
     scalping_strategy = TradingStrategyConfig(
-        id=strategy_id,
+        id=str(strategy_id),
         user_id=str(mock_user_id),
         config_name="Scalping BTC",
         base_strategy_type=BaseStrategyType.SCALPING,
-        parameters=ScalpingParameters(timeframe="1m", profit_target_percentage=0.5, stop_loss_percentage=0.25),
+        description="Test scalping strategy",
+        parameters=ScalpingParameters(
+            profit_target_percentage=0.5,
+            stop_loss_percentage=0.25,
+            max_holding_time_seconds=300,
+            leverage=10.0
+        ),
         is_active_paper_mode=True,
+        is_active_real_mode=False,
         ai_analysis_profile_id="ai_profile_1",
+        allowed_symbols=["BTC/USDT"],
+        excluded_symbols=None,
+        applicability_rules=None,
+        risk_parameters_override=None,
+        version=1,
+        parent_config_id=None,
+        performance_metrics=None,
+        market_condition_filters=None,
+        activation_schedule=None,
+        depends_on_strategies=None,
+        sharing_metadata=None,
     )
 
     # Mockear las llamadas a los servicios dependientes

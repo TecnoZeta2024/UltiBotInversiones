@@ -5,16 +5,7 @@ description = "Plataforma de trading personal avanzada y de alto rendimiento."
 authors = ["BMad Agent <bmad@example.com>"]
 readme = "README.md"
 packages = [
-    { include = "ultibot_ui", from = "src" },
-    { include = "shared", from = "src" },
-    { include = "adapters", from = "src" },
-    { include = "api", from = "src" },
-    { include = "core", from = "src" },
-    { include = "features", from = "src" },
-    { include = "services", from = "src" },
-    { include = "app_config.py", from = "src" },
-    { include = "dependencies.py", from = "src" },
-    { include = "main.py", from = "src" },
+    { include = "src" },
 ]
 
 [tool.poetry.dependencies]
@@ -56,6 +47,7 @@ pre-commit = "*"
 pylint = "^3.3.7"
 pytest-qt = "^4.4.0"
 pytest-timeout = "^2.3.1"
+playwright = "^1.53.0"
 
 [tool.poetry.scripts]
 test = "pytest:main"
@@ -87,7 +79,9 @@ select = [
 # skip-magic-trailing-comma = false
 
 [tool.pytest.ini_options]
-pythonpath = [
-  "src"
+minversion = "6.0"
+addopts = "-ra -q --cov=src --cov-report=term-missing"
+testpaths = [
+    "tests",
 ]
 asyncio_mode = "auto"

@@ -68,6 +68,40 @@ async def test_get_portfolio_summary_paper_success(
     # Limpiar el override
     app.dependency_overrides = {}
 
+async def test_get_portfolio_summary_invalid_mode(
+    client: Tuple[AsyncClient, FastAPI]
+):
+    """
+    Prueba que el endpoint /summary maneja un trading_mode inválido.
+    """
+    http_client, app = client
+    
+    response = await http_client.get("/api/v1/portfolio/summary?trading_mode=invalid_mode")
+    
+    assert response.status_code == 422 # Unprocessable Entity
+    assert "value is not a valid enumeration member" in response.json()["detail"][0]["msg"]
+    app.dependency_overrides = {}
+
+async def test_get_portfolio_summary_service_error(
+    client: Tuple[AsyncClient, FastAPI],
+    mocker
+):
+    """
+    Prueba que el endpoint /summary maneja errores del servicio de portafolio.
+    """
+    http_client, app = client
+    mock_service = AsyncMock()
+    mock_service._get_paper_trading_summary.side_effect = Exception("Service unavailable")
+    
+    app.dependency_overrides[get_portfolio_service] = lambda: mock_service
+    
+    response = await http_client.get("/api/v1/portfolio/summary?trading_mode=paper")
+    
+    assert response.status_code == 500
+    assert "Service unavailable" in response.json()["detail"]
+    mock_service._get_paper_trading_summary.assert_awaited_once()
+    app.dependency_overrides = {}
+
 async def test_get_portfolio_snapshot_success(
     client: Tuple[AsyncClient, FastAPI],
     mocker,
@@ -96,6 +130,43 @@ async def test_get_portfolio_snapshot_success(
     assert Decimal(data["paper_trading"]["total_portfolio_value_usd"]) == mock_portfolio_snapshot.paper_trading.total_portfolio_value_usd
     assert Decimal(data["real_trading"]["total_portfolio_value_usd"]) == mock_portfolio_snapshot.real_trading.total_portfolio_value_usd
     
+    mock_service.get_portfolio_snapshot.assert_awaited_once_with(user_id, "both")
+
+    app.dependency_overrides = {}
+
+async def test_get_portfolio_snapshot_invalid_mode(
+    client: Tuple[AsyncClient, FastAPI],
+    user_id
+):
+    """
+    Prueba que el endpoint /snapshot/{user_id} maneja un trading_mode inválido.
+    """
+    http_client, app = client
+    
+    response = await http_client.get(f"/api/v1/portfolio/snapshot/{user_id}?trading_mode=invalid_mode")
+    
+    assert response.status_code == 422 # Unprocessable Entity
+    assert "value is not a valid enumeration member" in response.json()["detail"][0]["msg"]
+    app.dependency_overrides = {}
+
+async def test_get_portfolio_snapshot_service_error(
+    client: Tuple[AsyncClient, FastAPI],
+    mocker,
+    user_id
+):
+    """
+    Prueba que el endpoint /snapshot/{user_id} maneja errores del servicio de portafolio.
+    """
+    http_client, app = client
+    mock_service = AsyncMock()
+    mock_service.get_portfolio_snapshot.side_effect = Exception("Snapshot retrieval failed")
+
+    app.dependency_overrides[get_portfolio_service] = lambda: mock_service
+
+    response = await http_client.get(f"/api/v1/portfolio/snapshot/{user_id}?trading_mode=both")
+
+    assert response.status_code == 500
+    assert "Snapshot retrieval failed" in response.json()["detail"]
     mock_service.get_portfolio_snapshot.assert_awaited_once_with(user_id, "both")
 
     app.dependency_overrides = {}

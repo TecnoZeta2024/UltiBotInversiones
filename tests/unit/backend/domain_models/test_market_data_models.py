@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from src.ultibot_backend.core.domain_models.orm_models import MarketDataORM
+from src.core.domain_models.orm_models import MarketDataORM
 
 # Test MarketDataORM Model
 def test_market_data_orm_creation():

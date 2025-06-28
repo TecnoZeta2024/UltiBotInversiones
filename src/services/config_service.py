@@ -187,7 +187,7 @@ class ConfigurationService:
 
         try:
             credential = await self.credential_service.get_credential(ServiceName.BINANCE_SPOT, "default")
-            if not credential or not await self.credential_service.verify_credential(credential):
+            if not credential or not await self.credential_service.verify_credential(credential.credential_label, credential.service_name):
                  raise CredentialError("Fallo en la verificación de la API Key de Binance.")
             logger.info("Verificación de API Key de Binance exitosa.")
         except (BinanceAPIError, CredentialError) as e:

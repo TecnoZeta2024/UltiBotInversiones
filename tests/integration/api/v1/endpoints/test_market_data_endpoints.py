@@ -127,3 +127,81 @@ async def test_get_klines_success(client: Tuple[AsyncClient, FastAPI]):
     
     # Limpiar el override
     app.dependency_overrides.clear()
+
+@pytest.mark.asyncio
+async def test_get_tickers_service_error(client: Tuple[AsyncClient, FastAPI]):
+    """
+    Prueba que el endpoint /market/tickers maneja errores del servicio de datos de mercado.
+    """
+    http_client, app = client
+    mock_service = AsyncMock()
+    mock_service.get_market_data_rest.side_effect = Exception("Service unavailable")
+    app.dependency_overrides[get_market_data_service] = lambda: mock_service
+    
+    response = await http_client.get("/api/v1/market/tickers?symbols=BTC/USDT")
+    
+    assert response.status_code == 500
+    assert "Service unavailable" in response.json()["detail"]
+    mock_service.get_market_data_rest.assert_awaited_once_with(['BTC/USDT'])
+    app.dependency_overrides.clear()
+
+@pytest.mark.asyncio
+async def test_get_ticker_24hr_invalid_symbol(client: Tuple[AsyncClient, FastAPI]):
+    """
+    Prueba que el endpoint /market-data/ticker/24hr/{symbol} maneja un símbolo inválido.
+    """
+    http_client, app = client
+    # No mockeamos el servicio aquí para probar la validación de la ruta
+    
+    response = await http_client.get("/api/v1/market/ticker/24hr/INVALID_SYMBOL")
+    
+    assert response.status_code == 422 # Unprocessable Entity (FastAPI validation error)
+    assert "value is not a valid enumeration member" in response.json()["detail"][0]["msg"]
+    app.dependency_overrides.clear()
+
+@pytest.mark.asyncio
+async def test_get_ticker_24hr_service_error(client: Tuple[AsyncClient, FastAPI]):
+    """
+    Prueba que el endpoint /market-data/ticker/24hr/{symbol} maneja errores del servicio.
+    """
+    http_client, app = client
+    mock_service = AsyncMock()
+    mock_service.get_ticker_24hr.side_effect = Exception("External API error")
+    app.dependency_overrides[get_market_data_service] = lambda: mock_service
+    
+    response = await http_client.get("/api/v1/market/ticker/24hr/BTCUSDT")
+    
+    assert response.status_code == 500
+    assert "External API error" in response.json()["detail"]
+    mock_service.get_ticker_24hr.assert_awaited_once_with("BTCUSDT")
+    app.dependency_overrides.clear()
+
+@pytest.mark.asyncio
+async def test_get_klines_invalid_interval(client: Tuple[AsyncClient, FastAPI]):
+    """
+    Prueba que el endpoint /market/klines maneja un intervalo inválido.
+    """
+    http_client, app = client
+    
+    response = await http_client.get("/api/v1/market/klines?symbol=BTCUSDT&interval=INVALID&limit=1")
+    
+    assert response.status_code == 422
+    assert "value is not a valid enumeration member" in response.json()["detail"][0]["msg"]
+    app.dependency_overrides.clear()
+
+@pytest.mark.asyncio
+async def test_get_klines_service_error(client: Tuple[AsyncClient, FastAPI]):
+    """
+    Prueba que el endpoint /market/klines maneja errores del servicio.
+    """
+    http_client, app = client
+    mock_service = AsyncMock()
+    mock_service.get_candlestick_data.side_effect = Exception("Data retrieval failed")
+    app.dependency_overrides[get_market_data_service] = lambda: mock_service
+    
+    response = await http_client.get("/api/v1/market/klines?symbol=BTCUSDT&interval=1h&limit=1")
+    
+    assert response.status_code == 500
+    assert "Data retrieval failed" in response.json()["detail"]
+    mock_service.get_candlestick_data.assert_awaited_once()
+    app.dependency_overrides.clear()

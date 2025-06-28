@@ -6,19 +6,20 @@ Tests for dynamic prompt generation and AI analysis integration.
 import pytest
 import uuid
 from datetime import datetime, timezone
+from decimal import Decimal
 from unittest.mock import Mock, AsyncMock, patch
 
-from ultibot_backend.services.ai_orchestrator_service import (
+from src.services.ai_orchestrator_service import (
     AIOrchestrator,
     AIAnalysisResult,
     OpportunityData,
 )
-from ultibot_backend.core.domain_models.trading_strategy_models import (
+from src.core.domain_models.trading_strategy_models import (
     TradingStrategyConfig,
     BaseStrategyType,
     ScalpingParameters,
 )
-from ultibot_backend.core.domain_models.user_configuration_models import (
+from src.core.domain_models.user_configuration_models import (
     AIStrategyConfiguration,
     ConfidenceThresholds,
 )
@@ -64,6 +65,8 @@ def sample_scalping_strategy():
             max_holding_time_seconds=300,
             leverage=1.0,
         ),
+        allowed_symbols=None,
+        excluded_symbols=None,
         applicability_rules=None,
         ai_analysis_profile_id="test-ai-profile-1",
         risk_parameters_override=None,
@@ -83,6 +86,10 @@ def sample_ai_config():
     return AIStrategyConfiguration(
         id="test-ai-profile-1",
         name="Test Scalping AI Profile",
+        is_active_paper_mode=True,
+        is_active_real_mode=False,
+        total_pnl=Decimal("0.0"),
+        number_of_trades=0,
         applies_to_strategies=["SCALPING"],
         applies_to_pairs=None,
         gemini_prompt_template="""

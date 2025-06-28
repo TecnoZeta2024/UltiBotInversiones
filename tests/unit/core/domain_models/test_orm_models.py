@@ -6,7 +6,7 @@ from decimal import Decimal
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from src.ultibot_backend.core.domain_models.orm_models import (
+from src.core.domain_models.orm_models import (
     Base,
     UserConfigurationORM,
     TradeORM,

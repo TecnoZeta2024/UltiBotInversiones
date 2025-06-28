@@ -7,7 +7,7 @@ from typing import AsyncGenerator, Generator
 import httpx
 from httpx import RequestError
 
-from src.ultibot_backend.main import app
+from src.main import app
 from src.ultibot_ui.services.api_client import UltiBotAPIClient
 from src.ultibot_ui import workers
 

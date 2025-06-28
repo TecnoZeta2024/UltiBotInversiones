@@ -5,16 +5,16 @@ from httpx import AsyncClient
 from typing import Tuple
 from fastapi import FastAPI
 
-from tests.conftest import FIXED_USER_ID
-from dependencies import get_performance_service
-from api.v1.models.performance_models import StrategyPerformanceData, OperatingMode
+from src.dependencies import get_performance_service
+from src.api.v1.models.performance_models import StrategyPerformanceData, OperatingMode
 
 # No se necesitan más importaciones de dominio o servicio, ya que el servicio está completamente mockeado.
 
 @pytest.mark.asyncio
 async def test_get_strategies_performance_endpoint_no_data(
     client: Tuple[AsyncClient, FastAPI], 
-    mock_performance_service_for_endpoint: MagicMock
+    mock_performance_service_for_endpoint: MagicMock,
+    user_id: UUID # Add user_id fixture
 ):
     """
     Test GET /api/v1/performance/strategies when no performance data is available.
@@ -32,13 +32,14 @@ async def test_get_strategies_performance_endpoint_no_data(
     # Assert: Check the response and that the service was called correctly
     assert response.status_code == 200
     assert response.json() == []
-    mock_performance_service_for_endpoint.get_all_strategies_performance.assert_called_once_with(user_id=FIXED_USER_ID, mode_filter=None)
+    mock_performance_service_for_endpoint.get_all_strategies_performance.assert_called_once_with(user_id=user_id, mode_filter=None)
 
 
 @pytest.mark.asyncio
 async def test_get_strategies_performance_endpoint_with_paper_data(
     client: Tuple[AsyncClient, FastAPI], 
-    mock_performance_service_for_endpoint: MagicMock
+    mock_performance_service_for_endpoint: MagicMock,
+    user_id: UUID # Add user_id fixture
 ):
     """
     Test GET /api/v1/performance/strategies filtering by 'paper' mode.
@@ -69,13 +70,14 @@ async def test_get_strategies_performance_endpoint_with_paper_data(
     assert len(data) == 1
     assert data[0]["strategyId"] == "11111111-1111-1111-1111-111111111111"
     assert data[0]["mode"] == "paper"
-    mock_performance_service_for_endpoint.get_all_strategies_performance.assert_called_once_with(user_id=FIXED_USER_ID, mode_filter='paper')
+    mock_performance_service_for_endpoint.get_all_strategies_performance.assert_called_once_with(user_id=user_id, mode_filter='paper')
 
 
 @pytest.mark.asyncio
 async def test_get_strategies_performance_endpoint_with_real_data(
     client: Tuple[AsyncClient, FastAPI], 
-    mock_performance_service_for_endpoint: MagicMock
+    mock_performance_service_for_endpoint: MagicMock,
+    user_id: UUID # Add user_id fixture
 ):
     """
     Test GET /api/v1/performance/strategies filtering by 'real' mode.
@@ -106,13 +108,14 @@ async def test_get_strategies_performance_endpoint_with_real_data(
     assert len(data) == 1
     assert data[0]["strategyId"] == "22222222-2222-2222-2222-222222222222"
     assert data[0]["mode"] == "real"
-    mock_performance_service_for_endpoint.get_all_strategies_performance.assert_called_once_with(user_id=FIXED_USER_ID, mode_filter='real')
+    mock_performance_service_for_endpoint.get_all_strategies_performance.assert_called_once_with(user_id=user_id, mode_filter='real')
 
 
 @pytest.mark.asyncio
 async def test_get_strategies_performance_endpoint_no_mode_filter(
     client: Tuple[AsyncClient, FastAPI], 
-    mock_performance_service_for_endpoint: MagicMock
+    mock_performance_service_for_endpoint: MagicMock,
+    user_id: UUID # Add user_id fixture
 ):
     """
     Test GET /api/v1/performance/strategies without the 'mode' query parameter.
@@ -149,7 +152,7 @@ async def test_get_strategies_performance_endpoint_no_mode_filter(
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 2
-    mock_performance_service_for_endpoint.get_all_strategies_performance.assert_called_once_with(user_id=FIXED_USER_ID, mode_filter=None)
+    mock_performance_service_for_endpoint.get_all_strategies_performance.assert_called_once_with(user_id=user_id, mode_filter=None)
 
 
 @pytest.mark.asyncio

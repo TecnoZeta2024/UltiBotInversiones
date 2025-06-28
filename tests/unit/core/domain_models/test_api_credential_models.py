@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 from datetime import datetime
 import unittest.mock as mock
 
-from src.ultibot_backend.core.domain_models.api_credential_models import GUID, APICredentialORM
+from src.core.domain_models.api_credential_models import GUID, APICredentialORM
 
 # Tests for the GUID TypeDecorator
 # =================================================================
@@ -86,7 +86,7 @@ class TestGUIDTypeDecorator:
 # =================================================================
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from src.ultibot_backend.core.domain_models.base import Base
+from src.core.domain_models.base import Base
 
 class TestAPICredentialORM:
 
@@ -152,4 +152,3 @@ class TestAPICredentialORM:
         # No need to add to session for __repr__ test, but keeping db_session fixture for consistency
         expected_repr = f"<APICredentialORM(user_id='{user_id}', service_name='kucoin', label='main_account')>"
         assert repr(credential) == expected_repr
-
