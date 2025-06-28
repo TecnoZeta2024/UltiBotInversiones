@@ -27,7 +27,13 @@ Si un error persiste después de aplicar un cambio a un archivo y el servidor se
 ### 2. Mejorar la guía para la depuración de errores de validación de Pydantic en scripts de prueba:
 Cuando un endpoint de API devuelve un error 400 (Bad Request) o 422 (Unprocessable Entity) debido a problemas de validación de Pydantic, o cuando hay **inconsistencias en el formato de datos (ej. símbolos de trading, fechas) entre el frontend, el backend y las APIs externas**, examine cuidadosamente el campo `detail` de la respuesta JSON. Preste especial atención a los campos `loc` (ubicación del error en el payload) y `msg` (mensaje de error específico). Ajuste el payload de su script de prueba o solicitud de API de forma incremental, asegurándose de que los datos enviados coincidan con el esquema Pydantic esperado por el backend. Si es necesario, consulte directamente el modelo Pydantic relevante en el código fuente del backend (ej. `src/ultibot_backend/core/domain_models/trading_strategy_models.py` para estrategias) para entender los campos requeridos y sus tipos. **Considere también la implementación de tests de integración específicos para la consistencia del formato de datos.**
 
-### 3. Guía para la Depuración de Tests de Integración con Mocks:
+### 3. Guía para la Depuración de Problemas de Conexión Frontend/Backend:
+Cuando el frontend no puede conectarse al backend (ej. "Error de Conexión" en la UI) a pesar de que el backend está en ejecución y CORS está configurado correctamente, considere los siguientes pasos:
+1.  **Caché del Navegador:** Instruya al usuario a borrar la caché del navegador o a probar en modo incógnito/navegador diferente para descartar configuraciones antiguas.
+2.  **Resolución de Host:** Si el backend escucha en `0.0.0.0` y el frontend se conecta a `localhost`, verifique que no haya problemas de resolución de `localhost` o configuraciones de firewall que bloqueen la conexión.
+3.  **Reinicios Forzados:** Si el backend usa `uvicorn --reload`, y los problemas persisten, sugiera un reinicio manual del proceso del backend (ej. `taskkill /F /IM python.exe` en Windows o `killall python` en Linux/macOS) para asegurar una reinicialización completa.
+
+### 4. Guía para la Depuración de Tests de Integración con Mocks:
 Cuando un test de integración falle con `AssertionError` en un mock (ej. `assert_called_once`) o con errores inesperados como `IndexError` o `AttributeError` en las aserciones, se debe seguir un protocolo de verificación sistemático antes de asumir un error en la lógica de negocio:
 1.  **Verificar el Contrato del Test (Mock-Implementación):**
     *   **Análisis de la Implementación:** Leer el código fuente de la función que se está probando para identificar **exactamente** qué métodos de qué servicios dependientes son invocados.

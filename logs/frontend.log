@@ -20127,3 +20127,146 @@ fastapi.exceptions.ResponseValidationError: 15 validation errors:
 2025-06-28 17:06:17,821 - ultibot_backend - INFO - [MainThread] - main.py:137 - Middleware: Solicitud procesada: GET /api/v1/strategies/active/paper - Status: 500
 2025-06-28 17:06:17,822 - ultibot_backend - INFO - [MainThread] - main.py:112 - Shutting down UltiBot Backend (lifespan)...
 2025-06-28 17:06:17,823 - ultibot_backend - INFO - [MainThread] - main.py:115 - Resources released and application shut down (lifespan).
+2025-06-28 18:12:11,162 - ultibot_backend - INFO - [MainThread] - main.py:91 - Starting UltiBot Backend (lifespan)...
+2025-06-28 18:12:11,162 - ultibot_backend - INFO - [MainThread] - main.py:99 - DependencyContainer attached to app.state for non-test env: True
+2025-06-28 18:12:11,776 - ultibot_backend - CRITICAL - [MainThread] - main.py:104 - Fatal error during application startup (lifespan): 5 validation errors for AppSettings
+SUPABASE_URL
+  Field required [type=missing, input_value={'GEMINI_API_KEY': 'AIzaS...E3Jwcj0dBj58l2Wxj_qnko'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+SUPABASE_ANON_KEY
+  Field required [type=missing, input_value={'GEMINI_API_KEY': 'AIzaS...E3Jwcj0dBj58l2Wxj_qnko'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+SUPABASE_SERVICE_ROLE_KEY
+  Field required [type=missing, input_value={'GEMINI_API_KEY': 'AIzaS...E3Jwcj0dBj58l2Wxj_qnko'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+DATABASE_URL
+  Field required [type=missing, input_value={'GEMINI_API_KEY': 'AIzaS...E3Jwcj0dBj58l2Wxj_qnko'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+CREDENTIAL_ENCRYPTION_KEY
+  Field required [type=missing, input_value={'GEMINI_API_KEY': 'AIzaS...E3Jwcj0dBj58l2Wxj_qnko'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\main.py", line 101, in lifespan
+    await container.initialize_services()
+  File "C:\Users\zamor\UltiBotInversiones\src\dependencies.py", line 136, in initialize_services
+    self.credential_service = CredentialService(
+                              ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\src\services\credential_service.py", line 28, in __init__
+    app_settings = get_app_settings()
+                   ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\src\app_config.py", line 55, in get_app_settings
+    return AppSettings(_env_file=env_file_to_use)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\pydantic_settings\main.py", line 176, in __init__
+    super().__init__(
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\pydantic\main.py", line 253, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pydantic_core._pydantic_core.ValidationError: 5 validation errors for AppSettings
+SUPABASE_URL
+  Field required [type=missing, input_value={'GEMINI_API_KEY': 'AIzaS...E3Jwcj0dBj58l2Wxj_qnko'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+SUPABASE_ANON_KEY
+  Field required [type=missing, input_value={'GEMINI_API_KEY': 'AIzaS...E3Jwcj0dBj58l2Wxj_qnko'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+SUPABASE_SERVICE_ROLE_KEY
+  Field required [type=missing, input_value={'GEMINI_API_KEY': 'AIzaS...E3Jwcj0dBj58l2Wxj_qnko'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+DATABASE_URL
+  Field required [type=missing, input_value={'GEMINI_API_KEY': 'AIzaS...E3Jwcj0dBj58l2Wxj_qnko'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+CREDENTIAL_ENCRYPTION_KEY
+  Field required [type=missing, input_value={'GEMINI_API_KEY': 'AIzaS...E3Jwcj0dBj58l2Wxj_qnko'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2025-06-28 18:12:45,003 - ultibot_backend - INFO - [MainThread] - main.py:91 - Starting UltiBot Backend (lifespan)...
+2025-06-28 18:12:45,003 - ultibot_backend - INFO - [MainThread] - main.py:99 - DependencyContainer attached to app.state for non-test env: True
+2025-06-28 18:12:45,466 - ultibot_backend - CRITICAL - [MainThread] - main.py:104 - Fatal error during application startup (lifespan): Error al inicializar Fernet: Fernet key must be 32 url-safe base64-encoded bytes.
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\cryptography\fernet.py", line 35, in __init__
+    key = base64.urlsafe_b64decode(key)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\base64.py", line 134, in urlsafe_b64decode
+    return b64decode(s)
+           ^^^^^^^^^^^^
+  File "C:\Program Files\Python311\Lib\base64.py", line 88, in b64decode
+    return binascii.a2b_base64(s, strict_mode=validate)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+binascii.Error: Invalid base64-encoded string: number of data characters (41) cannot be 1 more than a multiple of 4
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\services\credential_service.py", line 38, in __init__
+    self.fernet = Fernet(encryption_key_str.encode('utf-8'))
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\.venv\Lib\site-packages\cryptography\fernet.py", line 37, in __init__
+    raise ValueError(
+ValueError: Fernet key must be 32 url-safe base64-encoded bytes.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\zamor\UltiBotInversiones\src\main.py", line 101, in lifespan
+    await container.initialize_services()
+  File "C:\Users\zamor\UltiBotInversiones\src\dependencies.py", line 136, in initialize_services
+    self.credential_service = CredentialService(
+                              ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\zamor\UltiBotInversiones\src\services\credential_service.py", line 41, in __init__
+    raise ValueError(f"Error al inicializar Fernet: {e}")
+ValueError: Error al inicializar Fernet: Fernet key must be 32 url-safe base64-encoded bytes.
+2025-06-28 18:13:29,353 - ultibot_backend - INFO - [MainThread] - main.py:91 - Starting UltiBot Backend (lifespan)...
+2025-06-28 18:13:29,354 - ultibot_backend - INFO - [MainThread] - main.py:99 - DependencyContainer attached to app.state for non-test env: True
+2025-06-28 18:13:29,818 - ultibot_backend - INFO - [MainThread] - main.py:102 - Dependency container initialized in lifespan for non-test env.
+2025-06-28 18:13:29,818 - ultibot_backend - INFO - [MainThread] - main.py:109 - Application started successfully (lifespan).
+2025-06-28 18:13:49,375 - ultibot_backend - INFO - [MainThread] - main.py:112 - Shutting down UltiBot Backend (lifespan)...
+2025-06-28 18:13:49,385 - ultibot_backend - INFO - [MainThread] - main.py:115 - Resources released and application shut down (lifespan).
+2025-06-28 18:17:04,952 - ultibot_backend - INFO - [MainThread] - main.py:91 - Starting UltiBot Backend (lifespan)...
+2025-06-28 18:17:04,952 - ultibot_backend - INFO - [MainThread] - main.py:99 - DependencyContainer attached to app.state for non-test env: True
+2025-06-28 18:17:05,590 - ultibot_backend - INFO - [MainThread] - main.py:102 - Dependency container initialized in lifespan for non-test env.
+2025-06-28 18:17:05,590 - ultibot_backend - INFO - [MainThread] - main.py:109 - Application started successfully (lifespan).
+2025-06-28 18:17:05,777 - ultibot_backend - INFO - [MainThread] - main.py:135 - Middleware: Solicitud entrante: GET /health
+2025-06-28 18:17:05,778 - ultibot_backend - INFO - [MainThread] - main.py:191 - Ejecutando health check extendido
+2025-06-28 18:17:06,495 - ultibot_backend - INFO - [MainThread] - main.py:232 - Health check completado: Todos los componentes están operativos
+2025-06-28 18:17:06,506 - ultibot_backend - INFO - [MainThread] - main.py:137 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-28 18:17:08,689 - ultibot_backend - INFO - [MainThread] - main.py:135 - Middleware: Solicitud entrante: GET /health
+2025-06-28 18:17:08,689 - ultibot_backend - INFO - [MainThread] - main.py:191 - Ejecutando health check extendido
+2025-06-28 18:17:09,096 - ultibot_backend - INFO - [MainThread] - main.py:232 - Health check completado: Todos los componentes están operativos
+2025-06-28 18:17:09,096 - ultibot_backend - INFO - [MainThread] - main.py:137 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-28 18:17:13,689 - ultibot_backend - INFO - [MainThread] - main.py:135 - Middleware: Solicitud entrante: GET /health
+2025-06-28 18:17:13,689 - ultibot_backend - INFO - [MainThread] - main.py:191 - Ejecutando health check extendido
+2025-06-28 18:17:14,068 - ultibot_backend - INFO - [MainThread] - main.py:232 - Health check completado: Todos los componentes están operativos
+2025-06-28 18:17:14,069 - ultibot_backend - INFO - [MainThread] - main.py:137 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-28 18:17:18,675 - ultibot_backend - INFO - [MainThread] - main.py:135 - Middleware: Solicitud entrante: GET /health
+2025-06-28 18:17:18,677 - ultibot_backend - INFO - [MainThread] - main.py:191 - Ejecutando health check extendido
+2025-06-28 18:17:19,047 - ultibot_backend - INFO - [MainThread] - main.py:232 - Health check completado: Todos los componentes están operativos
+2025-06-28 18:17:19,048 - ultibot_backend - INFO - [MainThread] - main.py:137 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-28 18:17:23,672 - ultibot_backend - INFO - [MainThread] - main.py:135 - Middleware: Solicitud entrante: GET /health
+2025-06-28 18:17:23,675 - ultibot_backend - INFO - [MainThread] - main.py:191 - Ejecutando health check extendido
+2025-06-28 18:17:24,045 - ultibot_backend - INFO - [MainThread] - main.py:232 - Health check completado: Todos los componentes están operativos
+2025-06-28 18:17:24,045 - ultibot_backend - INFO - [MainThread] - main.py:137 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-28 18:17:28,673 - ultibot_backend - INFO - [MainThread] - main.py:135 - Middleware: Solicitud entrante: GET /health
+2025-06-28 18:17:28,675 - ultibot_backend - INFO - [MainThread] - main.py:191 - Ejecutando health check extendido
+2025-06-28 18:17:29,045 - ultibot_backend - INFO - [MainThread] - main.py:232 - Health check completado: Todos los componentes están operativos
+2025-06-28 18:17:29,045 - ultibot_backend - INFO - [MainThread] - main.py:137 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-28 18:17:33,689 - ultibot_backend - INFO - [MainThread] - main.py:135 - Middleware: Solicitud entrante: GET /health
+2025-06-28 18:17:33,689 - ultibot_backend - INFO - [MainThread] - main.py:191 - Ejecutando health check extendido
+2025-06-28 18:17:34,065 - ultibot_backend - INFO - [MainThread] - main.py:232 - Health check completado: Todos los componentes están operativos
+2025-06-28 18:17:34,065 - ultibot_backend - INFO - [MainThread] - main.py:137 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-28 18:17:38,689 - ultibot_backend - INFO - [MainThread] - main.py:135 - Middleware: Solicitud entrante: GET /health
+2025-06-28 18:17:38,691 - ultibot_backend - INFO - [MainThread] - main.py:191 - Ejecutando health check extendido
+2025-06-28 18:17:39,065 - ultibot_backend - INFO - [MainThread] - main.py:232 - Health check completado: Todos los componentes están operativos
+2025-06-28 18:17:39,065 - ultibot_backend - INFO - [MainThread] - main.py:137 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-28 18:17:43,675 - ultibot_backend - INFO - [MainThread] - main.py:135 - Middleware: Solicitud entrante: GET /health
+2025-06-28 18:17:43,675 - ultibot_backend - INFO - [MainThread] - main.py:191 - Ejecutando health check extendido
+2025-06-28 18:17:44,050 - ultibot_backend - INFO - [MainThread] - main.py:232 - Health check completado: Todos los componentes están operativos
+2025-06-28 18:17:44,051 - ultibot_backend - INFO - [MainThread] - main.py:137 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-28 18:17:48,675 - ultibot_backend - INFO - [MainThread] - main.py:135 - Middleware: Solicitud entrante: GET /health
+2025-06-28 18:17:48,675 - ultibot_backend - INFO - [MainThread] - main.py:191 - Ejecutando health check extendido
+2025-06-28 18:17:49,046 - ultibot_backend - INFO - [MainThread] - main.py:232 - Health check completado: Todos los componentes están operativos
+2025-06-28 18:17:49,046 - ultibot_backend - INFO - [MainThread] - main.py:137 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-28 18:17:53,675 - ultibot_backend - INFO - [MainThread] - main.py:135 - Middleware: Solicitud entrante: GET /health
+2025-06-28 18:17:53,675 - ultibot_backend - INFO - [MainThread] - main.py:191 - Ejecutando health check extendido
+2025-06-28 18:17:54,045 - ultibot_backend - INFO - [MainThread] - main.py:232 - Health check completado: Todos los componentes están operativos
+2025-06-28 18:17:54,045 - ultibot_backend - INFO - [MainThread] - main.py:137 - Middleware: Solicitud procesada: GET /health - Status: 200
+2025-06-28 18:18:36,856 - ultibot_backend - INFO - [MainThread] - main.py:112 - Shutting down UltiBot Backend (lifespan)...
+2025-06-28 18:18:36,861 - ultibot_backend - INFO - [MainThread] - main.py:115 - Resources released and application shut down (lifespan).

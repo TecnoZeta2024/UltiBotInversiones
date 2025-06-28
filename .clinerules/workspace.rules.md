@@ -134,6 +134,7 @@
 *   **Principio:** "Local-First". Entorno local, funcional, estable y sin costo.
 *   **Base de Datos:** `SQLite` para `dev-mode` y `paper-trading-mode`.
 *   **Automatización y Estandarización de Comandos:** Las operaciones críticas y recurrentes (ej. iniciar backend, iniciar UI, ejecutar todos los tests) **DEBEN** estar definidas como scripts en `pyproject.toml` (`[tool.poetry.scripts]`). Esto garantiza la descubribilidad, consistencia y facilidad de ejecución. El objetivo es poder iniciar el sistema completo con una o dos acciones predecibles.
+*   **Manejo de Comandos Multi-Shell:** Cuando se encadenen comandos en entornos Windows (especialmente PowerShell), si los operadores `&&` o `&` fallan, se DEBE usar el punto y coma `;` para encadenar comandos (ej. `cd directorio; comando`) o ejecutar los comandos por separado para asegurar la persistencia del cambio de directorio.
 
 ### **4.5. Protocolos de Gobernanza del Sistema**
 *   **Manejo de Límite de Contexto:** Al alcanzar el límite de costo de **`$1.2000`**, se **DEBE** invocar el **Sistema de Memoria y Seguimiento Centralizado (SMYC)** para generar un `Punto de Control` y ejecutar el traspaso con la herramienta `new_task`, utilizando la plantilla definida en la sección 4.1.
